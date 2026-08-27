@@ -53,11 +53,11 @@ static C_MM: AtomicU64 = AtomicU64::new(0);
 pub fn f_2rn(r_2rr: &Path, r_2rn: &[u8]) -> Result<(), String> {
     let r_2rq = r_2rr
         .parent()
-        .ok_or_else(|| "xJHGsOG7nW5nIGThuqtuIGtow7RuZyBjw7MgdGjGsCBt4bulYyBjaGE=".to_string())?;
+        .ok_or_else(|| "đường dẫn không có thư mục cha".to_string())?;
     let fname = r_2rr
         .file_name()
         .and_then(|r_2rs| r_2rs.to_str())
-        .ok_or_else(|| "dMOqbiBmaWxlIGtow7RuZyBo4bujcCBs4buH".to_string())?;
+        .ok_or_else(|| "tên file không hợp lệ".to_string())?;
     let uniq = format!(
         "{}.{}",
         std::process::id(),
@@ -66,19 +66,19 @@ pub fn f_2rn(r_2rr: &Path, r_2rn: &[u8]) -> Result<(), String> {
     let tmp = r_2rq.join(format!(".{fname}.{uniq}.tmp"));
     {
         let mut r_2rp =
-            fs::File::create(&tmp).map_err(|e| format!("dOG6oW8gZmlsZSB04bqhbSBs4buXaTog{e}"))?;
+            fs::File::create(&tmp).map_err(|e| format!("tạo file tạm lỗi: {e}"))?;
         r_2rp.write_all(r_2rn).map_err(|e| {
             let _ = fs::remove_file(&tmp);
-            format!("Z2hpIGZpbGUgdOG6oW0gbOG7l2k6IA=={e}")
+            format!("ghi file tạm lỗi: {e}")
         })?;
         r_2rp.sync_all().map_err(|e| {
             let _ = fs::remove_file(&tmp);
-            format!("ZnN5bmMgZmlsZSB04bqhbSBs4buXaTog{e}")
+            format!("fsync file tạm lỗi: {e}")
         })?;
     }
     fs::rename(&tmp, r_2rr).map_err(|e| {
         let _ = fs::remove_file(&tmp);
-        format!("xJHhu5VpIHTDqm4gZmlsZSBs4buXaTog{e}")
+        format!("đổi tên file lỗi: {e}")
     })?;
     if let Ok(r_2ro) = fs::File::open(r_2rq) {
         let _ = r_2ro.sync_all();
@@ -91,7 +91,7 @@ pub fn f_198(r_2rv: &DynamicImage, r_2rw: u8) -> Result<(Vec<u8>, u32, u32), Str
     let mut r_2rt = Vec::new();
     JpegEncoder::new_with_quality(&mut Cursor::new(&mut r_2rt), r_2rw.clamp(40, 100))
         .encode_image(&r_2rx)
-        .map_err(|e| format!("bcOjIGhvw6EgSlBFRyBs4buXaTog{e}"))?;
+        .map_err(|e| format!("mã hoá JPEG lỗi: {e}"))?;
     Ok((r_2rt, r_2ry, r_2ru))
 }
 pub fn f_12p(r_2s5: &DynamicImage, x: f32, r_2s9: f32, r_2s8: f32, r_2s3: f32) -> DynamicImage {
@@ -618,7 +618,7 @@ fn f_213(r_2xo: &str) -> Object {
 }
 pub fn f_sf(r_2y0: &[Tgx]) -> Result<Vec<u8>, String> {
     if r_2y0.is_empty() {
-        return Err("a2jDtG5nIGPDsyB0cmFuZyDEkeG7gyBnaMOpcCBQREY=".into());
+        return Err("không có trang để ghép PDF".into());
     }
     let mut r_2xu = Document::with_version("1.5");
     let r_2y1 = r_2xu.new_object_id();
@@ -655,7 +655,7 @@ pub fn f_sf(r_2y0: &[Tgx]) -> Result<Vec<u8>, String> {
         };
         let r_2xr = r_2xy
             .encode()
-            .map_err(|e| format!("ZOG7sW5nIG7hu5lpIGR1bmcgUERGIGzhu5dpOiA={e}"))?;
+            .map_err(|e| format!("dựng nội dung PDF lỗi: {e}"))?;
         let r_2xs = r_2xu.add_object(Stream::new(dictionary! {}, r_2xr));
         let r_2xz = dictionary! {
             "Type" => f_213("Page"), "Parent" => r_2y1, "MediaBox" =>
@@ -681,7 +681,7 @@ pub fn f_sf(r_2y0: &[Tgx]) -> Result<Vec<u8>, String> {
     let mut r_2xp = Vec::new();
     r_2xu
         .save_to(&mut r_2xp)
-        .map_err(|e| format!("bMawdSBQREYgbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("lưu PDF lỗi: {e}"))?;
     Ok(r_2xp)
 }
 pub fn f_1jt(r_2y9: &Path, r_2y8: &[&str], r_2ya: bool) -> PathBuf {
@@ -743,7 +743,7 @@ pub fn f_1bd(
         return Ok(v);
     }
     Err(
-        "S2jDtG5nIHjDoWMgxJHhu4tuaCDEkcaw4bujYyBuxINtIGjDrG5oIHRow6BuaCBo4buTIHPGoSAodGhp4bq/dSBuZ8OgeSBi4bqvdCDEkeG6p3UsIG7Eg20sIGhv4bq3YyB0aOG7nWkgZ2lhbiku"
+        "Không xác định được năm hình thành hồ sơ (thiếu ngày bắt đầu, năm, hoặc thời gian)."
             .into(),
     )
 }

@@ -87,11 +87,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_26c = Path(p_267.eval_jsonl)
     if not p_26c.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_26c}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_26c}", file=sys.stderr)
         return 2
     md = Path(p_267.model_dir)
     if not (md / "encoder.onnx").is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkgZW5jb2Rlci5vbm54IHRyb25nIA=={md}", file=sys.stderr)
+        print(f"LỖI: không thấy encoder.onnx trong {md}", file=sys.stderr)
         return 2
 
     import cv2
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     p_26e = [json.loads(p_26a) for p_26a in p_26c.open(encoding="utf-8") if p_26a.strip()][: p_267.limit]
     p_269 = [_preprocess(bgr) for p_26d in p_26e if (bgr := cv2.imread(p_26d["image"], cv2.IMREAD_COLOR)) is not None]
     if not p_269:
-        print("TOG7lkk6IGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mg4bqjbmggY3JvcCBuw6Bv", file=sys.stderr)
+        print("LỖI: không đọc được ảnh crop nào", file=sys.stderr)
         return 2
 
     cpu = bench(p_269, ["CPUExecutionProvider"], md)
@@ -116,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     print(json.dumps(p_26b, ensure_ascii=True, indent=2))
     if gpu["provider"] != "CUDAExecutionProvider":
-        print(f"4pqgIEPhuqJOSCBCw4FPOiBHUFUgcHJvdmlkZXIgdGjhu7FjIHThur8gPSA={gpu['provider']}IChy4bubdCB24buBIENQVT8pIOKAlCBz4buRICdncHUnIEtIw5RORyDEkcOhbmcgdGlu",
+        print(f"⚠ CẢNH BÁO: GPU provider thực tế = {gpu['provider']} (rớt về CPU?) — số 'gpu' KHÔNG đáng tin",
               file=sys.stderr)
     return 0
 

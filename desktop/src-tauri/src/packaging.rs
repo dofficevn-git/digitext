@@ -120,10 +120,10 @@ pub async fn package_download(
         Ok(r_2a7.to_string_lossy().into_owned())
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyBsxrB1IGZpbGUgbOG7l2k6IA=={e}")))?
-    .map_err(|e| AppError::internal(format!("bMawdSBmaWxlIGzhu5dpOiA={e}")))?;
+    .map_err(|e| AppError::internal(format!("luồng lưu file lỗi: {e}")))?
+    .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     tracing::info!(
-        package = % args.id, "cGFja2FnZV9kb3dubG9hZDogxJHDoyBsxrB1IFpJUCBnw7NpIHRpbg=="
+        package = % args.id, "package_download: đã lưu ZIP gói tin"
     );
     Ok(r_2a8)
 }

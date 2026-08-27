@@ -38,11 +38,11 @@ pub fn f_2gl(page: &Tgi) -> serde_json::Value {
 }
 #[derive(Debug, thiserror::Error)]
 pub enum AssembleError {
-    #[error("bOG7l2kgREIga2hpIGdow6lwIFBERjog{0}")]
+    #[error("lỗi DB khi ghép PDF: {0}")]
     Db(#[from] sqlx::Error),
-    #[error("bmd14buTbiDhuqNuaCB0cmFuZyBs4buXaTog{0}")]
+    #[error("nguồn ảnh trang lỗi: {0}")]
     Source(WorkerError),
-    #[error("ZOG7ryBsaeG7h3UgZ2jDqXAgUERGIGjhu49uZzog{0}")]
+    #[error("dữ liệu ghép PDF hỏng: {0}")]
     Data(String),
 }
 pub async fn f_va<S: Tgj>(
@@ -85,6 +85,6 @@ pub async fn f_va<S: Tgj>(
             spans: r_30a,
         });
     }
-    let r_2zz = f_vz(&r_303).map_err(|e| AssembleError::Data(format!("ZOG7sW5nIFBERjog{e}")))?;
+    let r_2zz = f_vz(&r_303).map_err(|e| AssembleError::Data(format!("dựng PDF: {e}")))?;
     Ok(Some(r_2zz))
 }

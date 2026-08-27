@@ -123,7 +123,7 @@ pub async fn docs_upload_local(
     if project_id.is_empty() {
         return Err(
             AppError::validation(
-                "Q2jGsGEgeMOhYyDEkeG7i25oIGThu7Egw6FuIOKAlCBow6N5IMSRxINuZyBuaOG6rXAgdsOgbyBt4buZdCBk4buxIMOhbiBy4buTaSB0aOG7rSBs4bqhaS4=",
+                "Chưa xác định dự án — hãy đăng nhập vào một dự án rồi thử lại.",
             ),
         );
     }
@@ -132,10 +132,10 @@ pub async fn docs_upload_local(
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
         .ok_or_else(|| {
-            AppError::validation("xJDGsOG7nW5nIGThuqtuIHThu4dwIGtow7RuZyBo4bujcCBs4buHLg==")
+            AppError::validation("Đường dẫn tệp không hợp lệ.")
         })?;
     if !filename.to_lowercase().ends_with(".pdf") {
-        return Err(AppError::validation("Q2jhu4kgaOG7lyB0cuG7oyB04buHcCBQREYu"));
+        return Err(AppError::validation("Chỉ hỗ trợ tệp PDF."));
     }
     let (bytes, blake3_hex, page_count) = tauri::async_runtime::spawn_blocking(
         move || -> std::io::Result<(Vec<u8>, String, Option<i64>)> {
@@ -150,8 +150,8 @@ pub async fn docs_upload_local(
         },
     )
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyDEkeG7jWMgdOG7h3AgbOG7l2k6IA=={e}")))?
-    .map_err(|e| AppError::internal(format!("xJHhu41jIHThu4dwIGzhu5dpOiA={e}")))?;
+    .map_err(|e| AppError::internal(format!("luồng đọc tệp lỗi: {e}")))?
+    .map_err(|e| AppError::internal(format!("đọc tệp lỗi: {e}")))?;
     let ho_so = args
         .ho_so_ref
         .as_deref()
@@ -190,7 +190,7 @@ pub async fn docs_upload_local(
     tracing::info!(
         document_id = % r_1je.id, duplicate = r_1je.duplicate, page_count = page_count
         .unwrap_or(- 1),
-        "ZG9jc191cGxvYWRfbG9jYWw6IHThuqNpIFBERiBsw6puIG3DoXkgY2jhu6cgeG9uZw=="
+        "docs_upload_local: tải PDF lên máy chủ xong"
     );
     Ok(Tpb {
         id: r_1je.id,
@@ -473,7 +473,7 @@ pub async fn docs_review(
 ) -> Result<ReviewResult, AppError> {
     if !f_2oo(&args.id) {
         return Err(AppError::validation(
-            "bcOjIHTDoGkgbGnhu4d1IGtow7RuZyBo4bujcCBs4buH",
+            "mã tài liệu không hợp lệ",
         ));
     }
     let (id, decision, note) = (args.id.clone(), args.decision.clone(), args.note.clone());
@@ -517,12 +517,12 @@ pub async fn docs_review_bulk(
 ) -> Result<ReviewBulkResult, AppError> {
     if args.ids.is_empty() {
         return Err(AppError::validation(
-            "Y2jGsGEgY2jhu41uIHTDoGkgbGnhu4d1IG7DoG8gxJHhu4MgZHV54buHdA==",
+            "chưa chọn tài liệu nào để duyệt",
         ));
     }
     if !args.ids.iter().all(|id| f_2oo(id)) {
         return Err(AppError::validation(
-            "bcOjIHTDoGkgbGnhu4d1IGtow7RuZyBo4bujcCBs4buH",
+            "mã tài liệu không hợp lệ",
         ));
     }
     let (ids, decision, note) = (args.ids.clone(), args.decision.clone(), args.note.clone());
@@ -685,11 +685,11 @@ async fn f_174(
     r_1kz: &(dyn Fn(u64, Option<u64>) + Sync),
 ) -> Result<u64, AppError> {
     let r_1ky = r_1l0.parent().ok_or_else(|| {
-        AppError::internal("xJHGsOG7nW5nIGThuqtuIGzGsHUga2jDtG5nIGjhu6NwIGzhu4c=")
+        AppError::internal("đường dẫn lưu không hợp lệ")
     })?;
     tokio::fs::create_dir_all(r_1ky)
         .await
-        .map_err(|e| AppError::internal(format!("dOG6oW8gdGjGsCBt4bulYyBsxrB1IGzhu5dpOiA={e}")))?;
+        .map_err(|e| AppError::internal(format!("tạo thư mục lưu lỗi: {e}")))?;
     let part = part_path(r_1l0);
     let n = f_2r8(r_1kx, auth, Permission::DocumentDownload, |r_1kw, r_1l1| {
         let (id, part) = (id.to_string(), part.clone());
@@ -710,7 +710,7 @@ async fn f_174(
     })?;
     tokio::fs::rename(&part, r_1l0)
         .await
-        .map_err(|e| AppError::internal(format!("bMawdSBmaWxlIGzhu5dpOiA={e}")))?;
+        .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     Ok(n)
 }
 const C_BN: usize = 8;
@@ -795,7 +795,7 @@ pub async fn docs_pdf_for_view(
     f_24k(&r_1l9);
     tracing::info!(
         document_id = % args.id, size_bytes,
-        "ZG9jc19wZGZfZm9yX3ZpZXc6IMSRw6MgdOG6o2kgUERGIHbhu4EgY2FjaGUgeGVtIHThuqFt"
+        "docs_pdf_for_view: đã tải PDF về cache xem tạm"
     );
     Ok(Tpt {
         path: r_1lb.to_string_lossy().into_owned(),

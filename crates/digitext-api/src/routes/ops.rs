@@ -80,7 +80,7 @@ async fn f_1il(
     let r_m0 = r_lz
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let limit = r_ly.limit.unwrap_or(50).clamp(1, 500);
     let r_lu = ops::f_17z(&r_lz.pool, limit).await?;
     let mut loi = 0usize;
@@ -113,18 +113,18 @@ pub async fn check_document(
             Ok(Some(b)) => (warm.clone(), b),
             Ok(None) => {
                 return Err(format!(
-                    "dGhp4bq/dSBvYmplY3QgdHJvbmcga2hvICg={signed}IHbDoCA={warm})"
+                    "thiếu object trong kho ({signed}IHbDoCA={warm})"
                 ));
             }
-            Err(e) => return Err(format!("a2hvIG9iamVjdCBs4buXaTog{e}")),
+            Err(e) => return Err(format!("kho object lỗi: {e}")),
         },
-        Err(e) => return Err(format!("a2hvIG9iamVjdCBs4buXaTog{e}")),
+        Err(e) => return Err(format!("kho object lỗi: {e}")),
     };
     let r_m3 = digitext_pdf::f_2p9(&r_m2, r_m5);
     if !r_m3.ok {
         return Err(format!(
             "{key}: {}",
-            r_m3.reason.unwrap_or_else(|| "a2jDtG5nIMSR4bqhdA==".into())
+            r_m3.reason.unwrap_or_else(|| "không đạt".into())
         ));
     }
     Ok(())
@@ -175,18 +175,18 @@ async fn f_27y(
     if !matches!(r_md.loai.as_str(), "gia_tang" | "day_du" | "day_du_3_nam") {
         return Err(
             ApiError::bad_request(
-                "bG9haSBuaOG6rW4gJ2dpYV90YW5nJyB8ICdkYXlfZHUnIHwgJ2RheV9kdV8zX25hbScgKMSQaeG7gXUgMzAuMSk=",
+                "loai nhận 'gia_tang' | 'day_du' | 'day_du_3_nam' (Điều 30.1)",
             ),
         );
     }
     if !matches!(r_md.ket_qua.as_str(), "dat" | "khong_dat") {
         return Err(ApiError::bad_request(
-            "a2V0UXVhIG5o4bqtbiAnZGF0JyB8ICdraG9uZ19kYXQn",
+            "ketQua nhận 'dat' | 'khong_dat'",
         ));
     }
     if r_md.nguon.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "dGhp4bq/dSBuZ3Xhu5NuIHNhbyBsxrB1ICjEkGnhu4F1IDMwLjMuYSk=",
+            "thiếu nguồn sao lưu (Điều 30.3.a)",
         ));
     }
     let r_me = ops::f_269(

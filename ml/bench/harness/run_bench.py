@@ -15,7 +15,7 @@ def _load_manifest(path: str) -> list:
                 try:
                     p_13c.append(json.loads(p_13a))
                 except json.JSONDecodeError as e:
-                    raise SystemExit(f"4p2MIG1hbmlmZXN0IGTDsm5nIA=={p_13b}: {e}")
+                    raise SystemExit(f"❌ manifest dòng {p_13b}: {e}")
     return p_13c
 
 def _as_text(t) -> str:
@@ -47,7 +47,7 @@ def run(manifest: list, triton_url: str, model: str, out_path: str) -> int:
 
     client = grpcclient.InferenceServerClient(url=triton_url)
     if not client.is_server_ready():
-        raise SystemExit(f"4p2MIFRyaXRvbiBjaMawYSBz4bq1biBzw6BuZzog{triton_url}")
+        raise SystemExit(f"❌ Triton chưa sẵn sàng: {triton_url}")
 
     p_145 = 0
     p_144 = 0
@@ -56,25 +56,25 @@ def run(manifest: list, triton_url: str, model: str, out_path: str) -> int:
             image = cv2.imread(p_146["image"])
             if image is None:
                 p_144 += 1
-                print(f"4pqgIGLhu48g{p_146['id']}OiBraMO0bmcgxJHhu41jIMSRxrDhu6NjIOG6o25oIA=={p_146['image']}", file=sys.stderr)
+                print(f"⚠ bỏ {p_146['id']}: không đọc được ảnh {p_146['image']}", file=sys.stderr)
                 continue
             hyp, conf = _infer_line(client, model, image)
             out.write(
                 json.dumps({"id": p_146["id"], "hyp": hyp, "conf": conf}, ensure_ascii=False) + "\n"
             )
             p_145 += 1
-    print(f"✅ {out_path}: {p_145}IGTDsm5n" + (f"IMK3IOKaoCBi4buPIA=={p_144}ICh0aGnhur91IOG6o25oKQ==" if p_144 else ""))
+    print(f"✅ {out_path}: {p_145} dòng" + (f" · ⚠ bỏ {p_144} (thiếu ảnh)" if p_144 else ""))
     return 0
 
 def main(argv=None) -> int:
-    p_147 = argparse.ArgumentParser(description="Q2jhuqF5IE9DUiBnb2xkZW4gcXVhIFRyaXRvbiDihpIgcHJlZC5qc29ubCAobm9kZSBHUFUp")
+    p_147 = argparse.ArgumentParser(description="Chạy OCR golden qua Triton → pred.jsonl (node GPU)")
     p_147.add_argument("--manifest", required=True, help="manifest.jsonl {id, image, stratum}")
-    p_147.add_argument("--triton", default="localhost:8001", help="xJHhu4thIGNo4buJIFRyaXRvbiBnUlBD")
-    p_147.add_argument("--model", default="ocr_pipeline", help="dMOqbiBtb2RlbCBCTFM=")
-    p_147.add_argument("--out", required=True, help="cHJlZC5qc29ubCDEkeG6p3UgcmE=")
+    p_147.add_argument("--triton", default="localhost:8001", help="địa chỉ Triton gRPC")
+    p_147.add_argument("--model", default="ocr_pipeline", help="tên model BLS")
+    p_147.add_argument("--out", required=True, help="pred.jsonl đầu ra")
     p_148 = p_147.parse_args(argv)
     if not os.path.exists(p_148.manifest):
-        raise SystemExit(f"4p2MIGtow7RuZyB0aOG6pXkgbWFuaWZlc3Q6IA=={p_148.manifest}")
+        raise SystemExit(f"❌ không thấy manifest: {p_148.manifest}")
     return run(_load_manifest(p_148.manifest), p_148.triton, p_148.model, p_148.out)
 
 if __name__ == "__main__":

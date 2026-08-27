@@ -36,7 +36,7 @@ fn f_2cf() -> Result<&'static str, String> {
     r_2hr
         .as_deref()
         .ok_or_else(|| {
-            "S2jDtG5nIHTDrG0gdGjhuqV5ICdzY2FuaW1hZ2UnLiBDw6BpIFNBTkUgcuG7k2kgdGjhu60gbOG6oWk6IGBicmV3IGluc3RhbGwgc2FuZS1iYWNrZW5kc2AgKG1hY09TKSBob+G6t2MgZ8OzaSBzYW5lLXV0aWxzIChMaW51eCku"
+            "Không tìm thấy 'scanimage'. Cài SANE rồi thử lại: `brew install sane-backends` (macOS) hoặc gói sane-utils (Linux)."
                 .to_string()
         })
 }
@@ -66,7 +66,7 @@ impl Tkv for Tki {
                         return r_2i5
                                     .error(
                                         r_2hu,
-                                        "a2jDtG5nIHTDrG0gdGjhuqV5IG3DoXkgcXXDqXQgKHNjYW5pbWFnZSAtTCB0cuG7kW5nKQ==",
+                                        "không tìm thấy máy quét (scanimage -L trống)",
                                     );
                     }
                 },
@@ -169,7 +169,7 @@ impl Tkv for Tki {
                     index += 1;
                 }
                 Err(e) => {
-                    return r_2i5.error(r_2hu, &format!("Z2nhuqNpIG3DoyB0cmFuZyA={index}: {e}"));
+                    return r_2i5.error(r_2hu, &format!("giải mã trang {index}: {e}"));
                 }
             }
             if r_2i4 || index.saturating_sub(r_2i2.start_index) >= C_BT {
@@ -202,7 +202,7 @@ fn f_2c1(
             .error(
                 r_2ib,
                 &format!(
-                    "a2jDtG5nIHThuqFvIMSRxrDhu6NjIHRoxrAgbeG7pWMgdOG6oW0gxJHhu4MgcXXDqXQgMiBt4bq3dDog{e}"
+                    "không tạo được thư mục tạm để quét 2 mặt: {e}"
                 ),
             );
     }
@@ -226,7 +226,7 @@ fn f_2c1(
             let _ = fs::remove_dir_all(&r_2ij);
             return r_2j0.error(
                 r_2ib,
-                &format!("a2jDtG5nIGNo4bqheSDEkcaw4bujYyBzY2FuaW1hZ2UgKA=={bin}): {e}"),
+                &format!("không chạy được scanimage ({bin}): {e}"),
             );
         }
     };
@@ -274,7 +274,7 @@ fn f_2c1(
                     }
                     Err(e) => r_2j0.error(
                         r_2ib,
-                        &format!("Z2nhuqNpIG3DoyB0cmFuZyA={}: {e}", r_2is.start_index + r_2it),
+                        &format!("giải mã trang {}: {e}", r_2is.start_index + r_2it),
                     ),
                 },
                 _ => {}
@@ -380,7 +380,7 @@ fn f_259() -> Result<Vec<Tkw>, String> {
     if r_2jl.is_empty() && !r_2jp {
         let msg = stderr.trim();
         if !msg.is_empty() {
-            return Err(format!("c2NhbmltYWdlIC1MIGzhu5dpOiA={msg}"));
+            return Err(format!("scanimage -L lỗi: {msg}"));
         }
     }
     Ok(r_2jl)
@@ -392,7 +392,7 @@ fn f_2cg(r_2js: &[&str], r_2k2: Duration) -> Result<(Vec<u8>, String, bool), Str
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("a2jDtG5nIGNo4bqheSDEkcaw4bujYyBzY2FuaW1hZ2UgKA=={bin}): {e}"))?;
+        .map_err(|e| format!("không chạy được scanimage ({bin}): {e}"))?;
     let mut r_2jx = r_2ju.stdout.take().expect("piped stdout");
     let mut r_2jw = r_2ju.stderr.take().expect("piped stderr");
     let (r_2k4, r_2jz) = mpsc::channel();
@@ -416,7 +416,7 @@ fn f_2cg(r_2js: &[&str], r_2k2: Duration) -> Result<(Vec<u8>, String, bool), Str
                     let _ = r_2ju.kill();
                     let _ = r_2ju.wait();
                     return Err(format!(
-                        "c2NhbmltYWdlIHF1w6Eg{}cyBraGkgZMOyIG3DoXkgcXXDqXQ=",
+                        "scanimage quá {}s khi dò máy quét",
                         r_2k2.as_secs()
                     ));
                 }

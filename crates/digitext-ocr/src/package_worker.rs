@@ -29,30 +29,30 @@ impl ClamdScanner {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let mut r_3by = tokio::net::TcpStream::connect(&self.addr)
             .await
-            .map_err(|e| format!("a+G6v3QgbuG7kWkgY2xhbWQg{}IGzhu5dpOiA={e}", self.addr))?;
+            .map_err(|e| format!("kết nối clamd {} lỗi: {e}", self.addr))?;
         r_3by
             .write_all(b"zINSTREAM\0")
             .await
-            .map_err(|e| format!("Z+G7rWkgSU5TVFJFQU0gbOG7l2k6IA=={e}"))?;
+            .map_err(|e| format!("gửi INSTREAM lỗi: {e}"))?;
         for r_3bx in r_3bw.chunks(64 * 1024) {
             r_3by
                 .write_all(&(r_3bx.len() as u32).to_be_bytes())
                 .await
-                .map_err(|e| format!("Z+G7rWkga2jDumMgZOG7ryBsaeG7h3UgbOG7l2k6IA=={e}"))?;
+                .map_err(|e| format!("gửi khúc dữ liệu lỗi: {e}"))?;
             r_3by
                 .write_all(r_3bx)
                 .await
-                .map_err(|e| format!("Z+G7rWkga2jDumMgZOG7ryBsaeG7h3UgbOG7l2k6IA=={e}"))?;
+                .map_err(|e| format!("gửi khúc dữ liệu lỗi: {e}"))?;
         }
         r_3by
             .write_all(&0u32.to_be_bytes())
             .await
-            .map_err(|e| format!("a+G6v3QgdGjDumMgc3RyZWFtIGzhu5dpOiA={e}"))?;
+            .map_err(|e| format!("kết thúc stream lỗi: {e}"))?;
         let mut r_3bz = Vec::new();
         r_3by
             .read_to_end(&mut r_3bz)
             .await
-            .map_err(|e| format!("xJHhu41jIHBo4bqjbiBo4buTaSBjbGFtZCBs4buXaTog{e}"))?;
+            .map_err(|e| format!("đọc phản hồi clamd lỗi: {e}"))?;
         let text = String::from_utf8_lossy(&r_3bz);
         let text = text.trim_end_matches(['\0', '\n', ' ']);
         if text.ends_with("OK") {
@@ -64,7 +64,7 @@ impl ClamdScanner {
             Ok(ScanVerdict::Infected(sig.trim().to_string()))
         } else {
             Err(format!(
-                "cGjhuqNuIGjhu5NpIGNsYW1kIGtow7RuZyBoaeG7g3UgxJHGsOG7o2M6IA=={text:?}"
+                "phản hồi clamd không hiểu được: {text:?}"
             ))
         }
     }
@@ -92,7 +92,7 @@ pub struct PackageWorker<'a> {
     scanner: Option<&'a dyn Tpu>,
 }
 fn f_2qd() -> FixedOffset {
-    FixedOffset::east_opt(7 * 3600).expect("KzA3OjAwIGjhu6NwIGzhu4c=")
+    FixedOffset::east_opt(7 * 3600).expect("+07:00 hợp lệ")
 }
 impl<'a> PackageWorker<'a> {
     pub fn new(
@@ -141,7 +141,7 @@ impl<'a> PackageWorker<'a> {
                 if !r_3c4 {
                     tracing::warn!(
                         package = % r_3c6.id,
-                        "beG6pXQgbGVhc2UgdHLGsOG7m2Mga2hpIGNo4buRdCBidWlsdCDigJQgYuG7jw=="
+                        "mất lease trước khi chốt built — bỏ"
                     );
                     return Ok(PackageRunOutcome::Failed(r_3c6.id));
                 }
@@ -164,20 +164,20 @@ impl<'a> PackageWorker<'a> {
                             tracing::info!(
                                 submission = % r_3c7, registered = r_3c5.registered,
                                 submitted = r_3c5.submitted, enough = r_3c5.enough,
-                                "xJHhu5FpIGNoaeG6v3UgTeG7pWMgbOG7pWMgbOG6p24gbuG7mXA="
+                                "đối chiếu Mục lục lần nộp"
                             )
                         }
                         None => {
                             tracing::debug!(
                                 submission = % r_3c7,
-                                "bOG6p24gbuG7mXAga2jDtG5nIOG7nyB0cuG6oW5nIHRow6FpIG5o4bqtbiBnw7NpIOKAlCBi4buPIHF1YSDEkeG7kWkgY2hp4bq/dQ=="
+                                "lần nộp không ở trạng thái nhận gói — bỏ qua đối chiếu"
                             )
                         }
                     }
                 }
                 tracing::info!(
                     package = % r_3c6.id, objid = % r_3c2.objid,
-                    "Z8OzaSB0aW4gZOG7sW5nIHhvbmc="
+                    "gói tin dựng xong"
                 );
                 Ok(PackageRunOutcome::Built(r_3c6.id))
             }
@@ -185,7 +185,7 @@ impl<'a> PackageWorker<'a> {
             Err(BuildStepError::Data(r_3c3)) => {
                 tracing::warn!(
                     package = % r_3c6.id, error = % r_3c3,
-                    "ZOG7sW5nIGfDs2kgdGjhuqV0IGLhuqFpIChs4buXaSBk4buvIGxp4buHdSk="
+                    "dựng gói thất bại (lỗi dữ liệu)"
                 );
                 packages::f_1rd(self.pool, r_3c6.id, self.worker_id, &r_3c3).await?;
                 Ok(PackageRunOutcome::Failed(r_3c6.id))
@@ -195,13 +195,13 @@ impl<'a> PackageWorker<'a> {
     async fn build(&self, r_3cg: &Tgc) -> Result<T1f, BuildStepError> {
         let r_3cj: Tq4 = serde_json::from_value(r_3cg.request_json.clone()).map_err(|e| {
             BuildStepError::Data(format!(
-                "cmVxdWVzdF9qc29uIGtow7RuZyDEkeG7jWMgxJHGsOG7o2M6IA=={e}"
+                "request_json không đọc được: {e}"
             ))
         })?;
         let r_3ci = r_3cj.shape_errors();
         if !r_3ci.is_empty() {
             return Err(BuildStepError::Data(format!(
-                "ecOqdSBj4bqndSBzYWkgaMOsbmggZOG6oW5nOiA={}",
+                "yêu cầu sai hình dạng: {}",
                 r_3ci.join("; ")
             )));
         }
@@ -216,14 +216,14 @@ impl<'a> PackageWorker<'a> {
                         .map_err(BuildStepError::Db)?
                         .ok_or_else(|| {
                             BuildStepError::Data(format!(
-                                "dMOgaSBsaeG7h3Ug{doc_id}IGtow7RuZyB04buTbiB04bqhaQ=="
+                                "tài liệu {doc_id} không tồn tại"
                             ))
                         })?;
                     if r_3cd.project_id != r_3cg.project_id {
                         return Err(
                             BuildStepError::Data(
                                 format!(
-                                    "dMOgaSBsaeG7h3Ug{doc_id}IGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIGPhu6dhIGfDs2k="
+                                    "tài liệu {doc_id} không thuộc dự án của gói"
                                 ),
                             ),
                         );
@@ -236,7 +236,7 @@ impl<'a> PackageWorker<'a> {
                             Ok(Some(b)) => {
                                 tracing::warn!(
                                     package = % r_3cg.id, document = % doc_id,
-                                    "Y2jGsGEgY8OzIFBERiDEkcOjIGvDvSDigJQgZMO5bmcgYuG6o24gd2FybSBjaMawYSBrw70="
+                                    "chưa có PDF đã ký — dùng bản warm chưa ký"
                                 );
                                 b
                             }
@@ -244,20 +244,20 @@ impl<'a> PackageWorker<'a> {
                                 return Err(
                                         BuildStepError::Data(
                                             format!(
-                                                "dGhp4bq/dSBQREYgdHJvbmcga2hvIGNobyB0w6BpIGxp4buHdSA={doc_id}ICjEkcOjIHRo4butIA=={signed}IHbDoCA={warm})"
+                                                "thiếu PDF trong kho cho tài liệu {doc_id} (đã thử {signed}IHbDoCA={warm})"
                                             ),
                                         ),
                                     );
                             }
                             Err(e) => {
                                 return Err(BuildStepError::Data(format!(
-                                    "xJHhu41jIGtobyBvYmplY3QgbOG7l2kgKA=={warm}): {e}"
+                                    "đọc kho object lỗi ({warm}): {e}"
                                 )));
                             }
                         },
                         Err(e) => {
                             return Err(BuildStepError::Data(format!(
-                                "xJHhu41jIGtobyBvYmplY3QgbOG7l2kgKA=={signed}): {e}"
+                                "đọc kho object lỗi ({signed}): {e}"
                             )));
                         }
                     };
@@ -266,8 +266,8 @@ impl<'a> PackageWorker<'a> {
                         return Err(
                             BuildStepError::Data(
                                 format!(
-                                    "dMOgaSBsaeG7h3Ug{doc_id}IGtow7RuZyDEkeG6oXQga2nhu4NtIFBERiBsxrB1IHRy4buvOiA={}",
-                                    r_3cb.reason.unwrap_or_else(|| "a2jDtG5nIMSR4bqhdA=="
+                                    "tài liệu {doc_id} không đạt kiểm PDF lưu trữ: {}",
+                                    r_3cb.reason.unwrap_or_else(|| "không đạt"
                                     .into())
                                 ),
                             ),
@@ -282,13 +282,13 @@ impl<'a> PackageWorker<'a> {
             let r_3ce = digitext_pdf::f_1cq()
                 .ok_or_else(|| {
                     BuildStepError::Data(
-                        "a2jDtG5nIHTDrG0gdGjhuqV5IGZvbnQgVFRGIGNobyB2xINuIGLhuqNuIHjDoWMgdGjhu7FjIERJUCDigJQgxJHhurd0IERJR0lURVhUX0NFUlRfRk9OVA=="
+                        "không tìm thấy font TTF cho văn bản xác thực DIP — đặt DIGITEXT_CERT_FONT"
                             .to_string(),
                     )
                 })?;
             Some(std::fs::read(&r_3ce).map_err(|e| {
                 BuildStepError::Data(format!(
-                    "xJHhu41jIGZvbnQg{}IGzhu5dpOiA={e}",
+                    "đọc font {} lỗi: {e}",
                     r_3ce.display()
                 ))
             })?)
@@ -310,7 +310,7 @@ impl<'a> PackageWorker<'a> {
                     return Err(
                             BuildStepError::Data(
                                 format!(
-                                    "cXXDqXQgdmlydXMgcGjDoXQgaGnhu4duIG3DoyDEkeG7mWM6IA=={sig}IOKAlCBnw7NpIGtow7RuZyDEkcaw4bujYyDEkcawYSB2w6BvIGtobw=="
+                                    "quét virus phát hiện mã độc: {sig} — gói không được đưa vào kho"
                                 ),
                             ),
                         );
@@ -319,7 +319,7 @@ impl<'a> PackageWorker<'a> {
                     let note = format!("scan_error: {e}");
                     let _ = packages::f_2ek(self.pool, r_3cg.id, &note).await;
                     return Err(BuildStepError::Data(format!(
-                        "cXXDqXQgdmlydXMgbOG7l2k6IA=={e}"
+                        "quét virus lỗi: {e}"
                     )));
                 }
             },
@@ -332,7 +332,7 @@ impl<'a> PackageWorker<'a> {
             .put(&zip_key, &built.zip_bytes)
             .await
             .map_err(|e| {
-                BuildStepError::Data(format!("UFVUIFpJUCB2w6BvIGtobyBs4buXaSAo{zip_key}): {e}"))
+                BuildStepError::Data(format!("PUT ZIP vào kho lỗi ({zip_key}): {e}"))
             })?;
         Ok(T1f {
             objid: built.objid,
@@ -360,7 +360,7 @@ impl<'a> PackageWorker<'a> {
                 if r_3cm > 0 {
                     tracing::warn!(
                         requeued = r_3cm,
-                        "cmVxdWV1ZSB5w6p1IGPhuqd1IMSRw7NuZyBnw7NpIGjhur90IGjhuqFuIGxlYXNl"
+                        "requeue yêu cầu đóng gói hết hạn lease"
                     );
                 }
                 tokio::select! {
@@ -373,7 +373,7 @@ impl<'a> PackageWorker<'a> {
         tracing::info!(
             worker_id = self.worker_id,
             r_3co,
-            "dsOybmcgbOG6t3AgxJHDs25nIGfDs2kgZOG7q25n"
+            "vòng lặp đóng gói dừng"
         );
         Ok(r_3co)
     }
@@ -400,7 +400,7 @@ pub async fn f_2bd(pool: &PgPool, r_3cq: Duration, r_3cr: &CancellationToken) ->
             digitext_db::workdays::f_1hg(& std::env::var("DIGITEXT_HOLIDAYS")
             .unwrap_or_default(), year - 1..= year,); let n =
             digitext_db::notifications::f_2fx(pool, & holidays). await ?; if n > 0 {
-            tracing::info!(created = n, "bmjhuq9jIFNMQSB0aHUgbuG7mXAgKFdGLTMp"); } }
+            tracing::info!(created = n, "nhắc SLA thu nộp (WF-3)"); } }
         }
     }
     Ok(())
@@ -417,12 +417,12 @@ pub async fn f_2am(
             = digitext_db::access::f_1ag(pool). await ?; let mut deleted = Vec::new();
             for (item_id, key) in & copies { match store.delete(key). await { Ok(()) =>
             deleted.push(* item_id), Err(e) => { tracing::warn!(key = % key, error = % e,
-            "eMOzYSBi4bqjbiBuZ8aw4budaSBkw7luZyBo4bq/dCBo4bqhbiBs4buXaSDigJQgdGjhu60gbOG6oWkgbMaw4bujdCBzYXU=");
+            "xóa bản người dùng hết hạn lỗi — thử lại lượt sau");
             } } } if ! deleted.is_empty() { digitext_db::access::f_1r9(pool, & deleted).
             await ?; } let expired = digitext_db::access::f_1rc(pool). await ?; if !
             deleted.is_empty() || expired > 0 { tracing::info!(copies = deleted.len(),
             requests = expired,
-            "a2hhaSB0aMOhYzogxJHDoyB4w7NhIGLhuqNuIG5nxrDhu51pIGTDuW5nIGjhur90IGjhuqFuICjEkGnhu4F1IDM3LjUvNDAuNik=");
+            "khai thác: đã xóa bản người dùng hết hạn (Điều 37.5/40.6)");
             } }
         }
     }
@@ -436,13 +436,13 @@ pub async fn f_2an(pool: &PgPool, r_3cu: Duration, r_3cv: &CancellationToken) ->
             digitext_db::disposal::f_1ah(pool). await ?; if dup.is_empty() && exp
             .is_empty() { continue; } tracing::info!(trung_lap = dup.len(), het_han = exp
             .len(),
-            "ZGFuaCBt4bulYyBo4buneTogcGjDoXQgaGnhu4duIG3hu5tpICjEkGnhu4F1IDQ4LjIvNDguMyk=");
+            "danh mục hủy: phát hiện mới (Điều 48.2/48.3)");
             let mut per_project : std::collections::BTreeMap < uuid::Uuid, (usize, usize)
             > = std::collections::BTreeMap::new(); for (p, _) in & dup { per_project
             .entry(* p).or_default().0 += 1; } for (p, _) in & exp { per_project.entry(*
             p).or_default().1 += 1; } for (project, (n_dup, n_exp)) in per_project { let
             admins = digitext_db::projects::f_re(pool, project). await ?; let msg =
-            format!("RGFuaCBt4bulYyBo4buneSBjw7MgcGjDoXQgaGnhu4duIG3hu5tpOiA={n_dup}IHRyw7luZyBs4bq3cCAoxJBp4buBdSA0OC4yKSwg{n_exp}IGjhur90IHRo4budaSBo4bqhbiBsxrB1IHRy4buvICjEkGnhu4F1IDQ4LjMpIOKAlCBj4bqnbiB4ZW0geMOpdA==");
+            format!("Danh mục hủy có phát hiện mới: {n_dup} trùng lặp (Điều 48.2), {n_exp} hết thời hạn lưu trữ (Điều 48.3) — cần xem xét");
             for admin in admins { let _ = digitext_db::notifications::f_1v8(pool, admin,
             None, "disposal_review", & msg,). await ?; } } }
         }
@@ -463,12 +463,12 @@ async fn check_document(
             Ok(Some(b)) => (warm.clone(), b),
             Ok(None) => {
                 return Err(format!(
-                    "dGhp4bq/dSBvYmplY3QgdHJvbmcga2hvICg={signed}IHbDoCA={warm})"
+                    "thiếu object trong kho ({signed}IHbDoCA={warm})"
                 ));
             }
-            Err(e) => return Err(format!("a2hvIG9iamVjdCBs4buXaTog{e}")),
+            Err(e) => return Err(format!("kho object lỗi: {e}")),
         },
-        Err(e) => return Err(format!("a2hvIG9iamVjdCBs4buXaTog{e}")),
+        Err(e) => return Err(format!("kho object lỗi: {e}")),
     };
     let r_3cx = digitext_pdf::f_2p9(&r_3cw, r_3cy);
     if !r_3cx.ok {
@@ -476,7 +476,7 @@ async fn check_document(
             "{key}: {}",
             r_3cx
                 .reason
-                .unwrap_or_else(|| "a2jDtG5nIMSR4bqhdA==".into())
+                .unwrap_or_else(|| "không đạt".into())
         ));
     }
     Ok(())
@@ -501,16 +501,16 @@ pub async fn f_2b5(
             await ?; * per_project.entry(project_id).or_default() += 1; } } } for
             (project, n_loi) in per_project { let admins =
             digitext_db::projects::f_re(pool, project). await ?; let msg =
-            format!("S2nhu4NtIHRyYSB0w6BpIGxp4buHdSAoxJBp4buBdSAyOSk6IHBow6F0IGhp4buHbiA={n_loi}IHThu4dwIEzhu5ZJIOKAlCB4ZW0gZGFuaCBt4bulYyB04buHcCBs4buXaSB2w6AgbOG6rXAgYmnDqm4gYuG6o24ga2nhu4NtIHRyYSAoTeG7pWMgMSBQaOG7pSBs4bulYyBWSUkp");
+            format!("Kiểm tra tài liệu (Điều 29): phát hiện {n_loi} tệp LỖI — xem danh mục tệp lỗi và lập biên bản kiểm tra (Mục 1 Phụ lục VII)");
             for admin in admins { let _ = digitext_db::notifications::f_1v8(pool, admin,
             None, "integrity_failed", & msg,). await ?; } } let last_ok =
             digitext_db::ops::f_1me(pool). await ?; let overdue = match last_ok { Some(t)
             => chrono::Utc::now() - t > chrono::Duration::hours(26), None => true, }; if
             overdue && ! digitext_db::ops::f_ti(pool, 20). await ? { let msg = match
             last_ok { Some(t) =>
-            format!("U0FPIEzGr1UgVFLhu4Q6IGzhuqduIHNhbyBsxrB1IMSR4bqhdCBn4bqnbiBuaOG6pXQgbMO6YyA={}IOKAlCDEkGnhu4F1IDMwLjEuYSB5w6p1IGPhuqd1IHNhbyBsxrB1IGdpYSB0xINuZyBI4bqwTkcgTkfDgFk=",
+            format!("SAO LƯU TRỄ: lần sao lưu đạt gần nhất lúc {} — Điều 30.1.a yêu cầu sao lưu gia tăng HẰNG NGÀY",
             t.with_timezone(& f_2qd()).format("%d/%m/%Y %H:%M")), None =>
-            "Q0jGr0EgQ8OTIFNBTyBMxq9VIG7DoG8gxJHGsOG7o2MgZ2hpIG5o4bqtbiDigJQgxJBp4buBdSAzMC4xLmEgecOqdSBj4bqndSBzYW8gbMawdSBnaWEgdMSDbmcgaOG6sW5nIG5nw6B5IChzY3JpcHQgduG6rW4gaMOgbmggYsOhbyBxdWEgUE9TVCAvb3BzL2JhY2t1cHMp"
+            "CHƯA CÓ SAO LƯU nào được ghi nhận — Điều 30.1.a yêu cầu sao lưu gia tăng hằng ngày (script vận hành báo qua POST /ops/backups)"
             .to_string(), }; for admin in digitext_db::ops::f_rk(pool). await ? { let _ =
             digitext_db::notifications::f_1v8(pool, admin, None, "backup_overdue", &
             msg,). await ?; } } }

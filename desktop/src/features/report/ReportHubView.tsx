@@ -12,8 +12,8 @@ import { V4o4, V4o5, V4o6, V4o3 } from "./reportLogic";
 function V4oa() {
   return (
     <V4o9
-      title="VOG7lW5nIGvhur90IHPhu5EgaG/DoQ=="
-      subtitle="U+G7kSBo4buTIHPGoS9QREYgxJHDoyBz4buRIGhvw6EgdsOgIHPhu5EgdHJhbmcgdGhlbyBraOG7lSBnaeG6pXkgKHF1eSDEkeG7lWkgQTQpIOKAlCBnb20gdGhlbyBwaMO0bmcu"
+      title="Tổng kết số hoá"
+      subtitle="Số hồ sơ/PDF đã số hoá và số trang theo khổ giấy (quy đổi A4) — gom theo phông."
       columns={V4o3}
       fetchRows={V4nx}
       sheetName="TongKetSoHoa"
@@ -25,8 +25,8 @@ function V4oa() {
 function V4ob() {
   return (
     <V4o9
-      title="VOG7lW5nIGvhur90IHRoZW8gbmjDom4gdmnDqm4="
-      subtitle="S2jhu5FpIGzGsOG7o25nIGPDtG5nIHZp4buHYyBxdXkgduG7gSBuZ8aw4budaSDEkcSDbmcgbmjhuq1wOiBo4buTIHPGoSwgdsSDbiBi4bqjbiwgdHJhbmcgcXXDqXQsIHRoYW8gdMOhYy4="
+      title="Tổng kết theo nhân viên"
+      subtitle="Khối lượng công việc quy về người đăng nhập: hồ sơ, văn bản, trang quét, thao tác."
       columns={V4o5}
       fetchRows={V4o0}
       sheetName="TongKetNhanVien"
@@ -46,8 +46,8 @@ function V4oc() {
   V41p(V22g, { topics: ["catalog", "hoso"], enabled: isTauri() });
   return (
     <V4o9
-      title="VOG7lW5nIGvhur90IGNo4buJbmggbMO9"
-      subtitle="SOG7mXAgdsOgIGjhu5Mgc8ahIHbEqW5oIHZp4buFbiAvIGPDsyB0aOG7nWkgaOG6oW4sIGLDs+KAk3Thuq1wIGjhu5Mgc8ahIGxv4bqhaSDigJQgZ29tIHRoZW8gcGjDsm5nIGJhbi4="
+      title="Tổng kết chỉnh lý"
+      subtitle="Hộp và hồ sơ vĩnh viễn / có thời hạn, bó–tập hồ sơ loại — gom theo phòng ban."
       columns={V4o4}
       fetchRows={() => V4ny(maDa || undefined)}
       sheetName="TongKetChinhLy"
@@ -71,8 +71,8 @@ function V4od() {
   const [V22k, V22l] = useState<string>("");
   return (
     <V4o9
-      title="VOG7lW5nIGvhur90IHBo4bqnbiBt4buBbQ=="
-      subtitle="SOG7mXAvaOG7kyBzxqEgdsSpbmggdmnhu4VuICYgY8OzIHRo4budaSBo4bqhbiwgYsOz4oCTdOG6rXAgbG/huqFpIOKAlCBnb20gdGhlbyBwaMO0bmcsIGzhu41jIHRoZW8gbmfDoHkga2jhu59pIHThuqFvLg=="
+      title="Tổng kết phần mềm"
+      subtitle="Hộp/hồ sơ vĩnh viễn & có thời hạn, bó–tập loại — gom theo phông, lọc theo ngày khởi tạo."
       columns={V4o6}
       fetchRows={() => V4nz(V22i || undefined, V22k || undefined)}
       sheetName="TongKetPhanMem"

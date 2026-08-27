@@ -6,11 +6,11 @@ use std::pin::Pin;
 use uuid::Uuid;
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
-    #[error("a2V5IGtow7RuZyBo4bujcCBs4buHOiA={0:?}")]
+    #[error("key không hợp lệ: {0:?}")]
     InvalidKey(String),
-    #[error("bOG7l2kgSS9PIGtobyBvYmplY3Q6IA=={0}")]
+    #[error("lỗi I/O kho object: {0}")]
     Io(String),
-    #[error("a2hvIFdPUk06IGtow7RuZyDEkcaw4bujYyB4b8OhIG9iamVjdCBnw7NpIHRpbiA={0:?}")]
+    #[error("kho WORM: không được xoá object gói tin {0:?}")]
     Immutable(String),
 }
 pub type Tm3<'a, T> = Pin<Box<dyn Future<Output = Result<T, StorageError>> + Send + 'a>>;
@@ -37,7 +37,7 @@ pub trait ObjectStore: Send + Sync {
             };
             let total = bytes.len() as u64;
             let (start, len) = f_296(range, total).ok_or_else(|| {
-                StorageError::Io(format!("ZOG6o2kgYnl0ZSBuZ2/DoGkgcGjhuqFtIHZpICg={key})"))
+                StorageError::Io(format!("dải byte ngoài phạm vi ({key})"))
             })?;
             let part = bytes[start as usize..(start + len) as usize].to_vec();
             Ok(Some(Tf8 {
@@ -166,7 +166,7 @@ impl ObjectStore for FsObjectStore {
                 .map_err(|e| StorageError::Io(e.to_string()))?
                 .len();
             let (start, len) = f_296(range, total).ok_or_else(|| {
-                StorageError::Io(format!("ZOG6o2kgYnl0ZSBuZ2/DoGkgcGjhuqFtIHZpICg={key})"))
+                StorageError::Io(format!("dải byte ngoài phạm vi ({key})"))
             })?;
             if start > 0 {
                 r_5g0
@@ -195,13 +195,13 @@ impl ObjectStore for FsObjectStore {
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
                     Err(e) => {
                         return Err(StorageError::Io(format!(
-                            "xJHhu41jIA=={}: {e}",
+                            "đọc {}: {e}",
                             r_5g2.display()
                         )));
                     }
                 };
                 while let Some(r_5g3) = rd.next_entry().await.map_err(|e| {
-                    StorageError::Io(format!("ZHV54buHdCA={}: {e}", r_5g2.display()))
+                    StorageError::Io(format!("duyệt {}: {e}", r_5g2.display()))
                 })? {
                     let name = r_5g3.file_name().to_string_lossy().into_owned();
                     let child = if rel.is_empty() {
@@ -247,7 +247,7 @@ pub fn f_vr(
         let Some(mc) = minio else {
             return Err(
                 StorageError::Io(
-                    "a2hhaSBidWNrZXQga2hvIFBERiAyIGzhu5twIG5oxrBuZyBUSEnhur5VIGPhuqV1IGjDrG5oIE1pbklPIChESUdJVEVYVF9NSU5JT18qKQ=="
+                    "khai bucket kho PDF 2 lớp nhưng THIẾU cấu hình MinIO (DIGITEXT_MINIO_*)"
                         .into(),
                 ),
             );
@@ -272,7 +272,7 @@ impl MinioObjectStore {
     pub fn new(r_5gb: &Tde) -> Result<Self, StorageError> {
         let endpoint = url::Url::parse(&r_5gb.endpoint).map_err(|e| {
             StorageError::Io(format!(
-                "ZW5kcG9pbnQgTWluSU8ga2jDtG5nIGjhu6NwIGzhu4cgKA=={}): {e}",
+                "endpoint MinIO không hợp lệ ({}): {e}",
                 r_5gb.endpoint
             ))
         })?;
@@ -358,7 +358,7 @@ impl ObjectStore for MinioObjectStore {
             let bytes = resp
                 .bytes()
                 .await
-                .map_err(|e| StorageError::Io(format!("GET {key}IMSR4buNYyBib2R5OiA={e}")))?;
+                .map_err(|e| StorageError::Io(format!("GET {key} đọc body: {e}")))?;
             Ok(Some(bytes.to_vec()))
         })
     }
@@ -421,18 +421,18 @@ impl ObjectStore for MinioObjectStore {
                 )
                 .ok_or_else(|| {
                     StorageError::Io(format!(
-                        "GET {key}OiBDb250ZW50LVJhbmdlIGtow7RuZyDEkeG7jWMgxJHGsOG7o2M="
+                        "GET {key}: Content-Range không đọc được"
                     ))
                 })?
             } else {
                 let r_5ge = resp.content_length().ok_or_else(|| {
-                    StorageError::Io(format!("GET {key}OiB0aGnhur91IENvbnRlbnQtTGVuZ3Ro"))
+                    StorageError::Io(format!("GET {key}: thiếu Content-Length"))
                 })?;
                 (r_5ge, 0, r_5ge)
             };
             let body = resp
                 .bytes_stream()
-                .map_err(move |e| StorageError::Io(format!("xJHhu41jIGJvZHkgc3RyZWFtOiA={e}")));
+                .map_err(move |e| StorageError::Io(format!("đọc body stream: {e}")));
             Ok(Some(Tf8 {
                 total_len: total,
                 start,
@@ -467,11 +467,11 @@ impl ObjectStore for MinioObjectStore {
                     .text()
                     .await
                     .map_err(|e| {
-                        StorageError::Io(format!("LIST {prefix:?}IMSR4buNYyBib2R5OiA={e}"))
+                        StorageError::Io(format!("LIST {prefix:?} đọc body: {e}"))
                     })?;
                 let r_5gk =
                     rusty_s3::actions::ListObjectsV2::parse_response(&body).map_err(|e| {
-                        StorageError::Io(format!("LIST {prefix:?}IHBow6JuIHTDrWNoIFhNTDog{e}"))
+                        StorageError::Io(format!("LIST {prefix:?} phân tích XML: {e}"))
                     })?;
                 for c in r_5gk.contents {
                     r_5gj.push(f_13g(&c.key));

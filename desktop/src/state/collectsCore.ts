@@ -64,7 +64,7 @@ export function V450(state: V44w, Vac: V44s): V44w {
       sessionId: Vac.sessionId,
       kind: Vac.kind,
       running: true,
-      stage: "xJBhbmcgY2h14bqpbiBi4buL4oCm",
+      stage: "Đang chuẩn bị…",
     };
   }
   return { ...state, running: false, stage: "", summary: Vac.summary };
@@ -155,24 +155,24 @@ export function V458(s: V44w): string {
   if (s.running) {
     if (t.downloading > 0) {
       return Vau
-        ? `xJBhbmcgdGjDqm0g${t.downloading}IHThu4dwIHbDoG8gS2hv`
-        : `xJBhbmcgZ29tIA==${t.downloading}IHThu4dwIHbhu4EgbcOheQ==`;
+        ? `Đang thêm ${t.downloading} tệp vào Kho`
+        : `Đang gom ${t.downloading} tệp về máy`;
     }
-    if (Vau) return "xJBhbmcgdGjDqm0gdMOgaSBsaeG7h3UgdOG7qyDhu5UgY+G7qW5n";
+    if (Vau) return "Đang thêm tài liệu từ ổ cứng";
     return s.peers > 0
-      ? `xJBhbmcgdGh1IHRo4bqtcCB04burIA==${s.peers}IG3DoXkgbmjDom4gdmnDqm4=`
-      : "xJBhbmcgdGh1IHRo4bqtcCBk4buvIGxp4buHdQ==";
+      ? `Đang thu thập từ ${s.peers} máy nhân viên`
+      : "Đang thu thập dữ liệu";
   }
   const Vav: string[] = [];
   if (t.done > 0)
-    Vav.push(Vau ? `xJDDoyB0aMOqbSA=${t.done}IHThu4dw` : `xJDDoyBnb20g${t.done}IHThu4dw`);
-  if (t.skipped > 0) Vav.push(`${t.skipped}IHThu4dwIMSRw6MgY8OzIHPhurVu`);
-  if (t.errors > 0) Vav.push(`${t.errors}IHThu4dwIGzhu5dp`);
-  if (t.cancelled > 0) Vav.push(`${t.cancelled}IHThu4dwIMSRw6MgaOG7p3k=`);
+    Vav.push(Vau ? `Đã thêm ${t.done} tệp` : `Đã gom ${t.done} tệp`);
+  if (t.skipped > 0) Vav.push(`${t.skipped} tệp đã có sẵn`);
+  if (t.errors > 0) Vav.push(`${t.errors} tệp lỗi`);
+  if (t.cancelled > 0) Vav.push(`${t.cancelled} tệp đã hủy`);
   if (Vav.length === 0)
     return Vau
-      ? "S2jDtG5nIHRow6ptIMSRxrDhu6NjIHThu4dwIG7DoG8gbeG7m2k="
-      : "S2jDtG5nIGdvbSDEkcaw4bujYyB04buHcCBuw6BvIG3hu5tp";
+      ? "Không thêm được tệp nào mới"
+      : "Không gom được tệp nào mới";
   return Vav.join(" · ");
 }
 
@@ -194,7 +194,7 @@ export function V459(Vaw: V44v, Vax: number, Vay: V44o = "lan"): string {
         V45d(Vaw, Vax),
       );
     case "done":
-      return Vaz(`${Vay === "disk" ? "xJHDoyBjaMOpcA==" : "xJHDoyB24buB"} ${V44a(Vaw.sizeBytes)}`);
+      return Vaz(`${Vay === "disk" ? "đã chép" : "đã về"} ${V44a(Vaw.sizeBytes)}`);
     default:
       return Vaz(Vaw.message ?? "");
   }
@@ -222,37 +222,37 @@ export function V45b(s: V44w, Vb1: boolean): V45a {
 
   const Vb3 = Vb1
     ? Vb2
-      ? `${t.done}IHThu4dwIMSRw6MgdsOgbyBLaG8=`
-      : `${t.done}IHThu4dwIMSRw6MgduG7gQ==${s.peers > 0 ? ` · ${s.peers}IG3DoXk=` : ""}`
+      ? `${t.done} tệp đã vào Kho`
+      : `${t.done} tệp đã về${s.peers > 0 ? ` · ${s.peers}IG3DoXk=` : ""}`
     : [
-        Vb2 ? `${t.done}IHThu4dwIHRow6ptIG3hu5tp` : `${t.done}IHThu4dwIGdvbSBt4bubaQ==`,
-        t.skipped > 0 ? `${t.skipped}IMSRw6MgY8OzIHPhurVu` : "",
-        t.errors > 0 ? `${t.errors}IGzhu5dp` : "",
-        t.cancelled > 0 ? `${t.cancelled}IMSRw6MgaOG7p3k=` : "",
+        Vb2 ? `${t.done} tệp thêm mới` : `${t.done} tệp gom mới`,
+        t.skipped > 0 ? `${t.skipped} đã có sẵn` : "",
+        t.errors > 0 ? `${t.errors} lỗi` : "",
+        t.cancelled > 0 ? `${t.cancelled} đã hủy` : "",
       ]
         .filter((x) => x !== "")
         .join(" · ");
 
   return {
     title: Vb2
-      ? "VHLhuqFuZyB0aMOhaSB0aMOqbSB0w6BpIGxp4buHdSB04burIOG7lSBj4bupbmc="
-      : "VHLhuqFuZyB0aMOhaSB0aHUgdGjhuq1w",
+      ? "Trạng thái thêm tài liệu từ ổ cứng"
+      : "Trạng thái thu thập",
     icon: Vb2 ? "them" : "nhapKho",
     empty: Vb2
       ? Vb1
-        ? "Q2jGsGEgY2jDqXAgdOG7h3AgbsOgbyDigJQgxJFhbmcgZHV54buHdCBs4buxYSBjaOG7jW4gKHRoxrAgbeG7pWMgbOG7m24gbeG6pXQgbeG7mXQgbMO6YynigKY="
-        : "TMaw4bujdCBuw6B5IGtow7RuZyBjw7MgdOG7h3AgbsOgbyDEkeG7gyB0aMOqbS4="
+        ? "Chưa chép tệp nào — đang duyệt lựa chọn (thư mục lớn mất một lúc)…"
+        : "Lượt này không có tệp nào để thêm."
       : Vb1
-        ? "Q2jGsGEgY8OzIHThu4dwIG7DoG8gduG7gSDigJQgxJFhbmcgdMOsbSB2w6AgxJHhu41jIGRhbmggc8OhY2ggY+G7p2EgbcOheSBuaMOibiB2acOqbuKApg=="
-        : "TMaw4bujdCBuw6B5IGtow7RuZyBjw7MgdOG7h3AgbeG7m2kgbsOgbyDEkeG7gyBnb20u",
+        ? "Chưa có tệp nào về — đang tìm và đọc danh sách của máy nhân viên…"
+        : "Lượt này không có tệp mới nào để gom.",
     foot: Vb3,
-    stop: Vb2 ? "ROG7q25nIHRow6ptIHTDoGkgbGnhu4d1" : "ROG7q25nIHRodSB0aOG6rXA=",
+    stop: Vb2 ? "Dừng thêm tài liệu" : "Dừng thu thập",
     closeBusy: Vb2
-      ? "xJBhbmcgdGjDqm0gdMOgaSBsaeG7h3Ug4oCUIHRodSBuaOG7jyBi4bqjbmcsIGhv4bq3YyBk4burbmcgdHLGsOG7m2Mga2hpIMSRw7NuZw=="
-      : "xJBhbmcgdGh1IHRo4bqtcCDigJQgdGh1IG5o4buPIGLhuqNuZywgaG/hurdjIGjhu6d5IHRyxrDhu5tjIGtoaSDEkcOzbmc=",
+      ? "Đang thêm tài liệu — thu nhỏ bảng, hoặc dừng trước khi đóng"
+      : "Đang thu thập — thu nhỏ bảng, hoặc hủy trước khi đóng",
     cancelRow: Vb2
-      ? "QuG7jyBxdWEgdOG7h3AgbsOgeSB0cm9uZyBsxrDhu6N0IHRow6pt"
-      : "QuG7jyBxdWEgdOG7h3AgbsOgeSB0cm9uZyBsxrDhu6N0IGdvbQ==",
+      ? "Bỏ qua tệp này trong lượt thêm"
+      : "Bỏ qua tệp này trong lượt gom",
   };
 }
 

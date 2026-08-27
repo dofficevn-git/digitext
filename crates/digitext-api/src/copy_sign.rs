@@ -10,14 +10,14 @@ pub fn f_1ov() -> Result<Option<(rsa::RsaPrivateKey, Vec<u8>)>, String> {
         return Ok(None);
     };
     let r_3l = std::fs::read_to_string(&key_path)
-        .map_err(|e| format!("xJHhu41jIGtow7NhIGvDvSBi4bqjbiBzYW8g{key_path}: {e}"))?;
+        .map_err(|e| format!("đọc khóa ký bản sao {key_path}: {e}"))?;
     let r_3k = rsa::RsaPrivateKey::from_pkcs8_pem(&r_3l).map_err(|e| {
-        format!("a2jDs2Ega8O9IGLhuqNuIHNhbyBraMO0bmcgcGjhuqNpIFBLQ1MjOCBQRU06IA=={e}")
+        format!("khóa ký bản sao không phải PKCS#8 PEM: {e}")
     })?;
     let r_3j = std::fs::read_to_string(&cert_path)
-        .map_err(|e| format!("xJHhu41jIGNo4bupbmcgdGjGsCBrw70gYuG6o24gc2FvIA=={cert_path}: {e}"))?;
+        .map_err(|e| format!("đọc chứng thư ký bản sao {cert_path}: {e}"))?;
     let r_3i =
-        f_222(&r_3j).ok_or("Y2jhu6luZyB0aMawIGvDvSBi4bqjbiBzYW8ga2jDtG5nIHBo4bqjaSBQRU0=")?;
+        f_222(&r_3j).ok_or("chứng thư ký bản sao không phải PEM")?;
     Ok(Some((r_3k, r_3i)))
 }
 fn f_222(r_3o: &str) -> Option<Vec<u8>> {
@@ -32,11 +32,11 @@ fn f_222(r_3o: &str) -> Option<Vec<u8>> {
 pub fn f_2f1(r_3s: &[u8], r_3q: &rsa::RsaPrivateKey, r_3p: &[u8]) -> Result<Vec<u8>, String> {
     let r_3r = chrono::Utc::now().timestamp().max(0) as u64;
     let r_3t = digitext_sign_verify::pdf::prepare(r_3s, r_3p, r_3r)
-        .map_err(|e| format!("Y2h14bqpbiBi4buLIGvDvSBi4bqjbiBzYW86IA=={e}"))?;
+        .map_err(|e| format!("chuẩn bị ký bản sao: {e}"))?;
     let r_3v = rsa::pkcs1v15::SigningKey::<rsa::sha2::Sha256>::new(r_3q.clone());
     let r_3u = r_3v
         .sign_prehash(&r_3t.tbs_digest)
-        .map_err(|e| format!("a8O9IGRpZ2VzdCBi4bqjbiBzYW86IA=={e}"))?;
+        .map_err(|e| format!("ký digest bản sao: {e}"))?;
     digitext_sign_verify::pdf::finalize(&r_3t, &r_3u.to_bytes(), r_3p)
-        .map_err(|e| format!("bOG6r3AgQ01TIGLhuqNuIHNhbzog{e}"))
+        .map_err(|e| format!("lắp CMS bản sao: {e}"))
 }

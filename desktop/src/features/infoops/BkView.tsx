@@ -21,7 +21,7 @@ export default function V4vd() {
 
   const [loai, V31p] = useState<V4v3["loai"]>("gia_tang");
   const [nguon, V31q] = useState(
-    "Q1NETCB0w6BpIGxp4buHdSBsxrB1IHRy4buvICsgbcOjIG5ndeG7k24gcGjhuqduIG3hu4Ft",
+    "CSDL tài liệu lưu trữ + mã nguồn phần mềm",
   );
   const [V31r, V31s] = useState("");
   const [V31t, V31u] = useState<V4v3["ketQua"]>("dat");
@@ -33,7 +33,7 @@ export default function V4vd() {
       V31i(await V4v1());
       V31k(await V4v4());
     } catch (V31x) {
-      V31o(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGThu68gbGnhu4d1OiA=${String(V31x)}`);
+      V31o(`Không tải được dữ liệu: ${String(V31x)}`);
     }
   }, []);
 
@@ -43,10 +43,10 @@ export default function V4vd() {
     V31m(true);
     try {
       const r = await V4v2();
-      V31o(`xJDDoyBraeG7g20g${r.daKiem}IHTDoGkgbGnhu4d1IOKAlCA=${r.loi}IGzhu5dpLg==`);
+      V31o(`Đã kiểm ${r.daKiem} tài liệu — ${r.loi} lỗi.`);
       await reload();
     } catch (V31z) {
-      V31o(`Q2jhuqF5IGtp4buDbSB0cmEgdGjhuqV0IGLhuqFpOiA=${String(V31z)}`);
+      V31o(`Chạy kiểm tra thất bại: ${String(V31z)}`);
     } finally {
       V31m(false);
     }
@@ -54,7 +54,7 @@ export default function V4vd() {
 
   const V320 = async () => {
     if (!nguon.trim()) {
-      V31o("VGhp4bq/dSBuZ3Xhu5NuIHNhbyBsxrB1ICjEkGnhu4F1IDMwLjMuYSku");
+      V31o("Thiếu nguồn sao lưu (Điều 30.3.a).");
       return;
     }
     V31m(true);
@@ -67,12 +67,12 @@ export default function V4vd() {
         chiTiet: V31v.trim() || null,
       });
       V31o(
-        "xJDDoyBnaGkgbmjhuq1uIGzhuqduIHNhbyBsxrB1IOKAlCBuaOG7myBs4bqtcCBuaOG6rXQga8O9L2Jpw6puIGLhuqNuIChN4bulYyAyKzMgUGjhu6UgbOG7pWMgVklJKS4=",
+        "Đã ghi nhận lần sao lưu — nhớ lập nhật ký/biên bản (Mục 2+3 Phụ lục VII).",
       );
       V31w("");
       await reload();
     } catch (V321) {
-      V31o(`R2hpIG5o4bqtbiB0aOG6pXQgYuG6oWk6IA==${String(V321)}`);
+      V31o(`Ghi nhận thất bại: ${String(V321)}`);
     } finally {
       V31m(false);
     }
@@ -211,7 +211,7 @@ export default function V4vd() {
                     <td>{b.nguon}</td>
                     <td>{b.phuongTien ?? "—"}</td>
                     <td title={b.chiTiet ?? undefined}>
-                      {b.ketQua === "dat" ? "xJDhuqF0" : "S2jDtG5nIMSR4bqhdA=="}
+                      {b.ketQua === "dat" ? "Đạt" : "Không đạt"}
                     </td>
                   </tr>
                 ))}

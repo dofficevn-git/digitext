@@ -69,29 +69,29 @@ pub async fn f_12e(
     let r_pk = r_pj
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let r_pg = digitext_pdf::f_1cq()
         .ok_or_else(|| {
             ApiError::service_unavailable(
-                "a2jDtG5nIHTDrG0gdGjhuqV5IGZvbnQgVFRGIGNobyBiacOqbiBi4bqjbiDigJQgxJHhurd0IERJR0lURVhUX0NFUlRfRk9OVA==",
+                "không tìm thấy font TTF cho biên bản — đặt DIGITEXT_CERT_FONT",
             )
         })?;
     let font = std::fs::read(&r_pg).map_err(|e| {
         tracing::error!(
             path = % r_pg.display(), error = % e,
-            "xJHhu41jIGZvbnQgYmnDqm4gYuG6o24gbOG7l2k="
+            "đọc font biên bản lỗi"
         );
         ApiError::internal()
     })?;
     let pdf =
         digitext_pdf::f_ve(&title, Some(bienban::f_2i2(kind)), &r_pf, &font).map_err(|e| {
-            ApiError::bad_request(format!("c2luaCBQREYgYmnDqm4gYuG6o24gbOG7l2k6IA=={e}"))
+            ApiError::bad_request(format!("sinh PDF biên bản lỗi: {e}"))
         })?;
     let record_id = Uuid::now_v7();
     let r_ph = f_26d(project_id, record_id);
     r_pk.put(&r_ph, &pdf).await.map_err(|e| {
         tracing::error!(
-            error = % e, "UFVUIFBERiBiacOqbiBi4bqjbiB2w6BvIGtobyBs4buXaQ=="
+            error = % e, "PUT PDF biên bản vào kho lỗi"
         );
         ApiError::internal()
     })?;
@@ -118,7 +118,7 @@ async fn f_12d(
     r_pl.require_perm(Permission::RecordCreate)?;
     let project_id = r_pn.project_id.or(r_pl.user.project_id).ok_or_else(|| {
         ApiError::bad_request(
-            "dGhp4bq/dSBwcm9qZWN0SWQgKG5nxrDhu51pIGfhu41pIGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIG7DoG8p",
+            "thiếu projectId (người gọi không thuộc dự án nào)",
         )
     })?;
     let r_po = f_29a(&r_pp.pool, &r_pl.user).await?;
@@ -171,13 +171,13 @@ async fn f_17e(
     let r_q1 = r_q0
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let r_px = r_q1
         .get(&r_py.pdf_key)
         .await
         .map_err(|e| {
             tracing::error!(
-                record = % id, error = % e, "xJHhu41jIFBERiBiacOqbiBi4bqjbiBs4buXaQ=="
+                record = % id, error = % e, "đọc PDF biên bản lỗi"
             );
             ApiError::internal()
         })?

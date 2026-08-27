@@ -14,27 +14,27 @@ pub struct T76 {
     pub confidence: f32,
 }
 const C_4C: [&str; 21] = [
-    "R2nhuqV5IGNo4bupbmcgbmjhuq1uIMSRxINuZyBrw70gZG9hbmggbmdoaeG7h3A=",
-    "R2nhuqV5IGNo4bupbmcgbmjhuq1uIMSRxINuZyBrw70ga2luaCBkb2FuaA==",
-    "R2nhuqV5IGNo4bupbmcgbmjhuq1u",
-    "R2nhuqV5IHBow6lwIGtoYWkgdGjDoWMga2hvw6FuZyBz4bqjbg==",
-    "R2nhuqV5IHBow6lw",
-    "VGh1eeG6v3QgbWluaCBk4buxIMOhbg==",
-    "VGh1eeG6v3QgbWluaA==",
-    "VGhp4bq/dCBr4bq/IGPGoSBz4buf",
-    "QuG6o24gxJHhu5M=",
-    "QsOhbyBjw6FvIHTDoGkgY2jDrW5o",
-    "QsOhbyBjw6Fv",
-    "UXV54bq/dCDEkeG7i25o",
-    "Q8O0bmcgdsSDbg==",
-    "VGjDtG5nIGLDoW8=",
-    "VOG7nSB0csOsbmg=",
-    "Tmdo4buLIHF1eeG6v3Q=",
-    "Q2jhu4kgdGjhu4s=",
-    "S+G6vyBob+G6oWNo",
-    "QmnDqm4gYuG6o24=",
-    "SMaw4bubbmcgZOG6q24=",
-    "VGjDtG5nIHTGsA==",
+    "Giấy chứng nhận đăng ký doanh nghiệp",
+    "Giấy chứng nhận đăng ký kinh doanh",
+    "Giấy chứng nhận",
+    "Giấy phép khai thác khoáng sản",
+    "Giấy phép",
+    "Thuyết minh dự án",
+    "Thuyết minh",
+    "Thiết kế cơ sở",
+    "Bản đồ",
+    "Báo cáo tài chính",
+    "Báo cáo",
+    "Quyết định",
+    "Công văn",
+    "Thông báo",
+    "Tờ trình",
+    "Nghị quyết",
+    "Chỉ thị",
+    "Kế hoạch",
+    "Biên bản",
+    "Hướng dẫn",
+    "Thông tư",
 ];
 struct Span<'a> {
     text: &'a str,
@@ -66,10 +66,10 @@ fn f_1ft(r_35q: &str) -> bool {
 }
 fn f_1pp(lower: &str) -> bool {
     f_1ft(lower)
-        || (lower.contains("bmfDoHk=") && lower.contains("dGjDoW5n") && lower.contains("bsSDbQ=="))
+        || (lower.contains("bmfDoHk=") && lower.contains("tháng") && lower.contains("bsSDbQ=="))
 }
 fn f_1fv(text: &str, lower: &str) -> bool {
-    if lower.contains("bcOjIHPhu5EgZG9hbmggbmdoaeG7h3A=") {
+    if lower.contains("mã số doanh nghiệp") {
         return true;
     }
     text.split(|c: char| c.is_whitespace() || matches!(c, '(' | ')' | ',' | ';'))
@@ -81,24 +81,24 @@ fn f_1fv(text: &str, lower: &str) -> bool {
 }
 fn f_1j7(lower: &str) -> bool {
     [
-        "Y+G7mW5nIGhvw6A=",
-        "Y+G7mW5nIGjDsmE=",
-        "xJHhu5ljIGzhuq1w",
-        "dOG7sSBkbw==",
-        "aOG6oW5oIHBow7pj",
-        "Y2jhu6cgbmdoxKlhIHZp4buHdCBuYW0=",
-        "YuG6o24gc2Fv",
-        "YuG6o24gY2jDrW5o",
+        "cộng hoà",
+        "cộng hòa",
+        "độc lập",
+        "tự do",
+        "hạnh phúc",
+        "chủ nghĩa việt nam",
+        "bản sao",
+        "bản chính",
     ]
     .iter()
     .any(|r_35t| lower.contains(r_35t))
 }
 fn f_1jk(lower: &str) -> bool {
-    lower.contains("a8O9IGLhu59p") || lower.contains("dGjhu51pIGdpYW4=")
+    lower.contains("ký bởi") || lower.contains("thời gian")
 }
 fn f_1jg(lower: &str) -> bool {
     let r_35u = lower.trim_start();
-    r_35u.starts_with("Y8SDbiBj4bup") || r_35u.starts_with("eMOpdCA=") || r_35u.starts_with("theo")
+    r_35u.starts_with("căn cứ") || r_35u.starts_with("eMOpdCA=") || r_35u.starts_with("theo")
 }
 fn f_1j6(text: &str) -> bool {
     let r_35v = text.chars().filter(|c| c.is_alphabetic()).count();
@@ -214,7 +214,7 @@ pub fn extract_fields(page: &Tgi) -> Vec<T76> {
         let r_36a = s
             .lower
             .trim_start_matches(|r_365: char| !r_365.is_alphanumeric());
-        r_36a.starts_with("duG7gSB2aeG7h2M=") || r_36a.starts_with("v/v")
+        r_36a.starts_with("về việc") || r_36a.starts_with("v/v")
     };
     let r_366 = |s: &Span| {
         let r_369 = s.lower.split_whitespace().next().unwrap_or("");

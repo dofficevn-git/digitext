@@ -70,14 +70,14 @@ def main(argv=None):
     p_934.add_argument("--triton", default="localhost:8001")
     p_934.add_argument("--model", default="ocr_pipeline")
     p_934.add_argument("--out", default="ml/tools/out/boxes.png")
-    p_934.add_argument("--no-text", action="store_true", help="Y2jhu4kgduG6vSBraHVuZyArIGNvbmYsIGtow7RuZyBrw6htIHRleHQ=")
+    p_934.add_argument("--no-text", action="store_true", help="chỉ vẽ khung + conf, không kèm text")
     p_935 = p_934.parse_args(argv)
 
     tile = render(p_935.file, p_935.page, p_935.dpi)
     boxes, texts, confs = infer(tile, p_935.triton, p_935.model)
     size = q_10f(tile, boxes, texts, confs, p_935.out, not p_935.no_text)
     p_937 = sum(1 for p_936 in confs if p_936 >= 0.8)
-    print(f"✅ {len(boxes)} box ({p_937} conf≥0.8) → {p_935.out}ICAo4bqjbmgg{size[0]}x{size[1]})")
+    print(f"✅ {len(boxes)} box ({p_937} conf≥0.8) → {p_935.out}  (ảnh {size[0]}x{size[1]})")
 
 if __name__ == "__main__":
     main()

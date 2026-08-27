@@ -55,7 +55,7 @@ export default function V4t9() {
     try {
       V2rq(await V4s2());
     } catch (V2sh) {
-      V2s2(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGRhbmggc8OhY2ggbOG6p24gbuG7mXA6IA==${String(V2sh)}`);
+      V2s2(`Không tải được danh sách lần nộp: ${String(V2sh)}`);
     }
 
     try {
@@ -84,7 +84,7 @@ export default function V4t9() {
         V2rw(null);
       }
     } catch (V2sk) {
-      V2s2(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGNoaSB0aeG6v3Q6IA==${String(V2sk)}`);
+      V2s2(`Không tải được chi tiết: ${String(V2sk)}`);
     } finally {
       V2s0(false);
     }
@@ -95,7 +95,7 @@ export default function V4t9() {
       await V4sd(V2sm);
       V2ru(await V4sc());
     } catch (V2sn) {
-      V2s2(`xJDDoW5oIGThuqV1IMSRw6MgxJHhu41jIGzhu5dpOiA=${String(V2sn)}`);
+      V2s2(`Đánh dấu đã đọc lỗi: ${String(V2sn)}`);
     }
   };
 
@@ -104,7 +104,7 @@ export default function V4t9() {
       await V4se();
       V2ru(await V4sc());
     } catch (V2sp) {
-      V2s2(`xJDDoW5oIGThuqV1IMSRw6MgxJHhu41jIGzhu5dpOiA=${String(V2sp)}`);
+      V2s2(`Đánh dấu đã đọc lỗi: ${String(V2sp)}`);
     }
   };
 
@@ -129,13 +129,13 @@ export default function V4t9() {
     V2s2(null);
     try {
       const V2sz = await V4s4(V2sw);
-      V2s2(`xJDDoyDEkcSDbmcga8O9IGzhuqduIG7hu5lwIOKAlCBtw6MgecOqdSBj4bqndSA=${V2sz.maYeuCau}.`);
+      V2s2(`Đã đăng ký lần nộp — mã yêu cầu ${V2sz.maYeuCau}.`);
       V2ry(false);
       V2sg([{ ...V4t8 }]);
       await reload();
       V2rs(V2sz);
     } catch (V2t0) {
-      V2s2(`xJDEg25nIGvDvSB0aOG6pXQgYuG6oWk6IA==${String(V2t0)}`);
+      V2s2(`Đăng ký thất bại: ${String(V2t0)}`);
     } finally {
       V2s0(false);
     }
@@ -144,22 +144,22 @@ export default function V4t9() {
   const V2t1 = async (V2t2: string, V2t3: string, V2t4?: boolean) => {
     let V2t5: string | undefined;
     if (V2t4) {
-      V2t5 = window.prompt("TMO9IGRvIChi4bqvdCBideG7mWMpOg==")?.trim() || undefined;
+      V2t5 = window.prompt("Lý do (bắt buộc):")?.trim() || undefined;
       if (!V2t5) return;
     } else if (V2t3 === "confirm" || V2t3 === "receive") {
-      V2t5 = window.prompt("R2hpIGNow7ogKHR14buzIGNo4buNbik6")?.trim() || undefined;
+      V2t5 = window.prompt("Ghi chú (tuỳ chọn):")?.trim() || undefined;
     }
     V2s0(true);
     V2s2(null);
     try {
       if (V2t3 === "approve") {
         const V2t6 = window
-          .prompt("U+G7kSBRdXnhur90IMSR4buLbmggcGjDqiBkdXnhu4d0ICjEkGnhu4F1IDI1LjEpOg==")
+          .prompt("Số Quyết định phê duyệt (Điều 25.1):")
           ?.trim();
         if (!V2t6) return;
         const V2t7 = await V4s9(V2t2, V2t6, V2t5);
         V2s2(
-          `xJDDoyBwaMOqIGR1eeG7h3Qg4oCUIA==${V2t7.convertedAipIds.length}IGfDs2kgQUlQIGNodXnhu4NuIGjDs2EgxJFhbmcgZOG7sW5nIG7hu4FuICjEkGnhu4F1IDI1LjMuYSku`,
+          `Đã phê duyệt — ${V2t7.convertedAipIds.length} gói AIP chuyển hóa đang dựng nền (Điều 25.3.a).`,
         );
       } else {
         await V4s6(V2t2, V2t3 as never, V2t5);
@@ -167,7 +167,7 @@ export default function V4t9() {
       await reload();
       await V2si(V2t2);
     } catch (V2t8) {
-      V2s2(`VGhhbyB0w6FjIHRo4bqldCBi4bqhaTog${String(V2t8)}`);
+      V2s2(`Thao tác thất bại: ${String(V2t8)}`);
     } finally {
       V2s0(false);
     }
@@ -176,7 +176,7 @@ export default function V4t9() {
   const V2t9 = async (V2ta: string, V2tb: string, V2tc: "dat" | "khong_dat") => {
     let V2td: string | undefined;
     if (V2tc === "khong_dat") {
-      V2td = window.prompt("TMO9IGRvIGtow7RuZyDEkeG6oXQgKMSQaeG7gXUgMjQuMik6")?.trim() || undefined;
+      V2td = window.prompt("Lý do không đạt (Điều 24.2):")?.trim() || undefined;
       if (!V2td) return;
     }
     V2s0(true);
@@ -184,7 +184,7 @@ export default function V4t9() {
       await V4s7(V2ta, V2tb, V2tc, V2td);
       await V2si(V2ta);
     } catch (V2te) {
-      V2s2(`Q2jhuqVtIGjhu5Mgc8ahIHRo4bqldCBi4bqhaTog${String(V2te)}`);
+      V2s2(`Chấm hồ sơ thất bại: ${String(V2te)}`);
     } finally {
       V2s0(false);
     }
@@ -214,7 +214,7 @@ export default function V4t9() {
           <div className="flex justify-between items-center">
             <h3 className="m-0">
               <Icon name="thongBao" /> Thông báo
-              {V2rt.unread > 0 ? ` (${V2rt.unread}IGNoxrBhIMSR4buNYyk=` : ""}
+              {V2rt.unread > 0 ? ` (${V2rt.unread} chưa đọc)` : ""}
             </h3>
             {V2rt.unread > 0 && (
               <button className="btn sm" onClick={() => void V2so()} disabled={V2rz}>
@@ -313,7 +313,7 @@ export default function V4t9() {
                         onClick={() => V2sg((V2to) => V2to.filter((_V2tp, V2tq) => V2tq !== i))}
                         disabled={V2sf.length === 1}
                       >
-                        <Icon name="xoa" size={14} label="QuG7jyBkw7JuZw==" />
+                        <Icon name="xoa" size={14} label="Bỏ dòng" />
                       </button>
                     </td>
                   </tr>
@@ -386,9 +386,9 @@ export default function V4t9() {
           </h3>
           <p className="muted">
             {V2rr.orgName} · phông {V2rr.fondCode} · lần nộp {V2rr.soLanNop}
-            {V2rr.reconcileNote ? `IMK3IMSR4buRaSBjaGnhur91OiA=${V2rr.reconcileNote}` : ""}
-            {V2rr.decisionNote ? `IMK3IMO9IGtp4bq/bjog${V2rr.decisionNote}` : ""}
-            {V2rr.approvalDoc ? `IMK3IHF1eeG6v3QgxJHhu4tuaDog${V2rr.approvalDoc}` : ""}
+            {V2rr.reconcileNote ? ` · đối chiếu: ${V2rr.reconcileNote}` : ""}
+            {V2rr.decisionNote ? ` · ý kiến: ${V2rr.decisionNote}` : ""}
+            {V2rr.approvalDoc ? ` · quyết định: ${V2rr.approvalDoc}` : ""}
           </p>
 
           {V2rr.duplicateInSystem.length > 0 && (
@@ -418,9 +418,9 @@ export default function V4t9() {
               V2ro.includes("submission.review") &&
               (
                 [
-                  ["thu_nop", "TOG6rXAgYmnDqm4gYuG6o24gdGh1IG7hu5lwICjEkGnhu4F1IDI1LjIp"],
-                  ["giao_nhan", "QmnDqm4gYuG6o24gZ2lhbyBuaOG6rW4gKMSQaeG7gXUgMjUuNS5hKQ=="],
-                  ["tra_lai", "QmnDqm4gYuG6o24gdHLhuqMgbOG6oWkgKMSQaeG7gXUgMjUuNS5hKQ=="],
+                  ["thu_nop", "Lập biên bản thu nộp (Điều 25.2)"],
+                  ["giao_nhan", "Biên bản giao nhận (Điều 25.5.a)"],
+                  ["tra_lai", "Biên bản trả lại (Điều 25.5.a)"],
                 ] as [V4t2, string][]
               ).map(([loai, V2tt]) => (
                 <button
@@ -433,10 +433,10 @@ export default function V4t9() {
                       try {
                         const V2tu = await V4t3(V2rr.id, undefined, loai);
                         V2s2(
-                          `xJDDoyBs4bqtcCBiacOqbiBi4bqjbiBz4buRIA==${V2tu.soBienBan}IOKAlCB04bqjaSBQREYg4bufIG3DoG4gQmnDqm4gYuG6o24u`,
+                          `Đã lập biên bản số ${V2tu.soBienBan} — tải PDF ở màn Biên bản.`,
                         );
                       } catch (V2tv) {
-                        V2s2(`TOG6rXAgYmnDqm4gYuG6o24gdGjhuqV0IGLhuqFpOiA=${String(V2tv)}`);
+                        V2s2(`Lập biên bản thất bại: ${String(V2tv)}`);
                       } finally {
                         V2s0(false);
                       }
@@ -457,11 +457,11 @@ export default function V4t9() {
                       const name = `ho-so-qua-trinh-${V2rr.maYeuCau.split("/").join("-")}.zip`;
                       const path = await V4si(V2rr.id, name);
                       V2s2(
-                        `xJDDoyBsxrB1IGjhu5Mgc8ahIHF1w6EgdHLDrG5oIHRodSBu4buZcCAoxJBp4buBdSAyNS41LmQpOiA=${path}`,
+                        `Đã lưu hồ sơ quá trình thu nộp (Điều 25.5.d): ${path}`,
                       );
                     } catch (V2tw) {
                       V2s2(
-                        `VOG6o2kgaOG7kyBzxqEgcXXDoSB0csOsbmggdGjhuqV0IGLhuqFpOiA=${String(V2tw)}`,
+                        `Tải hồ sơ quá trình thất bại: ${String(V2tw)}`,
                       );
                     } finally {
                       V2s0(false);
@@ -497,8 +497,8 @@ export default function V4t9() {
                       {V2tx.reviewResult === "pending"
                         ? "—"
                         : V2tx.reviewResult === "dat"
-                          ? "xJDhuqF0"
-                          : `S2jDtG5nIMSR4bqhdA==${V2tx.reviewNote ? ` (${V2tx.reviewNote})` : ""}`}
+                          ? "Đạt"
+                          : `Không đạt${V2tx.reviewNote ? ` (${V2tx.reviewNote})` : ""}`}
                     </td>
                     <td>
                       {V2rr.status === "received" && V2ro.includes("submission.review") && (
@@ -563,10 +563,10 @@ export default function V4t9() {
                                       V2ty.sipPackageId as string,
                                       V2ty.sipZipName ?? `${V2ty.maHoSo}.zip`,
                                     );
-                                    V2s2(`xJDDoyB04bqjaSBo4buTIHPGoSB0cuG6oyBs4bqhaTog${path}`);
+                                    V2s2(`Đã tải hồ sơ trả lại: ${path}`);
                                   } catch (V2tz) {
                                     V2s2(
-                                      `VOG6o2kgaOG7kyBzxqEgdHLhuqMgbOG6oWkgdGjhuqV0IGLhuqFpOiA=${String(V2tz)}`,
+                                      `Tải hồ sơ trả lại thất bại: ${String(V2tz)}`,
                                     );
                                   } finally {
                                     V2s0(false);
@@ -616,7 +616,7 @@ export default function V4t9() {
                       <td title={p.objid ?? undefined}>{p.label}</td>
                       <td>
                         {p.kind}
-                        {p.convertedFrom ? "IChjaHV54buDbiBow7NhKQ==" : ""}
+                        {p.convertedFrom ? " (chuyển hóa)" : ""}
                       </td>
                       <td title={p.error ?? undefined}>{p.status}</td>
                       <td>{p.documentCount}</td>

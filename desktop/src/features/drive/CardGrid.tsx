@@ -92,7 +92,7 @@ export default function V485({ kids: Vfx, marked: Vfy, onToggleMark: Vfz, onMove
             className={`fcard doc${Vgh}`}
             draggable
             onDragStart={(Vgn) => Vg9(Vgn, Vgg)}
-            title={n.path ? "QuG6pW0gxJHhu4MgbeG7nyBQREY=" : undefined}
+            title={n.path ? "Bấm để mở PDF" : undefined}
             onClick={() => {
               select(Vgg);
               if (n.path) void V40x(n.path).catch(() => {});

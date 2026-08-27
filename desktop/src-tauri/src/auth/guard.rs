@@ -18,12 +18,12 @@ impl AuthState {
     fn active_session_at(&self, r_kd: DateTime<Utc>) -> Result<Tr, AppError> {
         let r_ke = self
             .snapshot()
-            .ok_or_else(|| AppError::new("unauthorized", "Q2jGsGEgxJHEg25nIG5o4bqtcC4="))?;
+            .ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?;
         if r_ke.locked {
             return Err(
                 AppError::new(
                     "locked",
-                    "TcOgbiBow6xuaCDEkWFuZyBraG/DoSDigJQgbeG7nyBraG/DoSBi4bqxbmcgbeG6rXQga2jhuql1IMSR4buDIHRp4bq/cCB04bulYy4=",
+                    "Màn hình đang khoá — mở khoá bằng mật khẩu để tiếp tục.",
                 ),
             );
         }
@@ -31,7 +31,7 @@ impl AuthState {
             .map_err(|_| {
                 AppError::new(
                     "auth_cache_corrupt",
-                    "SOG6oW4gb2ZmbGluZSB0cm9uZyBwaGnDqm4ga2jDtG5nIGjhu6NwIGzhu4cu",
+                    "Hạn offline trong phiên không hợp lệ.",
                 )
             })?
             .with_timezone(&Utc);
@@ -39,7 +39,7 @@ impl AuthState {
             return Err(
                 AppError::new(
                     "offline_expired",
-                    "UXXDoSAzMCBuZ8OgeSBjaMawYSB4w6FjIHRo4buxYyBvbmxpbmUg4oCUIGvhur90IG7hu5FpIG3huqFuZyB2w6AgxJHEg25nIG5o4bqtcCBs4bqhaS4=",
+                    "Quá 30 ngày chưa xác thực online — kết nối mạng và đăng nhập lại.",
                 ),
             );
         }
@@ -62,6 +62,6 @@ impl AuthState {
 fn forbidden() -> AppError {
     AppError::new(
         "forbidden",
-        "VMOgaSBraG/huqNuIGPhu6dhIGLhuqFuIGtow7RuZyDEkeG7pyBxdXnhu4FuIHRo4buxYyBoaeG7h24gdGhhbyB0w6FjIG7DoHku",
+        "Tài khoản của bạn không đủ quyền thực hiện thao tác này.",
     )
 }

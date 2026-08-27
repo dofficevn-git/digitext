@@ -5,45 +5,48 @@ use serde_json::{json, Value};
 pub const FIELD_SPECS_V2: [(VanBanField, &str); 16] = [
     (
         VanBanField::ThuTu,
-        "U+G7kSB0aOG7qSB04buxIGPhu6dhIHbEg24gYuG6o24gdHJvbmcgaOG7kyBzxqEgKGNo4buJIGNo4buvIHPhu5Ep",
+        "Số thứ tự của văn bản trong hồ sơ (chỉ chữ số)",
     ),
     (
         VanBanField::LoaiVanBan,
-        "TG/huqFpIHbEg24gYuG6o24sIHbDrSBk4bulOiBRdXnhur90IMSR4buLbmgsIEPDtG5nIHbEg24sIFThu50gdHLDrG5oLCBCw6FvIGPDoW8gdMOgaSBjaMOtbmg=",
+        "Loại văn bản, ví dụ: Quyết định, Công văn, Tờ trình, Báo cáo tài chính",
     ),
     (
         VanBanField::SoKyHieu,
-        "U+G7kSB2w6Aga8O9IGhp4buHdSB2xINuIGLhuqNuLCB2w60gZOG7pTogOTk5OS9RxJAtVUJORA==",
+        "Số và ký hiệu văn bản, ví dụ: 9999/QĐ-UBND",
     ),
     (
         VanBanField::NgayThang,
-        "TmfDoHkgdGjDoW5nIGJhbiBow6BuaCwgxJHhu4tuaCBk4bqhbmcgZGQvbW0veXl5eQ==",
+        "Ngày tháng ban hành, định dạng dd/mm/yyyy",
     ),
-    (VanBanField::CoQuanBanHanh, "VMOqbiBjxqEgcXVhbiBiYW4gaMOgbmggdsSDbiBi4bqjbg=="),
+    (VanBanField::CoQuanBanHanh, "Tên cơ quan ban hành văn bản"),
     (
         VanBanField::TrichYeu,
-        "VHLDrWNoIHnhur91IG7hu5lpIGR1bmcgdsSDbiBi4bqjbiAoY8OzIHRo4buDIG5oaeG7gXUgZMOybmcp",
+        "Trích yếu nội dung văn bản (có thể nhiều dòng)",
     ),
-    (VanBanField::ToSo, "VOG7nSBz4buRIChjaOG7iSBjaOG7ryBz4buRKQ=="),
-    (VanBanField::SoTrang, "U+G7kSB0cmFuZyAoY2jhu4kgY2jhu68gc+G7kSk="),
-    (VanBanField::TrangSo, "VHJhbmcgc+G7kSAoY2jhu4kgY2jhu68gc+G7kSk="),
+    (VanBanField::ToSo, "Tờ số (chỉ chữ số)"),
+    (VanBanField::SoTrang, "Số trang (chỉ chữ số)"),
+    (VanBanField::TrangSo, "Trang số (chỉ chữ số)"),
     (
         VanBanField::NgonNgu,
-        "TmfDtG4gbmfhu68gY+G7p2EgdsSDbiBi4bqjbiwgdsOtIGThu6U6IFRp4bq/bmcgVmnhu4d0",
+        "Ngôn ngữ của văn bản, ví dụ: Tiếng Việt",
     ),
-    (VanBanField::CheDoSuDung, "Q2jhur8gxJHhu5kgc+G7rSBk4bulbmcgdMOgaSBsaeG7h3U="),
-    (VanBanField::DoTinCay, "xJDhu5kgdGluIGPhuq15IGPhu6dhIHTDoGkgbGnhu4d1"),
-    (VanBanField::ButTich, "QsO6dCB0w61jaCB0csOqbiB2xINuIGLhuqNu"),
+    (VanBanField::CheDoSuDung, "Chế độ sử dụng tài liệu"),
+    (VanBanField::DoTinCay, "Độ tin cậy của tài liệu"),
+    (VanBanField::ButTich, "Bút tích trên văn bản"),
     (
         VanBanField::TinhTrangVatLy,
-        "VMOsbmggdHLhuqFuZyB24bqtdCBsw70gY+G7p2EgdMOgaSBsaeG7h3U=",
+        "Tình trạng vật lý của tài liệu",
     ),
-    (VanBanField::TaiLieuSo, "VGjDtG5nIHRpbiB0w6BpIGxp4buHdSBz4buR"),
-    (VanBanField::GhiChu, "R2hpIGNow7o="),
+    (VanBanField::TaiLieuSo, "Thông tin tài liệu số"),
+    (VanBanField::GhiChu, "Ghi chú"),
 ];
 pub fn f_24a() -> String {
     let mut r_3k2 = String::from(
-        "QuG6oW4gbMOgIGjhu4cgdGjhu5FuZyBiw7NjIHTDoWNoIHRow7RuZyB0aW4gdsSDbiBi4bqjbiBow6BuaCBjaMOtbmggVmnhu4d0IE5hbS4KSMOjeSDEkeG7jWMg4bqjbmggdHJhbmcgdsSDbiBi4bqjbiB2w6AgdHLDrWNoIHh14bqldCAxNiB0csaw4budbmcgc2F1OgoK",
+        r#"Bạn là hệ thống bóc tách thông tin văn bản hành chính Việt Nam.
+Hãy đọc ảnh trang văn bản và trích xuất 16 trường sau:
+
+"#,
     );
     let r_3k1: Vec<String> = FIELD_SPECS_V2
         .iter()
@@ -52,7 +55,23 @@ pub fn f_24a() -> String {
     r_3k2.push_str(&r_3k1.join("\n"));
     r_3k2
         .push_str(
-            "CgpRVVkgVOG6rkMgQuG6rlQgQlXhu5hDOgoxLiBDSOG7iCB0csOtY2ggeHXhuqV0IGNo4buvIFRI4buwQyBT4buwIG5ow6xuIHRo4bqleSB0csOqbiB0cmFuZy4gVFVZ4buGVCDEkOG7kEkgS0jDlE5HIHN1eSDEkW/DoW4sIGtow7RuZyBi4buLYS4KMi4gVHLGsOG7nW5nIG7DoG8ga2jDtG5nIHh14bqldCBoaeG7h24gdHLDqm4gdHJhbmcgdGjDrCB0cuG6oyB24buBIGNodeG7l2kgcuG7l25nICIiLiBLaMO0bmcgdOG7sSBzdXkgZGnhu4VuLgozLiBHaeG7ryBOR1VZw4pOIFbEgk4gdGnhur9uZyBWaeG7h3QgY8OzIGThuqV1IMSRw7puZyBuaMawIHRyw6puIHRyYW5nLgo0LiBW4bubaSBz4buRLCBrw70gaGnhu4d1LCBuZ8OgeSB0aMOhbmc6IGNow6lwIGNow61uaCB4w6FjIHThu6tuZyBrw70gdOG7sSwga2jDtG5nIGNodeG6qW4gaG/DoSBs4bqhaS4KNS4gQuG7jiBRVUEgaG/DoG4gdG/DoG4gZOG6pXUgY2jhu68ga8O9IHPhu5EgLyBjb24gZOG6pXUg4bufIE3DiVAgdHJhbmcgKGTDsm5nIGLhuq90IMSR4bqndSBi4bqxbmcgIkvDvSBi4bufaToiLCAiVGjhu51pIGdpYW46IiwgdMOqbiBjxqEgcXVhbiBxdcOpdC9sxrB1IHRy4buvKS4gxJDDsyBLSMOUTkcgcGjhuqNpIG7hu5lpIGR1bmcgdsSDbiBi4bqjbi4KClFVWSBU4bquQyBSScOKTkcgVOG7qk5HIFRSxq/hu5xORyAoxJHhu41jIGvhu7kg4oCUIGhheSBuaOG6p20gbmjhuqV0KToKLSBjb1F1YW5CYW5IYW5oOiBM4bqkWSBjxqEgcXVhbiDhu58gR8OTQyBUUsOKTiBCw4pOIFRSw4FJICh0acOqdSDEkeG7gSB2xINuIGLhuqNuKS4gVFVZ4buGVCDEkOG7kEkgS0jDlE5HIGzhuqV5IGPGoSBxdWFuIHNhdSAiS8OtbmggZ+G7rWk6IiAoxJHDsyBsw6AgTsagSSBOSOG6rE4pLCBLSMOUTkcgbOG6pXkgIkPhu5hORyBIT8OAIFjDgyBI4buYSSBDSOG7piBOR0jEqEEgVknhu4ZUIE5BTSIgKMSRw7MgbMOgIHF14buRYyBoaeG7h3UpLCBLSMOUTkcgbOG6pXkgdMOqbiBjxqEgcXVhbiB0cm9uZyBk4bqldSBjaOG7ryBrw70gc+G7kSDhu58gbcOpcCwgS0jDlE5HIGzhuqV5IGPGoSBxdWFuIGJhbiBow6BuaCBN4bqqVSBCSeG7glUgKHZkICJj4bunYSBC4buZIFTDoGkgY2jDrW5oIiB0cm9uZyDDtCBN4bqrdSBz4buRKS4gxJDGoW4vaOG7o3AgxJHhu5NuZyBjw6EgbmjDom4ga2jDtG5nIGPDsyBjxqEgcXVhbiBiYW4gaMOgbmggdGjDrCDEkeG7gyBy4buXbmcuCi0gc29LeUhpZXU6IEzhuqRZIHPhu5Eg4bufIMSR4bqndSB2xINuIGLhuqNuLCBuZ2F5IGTGsOG7m2kgY8ahIHF1YW4gYmFuIGjDoG5oICh2ZCAiU+G7kTogMTIzL1HEkC1VQk5EIikuIEtIw5RORyBs4bqleSBz4buRIGPhu6dhIHbEg24gYuG6o24gS0jDgUMgxJHGsOG7o2Mgbmjhuq9jIHRyb25nIHRow6JuIGLDoGkgKCJDxINuIGPhu6kgQ8O0bmcgdsSDbiBz4buRLi4uIiwgIlRo4buxYyBoaeG7h24gdsSDbiBi4bqjbiBz4buRLi4uIikuCi0gbmdheVRoYW5nOiBM4bqkWSBuZ8OgeSB0csOqbiBkw7JuZyAiLi4uLiwgbmfDoHkgLi4uIHRow6FuZyAuLi4gbsSDbSAuLi4iIOG7nyDEkOG6plUgdsSDbiBi4bqjbiAobmfDoHkgYmFuIGjDoG5oKS4gS0jDlE5HIGzhuqV5IG5nw6B5IHRyb25nIGThuqV1ICJDViDEkOG6vk4gLyBDw5RORyBWxIJOIMSQ4bq+TiIgKG5nw6B5IG5o4bqtbiksIEtIw5RORyBs4bqleSBuZ8OgeSB0cm9uZyB0aMOibiBiw6BpLCBLSMOUTkcgbOG6pXkgbmfDoHkgc2luaCwgbmfDoHkgY+G6pXAgQ01ORCwgbmfDoHkga+G6v3QgdGjDumMgbsSDbSB0w6BpIGNow61uaCwgaGF5IHRo4budaSBnaWFuIGNo4buvIGvDvSBz4buRIOG7nyBtw6lwLgotIGxvYWlWYW5CYW46IEzhuqRZIHThu6sgRMOSTkcgVEnDilUgxJDhu4AgaW4gxJHhuq1tIGdp4buvYSB0cmFuZyAoUVVZ4bq+VCDEkOG7ik5ILCBU4bucIFRSw4xOSCwgQsOBTyBDw4FPLCBUSMOUTkcgQsOBTywgS+G6viBIT+G6oENILCBHSeG6pFkgUEjDiVAsIEdJ4bqkWSBDSOG7qE5HIE5I4bqsTiwgSOG7olAgxJDhu5JORywgQknDik4gQuG6ok4sIEPDlE5HIFbEgk4uLi4pLiBO4bq/dSBraMO0bmcgY8OzIGTDsm5nIHRpw6p1IMSR4buBLCBzdXkgdOG7qyBrw70gaGnhu4d1IChDVj1Dw7RuZyB2xINuLCBRxJA9UXV54bq/dCDEkeG7i25oLCBUVHI9VOG7nSB0csOsbmgsIEJDPULDoW8gY8OhbywgVEI9VGjDtG5nIGLDoW8sIEtIPUvhur8gaG/huqFjaCwgR1A9R2nhuqV5IHBow6lwKS4KLSB0cmljaFlldTogTOG6pFkgZMOybmcgIlYvdiAuLi4iIGhv4bq3YyAiVuG7gSB2aeG7h2MgLi4uIiBuZ2F5IGTGsOG7m2kgc+G7kS9rw70gaGnhu4d1IChob+G6t2MgZMOybmcgcGjhu6UgxJHhu4EgbmdheSBkxrDhu5tpIHRpw6p1IMSR4buBKS4gS0jDlE5HIGzhuqV5IGPDonUgxJHhuqd1IFRIw4JOIELDgEkgKCJDxINuIGPhu6kuLi4iLCAiVGjhu7FjIGhp4buHbi4uLiIsICJLw61uaCBn4butaS4uLiIsIHTDqm4gY8ahIHF1YW4vY8O0bmcgdHkpLiBO4bq/dSB2xINuIGLhuqNuIGtow7RuZyBjw7MgZMOybmcgdHLDrWNoIHnhur91IHRow6wgxJHhu4MgcuG7l25nLgoKQ2jhu4kgdHLhuqMgduG7gSBkdXkgbmjhuqV0IG3hu5l0IMSR4buRaSB0xrDhu6NuZyBKU09OLg==",
+            r#"
+
+QUY TẮC BẮT BUỘC:
+1. CHỈ trích xuất chữ THỰC SỰ nhìn thấy trên trang. TUYỆT ĐỐI KHÔNG suy đoán, không bịa.
+2. Trường nào không xuất hiện trên trang thì trả về chuỗi rỗng "". Không tự suy diễn.
+3. Giữ NGUYÊN VĂN tiếng Việt có dấu đúng như trên trang.
+4. Với số, ký hiệu, ngày tháng: chép chính xác từng ký tự, không chuẩn hoá lại.
+5. BỎ QUA hoàn toàn dấu chữ ký số / con dấu ở MÉP trang (dòng bắt đầu bằng "Ký bởi:", "Thời gian:", tên cơ quan quét/lưu trữ). Đó KHÔNG phải nội dung văn bản.
+
+QUY TẮC RIÊNG TỪNG TRƯỜNG (đọc kỹ — hay nhầm nhất):
+- coQuanBanHanh: LẤY cơ quan ở GÓC TRÊN BÊN TRÁI (tiêu đề văn bản). TUYỆT ĐỐI KHÔNG lấy cơ quan sau "Kính gửi:" (đó là NƠI NHẬN), KHÔNG lấy "CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM" (đó là quốc hiệu), KHÔNG lấy tên cơ quan trong dấu chữ ký số ở mép, KHÔNG lấy cơ quan ban hành MẪU BIỂU (vd "của Bộ Tài chính" trong ô Mẫu số). Đơn/hợp đồng cá nhân không có cơ quan ban hành thì để rỗng.
+- soKyHieu: LẤY số ở đầu văn bản, ngay dưới cơ quan ban hành (vd "Số: 123/QĐ-UBND"). KHÔNG lấy số của văn bản KHÁC được nhắc trong thân bài ("Căn cứ Công văn số...", "Thực hiện văn bản số...").
+- ngayThang: LẤY ngày trên dòng "...., ngày ... tháng ... năm ..." ở ĐẦU văn bản (ngày ban hành). KHÔNG lấy ngày trong dấu "CV ĐẾN / CÔNG VĂN ĐẾN" (ngày nhận), KHÔNG lấy ngày trong thân bài, KHÔNG lấy ngày sinh, ngày cấp CMND, ngày kết thúc năm tài chính, hay thời gian chữ ký số ở mép.
+- loaiVanBan: LẤY từ DÒNG TIÊU ĐỀ in đậm giữa trang (QUYẾT ĐỊNH, TỜ TRÌNH, BÁO CÁO, THÔNG BÁO, KẾ HOẠCH, GIẤY PHÉP, GIẤY CHỨNG NHẬN, HỢP ĐỒNG, BIÊN BẢN, CÔNG VĂN...). Nếu không có dòng tiêu đề, suy từ ký hiệu (CV=Công văn, QĐ=Quyết định, TTr=Tờ trình, BC=Báo cáo, TB=Thông báo, KH=Kế hoạch, GP=Giấy phép).
+- trichYeu: LẤY dòng "V/v ..." hoặc "Về việc ..." ngay dưới số/ký hiệu (hoặc dòng phụ đề ngay dưới tiêu đề). KHÔNG lấy câu đầu THÂN BÀI ("Căn cứ...", "Thực hiện...", "Kính gửi...", tên cơ quan/công ty). Nếu văn bản không có dòng trích yếu thì để rỗng.
+
+Chỉ trả về duy nhất một đối tượng JSON."#,
         );
     r_3k2
 }
@@ -67,7 +86,7 @@ pub fn image_tokens(width: u32, height: u32) -> u32 {
 pub fn fit_max_side(width: u32, height: u32, budget: u32) -> Result<Option<u32>, VlmError> {
     if width == 0 || height == 0 {
         return Err(VlmError::Backend(format!(
-            "a8OtY2ggdGjGsOG7m2Mg4bqjbmggdsO0IGzDvTog{width}x{height}"
+            "kích thước ảnh vô lý: {width}x{height}"
         )));
     }
     if image_tokens(width, height) <= budget {
@@ -84,7 +103,7 @@ pub fn output_budget(img_tokens: u32) -> Result<u32, VlmError> {
         return Err(
             VlmError::Backend(
                 format!(
-                    "4bqjbmgg{img_tokens}IHRva2VuIGtow7RuZyBjw7JuIGNo4buXIGNobyDEkeG6p3UgcmEgKG1heF9sZW49{MODEL_MAX_LEN_V2}KTsgcGjhuqNpIHRodSBuaOG7jyDhuqNuaCB0csaw4bubYw=="
+                    "ảnh {img_tokens} token không còn chỗ cho đầu ra (max_len={MODEL_MAX_LEN_V2}); phải thu nhỏ ảnh trước"
                 ),
             ),
         );
@@ -101,9 +120,9 @@ pub fn guided_schema_v2_json() -> String {
             required.push(',');
         }
         let key =
-            serde_json::to_string(k.as_str()).expect("a2hvw6EgbMOgIGNodeG7l2kgaOG7o3AgbOG7hw==");
+            serde_json::to_string(k.as_str()).expect("khoá là chuỗi hợp lệ");
         let desc =
-            serde_json::to_string(r_3k4).expect("bcO0IHThuqMgbMOgIGNodeG7l2kgaOG7o3AgbOG7hw==");
+            serde_json::to_string(r_3k4).expect("mô tả là chuỗi hợp lệ");
         write!(
             props,
             "{key}:{{\"type\":\"string\",\"description\":{desc}}}"
@@ -134,7 +153,7 @@ pub fn build_request_v2(model: &str, r_3k5: &str, max_tokens: u32) -> Tiz {
         temperature: 0.0,
         max_tokens,
         guided_json: serde_json::value::RawValue::from_string(guided_schema_v2_json())
-            .expect("Z3VpZGVkX3NjaGVtYV92Ml9qc29uIGzDoCBKU09OIGjhu6NwIGzhu4c="),
+            .expect("guided_schema_v2_json là JSON hợp lệ"),
     }
 }
 pub fn parse_fields_v2(r_3ka: &Value) -> Vec<(VanBanField, String)> {

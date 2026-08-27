@@ -34,13 +34,13 @@ export const V4j2 = (f: V4iz): boolean => V4j1(f) || f.search.trim() !== "";
 export const V4j3 = (f: V4iz): boolean => f.maDv !== "" || f.mangCvid !== "" || f.thbq !== "";
 
 export function V4j4(V1me: "phongBan" | "mang", V1mf: boolean, V1mg: number): string {
-  const ten = V1me === "phongBan" ? "cGjDsm5nIGJhbg==" : "beG6o25nIGPDtG5nIHZp4buHYw==";
+  const ten = V1me === "phongBan" ? "phòng ban" : "mảng công việc";
   if (!V1mf)
     return V1me === "phongBan"
-      ? "4oCUIENo4buNbiBwaMO0bmcgdHLGsOG7m2Mg4oCU"
-      : "4oCUIENo4buNbiBwaMOybmcgYmFuIHRyxrDhu5tjIOKAlA==";
-  if (V1mg === 0) return `4oCUIERhbmggbeG7pWMgY2jGsGEgY8OzIA==${ten} —`;
-  return `4oCUIFThuqV0IGPhuqMg${ten} —`;
+      ? "— Chọn phông trước —"
+      : "— Chọn phòng ban trước —";
+  if (V1mg === 0) return `— Danh mục chưa có ${ten} —`;
+  return `— Tất cả ${ten} —`;
 }
 
 export interface V4j5 {

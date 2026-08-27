@@ -13,7 +13,7 @@ pub fn cli_main() -> ExitCode {
     {
         Ok(rt) => rt,
         Err(e) => {
-            eprintln!("a2jDtG5nIHThuqFvIMSRxrDhu6NjIHRva2lvIHJ1bnRpbWU6IA=={e}");
+            eprintln!("không tạo được tokio runtime: {e}");
             return ExitCode::FAILURE;
         }
     };
@@ -27,13 +27,13 @@ pub fn cli_main() -> ExitCode {
 }
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let r_2w8 = std::env::var("DIGITEXT_DATABASE_URL")
-        .map_err(|_| "Y+G6p24gRElHSVRFWFRfREFUQUJBU0VfVVJM")?;
+        .map_err(|_| "cần DIGITEXT_DATABASE_URL")?;
     let interval_ms = interval_ms(std::env::var("DIGITEXT_DISPATCH_INTERVAL_MS").ok());
     let r_2wb = digitext_db::connect(&r_2w8).await?;
     let mut r_2wa = PgListener::connect(&r_2w8).await?;
     r_2wa.listen("ocr_jobs").await?;
     let mut r_2wc = tokio::time::interval(Duration::from_millis(interval_ms.max(50)));
-    tracing::info!("ZGlzcGF0Y2hlciBmYWlyLXNoYXJlOiBuaOG7i3Ag{interval_ms}ms + LISTEN ocr_jobs");
+    tracing::info!("dispatcher fair-share: nhịp {interval_ms}ms + LISTEN ocr_jobs");
     loop {
         tokio::select! {
             _ = r_2wc.tick() => {} r = r_2wa.recv() => { r ?; }
@@ -42,11 +42,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             Ok(r_2w9) if r_2w9 > 0 => {
                 tracing::debug!(
                     f_17t = r_2w9,
-                    "xJHDoyBj4bqtcCBuaOG6rXQgcHJpb3JpdHkgZmFpci1zaGFyZQ=="
+                    "đã cập nhật priority fair-share"
                 )
             }
             Ok(_) => {}
-            Err(e) => tracing::error!("cmVwcmlvcml0aXplIGzhu5dpOiA={e}"),
+            Err(e) => tracing::error!("reprioritize lỗi: {e}"),
         }
     }
 }

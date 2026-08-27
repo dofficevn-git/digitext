@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_4ea = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_4ea.add_argument("rows_jsonl")
-    p_4ea.add_argument("--engine", action="append", required=True, help="Vz1EVU9OR19EQU4gKGzhurdwIGzhuqFpIMSRxrDhu6NjKQ==")
+    p_4ea.add_argument("--engine", action="append", required=True, help="W=DUONG_DAN (lặp lại được)")
     p_4ea.add_argument("--limit", type=int, default=400)
     p_4ea.add_argument("--threshold", type=int, default=None,
                     help="bat CHINH SACH NGUONG: rong > nguong dung engine lon nhat")

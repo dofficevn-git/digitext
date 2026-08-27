@@ -55,9 +55,9 @@ const C_40: &str = "/var/lib/digitext/pages";
 const C_43: &str = "worker-1";
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ConfigError {
-    #[error("dGhp4bq/dSBiaeG6v24gbcO0aSB0csaw4budbmcgYuG6r3QgYnXhu5ljOiA={0}")]
+    #[error("thiếu biến môi trường bắt buộc: {0}")]
     Missing(&'static str),
-    #[error("Z2nDoSB0cuG7iyBraMO0bmcgaOG7o3AgbOG7hyBjaG8g{field}: {reason}")]
+    #[error("giá trị không hợp lệ cho {field}: {reason}")]
     Invalid { field: &'static str, reason: String },
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,7 +158,7 @@ impl WorkerConfig {
         if !(database_url.starts_with("postgres://") || database_url.starts_with("postgresql://")) {
             return Err(ConfigError::Invalid {
                 field: C_5G,
-                reason: "cGjhuqNpIGLhuq90IMSR4bqndSBi4bqxbmcgcG9zdGdyZXM6Ly8gaG/hurdjIHBvc3RncmVzcWw6Ly8="
+                reason: "phải bắt đầu bằng postgres:// hoặc postgresql://"
                     .to_owned(),
             });
         }
@@ -166,7 +166,7 @@ impl WorkerConfig {
         if triton_endpoint.chars().any(char::is_whitespace) {
             return Err(ConfigError::Invalid {
                 field: C_6D,
-                reason: "a2jDtG5nIMSRxrDhu6NjIGNo4bupYSBraG/huqNuZyB0cuG6r25n".to_owned(),
+                reason: "không được chứa khoảng trắng".to_owned(),
             });
         }
         let triton_http_endpoint = r_30y
@@ -179,7 +179,7 @@ impl WorkerConfig {
         {
             return Err(ConfigError::Invalid {
                 field: C_6E,
-                reason: "cGjhuqNpIGLhuq90IMSR4bqndSBi4bqxbmcgaHR0cDovLyBob+G6t2MgaHR0cHM6Ly8="
+                reason: "phải bắt đầu bằng http:// hoặc https://"
                     .to_owned(),
             });
         }
@@ -193,7 +193,7 @@ impl WorkerConfig {
             .map_err(|_| ConfigError::Invalid {
                 field: C_5T,
                 reason: format!(
-                    "a2jDtG5nIHBo4bqjaSDEkeG7i2EgY2jhu4kgaG9zdDpwb3J0IGjhu6NwIGzhu4c6IA=={metrics_addr:?}"
+                    "không phải địa chỉ host:port hợp lệ: {metrics_addr:?}"
                 ),
             })?;
         let worker_concurrency = f_1eu::<usize>(r_30y, C_6I, 4, 1, 64)?;
@@ -202,7 +202,7 @@ impl WorkerConfig {
         if tile_size % 32 != 0 {
             return Err(ConfigError::Invalid {
                 field: C_6C,
-                reason: format!("cGjhuqNpIGzDoCBi4buZaSBz4buRIGPhu6dhIDMyLCBuaOG6rW4g{tile_size}"),
+                reason: format!("phải là bội số của 32, nhận {tile_size}"),
             });
         }
         let tile_overlap = f_1eu::<u32>(r_30y, C_6B, 64, 0, 4096)?;
@@ -210,7 +210,7 @@ impl WorkerConfig {
             return Err(ConfigError::Invalid {
                 field: C_6B,
                 reason: format!(
-                    "cGjhuqNpIDwgdGlsZV9zaXplICg={tile_size}KSwgbmjhuq1uIA=={tile_overlap}"
+                    "phải < tile_size ({tile_size}), nhận {tile_overlap}"
                 ),
             });
         }
@@ -223,7 +223,7 @@ impl WorkerConfig {
             return Err(ConfigError::Invalid {
                 field: C_69,
                 reason: format!(
-                    "cGjhuqNpID49IHJldHJ5X2Jhc2VfZGVsYXlfbXMgKA=={base_ms}KSwgbmjhuq1uIA=={max_ms}"
+                    "phải >= retry_base_delay_ms ({base_ms}), nhận {max_ms}"
                 ),
             });
         }
@@ -242,7 +242,7 @@ impl WorkerConfig {
         if worker_id.is_empty() {
             return Err(ConfigError::Invalid {
                 field: C_6K,
-                reason: "a2jDtG5nIMSRxrDhu6NjIHLhu5duZw==".to_owned(),
+                reason: "không được rỗng".to_owned(),
             });
         }
         let llm_corrector_enabled = f_1ee(r_30y, C_5L, false)?;
@@ -261,7 +261,7 @@ impl WorkerConfig {
                 return Err(ConfigError::Invalid {
                     field: ENV_FIELDS_ENGINE,
                     reason: format!(
-                        "Y2jhu4kgbmjhuq1uICd2MScgaG/hurdjICd2MicsIG5o4bqtbiA={other:?}"
+                        "chỉ nhận 'v1' hoặc 'v2', nhận {other:?}"
                     ),
                 });
             }
@@ -291,7 +291,7 @@ impl WorkerConfig {
                     return Err(ConfigError::Invalid {
                         field: C_5W,
                         reason:
-                            "cGjhuqNpIGLhuq90IMSR4bqndSBi4bqxbmcgaHR0cDovLyBob+G6t2MgaHR0cHM6Ly8="
+                            "phải bắt đầu bằng http:// hoặc https://"
                                 .to_owned(),
                     });
                 }
@@ -306,7 +306,7 @@ impl WorkerConfig {
             _ => {
                 return Err(ConfigError::Invalid {
                     field: C_5W,
-                    reason: "TWluSU8gY+G6p24gxJHhu6cgNCBraG/DoSBFTkRQT0lOVC9CVUNLRVQvQUNDRVNTX0tFWS9TRUNSRVRfS0VZIChob+G6t2MgYuG7jyBo4bq/dCk="
+                    reason: "MinIO cần đủ 4 khoá ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY (hoặc bỏ hết)"
                         .to_owned(),
                 });
             }
@@ -317,7 +317,7 @@ impl WorkerConfig {
             Some(_) => {
                 return Err(ConfigError::Invalid {
                     field: C_61,
-                    reason: "Y2jhu4kgbmjhuq1uICdwZGYnIGhv4bq3YyAnaW1hZ2VzJw==".to_owned(),
+                    reason: "chỉ nhận 'pdf' hoặc 'images'".to_owned(),
                 });
             }
         };
@@ -380,13 +380,13 @@ where
         None => return Ok(r_313),
         Some(s) => s.parse::<T>().map_err(|_| ConfigError::Invalid {
             field: r_314,
-            reason: format!("a2jDtG5nIHBo4bqjaSBz4buRIGjhu6NwIGzhu4c6IA=={s:?}"),
+            reason: format!("không phải số hợp lệ: {s:?}"),
         })?,
     };
     if value < min || value > max {
         return Err(ConfigError::Invalid {
             field: r_314,
-            reason: format!("cGjhuqNpIHRyb25nIFs={min}, {max}XSwgbmjhuq1uIA=={value}"),
+            reason: format!("phải trong [{min}, {max}], nhận {value}"),
         });
     }
     Ok(value)
@@ -402,7 +402,7 @@ fn f_1ee(
         Some("false") => Ok(false),
         Some(other) => Err(ConfigError::Invalid {
             field: r_317,
-            reason: format!("cGjhuqNpICd0cnVlJyBob+G6t2MgJ2ZhbHNlJywgbmjhuq1uIA=={other:?}"),
+            reason: format!("phải 'true' hoặc 'false', nhận {other:?}"),
         }),
     }
 }

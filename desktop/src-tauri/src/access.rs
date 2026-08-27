@@ -124,7 +124,7 @@ pub async fn access_action(
 ) -> Result<serde_json::Value, AppError> {
     if !matches!(args.action.as_str(), "approve" | "refuse" | "pay" | "dip") {
         return Err(AppError::validation(format!(
-            "aMOgbmggxJHhu5luZyBraMO0bmcgaOG7o3AgbOG7hzog{}",
+            "hành động không hợp lệ: {}",
             args.action
         )));
     }
@@ -216,10 +216,10 @@ pub async fn access_download(
         Ok(r_g.to_string_lossy().into_owned())
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyBsxrB1IGZpbGUgbOG7l2k6IA=={e}")))?
-    .map_err(|e| AppError::internal(format!("bMawdSBmaWxlIGzhu5dpOiA={e}")))?;
+    .map_err(|e| AppError::internal(format!("luồng lưu file lỗi: {e}")))?
+    .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     tracing::info!(
-        request = % args.id, "YWNjZXNzX2Rvd25sb2FkOiDEkcOjIGzGsHUgYuG6o24gc2Fv"
+        request = % args.id, "access_download: đã lưu bản sao"
     );
     Ok(r_h)
 }

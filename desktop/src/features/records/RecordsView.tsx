@@ -11,11 +11,11 @@ import { V4ti, V4tf, V4tg, type V4ta } from "./recordForms";
 import { Icon } from "@/components/Icon";
 
 const V4tj: Record<string, string> = Object.fromEntries(V4tf.map((t) => [t.kind, t.label]));
-V4tj["thu_nop"] = "QmnDqm4gYuG6o24gdGh1IG7hu5lwICjEkGnhu4F1IDI1LjIp";
+V4tj["thu_nop"] = "Biên bản thu nộp (Điều 25.2)";
 V4tj["giao_nhan"] =
-  "QmnDqm4gYuG6o24gZ2lhbyBuaOG6rW4gdsOgbyBsxrB1IHRy4buvIGzhu4tjaCBz4butICjEkGnhu4F1IDI1LjUuYSk=";
+  "Biên bản giao nhận vào lưu trữ lịch sử (Điều 25.5.a)";
 V4tj["tra_lai"] =
-  "QmnDqm4gYuG6o24gaOG7kyBzxqEsIHTDoGkgbGnhu4d1IHRy4bqjIGzhuqFpICjEkGnhu4F1IDI1LjUuYSk=";
+  "Biên bản hồ sơ, tài liệu trả lại (Điều 25.5.a)";
 
 export default function V4tk() {
   const { session: V2uf } = V460();
@@ -35,7 +35,7 @@ export default function V4tk() {
     try {
       V2ui(await V4sz());
     } catch (V2uv) {
-      V2us(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGRhbmggc8OhY2ggYmnDqm4gYuG6o246IA==${String(V2uv)}`);
+      V2us(`Không tải được danh sách biên bản: ${String(V2uv)}`);
     }
   }, []);
 
@@ -73,11 +73,11 @@ export default function V4tk() {
         kind: V2uj,
         payload: V2v4,
       });
-      V2us(`xJDDoyBs4bqtcCBiacOqbiBi4bqjbiBz4buRIA==${row.soBienBan}.`);
+      V2us(`Đã lập biên bản số ${row.soBienBan}.`);
       V2uw(V2uj);
       await reload();
     } catch (V2v6) {
-      V2us(`TOG6rXAgYmnDqm4gYuG6o24gdGjhuqV0IGLhuqFpOiA=${String(V2v6)}`);
+      V2us(`Lập biên bản thất bại: ${String(V2v6)}`);
     } finally {
       V2uq(false);
     }
@@ -87,9 +87,9 @@ export default function V4tk() {
     V2uq(true);
     try {
       const path = await V4t1(row.id, `${row.soBienBan.split("/").join("-")}.pdf`);
-      V2us(`xJDDoyBsxrB1IGJpw6puIGLhuqNuOiA=${path}`);
+      V2us(`Đã lưu biên bản: ${path}`);
     } catch (V2v8) {
-      V2us(`VOG6o2kgYmnDqm4gYuG6o24gdGjhuqV0IGLhuqFpOiA=${String(V2v8)}`);
+      V2us(`Tải biên bản thất bại: ${String(V2v8)}`);
     } finally {
       V2uq(false);
     }
@@ -131,7 +131,7 @@ export default function V4tk() {
               <div className="field" key={f.key}>
                 <label>
                   {f.label}
-                  {f.optional ? "ICh0deG7syBjaOG7jW4p" : ""}
+                  {f.optional ? " (tuỳ chọn)" : ""}
                 </label>
                 <input
                   className="inp"
@@ -156,7 +156,7 @@ export default function V4tk() {
                         l.columns.map((c) => (
                           <th key={c.key}>
                             {c.label}
-                            {c.optional ? "ICh0deG7syBjaOG7jW4p" : ""}
+                            {c.optional ? " (tuỳ chọn)" : ""}
                           </th>
                         ))
                       )}
@@ -196,7 +196,7 @@ export default function V4tk() {
                               }))
                             }
                           >
-                            <Icon name="xoa" size={14} label="WG/DoSBkw7JuZw==" />
+                            <Icon name="xoa" size={14} label="Xoá dòng" />
                           </button>
                         </td>
                       </tr>

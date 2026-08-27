@@ -42,7 +42,7 @@ def q_112(text: str) -> dict:
         "muc_luc_so": by_label(r"muc\s*luc\s*(?:so)?"),
     }
     fields["ngay"] = re.findall(r"\b(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})\b", text)
-    p_8d8 = re.search("c1vhu5FvXVxzKls6XC1dP1xzKihcZCtccyovXHMqW0EtWmEtesSQxJEwLTlcLS5dKyk=", text)
+    p_8d8 = re.search("s[ốo]\\s*[:\\-]?\\s*(\\d+\\s*/\\s*[A-Za-zĐđ0-9\\-.]+)", text)
     fields["van_ban_so"] = p_8d8.group(1).replace(" ", "") if p_8d8 else None
 
     return {p_8d0: p_8d6 for p_8d0, p_8d6 in fields.items() if p_8d6}
@@ -81,7 +81,7 @@ def render_pages(path: Path, dpi: int, page_sel: str | None):
 
     p_8e7 = cv2.imread(str(path))
     if p_8e7 is None:
-        raise SystemExit(f"4p2MIGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mg4bqjbmg6IA=={path}")
+        raise SystemExit(f"❌ không đọc được ảnh: {path}")
     return [(1, p_8e7)]
 
 def _parse_pages(sel: str | None, n: int) -> list[int]:
@@ -122,14 +122,14 @@ def run(path: Path, dpi: int, out_dir: Path | None, pages: str | None = None):
         text = q_14a(lines)
         fields = q_112(text)
 
-        print(f"\n{'=' * 70}\nTRANG {p_8f7}  ({len(lines)}IGTDsm5nKQo={'=' * 70}")
-        print("4pSA4pSAIFRFWFQgVEjDlCAodGjhu6kgdOG7sSDEkeG7jWMpIOKUgOKUgA==")
+        print(f"\n{'=' * 70}\nTRANG {p_8f7}  ({len(lines)} dòng)\n{'=' * 70}")
+        print("── TEXT THÔ (thứ tự đọc) ──")
         print(text)
-        print("CuKUgOKUgCBDT05GSURFTkNFIFRI4bqkUCAoPDAuODUpIOKUgOKUgA==")
+        print("\n── CONFIDENCE THẤP (<0.85) ──")
         for p_8fb, p_8f2, p_8ee in sorted(lines, key=lambda x: x[1]):
             if p_8f2 < 0.85:
                 print(f"  {p_8f2:.2f}  {p_8fb}")
-        print("CuKUgOKUgCBUUsav4bucTkcgSOG7kiBTxqAgKGhldXJpc3RpYykg4pSA4pSA")
+        print("\n── TRƯỜNG HỒ SƠ (heuristic) ──")
         print(json.dumps(fields, ensure_ascii=False, indent=2))
 
         if out_dir:
@@ -144,7 +144,7 @@ def run(path: Path, dpi: int, out_dir: Path | None, pages: str | None = None):
                 cv2.putText(p_8f1, str(p_8f3), pts[0], cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
             cv2.imwrite(str(out_dir / f"trang{p_8f7}_boxes.jpg"), p_8f1)
     if out_dir:
-        print(f"CuKchSDEkMOjIGdoaSB0ZXh0L2pzb24v4bqjbmgtYm94IHbDoG86IA=={out_dir}")
+        print(f"\n✅ Đã ghi text/json/ảnh-box vào: {out_dir}")
 
 def q_e3(pts):
     import numpy as np
@@ -153,13 +153,13 @@ def q_e3(pts):
 
 def main(argv=None):
     p_8fc = argparse.ArgumentParser(description="OCR quality preview (PaddleOCR CPU, Mac)")
-    p_8fc.add_argument("file", type=Path, help="UERGIGhv4bq3YyDhuqNuaCAoLmpwZy8ucG5nKQ==")
-    p_8fc.add_argument("--dpi", type=int, default=300, help="RFBJIHJlbmRlciBQREYgKG3hurdjIMSR4buLbmggMzAwKQ==")
-    p_8fc.add_argument("--out", type=Path, default=None, help="dGjGsCBt4bulYyB4deG6pXQgdGV4dC9qc29uL+G6o25oLWJveA==")
-    p_8fc.add_argument("--pages", default=None, help="dHJhbmcgY+G6p24gT0NSLCB2ZCAnMScgaG/hurdjICcxLTMnICht4bq3YyDEkeG7i25oOiB04bqldCBj4bqjKQ==")
+    p_8fc.add_argument("file", type=Path, help="PDF hoặc ảnh (.jpg/.png)")
+    p_8fc.add_argument("--dpi", type=int, default=300, help="DPI render PDF (mặc định 300)")
+    p_8fc.add_argument("--out", type=Path, default=None, help="thư mục xuất text/json/ảnh-box")
+    p_8fc.add_argument("--pages", default=None, help="trang cần OCR, vd '1' hoặc '1-3' (mặc định: tất cả)")
     p_8fd = p_8fc.parse_args(argv)
     if not p_8fd.file.exists():
-        raise SystemExit(f"4p2MIGtow7RuZyB0aOG6pXkgZmlsZTog{p_8fd.file}")
+        raise SystemExit(f"❌ không thấy file: {p_8fd.file}")
     run(p_8fd.file, p_8fd.dpi, p_8fd.out, p_8fd.pages)
 
 if __name__ == "__main__":

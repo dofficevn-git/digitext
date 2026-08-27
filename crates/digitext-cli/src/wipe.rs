@@ -14,7 +14,7 @@ pub struct Tq2 {
 }
 pub fn help_text(prog: &str) -> String {
     format!(
-        "{prog}IOKAlCB4b8OhIHPhuqFjaCBk4buvIGxp4buHdSBEaWdpVGV4dCAoS0jDlE5HIGhvw6BuIHTDoWMgxJHGsOG7o2MpCgpDw6FjaCBkw7luZzoKICA={prog}IC0tbG9jYWwgIFstLXN0b3JhZ2Utcm9vdCA8xJHGsOG7nW5nLWThuqtuPl0gICBNw6F5IG5nxrDhu51pIGTDuW5nIC8gbcOheSBhZG1pbiAoYXBwIGRlc2t0b3ApCiAg{prog}IC0tc2VydmVyIFstLWFsbF0gICAgICAgICAgICAgICAgICAgICAgICBNw6F5IGNo4bunOiBQb3N0Z3JlcyArIGtobyBvYmplY3QgKyDEkcSpYQoKVHXhu7MgY2jhu41uOgogIC0tYXBwbHkgICAgICAgICAgICBUaGkgaMOgbmggdGjhuq10LiBLSMOUTkcgY8OzIGPhu50gbsOgeSA9IGNo4buJIElOIEvhur4gSE/huqBDSCAobeG6t2MgxJHhu4tuaCBhbiB0b8OgbikKICAtLWNvbmZpcm0gPGPDonU+ICAgIEPhuqVwIHPhurVuIGPDonUgeMOhYyBuaOG6rW4gKGNo4bqheSB0cm9uZyBzY3JpcHQpOyBraMO0bmcgY8OzIOKHkiBo4buPaSB0csOqbiBiw6BuIHBow61tCiAgLS1hbGwgICAgICAgICAgICAgIChjaOG7iSB24bubaSAtLXNlcnZlcikgeG/DoSBj4bqjIHTDoGkga2hv4bqjbiwgZOG7sSDDoW4sIGRhbmggbeG7pWMg4oCUIHNhdSDEkcOzIHBo4bqjaQogICAgICAgICAgICAgICAgICAgICBjaOG6oXkgbOG6oWkgYGRpZ2l0ZXh0IGFwaSBib290c3RyYXAtc3VwZXJhZG1pbmAKICAtLXN0b3JhZ2Utcm9vdCA8cD4gKGNo4buJIHbhu5tpIC0tbG9jYWwpIGNo4buJIMSR4buLbmgga2hvIHTDoGkgbGnhu4d1IHRoYXkgdsOsIMSR4buNYyB04burIHNldHRpbmdzCiAgLS1oZWxwIC8gLWggICAgICAgIEluIHRy4bujIGdpw7pwIG7DoHkKCkJp4bq/biBtw7RpIHRyxrDhu51uZyAodOG6p25nIC0tc2VydmVyKTogREFUQUJBU0VfVVJMIGhv4bq3YyBESUdJVEVYVF9EQVRBQkFTRV9VUkwgwrcgRElHSVRFWFRfREFUQV9ESVIgwrcKRElHSVRFWFRfUERGX1NUT1JFX0RJUiDCtyBESUdJVEVYVF9NSU5JT18qICjEkeG7pyA0IGtob8OhIG3hu5tpIGLhuq10KS4KClF1eSB0csOsbmg6IGThu7FuZyBr4bq/IGhv4bqhY2ggKMSR4bq/bSwga2jDtG5nIMSR4bulbmcgZOG7ryBsaeG7h3UpIOKGkiBi4bqhbiBkdXnhu4d0IOKGkiBnw7UgTkdVWcOKTiBWxIJOIGPDonUgeMOhYyBuaOG6rW4KKGPDonUgZ+G6r24gduG7m2kgdMOqbiBDU0RMIC8gxJHGsOG7nW5nIGThuqtuIGtobywgbsOqbiBjw6J1IGPhu6dhIG3DoXkgdGjhu60ga2jDtG5nIGNo4bqheSDEkcaw4bujYyB0csOqbiBtw6F5IHRo4bqtdCkuCg=="
+        "{prog} — xoá sạch dữ liệu DigiText (KHÔNG hoàn tác được)\n\nCách dùng:\n  {prog} --local  [--storage-root <đường-dẫn>]   Máy người dùng / máy admin (app desktop)\n  {prog} --server [--all]                        Máy chủ: Postgres + kho object + đĩa\n\nTuỳ chọn:\n  --apply            Thi hành thật. KHÔNG có cờ này = chỉ IN KẾ HOẠCH (mặc định an toàn)\n  --confirm <câu>    Cấp sẵn câu xác nhận (chạy trong script); không có ⇒ hỏi trên bàn phím\n  --all              (chỉ với --server) xoá cả tài khoản, dự án, danh mục — sau đó phải\n                     chạy lại `digitext api bootstrap-superadmin`\n  --storage-root <p> (chỉ với --local) chỉ định kho tài liệu thay vì đọc từ settings\n  --help / -h        In trợ giúp này\n\nBiến môi trường (tầng --server): DATABASE_URL hoặc DIGITEXT_DATABASE_URL · DIGITEXT_DATA_DIR ·\nDIGITEXT_PDF_STORE_DIR · DIGITEXT_MINIO_* (đủ 4 khoá mới bật).\n\nQuy trình: dựng kế hoạch (đếm, không đụng dữ liệu) → bạn duyệt → gõ NGUYÊN VĂN câu xác nhận\n(câu gắn với tên CSDL / đường dẫn kho, nên câu của máy thử không chạy được trên máy thật).\n"
     )
 }
 pub fn parse_args(r_1xa: &[String]) -> Result<Tq2, String> {
@@ -32,18 +32,18 @@ pub fn parse_args(r_1xa: &[String]) -> Result<Tq2, String> {
                 confirm = Some(
                     r_1xb
                         .next()
-                        .ok_or("LS1jb25maXJtIGPhuqduIG3hu5l0IGPDonUgxJFpIGvDqG0=")?
+                        .ok_or("--confirm cần một câu đi kèm")?
                         .clone(),
                 );
             }
             "--storage-root" => {
                 storage_root =
                     Some(PathBuf::from(r_1xb.next().ok_or(
-                        "LS1zdG9yYWdlLXJvb3QgY+G6p24gxJHGsOG7nW5nIGThuqtuIMSRaSBrw6ht",
+                        "--storage-root cần đường dẫn đi kèm",
                     )?));
             }
             other => {
-                return Err(format!("dGhhbSBz4buRIGtow7RuZyBo4bujcCBs4buHOiA={other}"));
+                return Err(format!("tham số không hợp lệ: {other}"));
             }
         }
     }
@@ -52,21 +52,21 @@ pub fn parse_args(r_1xa: &[String]) -> Result<Tq2, String> {
         (false, true) => Scope::Server,
         (true, true) => {
             return Err(
-                "Y2jhu41uIE3hu5hUIHThuqduZyBt4buXaSBs4bqnbjogLS1sb2NhbCBob+G6t2MgLS1zZXJ2ZXIgKHhvw6EgaGFpIHThuqduZyBjw7luZyBsw7pjIHRow6wgbeG7mXQgY8OidSB4w6FjIG5o4bqtbiBz4bq9IHBo4bqjaSBnw6FuaCBj4bqjIGhhaSk="
+                "chọn MỘT tầng mỗi lần: --local hoặc --server (xoá hai tầng cùng lúc thì một câu xác nhận sẽ phải gánh cả hai)"
                     .into(),
             );
         }
         (false, false) => {
             return Err(
-                "dGhp4bq/dSB04bqnbmcgY+G6p24geG/DoTogLS1sb2NhbCBob+G6t2MgLS1zZXJ2ZXI=".into(),
+                "thiếu tầng cần xoá: --local hoặc --server".into(),
             );
         }
     };
     if all && scope != Scope::Server {
-        return Err("LS1hbGwgY2jhu4kgZMO5bmcgduG7m2kgLS1zZXJ2ZXI=".into());
+        return Err("--all chỉ dùng với --server".into());
     }
     if storage_root.is_some() && scope != Scope::Local {
-        return Err("LS1zdG9yYWdlLXJvb3QgY2jhu4kgZMO5bmcgduG7m2kgLS1sb2NhbA==".into());
+        return Err("--storage-root chỉ dùng với --local".into());
     }
     Ok(Tq2 {
         scope,
@@ -80,7 +80,7 @@ fn f_17n() -> Result<String, String> {
     std::env::var("DATABASE_URL")
         .or_else(|_| std::env::var("DIGITEXT_DATABASE_URL"))
         .map_err(|_| {
-            "Y+G6p24gREFUQUJBU0VfVVJMIChob+G6t2MgRElHSVRFWFRfREFUQUJBU0VfVVJMKQ==".to_owned()
+            "cần DATABASE_URL (hoặc DIGITEXT_DATABASE_URL)".to_owned()
         })
 }
 fn minio_from_env() -> Option<Tde> {
@@ -96,7 +96,7 @@ fn minio_from_env() -> Option<Tde> {
 fn f_sc(expected: &str) -> Result<String, String> {
     use std::io::{BufRead, Write};
     println!(
-        "CsSQ4buDIHRoaSBow6BuaCwgZ8O1IE5HVVnDik4gVsSCTiBjw6J1IHNhdSBy4buTaSBFbnRlciAoQ3RybC1DIMSR4buDIGh14bu3KToKCiAgICA={expected}\n"
+        "\nĐể thi hành, gõ NGUYÊN VĂN câu sau rồi Enter (Ctrl-C để huỷ):\n\n    {expected}\n"
     );
     print!("> ");
     std::io::stdout().flush().ok();
@@ -104,10 +104,10 @@ fn f_sc(expected: &str) -> Result<String, String> {
     let n = std::io::stdin()
         .lock()
         .read_line(&mut r_1xh)
-        .map_err(|e| format!("xJHhu41jIHjDoWMgbmjhuq1uIGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("đọc xác nhận lỗi: {e}"))?;
     if n == 0 {
         return Err(
-            "a2jDtG5nIMSR4buNYyDEkcaw4bujYyB4w6FjIG5o4bqtbiAoxJHhuqd1IHbDoG8gxJHDoyDEkcOzbmcpIOKAlCBkw7luZyAtLWNvbmZpcm0gbuG6v3UgY2jhuqF5IHRyb25nIHNjcmlwdA=="
+            "không đọc được xác nhận (đầu vào đã đóng) — dùng --confirm nếu chạy trong script"
                 .into(),
         );
     }
@@ -116,12 +116,14 @@ fn f_sc(expected: &str) -> Result<String, String> {
 fn f_114(plan: &Thd, r_1xi: &Tq2) -> Result<bool, String> {
     println!("{plan}");
     if plan.is_empty() {
-        println!("Cktow7RuZyBjw7MgZ8OsIMSR4buDIHhvw6Eu");
+        println!(r#"
+Không có gì để xoá."#);
         return Ok(false);
     }
     if !r_1xi.apply {
         println!(
-            "CuKUgOKUgCBYRU0gVFLGr+G7mkMg4pSA4pSAIGNoxrBhIHhvw6EgZ8OsLiBUaMOqbSAtLWFwcGx5IMSR4buDIHRoaSBow6BuaCAoc+G6vSBo4buPaSBjw6J1IHjDoWMgbmjhuq1uKS4="
+            r#"
+── XEM TRƯỚC ── chưa xoá gì. Thêm --apply để thi hành (sẽ hỏi câu xác nhận)."#
         );
         return Ok(false);
     }
@@ -133,7 +135,7 @@ fn f_114(plan: &Thd, r_1xi: &Tq2) -> Result<bool, String> {
     if !plan.phrase_matches(&r_1xk) {
         return Err(
             format!(
-                "Y8OidSB4w6FjIG5o4bqtbiBraMO0bmcga2jhu5twIOKAlCBodeG7tywgS0jDlE5HIHhvw6EgZ8OsLgogIGPhuqduOiA={expected}"
+                "câu xác nhận không khớp — huỷ, KHÔNG xoá gì.\n  cần: {expected}"
             ),
         );
     }
@@ -152,7 +154,7 @@ fn f_2az(r_1xl: &Tq2) -> Result<(), String> {
         Ok(())
     } else {
         Err(
-            "Y8OzIG3hu6VjIGtow7RuZyB4b8OhIMSRxrDhu6NjIOKAlCB4ZW0gZGFuaCBzw6FjaCBs4buXaSDhu58gdHLDqm4="
+            "có mục không xoá được — xem danh sách lỗi ở trên"
                 .into(),
         )
     }
@@ -161,11 +163,11 @@ async fn f_2ba(r_1xo: &Tq2) -> Result<(), String> {
     let r_1xs = f_17n()?;
     let r_1xx = digitext_db::connect(&r_1xs)
         .await
-        .map_err(|e| format!("a+G6v3QgbuG7kWkgUG9zdGdyZXMgdGjhuqV0IGLhuqFpOiA={e}"))?;
+        .map_err(|e| format!("kết nối Postgres thất bại: {e}"))?;
     let r_1xw = minio_from_env()
         .map(|r_1xp| MinioObjectStore::new(&r_1xp).map(|s| (format!("MinIO {}", r_1xp.bucket), s)))
         .transpose()
-        .map_err(|e| format!("ZOG7sW5nIE1pbklPIHRo4bqldCBi4bqhaTog{e}"))?;
+        .map_err(|e| format!("dựng MinIO thất bại: {e}"))?;
     let r_1xt = std::env::var("DIGITEXT_PDF_STORE_DIR")
         .ok()
         .filter(|s| !s.is_empty())
@@ -180,7 +182,7 @@ async fn f_2ba(r_1xo: &Tq2) -> Result<(), String> {
     }
     if let (Some(r_1xq), Some(s)) = (&r_1xt, &r_1xu) {
         r_1xy.push(Tdp {
-            label: format!("dGjGsCBt4bulYyA={}", r_1xq.display()),
+            label: format!("thư mục {}", r_1xq.display()),
             store: s,
         });
     }
@@ -206,7 +208,7 @@ async fn f_2ba(r_1xo: &Tq2) -> Result<(), String> {
         Ok(())
     } else {
         Err(
-            "Y8OzIG3hu6VjIGtow7RuZyB4b8OhIMSRxrDhu6NjIOKAlCB4ZW0gZGFuaCBzw6FjaCBs4buXaSDhu58gdHLDqm4="
+            "có mục không xoá được — xem danh sách lỗi ở trên"
                 .into(),
         )
     }
@@ -233,7 +235,7 @@ pub fn cli_main(prog: &str, r_1y1: &[String]) -> ExitCode {
             {
                 Ok(r_1y4) => r_1y4.block_on(f_2ba(&r_1y2)),
                 Err(e) => Err(format!(
-                    "a2jDtG5nIHThuqFvIMSRxrDhu6NjIHRva2lvIHJ1bnRpbWU6IA=={e}"
+                    "không tạo được tokio runtime: {e}"
                 )),
             }
         }

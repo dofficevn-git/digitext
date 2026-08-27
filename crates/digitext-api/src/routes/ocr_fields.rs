@@ -103,12 +103,12 @@ async fn f_11n(
     r_kv.require_perm(Permission::DocumentList)?;
     let r_kx = f_sv(&r_l1, &r_kv, id).await?;
     if r_kw.page_no < 1 {
-        return Err(ApiError::bad_request("cGFnZV9ubyBwaOG6o2kg4omlIDE="));
+        return Err(ApiError::bad_request("page_no phải ≥ 1"));
     }
     let field: VanBanField = r_kw
         .field_key
         .parse()
-        .map_err(|_| ApiError::bad_request("ZmllbGRfa2V5IGtow7RuZyBo4bujcCBs4buH"))?;
+        .map_err(|_| ApiError::bad_request("field_key không hợp lệ"))?;
     let engine = match r_kw.engine_version_id {
         Some(e) => e,
         None => {
@@ -116,7 +116,7 @@ async fn f_11n(
                 .await?
                 .ok_or_else(|| {
                     ApiError::bad_request(
-                        "Y2jGsGEgY8OzIGVuZ2luZSByZWNvZ25pdGlvbiBhY3RpdmUgxJHhu4MgZ+G6r24=",
+                        "chưa có engine recognition active để gắn",
                     )
                 })?
                 .id
@@ -160,7 +160,7 @@ async fn f_11n(
             ) =>
         {
             return Err(ApiError::bad_request(
-                "ZW5naW5lVmVyc2lvbklkIGtow7RuZyB04buTbiB04bqhaQ==",
+                "engineVersionId không tồn tại",
             ));
         }
         Err(e) => return Err(e.into()),

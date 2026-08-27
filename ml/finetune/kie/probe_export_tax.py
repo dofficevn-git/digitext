@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     p_512 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_512.add_argument("rows_jsonl")
     p_512.add_argument("--weights", required=True)
-    p_512.add_argument("--limit", type=int, default=400, help="c+G7kSBkw7JuZyAoZ2nhuqNpIG3DoyB0b3JjaCBy4bqldCBjaOG6rW0p")
+    p_512.add_argument("--limit", type=int, default=400, help="số dòng (giải mã torch rất chậm)")
     p_511 = p_512.parse_args(argv)
 
     rows = [json.loads(p_514) for p_514 in open(p_511.rows_jsonl, encoding="utf-8") if p_514.strip()]

@@ -59,7 +59,7 @@ fn f_2b7(script: &str, r_2ng: Duration) -> Result<(Vec<u8>, String, bool), Strin
     f_1gz(&mut r_2n8);
     let mut r_2n7 = r_2n8
         .spawn()
-        .map_err(|e| format!("a2jDtG5nIGNo4bqheSDEkcaw4bujYyBQb3dlclNoZWxsOiA={e}"))?;
+        .map_err(|e| format!("không chạy được PowerShell: {e}"))?;
     let mut r_2nb = r_2n7.stdout.take().expect("piped stdout");
     let mut r_2na = r_2n7.stderr.take().expect("piped stderr");
     let (r_2ni, r_2nd) = mpsc::channel();
@@ -82,7 +82,7 @@ fn f_2b7(script: &str, r_2ng: Duration) -> Result<(Vec<u8>, String, bool), Strin
                 if Instant::now() >= r_2n9 {
                     let _ = r_2n7.kill();
                     let _ = r_2n7.wait();
-                    return Err(format!("UG93ZXJTaGVsbCBxdcOhIA=={}s", r_2ng.as_secs()));
+                    return Err(format!("PowerShell quá {}s", r_2ng.as_secs()));
                 }
                 thread::sleep(Duration::from_millis(40));
             }
@@ -104,7 +104,7 @@ foreach($di in $dm.DeviceInfos){
   }
 }
 "#;
-const C_JH: &str = "CnBhcmFtKFtzdHJpbmddJERldmljZUlELFtpbnRdJERwaSxbaW50XSREYXRhVHlwZSxbc3RyaW5nXSRBZGYsW2ludF0kRG9jSGFuZGxpbmcsW3N0cmluZ10kT3V0RGlyLFtpbnRdJFN0YXJ0SW5kZXgpCiRFcnJvckFjdGlvblByZWZlcmVuY2U9J1N0b3AnCiMgVVRGLTggc3Rkb3V0OiBu4bq/dSBraMO0bmcsIMSRxrDhu51uZyBk4bqrbiBpbiByYSBkw7luZyBPRU0gY29kZXBhZ2U7ICVURU1QJSBjaOG7qWEgdMOqbiB1c2VyIHRp4bq/bmcKIyBWaeG7h3Qg4oaSIFJ1c3QgxJHhu41jIGjhu49uZyDihpIgbeG7jWkgdHJhbmcgZmFpbCDEkeG7jWMgZmlsZSDihpIgbMO0ICJob8OgbiB0aMOgbmgiIDAgdHJhbmcuCltDb25zb2xlXTo6T3V0cHV0RW5jb2RpbmcgPSBbU3lzdGVtLlRleHQuRW5jb2RpbmddOjpVVEY4CiRGTVQ9Jw=={B96B3CAB-0728-11D3-9D7B-0000F81EF32E}'   # wiaFormatBMP\n$dm = New-Object -ComObject WIA.DeviceManager\n$info = $dm.DeviceInfos | Where-Object { $_.DeviceID -eq $DeviceID } | Select-Object -First 1\nif(-not $info){ [Console]::Error.WriteLine('device-not-found'); exit 2 }CiRkZXYgPSAkaW5mby5Db25uZWN0KCkKIyBET0NVTUVOVF9IQU5ETElOR19TRUxFQ1QgKDMwODgpOiAxPUZFRURFUiwgNT1GRUVERVJ8RFVQTEVYICgxfDQpOyAwID0gbeG6t2MgxJHhu4tuaCAoa8OtbmggcGjhurNuZykuCmlmKCREb2NIYW5kbGluZyAtZ3QgMCk={ try { $dev.Properties.Item('3088').Value = $DocHandling } catch {} }\n$item = $dev.Items.Item(1)\nfunction SetP($id,$v){ try { $item.Properties.Item(\"$id\").Value = $v } catch {} }\nSetP 6147 $Dpi        # WIA_IPS_XRES\nSetP 6148 $Dpi        # WIA_IPS_YRES\nSetP 4103 $DataType   # WIA_IPA_DATATYPE (2=gray,3=color)\n$i = $StartIndex\nwhile($true){\n  try { $img = $item.Transfer($FMT) }\n  catch { [Console]::Error.WriteLine('end:'+$_.Exception.Message); break }\n  $p = Join-Path $OutDir ('page-{0:00000}.bmp' -f $i)\n  if(Test-Path $p){ Remove-Item -Force $p }\n  $img.SaveFile($p)\n  [Console]::Out.WriteLine($p)\n  try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($img) | Out-Null } catch {}\n  $i++\n  if($Adf -ne '1'){ break }ICAgIyBrw61uaCBwaOG6s25nOiAxIHRyYW5nCn0K";
+const C_JH: &str = "\nparam([string]$DeviceID,[int]$Dpi,[int]$DataType,[string]$Adf,[int]$DocHandling,[string]$OutDir,[int]$StartIndex)\n$ErrorActionPreference='Stop'\n# UTF-8 stdout: nếu không, đường dẫn in ra dùng OEM codepage; %TEMP% chứa tên user tiếng\n# Việt → Rust đọc hỏng → mọi trang fail đọc file → lô \"hoàn thành\" 0 trang.\n[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n$FMT='{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}'   # wiaFormatBMP\n$dm = New-Object -ComObject WIA.DeviceManager\n$info = $dm.DeviceInfos | Where-Object { $_.DeviceID -eq $DeviceID } | Select-Object -First 1\nif(-not $info){ [Console]::Error.WriteLine('device-not-found'); exit 2 }\n$dev = $info.Connect()\n# DOCUMENT_HANDLING_SELECT (3088): 1=FEEDER, 5=FEEDER|DUPLEX (1|4); 0 = mặc định (kính phẳng).\nif($DocHandling -gt 0){ try { $dev.Properties.Item('3088').Value = $DocHandling } catch {} }\n$item = $dev.Items.Item(1)\nfunction SetP($id,$v){ try { $item.Properties.Item(\"$id\").Value = $v } catch {} }\nSetP 6147 $Dpi        # WIA_IPS_XRES\nSetP 6148 $Dpi        # WIA_IPS_YRES\nSetP 4103 $DataType   # WIA_IPA_DATATYPE (2=gray,3=color)\n$i = $StartIndex\nwhile($true){\n  try { $img = $item.Transfer($FMT) }\n  catch { [Console]::Error.WriteLine('end:'+$_.Exception.Message); break }\n  $p = Join-Path $OutDir ('page-{0:00000}.bmp' -f $i)\n  if(Test-Path $p){ Remove-Item -Force $p }\n  $img.SaveFile($p)\n  [Console]::Out.WriteLine($p)\n  try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($img) | Out-Null } catch {}\n  $i++\n  if($Adf -ne '1'){ break }   # kính phẳng: 1 trang\n}\n";
 pub struct Tq1;
 impl Tq1 {
     pub fn new() -> Self {
@@ -128,7 +128,7 @@ impl Tkv for Tq1 {
             };
             f_2qy(&format!("list_devices: id='{id}' name='{name}'"));
             let r_2nm = if name.is_empty() {
-                "TcOheSBxdcOpdCBXSUE=".to_string()
+                "Máy quét WIA".to_string()
             } else {
                 name.clone()
             };
@@ -140,13 +140,13 @@ impl Tkv for Tq1 {
             });
         }
         f_2qy(&format!(
-            "list_devices: {}IHRoaeG6v3QgYuG7iyAob2s9{ok})",
+            "list_devices: {} thiết bị (ok={ok})",
             r_2nl.len()
         ));
         if r_2nl.is_empty() && !ok {
             let e = stderr.trim();
             if !e.is_empty() {
-                return Err(format!("V0lBIGzhu5dpOiA={e}"));
+                return Err(format!("WIA lỗi: {e}"));
             }
         }
         Ok(r_2nl)
@@ -156,7 +156,7 @@ impl Tkv for Tq1 {
         let device = match r_2ny.device_id.clone() {
             Some(r_2nu) if !r_2nu.is_empty() => r_2nu,
             _ => {
-                r_2o6.error(batch_id, "Q2jGsGEgY2jhu41uIG3DoXkgcXXDqXQu");
+                r_2o6.error(batch_id, "Chưa chọn máy quét.");
                 r_2o6.state(batch_id, BatchState::Cancelled { pages: 0 });
                 return;
             }
@@ -166,7 +166,7 @@ impl Tkv for Tq1 {
         if let Err(e) = std::fs::write(&r_2o5, C_JH) {
             return r_2o6.error(
                 batch_id,
-                &format!("a2jDtG5nIGdoaSDEkcaw4bujYyBzY3JpcHQgV0lBOiA={e}"),
+                &format!("không ghi được script WIA: {e}"),
             );
         }
         let r_2nz = r_2o9.join(format!("digitext-wia-{batch_id}"));
@@ -230,7 +230,7 @@ impl Tkv for Tq1 {
             Err(e) => {
                 return r_2o6.error(
                     batch_id,
-                    &format!("a2jDtG5nIGNo4bqheSDEkcaw4bujYyBQb3dlclNoZWxsOiA={e}"),
+                    &format!("không chạy được PowerShell: {e}"),
                 );
             }
         };
@@ -264,7 +264,7 @@ impl Tkv for Tq1 {
                 let _ = r_2ns.kill();
                 let _ = r_2ns.wait();
                 let _ = r_2nx.join();
-                f_2qy("c2NhbjogaHXhu7c=");
+                f_2qy("scan: huỷ");
                 r_2o6.state(batch_id, BatchState::Cancelled { pages: produced });
                 let _ = std::fs::remove_dir_all(&r_2nz);
                 return;
@@ -292,25 +292,25 @@ impl Tkv for Tq1 {
                 Ok(Err(e)) => {
                     failed += 1;
                     f_2qy(&format!(
-                        "c2NhbjogZ2nhuqNpIG3DoyB0cmFuZyA={index}IGzhu5dpIA=={e}"
+                        "scan: giải mã trang {index} lỗi {e}"
                     ));
                     r_2o6.error(
                         batch_id,
                         &format!(
-                            "Trang {index}IGzhu5dpIGdp4bqjaSBtw6Mg4bqjbmgg4oCUIHF1w6l0IGzhuqFpLg=="
+                            "Trang {index} lỗi giải mã ảnh — quét lại."
                         ),
                     );
                 }
                 Err(e) => {
                     failed += 1;
                     f_2qy(&format!(
-                        "c2NhbjogxJHhu41jIHRyYW5nIA=={index}IGzhu5dpIA=={e}"
+                        "scan: đọc trang {index} lỗi {e}"
                     ));
                     r_2o6
                         .error(
                             batch_id,
                             &format!(
-                                "Trang {index}IGtow7RuZyDEkeG7jWMgxJHGsOG7o2MgZmlsZSDhuqNuaCDigJQgcXXDqXQgbOG6oWku"
+                                "Trang {index} không đọc được file ảnh — quét lại."
                             ),
                         );
                 }

@@ -33,7 +33,7 @@ impl fmt::Display for ReviewStatus {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("dHLhuqFuZyB0aMOhaSBkdXnhu4d0IGtow7RuZyBo4bujcCBs4buHOiA={0:?}")]
+#[error("trạng thái duyệt không hợp lệ: {0:?}")]
 pub struct Tgp(pub String);
 impl FromStr for ReviewStatus {
     type Err = Tgp;

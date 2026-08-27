@@ -13,7 +13,7 @@ pub fn f_19x(r_23z: &Connection) -> rusqlite::Result<SigningKey> {
             return Ok(sk);
         }
         tracing::warn!(
-            "bGFuX2RldmljZV9zZWVkIGjhu49uZyDigJQgc2luaCBs4bqhaSBraG/DoSBkYW5oIHTDrW5oIG3DoXkgKHBlZXIgc+G6vSBnaGltIGzhuqFpKQ=="
+            "lan_device_seed hỏng — sinh lại khoá danh tính máy (peer sẽ ghim lại)"
         );
     }
     let sk = SigningKey::generate(&mut rand::rngs::OsRng);

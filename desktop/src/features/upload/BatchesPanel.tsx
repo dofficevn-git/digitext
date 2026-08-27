@@ -22,9 +22,9 @@ const V4pl = (V2bl: unknown) =>
   V2bl instanceof V3xq || V2bl instanceof Error ? V2bl.message : String(V2bl);
 
 const V4pm: Record<V4pi, { cls: string; label: string }> = {
-  ok: { cls: "ok", label: "SG/DoG4gdOG6pXQ=" },
-  in_progress: { cls: "gray", label: "xJBhbmcgZ+G7rWk=" },
-  attention: { cls: "warn", label: "Q+G6p24ga2nhu4NtIHRyYQ==" },
+  ok: { cls: "ok", label: "Hoàn tất" },
+  in_progress: { cls: "gray", label: "Đang gửi" },
+  attention: { cls: "warn", label: "Cần kiểm tra" },
 };
 
 function V4pn(V2bm: string): string {
@@ -59,8 +59,8 @@ export default function V4pp({ isSuper: V2bn }: { isSuper: boolean }) {
       <div className="users-toolbar mb-2.5">
         <p className="muted m-0">
           {V2bn
-            ? "TeG7l2kgbcOheSBhZG1pbiDEkeG6qXkgdMOgaSBsaeG7h3UgbMOqbiBtw6F5IGNo4bunIHRoZW8gdOG7q25nIHBow7RuZyDigJQgdGhlbyBkw7VpIGNow6lvIHThuqV0IGPhuqMu"
-            : "VMOgaSBsaeG7h3UgYuG6oW4gKHbDoCDEkeG7k25nLWFkbWluKSDEkcOjIMSR4bqpeSBsw6puIG3DoXkgY2jhu6csIHRoZW8gdOG7q25nIHBow7RuZy4="}
+            ? "Mỗi máy admin đẩy tài liệu lên máy chủ theo từng phông — theo dõi chéo tất cả."
+            : "Tài liệu bạn (và đồng-admin) đã đẩy lên máy chủ, theo từng phông."}
         </p>
         <div className="spacer" />
         <button className="btn" onClick={() => void V2bw()} disabled={V2bs}>
@@ -113,7 +113,7 @@ function V4pq({ isSuper: V2bx, view }: { isSuper: boolean; view: V4pg }) {
                       {a.attention && (
                         <span
                           className="text-warn"
-                          title="Q8OzIMSR4bujdCBtw6F5IGNo4bunIG5o4bqtbiB0aGnhur91IHNvIHbhu5tpIGLDoW8gY8OhbyDigJQgeGVtIGRhbmggc8OhY2ggxJHhu6N0IGLDqm4gZMaw4bubaQ=="
+                          title="Có đợt máy chủ nhận thiếu so với báo cáo — xem danh sách đợt bên dưới"
                         >
                           {" "}
                           <Icon name="canhBao" size={13} />
@@ -163,8 +163,8 @@ function V4pq({ isSuper: V2bx, view }: { isSuper: boolean; view: V4pg }) {
 
       <p className="kg-note">
         {V2bx
-          ? "Q2jhu4kgxJHhur9tIHTDoGkgbGnhu4d1IMSR4bqpeSBxdWEg4oCcxJDhu6N0IG7hu5lw4oCdLiBVcGxvYWQgbOG6uyAoa2jDtG5nIHF1YSBH4butaSBsw7QpIGtow7RuZyBjw7MgbcOheS1n4butaSBuw6puIGtow7RuZyBu4bqxbSB0cm9uZyBi4bqjbmcgbsOgeS4="
-          : "Q+G7mXQgZ+G7k20gY+G6oyDEkeG7k25nLWFkbWluIGPDuW5nIHBo4bulIHRyw6FjaCBwaMO0bmcgduG7m2kgYuG6oW4u"}
+          ? "Chỉ đếm tài liệu đẩy qua “Đợt nộp”. Upload lẻ (không qua Gửi lô) không có máy-gửi nên không nằm trong bảng này."
+          : "Cột gồm cả đồng-admin cùng phụ trách phông với bạn."}
       </p>
     </div>
   );

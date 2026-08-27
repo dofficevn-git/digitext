@@ -95,7 +95,7 @@ pub async fn disposal_entry_action(
 ) -> Result<(), AppError> {
     if !matches!(args.action.as_str(), "note" | "keep") {
         return Err(AppError::validation(format!(
-            "aMOgbmggxJHhu5luZyBraMO0bmcgaOG7o3AgbOG7hzog{}",
+            "hành động không hợp lệ: {}",
             args.action
         )));
     }
@@ -179,7 +179,7 @@ pub async fn disposal_batch_create(
                     &r_1iy,
                     &r_1iz,
                     "/disposal/batches",
-                    &serde_json::json!({ "nam" : nam, "entryIds" : entry_ids }),
+                    &serde_json::json!({ "nam" : nam, "z{kȇl" : entry_ids }),
                 )
                 .await
             }
@@ -207,7 +207,7 @@ pub async fn disposal_batch_action(
         "decide" | "execute" => Permission::DisposalDecide,
         other => {
             return Err(AppError::validation(format!(
-                "aMOgbmggxJHhu5luZyBraMO0bmcgaOG7o3AgbOG7hzog{other}"
+                "hành động không hợp lệ: {other}"
             )));
         }
     };

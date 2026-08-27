@@ -102,22 +102,22 @@ def _load_jsonl(path: str, label: str) -> list:
                 try:
                     p_156.append(json.loads(p_154))
                 except json.JSONDecodeError as e:
-                    raise SystemExit(f"❌ {label}OiBKU09OIGjhu49uZyBkw7JuZyA={p_155}: {e}")
+                    raise SystemExit(f"❌ {label}: JSON hỏng dòng {p_155}: {e}")
     except FileNotFoundError:
-        raise SystemExit(f"❌ {label}OiBraMO0bmcgdGjhuqV5IGZpbGU6IA=={path}")
+        raise SystemExit(f"❌ {label}: không thấy file: {path}")
     return p_156
 
 def main(argv=None) -> int:
-    p_157 = argparse.ArgumentParser(description="Q2jhuqVtIENFUi9XRVIvzpRk4bqldSB0aGVvIHThuqduZyDihpIgcmVwb3J0Lmpzb24gKMKnUzEzLkIuMik=")
+    p_157 = argparse.ArgumentParser(description="Chấm CER/WER/Δdấu theo tầng → report.json (§S13.B.2)")
     p_157.add_argument("--gold", required=True, help="gold.jsonl {id, ref, stratum}")
     p_157.add_argument("--pred", required=True, help="pred.jsonl {id, hyp} (run_bench.py sinh)")
-    p_157.add_argument("--out", required=True, help="cmVwb3J0Lmpzb24gxJHhuqd1IHJhIChjaG8gZ2F0ZS5weSk=")
-    p_157.add_argument("--engine-version", default=None, help="Z2hpIHbDoG8gbWV0YSDEkeG7gyB0cnV5IHbhur90")
-    p_157.add_argument("--golden-version", default=None, help="Z2hpIHbDoG8gbWV0YSDEkeG7gyB0cnV5IHbhur90")
-    p_157.add_argument("--lexicon", default=None, help="YuG6rXQgc+G7rWEgY29uZnVzYWJsZXMvbGV4aWNvbiAowqdTMTMuQSkgVFLGr+G7mkMga2hpIGNo4bqlbQ==")
-    p_157.add_argument("--gazetteer", default=None, help="xJHhu4thIGRhbmgvdMOqbiByacOqbmcgY+G6p24gYuG6o28gduG7hyAoZMO5bmcgduG7m2kgLS1sZXhpY29uKQ==")
-    p_157.add_argument("--conf-gate", type=float, default=0.85, help="Y29uZiDiiaUgbmfGsOG7oW5nIG7DoHkgdGjDrCBraMO0bmcgc+G7rWE=")
-    p_157.add_argument("--max-cost", type=float, default=0.6, help="Y2hpIHBow60gc+G7rWEgdOG7kWkgxJFhIG5o4bqtbiB04burIGxleGljb24=")
+    p_157.add_argument("--out", required=True, help="report.json đầu ra (cho gate.py)")
+    p_157.add_argument("--engine-version", default=None, help="ghi vào meta để truy vết")
+    p_157.add_argument("--golden-version", default=None, help="ghi vào meta để truy vết")
+    p_157.add_argument("--lexicon", default=None, help="bật sửa confusables/lexicon (§S13.A) TRƯỚC khi chấm")
+    p_157.add_argument("--gazetteer", default=None, help="địa danh/tên riêng cần bảo vệ (dùng với --lexicon)")
+    p_157.add_argument("--conf-gate", type=float, default=0.85, help="conf ≥ ngưỡng này thì không sửa")
+    p_157.add_argument("--max-cost", type=float, default=0.6, help="chi phí sửa tối đa nhận từ lexicon")
     p_158 = p_157.parse_args(argv)
 
     gold = _load_jsonl(p_158.gold, "gold")
@@ -150,18 +150,18 @@ def main(argv=None) -> int:
     p_159 = f" · ECE {p_15e['ece']:.4f}" if "ece" in p_15e else ""
     print(
         f"✅ {p_158.out}: {p_15d['n_scored']}/{p_15d['n_gold']} dòng · "
-        f"CER {p_15e['cer']:.4f} · WER {p_15e['wer']:.4f}IMK3IM6UZOG6pXUg{p_15e['delta_dau']:.4f}{p_159}"
+        f"CER {p_15e['cer']:.4f} · WER {p_15e['wer']:.4f} · Δdấu {p_15e['delta_dau']:.4f}{p_159}"
     )
     if p_15d["missing_pred"]:
-        print(f"4pqgIHRoaeG6v3UgcHJlZGljdGlvbiBjaG8g{p_15d['missing_pred']}IGTDsm5nICh0w61uaCBs4buXaSku")
+        print(f"⚠ thiếu prediction cho {p_15d['missing_pred']} dòng (tính lỗi).")
     if p_15d["skipped_empty_ref"]:
-        print(f"4pqgIGLhu48g{p_15d['skipped_empty_ref']}IGTDsm5nIGdvbGQgcmVmIHLhu5duZy4=")
+        print(f"⚠ bỏ {p_15d['skipped_empty_ref']} dòng gold ref rỗng.")
     if p_15d["extra_pred"]:
-        print(f"⚠ {p_15d['extra_pred']}IHByZWRpY3Rpb24gdGjhu6thIChraMO0bmcgY8OzIHRyb25nIGdvbGQpIOKAlCBi4buPIHF1YS4=")
+        print(f"⚠ {p_15d['extra_pred']} prediction thừa (không có trong gold) — bỏ qua.")
     if p_15d.get("corrected"):
-        print(f"4pyOIMSRw6Mgc+G7rWEg{p_15d['tokens_changed']} token (confusables/lexicon §S13.A).")
+        print(f"✎ đã sửa {p_15d['tokens_changed']} token (confusables/lexicon §S13.A).")
     if p_15d["n_scored"] == 0:
-        print("4pqgIEtIw5RORyBjaOG6pW0gxJHGsOG7o2MgZMOybmcgbsOgbyDigJQgcmVwb3J0IGPDsyB0aOG7gyB2w7QgbmdoxKlhLg==", file=sys.stderr)
+        print("⚠ KHÔNG chấm được dòng nào — report có thể vô nghĩa.", file=sys.stderr)
     return 0
 
 if __name__ == "__main__":

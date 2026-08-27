@@ -39,19 +39,19 @@ pub fn f_1hv(bytes: &[u8]) -> Result<(u32, u32), WorkerError> {
         .with_guessed_format()
         .map_err(|e| {
             WorkerError::CorruptInput(format!(
-                "xJFvw6FuIMSR4buLbmggZOG6oW5nIOG6o25oIHRyYW5nIGzhu5dpOiA={e}"
+                "đoán định dạng ảnh trang lỗi: {e}"
             ))
         })?
         .into_dimensions()
         .map_err(|e| {
             WorkerError::CorruptInput(format!(
-                "xJHhu41jIGvDrWNoIHRoxrDhu5tjIOG6o25oIHRyYW5nIGzhu5dpOiA={e}"
+                "đọc kích thước ảnh trang lỗi: {e}"
             ))
         })
 }
 pub fn f_13f(bytes: &[u8]) -> Result<RgbImage, WorkerError> {
     let r_3di = image::load_from_memory(bytes).map_err(|e| {
-        WorkerError::CorruptInput(format!("Z2nhuqNpIG3DoyDhuqNuaCB0cmFuZyBs4buXaTog{e}"))
+        WorkerError::CorruptInput(format!("giải mã ảnh trang lỗi: {e}"))
     })?;
     Ok(r_3di.to_rgb8())
 }
@@ -125,11 +125,11 @@ impl Tgd for LocalDirPageBytes {
             Ok(bytes) => Ok(FetchedPage::bytes_only(bytes)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 Err(WorkerError::StorageUnavailable(format!(
-                    "Y2jGsGEgdGjhuqV5IOG6o25oIHRyYW5nIA=={path:?}"
+                    "chưa thấy ảnh trang {path:?}"
                 )))
             }
             Err(e) => Err(WorkerError::StorageUnavailable(format!(
-                "xJHhu41jIA=={path:?}: {e}"
+                "đọc {path:?}: {e}"
             ))),
         }
     }
@@ -148,10 +148,10 @@ impl Tgd for MinioPageBytes {
         match self.store.get(&key).await {
             Ok(Some(bytes)) => Ok(FetchedPage::bytes_only(bytes)),
             Ok(None) => Err(WorkerError::StorageUnavailable(format!(
-                "Y2jGsGEgdGjhuqV5IOG6o25oIHRyYW5nICc={key}' trong kho"
+                "chưa thấy ảnh trang '{key}' trong kho"
             ))),
             Err(e) => Err(WorkerError::StorageUnavailable(format!(
-                "ZmV0Y2gg4bqjbmggdHJhbmcgJw=={key}': {e}"
+                "fetch ảnh trang '{key}': {e}"
             ))),
         }
     }
@@ -187,7 +187,7 @@ pub async fn f_1xk(
             let bytes = f_25k(pdf, page_no, raster).await?;
             tracing::info!(
                 key, page = page_no, dpi = raster.dpi, bytes = bytes.len(),
-                "dHJhbmcga2jDtG5nIGPDsyBKUEVHIG5ow7puZyAoQ0NJVFQvSkJJRzIvdmVjdG9yKSDigJQgxJHDoyByYXN0ZXIgaG/DoQ=="
+                "trang không có JPEG nhúng (CCITT/JBIG2/vector) — đã raster hoá"
             );
             Ok(FetchedPage {
                 bytes,
@@ -195,7 +195,7 @@ pub async fn f_1xk(
             })
         }
         Err(e) => Err(WorkerError::CorruptInput(format!(
-            "dMOhY2ggdHJhbmcg{page_no}IHThu6sgJw=={key}': {e}"
+            "tách trang {page_no} từ '{key}': {e}"
         ))),
     }
 }
@@ -219,32 +219,32 @@ pub async fn f_25k(pdf: &[u8], page_no: i32, r_3dt: &Tid) -> Result<Vec<u8>, Wor
         .map_err(|e| {
             WorkerError::StorageUnavailable(
                 format!(
-                    "a2jDtG5nIGNo4bqheSDEkcaw4bujYyAn{}JyDEkeG7gyByYXN0ZXIgaG/DoSB0cmFuZyAoY8OgaSBwb3BwbGVyLXV0aWxzIGhv4bq3YyDEkeG6t3Qg{}): {e}",
+                    "không chạy được '{}' để raster hoá trang (cài poppler-utils hoặc đặt {}): {e}",
                     r_3dt.pdftoppm_bin, crate ::config::C_63,
                 ),
             )
         })?;
-    let mut stdin = r_3du.stdin.take().expect("xJHDoyAuc3RkaW4ocGlwZWQp");
+    let mut stdin = r_3du.stdin.take().expect("đã .stdin(piped)");
     let r_3dx = pdf.to_vec();
     let r_3dy = tokio::spawn(async move {
         let _ = stdin.write_all(&r_3dx).await;
         let _ = stdin.shutdown().await;
     });
     let r_3dw = r_3du.wait_with_output().await.map_err(|e| {
-        WorkerError::StorageUnavailable(format!("Y2jhu50gJw=={}': {e}", r_3dt.pdftoppm_bin))
+        WorkerError::StorageUnavailable(format!("chờ '{}': {e}", r_3dt.pdftoppm_bin))
     })?;
     let _ = r_3dy.await;
     if !r_3dw.status.success() {
         let r_3dv = String::from_utf8_lossy(&r_3dw.stderr);
         return Err(WorkerError::CorruptInput(format!(
-            "cmFzdGVyIGhvw6EgdHJhbmcg{page_no}IHRo4bqldCBi4bqhaSAo{}): {}",
+            "raster hoá trang {page_no} thất bại ({}): {}",
             r_3dw.status,
             r_3dv.trim()
         )));
     }
     if r_3dw.stdout.is_empty() {
         return Err(WorkerError::CorruptInput(format!(
-            "cmFzdGVyIGhvw6EgdHJhbmcg{page_no}IHJhIDAgYnl0ZSAodHJhbmcga2jDtG5nIHThu5NuIHThuqFpPyk="
+            "raster hoá trang {page_no} ra 0 byte (trang không tồn tại?)"
         )));
     }
     Ok(r_3dw.stdout)
@@ -255,14 +255,14 @@ impl Tgd for PdfMinioPageBytes {
             .await
             .map_err(|e| WorkerError::StorageUnavailable(format!("tra document: {e}")))?
             .ok_or_else(|| {
-                WorkerError::CorruptInput(format!("a2jDtG5nIHRo4bqleSBkb2N1bWVudCA={document_id}"))
+                WorkerError::CorruptInput(format!("không thấy document {document_id}"))
             })?;
         let key = &r_3dz.storage_path;
         let pdf = match self.store.get(key).await {
             Ok(Some(bytes)) => bytes,
             Ok(None) => {
                 return Err(WorkerError::StorageUnavailable(format!(
-                    "Y2jGsGEgdGjhuqV5IFBERiAn{key}' trong kho"
+                    "chưa thấy PDF '{key}' trong kho"
                 )));
             }
             Err(e) => {

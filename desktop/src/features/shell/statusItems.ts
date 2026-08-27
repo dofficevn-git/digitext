@@ -41,20 +41,20 @@ function V47o(i: V47l): V47n {
       ...base,
       dot: "unknown",
       value: "—",
-      title: "xJBhbmcgZMOyIG3DoXkgcXXDqXQgKGhv4bq3YyBraMO0bmcgY8OzIHF1eeG7gW4pLg==",
+      title: "Đang dò máy quét (hoặc không có quyền).",
     };
   if (i.scanners > 0)
     return {
       ...base,
       dot: "ok",
-      value: i.scanners === 1 ? "xJDDoyBr4bq/dCBu4buRaQ==" : `${i.scanners}IG3DoXk=`,
-      title: `RMOyIHRo4bqleSA=${i.scanners}IG3DoXkgcXXDqXQu`,
+      value: i.scanners === 1 ? "Đã kết nối" : `${i.scanners}IG3DoXk=`,
+      title: `Dò thấy ${i.scanners} máy quét.`,
     };
   return {
     ...base,
     dot: "err",
-    value: "S2jDtG5nIHRo4bqleQ==",
-    title: "S2jDtG5nIGTDsiB0aOG6pXkgbcOheSBxdcOpdCBuw6BvLg==",
+    value: "Không thấy",
+    title: "Không dò thấy máy quét nào.",
   };
 }
 
@@ -65,30 +65,30 @@ function token(i: V47l): V47n {
       ...base,
       dot: "unknown",
       value: "—",
-      title: "xJBhbmcga2nhu4NtIHRyYSBwaGnDqm4gxJHEg25nIG5o4bqtcC4=",
+      title: "Đang kiểm tra phiên đăng nhập.",
     };
   if (!i.session)
     return {
       ...base,
       dot: "err",
-      value: "Q2jGsGEgxJHEg25nIG5o4bqtcA==",
-      title: "Q2jGsGEgY8OzIHBoacOqbiDEkcSDbmcgbmjhuq1wLg==",
+      value: "Chưa đăng nhập",
+      title: "Chưa có phiên đăng nhập.",
     };
   if (i.session.locked)
     return {
       ...base,
       dot: "warn",
-      value: "xJBhbmcga2hvw6E=",
-      title: "UGhpw6puIMSRYW5nIGtob8OhIOKAlCBt4bufIGtob8OhIGLhurFuZyBt4bqtdCBraOG6qXUu",
+      value: "Đang khoá",
+      title: "Phiên đang khoá — mở khoá bằng mật khẩu.",
     };
   return {
     ...base,
     dot: "ok",
-    value: i.session.mode === "online" ? "VHLhu7FjIHR1eeG6v24=" : "Tmdv4bqhaSB0dXnhur9u",
+    value: i.session.mode === "online" ? "Trực tuyến" : "Ngoại tuyến",
     title:
       i.session.mode === "online"
-        ? "VG9rZW4gxJHEg25nIG5o4bqtcCBo4bujcCBs4buHICh0cuG7sWMgdHV54bq/biku"
-        : "VG9rZW4gxJHEg25nIG5o4bqtcCBjw7JuIGjhuqFuIChuZ2/huqFpIHR1eeG6v24pLg==",
+        ? "Token đăng nhập hợp lệ (trực tuyến)."
+        : "Token đăng nhập còn hạn (ngoại tuyến).",
   };
 }
 
@@ -99,106 +99,106 @@ function server(i: V47l): V47n {
       ...base,
       dot: "unknown",
       value: "—",
-      title: "xJBhbmcga2nhu4NtIHRyYSBr4bq/dCBu4buRaSBtw6F5IGNo4bunLg==",
+      title: "Đang kiểm tra kết nối máy chủ.",
     };
   return i.serverUp
     ? {
         ...base,
         dot: "ok",
-        value: "S+G6v3QgbuG7kWk=",
-        title: "TcOheSBjaOG7pyBwaOG6o24gaOG7k2kgKC9oZWFsdGh6KS4=",
+        value: "Kết nối",
+        title: "Máy chủ phản hồi (/healthz).",
       }
     : {
         ...base,
         dot: "err",
-        value: "TeG6pXQga+G6v3QgbuG7kWk=",
-        title: "S2jDtG5nIGvhur90IG7hu5FpIMSRxrDhu6NjIG3DoXkgY2jhu6cu",
+        value: "Mất kết nối",
+        title: "Không kết nối được máy chủ.",
       };
 }
 
 function V47p(i: V47l): V47n {
-  const base = { key: "live" as const, icon: "live" as const, label: "VHLhu7FjIHRp4bq/cA==" };
+  const base = { key: "live" as const, icon: "live" as const, label: "Trực tiếp" };
   if (i.live === null)
     return {
       ...base,
       dot: "unknown",
       value: "—",
-      title: "Q2jGsGEgdGhlbyBkw7VpIChjaMawYSDEkcSDbmcgbmjhuq1wKS4=",
+      title: "Chưa theo dõi (chưa đăng nhập).",
     };
   return i.live
     ? {
         ...base,
         dot: "ok",
-        value: "xJBhbmcgY+G6rXAgbmjhuq10",
+        value: "Đang cập nhật",
         title:
-          "TcOgbiBow6xuaCB04buxIGPhuq1wIG5o4bqtdCB0aGVvIG3DoXkgY2jhu6cg4oCUIGtow7RuZyBj4bqnbiBt4bufIGzhuqFpIG3DoG4u",
+          "Màn hình tự cập nhật theo máy chủ — không cần mở lại màn.",
       }
     : {
         ...base,
         dot: "err",
-        value: "TeG6pXQgdGhlbyBkw7Vp",
+        value: "Mất theo dõi",
         title:
-          "S2jDtG5nIGjhu49pIMSRxrDhu6NjIG3DoXkgY2jhu6cg4oCUIGThu68gbGnhu4d1IHRyw6puIG3DoG4gY8OzIHRo4buDIMSRw6MgY8WpLg==",
+          "Không hỏi được máy chủ — dữ liệu trên màn có thể đã cũ.",
       };
 }
 
 function upload(i: V47l): V47n {
-  const base = { key: "upload" as const, icon: "upload" as const, label: "VOG6o2kgbMOqbg==" };
+  const base = { key: "upload" as const, icon: "upload" as const, label: "Tải lên" };
   if (i.serverUp === null || i.loading)
     return {
       ...base,
       dot: "unknown",
       value: "—",
-      title: "xJBhbmcga2nhu4NtIHRyYSBraOG6oyBuxINuZyB04bqjaSBsw6puLg==",
+      title: "Đang kiểm tra khả năng tải lên.",
     };
   if (!i.session || i.session.locked)
     return {
       ...base,
       dot: "err",
-      value: "Q+G6p24gxJHEg25nIG5o4bqtcA==",
-      title: "xJDEg25nIG5o4bqtcCAobeG7nyBraG/DoSkgxJHhu4MgdOG6o2kgbMOqbi4=",
+      value: "Cần đăng nhập",
+      title: "Đăng nhập (mở khoá) để tải lên.",
     };
   if (!i.serverUp)
     return {
       ...base,
       dot: "err",
-      value: "Q2jhu50gbcOheSBjaOG7pw==",
-      title: "TcOheSBjaOG7pyBraMO0bmcgdOG7m2kgxJHGsOG7o2Mg4oCUIGNoxrBhIHThuqNpIGzDqm4gxJHGsOG7o2Mu",
+      value: "Chờ máy chủ",
+      title: "Máy chủ không tới được — chưa tải lên được.",
     };
   return {
     ...base,
     dot: "ok",
-    value: "U+G6tW4gc8Ogbmc=",
+    value: "Sẵn sàng",
     title:
-      "VOG6o2kgbMOqbiDEkcaw4bujYzogbcOheSBjaOG7pyB04bubaSDEkcaw4bujYyB2w6AgxJHDoyDEkcSDbmcgbmjhuq1wLg==",
+      "Tải lên được: máy chủ tới được và đã đăng nhập.",
   };
 }
 
 function drive(i: V47l): V47n {
-  const base = { key: "drive" as const, icon: "drive" as const, label: "4buUIG5nb8OgaQ==" };
+  const base = { key: "drive" as const, icon: "drive" as const, label: "Ổ ngoài" };
   if (i.storage === null)
-    return { ...base, dot: "unknown", value: "—", title: "xJBhbmcgZMOyIOG7lSBsxrB1IHRy4buvLg==" };
+    return { ...base, dot: "unknown", value: "—", title: "Đang dò ổ lưu trữ." };
 
   if (!i.storage.configured)
     return {
       ...base,
       dot: "unknown",
-      value: "TuG7mWkgYuG7mQ==",
-      title: "xJBhbmcgZMO5bmcg4buVIG7hu5lpIGLhu5kgKHRoxrAgbeG7pWMgRG9jdW1lbnRzKS4=",
+      value: "Nội bộ",
+      title: "Đang dùng ổ nội bộ (thư mục Documents).",
     };
   return i.storage.exists
     ? {
         ...base,
         dot: "ok",
-        value: "xJDDoyBn4bqvbg==",
-        title: "4buUIGzGsHUgdHLhu68gdMO5eSBjaOG7jW4gdHJ1eSBj4bqtcCDEkcaw4bujYy4=",
+        value: "Đã gắn",
+        title: "Ổ lưu trữ tùy chọn truy cập được.",
       }
     : {
         ...base,
         dot: "err",
-        value: "S2jDtG5nIHRo4bqleQ==",
+        value: "Không thấy",
         title:
-          "4buUIGzGsHUgdHLhu68gxJHDoyBj4bqldSBow6xuaCBraMO0bmcgdHJ1eSBj4bqtcCDEkcaw4bujYyDigJQga2nhu4NtIHRyYSDhu5UgY+G6r20u",
+          "Ổ lưu trữ đã cấu hình không truy cập được — kiểm tra ổ cắm.",
       };
 }
 

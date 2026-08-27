@@ -16,7 +16,7 @@ export interface V49k {
 export function V49l(Vlu: unknown): void {
   const Vlv = Vlu instanceof V3xq ? Vlu.message : Vlu instanceof Error ? Vlu.message : String(Vlu);
   window.alert(
-    `TMawdSBkYW5oIG3hu6VjIHh14buRbmcgY8ahIHPhu58gZOG7ryBsaeG7h3UgdGjhuqV0IGLhuqFpOiA=${Vlv}`,
+    `Lưu danh mục xuống cơ sở dữ liệu thất bại: ${Vlv}`,
   );
 }
 
@@ -39,7 +39,7 @@ export function V49o(
   Vm3?: Pick<V49m, "canUpdate" | "canDelete">,
 ) {
   const Vm4 = () => {
-    if (window.confirm("WMOzYSBt4bulYyBuw6B5PyBLaMO0bmcgdGjhu4MgaG/DoG4gdMOhYy4=")) Vm1();
+    if (window.confirm("Xóa mục này? Không thể hoàn tác.")) Vm1();
   };
   return (
     <>

@@ -22,11 +22,11 @@ pub fn phong_ban_upsert(
     let r_ol = args.phong_ban;
     if r_ol.ma_dv.trim().is_empty() || r_ol.ma_phong.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBtw6MgcGjDsm5nIGJhbiBob+G6t2MgbcOjIHBow7RuZy4=",
+            "Thiếu mã phòng ban hoặc mã phông.",
         ));
     }
     if r_ol.ten_don_vi.trim().is_empty() {
-        return Err(AppError::validation("VGhp4bq/dSB0w6puIHBow7JuZyBiYW4u"));
+        return Err(AppError::validation("Thiếu tên phòng ban."));
     }
     let r_ok = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     store::f_2o7(&r_ok, &r_ol)?;
@@ -53,7 +53,7 @@ pub fn mang_upsert(
     let r_oo = args.mang;
     if r_oo.ten_mang.trim().is_empty() || r_oo.ma_dv.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0w6puIG3huqNuZyBob+G6t2MgcGjDsm5nIGJhbi4=",
+            "Thiếu tên mảng hoặc phòng ban.",
         ));
     }
     let r_on = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -81,7 +81,7 @@ pub fn thbq_upsert(
     let r_or = args.thbq;
     if r_or.ten_thbq.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0w6puIHRo4budaSBo4bqhbiBi4bqjbyBxdeG6o24u",
+            "Thiếu tên thời hạn bảo quản.",
         ));
     }
     let r_oq = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -109,12 +109,12 @@ pub fn phong_upsert(
     let r_ou = args.phong;
     if r_ou.ma_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBtw6MgcGjDtG5nIGzGsHUgdHLhu68u",
+            "Thiếu mã phông lưu trữ.",
         ));
     }
     if r_ou.ten_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0w6puIHBow7RuZyBsxrB1IHRy4buvLg==",
+            "Thiếu tên phông lưu trữ.",
         ));
     }
     let r_ot = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -149,7 +149,7 @@ pub fn ngon_ngu_upsert(
     let r_ox = args.ngon_ngu;
     if r_ox.ma_ngon_ngu.trim().is_empty() || r_ox.ten_ngon_ngu.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBtw6MgaG/hurdjIHTDqm4gbmfDtG4gbmfhu68u",
+            "Thiếu mã hoặc tên ngôn ngữ.",
         ));
     }
     let r_ow = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -177,7 +177,7 @@ pub fn loai_van_ban_upsert(
     let r_p0 = args.loai_van_ban;
     if r_p0.ma_loai.trim().is_empty() || r_p0.ten_loai.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBtw6MgaG/hurdjIHTDqm4gbG/huqFpIHTDoGkgbGnhu4d1Lg==",
+            "Thiếu mã hoặc tên loại tài liệu.",
         ));
     }
     let r_oz = db.0.lock().map_err(|_| AppError::DbPoisoned)?;

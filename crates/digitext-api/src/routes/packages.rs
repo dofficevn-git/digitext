@@ -89,7 +89,7 @@ async fn f_12b(
     r_mj.require_perm(Permission::PackageCreate)?;
     let project_id = r_mq.project_id.or(r_mj.user.project_id).ok_or_else(|| {
         ApiError::bad_request(
-            "dGhp4bq/dSBwcm9qZWN0SWQgKG5nxrDhu51pIGfhu41pIGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIG7DoG8p",
+            "thiếu projectId (người gọi không thuộc dự án nào)",
         )
     })?;
     let r_mt = f_29a(&r_mv.pool, &r_mj.user).await?;
@@ -99,7 +99,7 @@ async fn f_12b(
     let r_mu = r_mq.request.shape_errors();
     if !r_mu.is_empty() {
         return Err(ApiError::bad_request(format!(
-            "ecOqdSBj4bqndSDEkcOzbmcgZ8OzaSBraMO0bmcgaOG7o3AgbOG7hzog{}",
+            "yêu cầu đóng gói không hợp lệ: {}",
             r_mu.join("; ")
         )));
     }
@@ -109,12 +109,12 @@ async fn f_12b(
                 .await?
                 .ok_or_else(|| {
                     ApiError::bad_request(format!(
-                        "dMOgaSBsaeG7h3Ug{doc_id}IGtow7RuZyB04buTbiB04bqhaQ=="
+                        "tài liệu {doc_id} không tồn tại"
                     ))
                 })?;
             if r_mm.project_id != project_id {
                 return Err(ApiError::bad_request(format!(
-                    "dMOgaSBsaeG7h3Ug{doc_id}IGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIGPhu6dhIGfDs2k="
+                    "tài liệu {doc_id} không thuộc dự án của gói"
                 )));
             }
         }
@@ -125,7 +125,7 @@ async fn f_12b(
         _ => {
             return Err(
                 ApiError::bad_request(
-                    "c3R0RnJvbS9zdHRUbyBwaOG6o2kgxJFpIHRow6BuaCBj4bq3cCB2w6AgMSDiiaQgdOG7qyDiiaQgxJHhur9uIChQSy01LCDEkGnhu4F1IDIyLjMuYyk="
+                    "sttFrom/sttTo phải đi thành cặp và 1 ≤ từ ≤ đến (PK-5, Điều 22.3.c)"
                         .to_string(),
                 ),
             );
@@ -135,18 +135,18 @@ async fn f_12b(
         let r_my = digitext_db::submissions::get(&r_mv.pool, sid)
             .await?
             .ok_or_else(|| {
-                ApiError::bad_request(format!("bOG6p24gbuG7mXAg{sid}IGtow7RuZyB04buTbiB04bqhaQ=="))
+                ApiError::bad_request(format!("lần nộp {sid} không tồn tại"))
             })?;
         if r_my.project_id != project_id {
             return Err(ApiError::bad_request(
-                "bOG6p24gbuG7mXAga2jDtG5nIHRodeG7mWMgZOG7sSDDoW4gY+G7p2EgZ8OzaQ==".to_string(),
+                "lần nộp không thuộc dự án của gói".to_string(),
             ));
         }
         if r_my.status != "confirmed" && r_my.status != "awaiting_reception" {
             return Err(
                 ApiError::conflict(
                     format!(
-                        "bOG6p24gbuG7mXAgY2jGsGEgbmjhuq1uIGfDs2kgKHRy4bqhbmcgdGjDoWk6IA=={}KSDigJQgY+G6p24gxJHGsOG7o2MgeMOhYyBuaOG6rW4gdHLGsOG7m2MgKMSQaeG7gXUgMjEp",
+                        "lần nộp chưa nhận gói (trạng thái: {}) — cần được xác nhận trước (Điều 21)",
                         r_my.status
                     ),
                 ),
@@ -155,7 +155,7 @@ async fn f_12b(
         if !r_mq.request.kind.starts_with("sip_") {
             return Err(
                 ApiError::bad_request(
-                    "Y2jhu4kgZ8OzaSBTSVAgbeG7m2kgZ+G6r24gxJHGsOG7o2MgdsOgbyBs4bqnbiBu4buZcCAoxJBp4buBdSAyMi4zLmMp"
+                    "chỉ gói SIP mới gắn được vào lần nộp (Điều 22.3.c)"
                         .to_string(),
                 ),
             );
@@ -168,7 +168,7 @@ async fn f_12b(
                     return Err(
                         ApiError::bad_request(
                             format!(
-                                "ZOG6o2kgU1RUIA=={a}–{b}IG7hurFtIG5nb8OgaSBN4bulYyBs4bulYyBj4bunYSBs4bqnbiBu4buZcCAoUEstNSk="
+                                "dải STT {a}–{b} nằm ngoài Mục lục của lần nộp (PK-5)"
                             ),
                         ),
                     );
@@ -187,7 +187,7 @@ async fn f_12b(
     }
     let r_mr = serde_json::to_value(&r_mq.request).map_err(|e| {
         ApiError::bad_request(format!(
-            "cmVxdWVzdCBraMO0bmcgc2VyaWFsaXplIMSRxrDhu6NjOiA={e}"
+            "request không serialize được: {e}"
         ))
     })?;
     let r_ms = packages::create(
@@ -299,7 +299,7 @@ async fn f_17c(
     let r_nm = load_in_scope(&r_no, &r_nf, id).await?;
     if r_nm.status != "built" {
         return Err(ApiError::conflict(format!(
-            "Z8OzaSBjaMawYSBz4bq1biBzw6BuZyAodHLhuqFuZyB0aMOhaTog{})",
+            "gói chưa sẵn sàng (trạng thái: {})",
             r_nm.status
         )));
     }
@@ -309,7 +309,7 @@ async fn f_17c(
     let r_np = r_no
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let etag = r_nm
         .zip_sha256
         .as_deref()
@@ -349,7 +349,7 @@ async fn f_17c(
         .map_err(|e| {
             tracing::error!(
                 package = % id, error = % e,
-                "xJHhu41jIFpJUCBnw7NpIHRpbiB04burIGtobyBs4buXaQ=="
+                "đọc ZIP gói tin từ kho lỗi"
             );
             ApiError::internal()
         })?

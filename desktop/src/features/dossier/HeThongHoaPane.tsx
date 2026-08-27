@@ -81,7 +81,7 @@ export default function HeThongHoaPane() {
       V15o = V15o.filter((r) => r.thbq != null && set.has(r.thbq));
     }
     if (V152)
-      V15o = V15o.filter((r) => V4co(V14r, r.thbq).toLowerCase().includes("dsSpbmggdmnhu4Vu"));
+      V15o = V15o.filter((r) => V4co(V14r, r.thbq).toLowerCase().includes("vĩnh viễn"));
     if (V154) V15o = V15o.filter((r) => (r.trangThai || "").toUpperCase().includes("GL"));
     if (V156) V15o = V15o.filter((r) => (r.trangThai || "").toLowerCase().includes("het"));
     if (V158) V15o = V15o.filter((r) => r.trungThua);
@@ -110,17 +110,17 @@ export default function HeThongHoaPane() {
       const V15w = V4dw(V15n, V14r, V15u);
       const data = V15w.map((r) => ({
         TcOjIEjhu5MgU8ah: r.maHoSo ?? "",
-        "SOG7mXAgU+G7kQ==": r.hopSo ?? "",
-        "SFMgU+G7kQ==": r.thuTuSapXep ?? "",
-        "QsOzIFPhu5E=": r.boSo ?? "",
-        "VOG6rXAgU+G7kQ==": r.tapSo ?? "",
-        "U+G7kSBU4bqhbQ==": r.soTam,
-        "VGnDqnUgxJDhu4E=": r.tieuDe,
+        "Hộp Số": r.hopSo ?? "",
+        "HS Số": r.thuTuSapXep ?? "",
+        "Bó Số": r.boSo ?? "",
+        "Tập Số": r.tapSo ?? "",
+        "Số Tạm": r.soTam,
+        "Tiêu Đề": r.tieuDe,
         THBQ: V4co(V14r, r.thbq),
-        "U+G7kSBU4bud": V4dt(r.soTo),
-        "Ti5C4bqvdCDEkOG6p3U=": V4dr(r.ngayBatDau),
-        "Ti5L4bq/dCBUaMO6Yw==": V4dr(r.ngayKetThuc),
-        "VHLhuqFuZyBUaMOhaQ==": V4du(r, V14r).label,
+        "Số Tờ": V4dt(r.soTo),
+        "N.Bắt Đầu": V4dr(r.ngayBatDau),
+        "N.Kết Thúc": V4dr(r.ngayKetThuc),
+        "Trạng Thái": V4du(r, V14r).label,
       }));
       const V15x = V15v.utils.json_to_sheet(data);
       const V15y = V15v.utils.book_new();
@@ -289,7 +289,7 @@ export default function HeThongHoaPane() {
             <input
               className="form-control solo"
               value={V150}
-              placeholder="Tmjhuq1wIGvDvSB04buxIGLhuqV0IGvhu7MgdsOgIG5o4bqlbiBwaMOtbSBFbnRlciDEkeG7gyB0w6xtIGtp4bq/bQ=="
+              placeholder="Nhập ký tự bất kỳ và nhấn phím Enter để tìm kiếm"
               onChange={(V16e) => V151(V16e.target.value)}
               onKeyDown={(V16f) => V16f.key === "Enter" && V15m()}
             />
@@ -411,7 +411,7 @@ export default function HeThongHoaPane() {
                         <a
                           className="ic-word"
                           onClick={() => V15d(r)}
-                          title="VGjDqm0gdGjDtG5nIHRpbiB2xINuIGLhuqNu"
+                          title="Thêm thông tin văn bản"
                         >
                           <Icon name="tepWord" />
                         </a>
@@ -427,7 +427,7 @@ export default function HeThongHoaPane() {
                 <td className="footer-restore" colSpan={V164}>
                   <a
                     className="toggle-vis"
-                    title="SGnhu4NuIHRo4buLIHRvw6BuIGLhu5kgY+G7mXQ="
+                    title="Hiển thị toàn bộ cột"
                     onClick={() => V15g({ bo: true, tap: true, sotam: true, tthua: true })}
                   >
                     <Icon name="luoi" />

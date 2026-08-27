@@ -47,7 +47,7 @@ impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
         Ok(Config {
             database_url: std::env::var("DATABASE_URL")
-                .context("dGhp4bq/dSBiaeG6v24gbcO0aSB0csaw4budbmcgREFUQUJBU0VfVVJM")?,
+                .context("thiếu biến môi trường DATABASE_URL")?,
             bind: std::env::var("DIGITEXT_BIND").unwrap_or_else(|_| "127.0.0.1:8080".into()),
             jwt_key_path: std::env::var("DIGITEXT_JWT_KEY_PATH")
                 .unwrap_or_else(|_| "jwt-ed25519.pem".into()),

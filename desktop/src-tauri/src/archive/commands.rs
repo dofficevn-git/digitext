@@ -55,7 +55,7 @@ pub fn import_ho_so(
     } = args;
     if r_2v.ma_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBtw6MgcGjDtG5nIChjxqEgcXVhbiku",
+            "Thiếu mã phông (cơ quan).",
         ));
     }
     let mut r_2t = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -64,7 +64,7 @@ pub fn import_ho_so(
     r_2x.commit()?;
     tracing::info!(
         r_2v = % r_2v.ma_du_an, count = ho_so, dossier,
-        "aW1wb3J0X2hvX3NvIChrw6htIMSR4buTbmcgYuG7mSBt4bulYyBs4bulYyBjaOG7iW5oIGzDvSk="
+        "import_ho_so (kèm đồng bộ mục lục chỉnh lý)"
     );
     Ok(T9p { ho_so, dossier })
 }
@@ -98,7 +98,7 @@ pub(crate) async fn apply_folder_tree(
 ) -> Result<T8b, AppError> {
     if r_3f.ma_du_an.trim().is_empty() || r_3f.ten_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0aMO0bmcgdGluIGPGoSBxdWFuIChQaMO0bmcpLg==",
+            "Thiếu thông tin cơ quan (Phông).",
         ));
     }
     let r_3e = r_3l.or_else(|| f_112(r_33));
@@ -110,10 +110,10 @@ pub(crate) async fn apply_folder_tree(
         tauri::async_runtime::spawn_blocking(move || -> Result<(String, Vec<T89>), String> {
             let r_31 = r_3j
                 .canonicalize()
-                .map_err(|e| format!("dGjGsCBt4bulYyBn4buRYyBs4buXaTog{e}"))?;
+                .map_err(|e| format!("thư mục gốc lỗi: {e}"))?;
             let r_3g = storage::f_1jt(&r_3j, &[&r_3i], r_3m);
             std::fs::create_dir_all(&r_3g)
-                .map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBjxqEgcXVhbiBs4buXaTog{e}"))?;
+                .map_err(|e| format!("tạo thư mục cơ quan lỗi: {e}"))?;
             let mut r_3d: Vec<T89> = Vec::with_capacity(r_3a.len());
             for r_38 in &r_3a {
                 if r_38.ho_so_so.trim().is_empty() {
@@ -121,11 +121,11 @@ pub(crate) async fn apply_folder_tree(
                 }
                 let r_34 = storage::f_1jt(&r_3j, &[&r_3i, &r_38.hop_so, &r_38.ho_so_so], r_3m);
                 std::fs::create_dir_all(&r_34)
-                    .map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBo4buTIHPGoSBs4buXaTog{e}"))?;
+                    .map_err(|e| format!("tạo thư mục hồ sơ lỗi: {e}"))?;
                 let r_30 = r_34.canonicalize().map_err(|e| e.to_string())?;
                 if !r_30.starts_with(&r_31) {
                     return Err(
-                        "xJHGsOG7nW5nIGThuqtuIHRoxrAgbeG7pWMga2jDtG5nIGjhu6NwIGzhu4c=".into(),
+                        "đường dẫn thư mục không hợp lệ".into(),
                     );
                 }
                 r_3d.push((
@@ -137,7 +137,7 @@ pub(crate) async fn apply_folder_tree(
             Ok((r_3g.to_string_lossy().into_owned(), r_3d))
         })
         .await
-        .map_err(|e| format!("bHXhu5NuZyB04bqhbyB0aMawIG3hu6VjIGzhu5dpOiA={e}"))??;
+        .map_err(|e| format!("luồng tạo thư mục lỗi: {e}"))??;
     let r_3o;
     {
         let mut r_35: std::collections::HashMap<(String, String), String> =
@@ -153,7 +153,7 @@ pub(crate) async fn apply_folder_tree(
     }
     tracing::info!(
         r_3f = % r_3f.ma_du_an, created = r_36.len(), r_3o,
-        "YXBwbHlfZm9sZGVyX3RyZWUgKGvDqG0gxJHhu5NuZyBi4buZIG3hu6VjIGzhu6VjIGNo4buJbmggbMO9KQ=="
+        "apply_folder_tree (kèm đồng bộ mục lục chỉnh lý)"
     );
     Ok(T8b {
         root_path: r_3k,
@@ -172,16 +172,16 @@ pub async fn finalize_ho_so(
     let r_3x = auth.require_perm(Permission::DossierUpdate)?;
     if args.pages.is_empty() {
         return Err(AppError::validation(
-            "S2jDtG5nIGPDsyB0cmFuZyBuw6BvIMSR4buDIMSRw7NuZyBnw7NpLg==",
+            "Không có trang nào để đóng gói.",
         ));
     }
     if args.ho_so_id.is_none() {
         if args.ho_so.ho_so_so.trim().is_empty() {
-            return Err(AppError::validation("VGhp4bq/dSBI4buTIHPGoSBz4buRLg=="));
+            return Err(AppError::validation("Thiếu Hồ sơ số."));
         }
         if args.phong.ma_du_an.trim().is_empty() || args.phong.ten_du_an.trim().is_empty() {
             return Err(AppError::validation(
-                "VGhp4bq/dSB0aMO0bmcgdGluIGPGoSBxdWFuIChQaMO0bmcpLg==",
+                "Thiếu thông tin cơ quan (Phông).",
             ));
         }
     }
@@ -205,7 +205,7 @@ pub async fn finalize_ho_so(
     };
     let r_3t = tauri::async_runtime::spawn_blocking(move || f_vb(r_3s))
         .await
-        .map_err(|e| format!("bHXhu5NuZyDEkcOzbmcgZ8OzaSBs4buXaTog{e}"))??;
+        .map_err(|e| format!("luồng đóng gói lỗi: {e}"))??;
     let r_3v = args.phong;
     let r_3r = args.ho_so.to_input(&r_3v.ma_du_an);
     let id = {
@@ -264,19 +264,19 @@ pub async fn merge_scanned_pages_pdf(
     auth.require_perm(Permission::ScanExecute)?;
     if args.pages.is_empty() {
         return Err(AppError::validation(
-            "Q2jGsGEgY2jhu41uIOG6o25oIG7DoG8gxJHhu4MgZ+G7mXAu",
+            "Chưa chọn ảnh nào để gộp.",
         ));
     }
     if args.ho_so.ho_so_so.trim().is_empty() {
         return Err(
             AppError::validation(
-                "VGhp4bq/dSBI4buTIHPGoSBz4buRIChj4bqnbiDEkeG7gyDEkeG6t3QgdMOqbiAmIGNo4buNbiB0aMawIG3hu6VjIGzGsHUpLg==",
+                "Thiếu Hồ sơ số (cần để đặt tên & chọn thư mục lưu).",
             ),
         );
     }
     if args.phong.ten_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0aMO0bmcgdGluIGPGoSBxdWFuIChQaMO0bmcpLg==",
+            "Thiếu thông tin cơ quan (Phông).",
         ));
     }
     let r_41 = args.options.storage_root.clone().or_else(|| f_112(&db));
@@ -298,7 +298,7 @@ pub async fn merge_scanned_pages_pdf(
     };
     let r_40 = tauri::async_runtime::spawn_blocking(move || f_1sb(r_3z))
         .await
-        .map_err(|e| format!("bHXhu5NuZyBn4buZcCBQREYgbOG7l2k6IA=={e}"))??;
+        .map_err(|e| format!("luồng gộp PDF lỗi: {e}"))??;
     tracing::info!(
         pages = r_40.page_count,
         bytes = r_40.pdf_size,
@@ -341,14 +341,14 @@ pub fn ho_so_update(
     let T99 { id: r_46, ho_so } = args;
     if ho_so.ho_so_so.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBo4buTIHPGoSBz4buRIChraMOzYSDEkeG7i25oIGRhbmggaOG7kyBzxqEpLg==",
+            "Thiếu hồ sơ số (khóa định danh hồ sơ).",
         ));
     }
     let r_45 = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     let r_47 = db::f_2nf(&r_45, r_46, &ho_so.to_input(""))?;
     if !r_47 {
         return Err(AppError::not_found(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahIMSR4buDIGPhuq1wIG5o4bqtdC4=",
+            "Không tìm thấy hồ sơ để cập nhật.",
         ));
     }
     Ok(())
@@ -370,12 +370,12 @@ pub fn open_pdf(auth: State<'_, AuthState>, args: Tfi) -> Result<(), AppError> {
     auth.require(Perm::Read)?;
     if !f_1fx(&args.path) {
         return Err(AppError::validation(
-            "Q2jhu4kgbeG7nyDEkcaw4bujYyBmaWxlIC5wZGYu",
+            "Chỉ mở được file .pdf.",
         ));
     }
     let r_49 = Path::new(&args.path);
     if !r_49.is_file() {
-        return Err(AppError::not_found("RmlsZSBraMO0bmcgdOG7k24gdOG6oWku"));
+        return Err(AppError::not_found("File không tồn tại."));
     }
     f_1w9(r_49).map_err(|e| super::paths::f_1w7(&e))
 }
@@ -397,7 +397,7 @@ pub async fn save_export(
     let ext = args.ext.as_deref().unwrap_or("html").to_lowercase();
     if !C_6O.contains(&ext.as_str()) {
         return Err(AppError::validation(
-            "xJB1w7RpIGZpbGUga2jDtG5nIGjhu6NwIGzhu4cu",
+            "Đuôi file không hợp lệ.",
         ));
     }
     let path = if args.open {
@@ -421,13 +421,13 @@ pub async fn save_export(
                 .blocking_save_file()
         })
         .await
-        .map_err(|e| AppError::internal(format!("aOG7mXAgdGhv4bqhaSBMxrB1IGzhu5dpOiA={e}")))?;
+        .map_err(|e| AppError::internal(format!("hộp thoại Lưu lỗi: {e}")))?;
         let Some(r_4d) = r_4a else {
             return Ok(None);
         };
         r_4d.into_path().map_err(|e| {
             AppError::internal(format!(
-                "xJHGsOG7nW5nIGThuqtuIGtow7RuZyBo4bujcCBs4buHOiA={e}"
+                "đường dẫn không hợp lệ: {e}"
             ))
         })?
     };
@@ -435,8 +435,8 @@ pub async fn save_export(
     let r_4f = path.clone();
     tauri::async_runtime::spawn_blocking(move || crate::storage::f_2rn(&r_4f, &r_4b))
         .await
-        .map_err(|e| AppError::internal(format!("bHXhu5NuZyBnaGkgbOG7l2k6IA=={e}")))?
-        .map_err(|e| AppError::internal(format!("a2jDtG5nIGdoaSDEkcaw4bujYyBmaWxlOiA={e}")))?;
+        .map_err(|e| AppError::internal(format!("luồng ghi lỗi: {e}")))?
+        .map_err(|e| AppError::internal(format!("không ghi được file: {e}")))?;
     if args.open {
         f_1w9(&path).map_err(|e| super::paths::f_1w7(&e))?;
     }
@@ -496,10 +496,10 @@ pub fn delete_path(
     let r_4m = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     if r_4n.is_dir() {
         std::fs::remove_dir_all(&r_4n)
-            .map_err(|e| format!("eG/DoSB0aMawIG3hu6VjIGzhu5dpOiA={e}"))?;
+            .map_err(|e| format!("xoá thư mục lỗi: {e}"))?;
         db::f_148(&r_4m, &r_4o)?;
     } else {
-        std::fs::remove_file(&r_4n).map_err(|e| format!("eG/DoSBmaWxlIGzhu5dpOiA={e}"))?;
+        std::fs::remove_file(&r_4n).map_err(|e| format!("xoá file lỗi: {e}"))?;
         db::f_102(&r_4m, &r_4o)?;
     }
     tracing::info!(path = % r_4o, "delete_path");
@@ -508,14 +508,14 @@ pub fn delete_path(
 fn f_yd(r_4p: &str, nhan: &str) -> Result<(), AppError> {
     if r_4p.is_empty() {
         return Err(AppError::validation(format!(
-            "{nhan}IGtow7RuZyBo4bujcCBs4buHLg=="
+            "{nhan} không hợp lệ."
         )));
     }
     if r_4p.starts_with('_') {
         return Err(
             AppError::validation(
                 format!(
-                    "{nhan}IGtow7RuZyDEkcaw4bujYyBi4bqvdCDEkeG6p3UgYuG6sW5nIGThuqV1IGfhuqFjaCBkxrDhu5tpIChfKTogdGnhu4FuIHThu5EgbsOgeSBkw6BuaCBjaG8gdGjGsCBt4bulYyBu4buZaSBi4buZIGPhu6dhIOG7qW5nIGThu6VuZyB2w6Agc+G6vSBraMO0bmcgaGnhu4duIHRyb25nIEtoby4="
+                    "{nhan} không được bắt đầu bằng dấu gạch dưới (_): tiền tố này dành cho thư mục nội bộ của ứng dụng và sẽ không hiện trong Kho."
                 ),
             ),
         );
@@ -533,7 +533,7 @@ pub fn rename_path(
     let r_4w = f_113(&app, &db, &args.path)?;
     let r_4x = r_4w
         .parent()
-        .ok_or_else(|| AppError::validation("S2jDtG5nIGPDsyB0aMawIG3hu6VjIGNoYS4="))?;
+        .ok_or_else(|| AppError::validation("Không có thư mục cha."))?;
     let r_4r = r_4w.is_file();
     let ext = if r_4r {
         r_4w.extension()
@@ -551,10 +551,10 @@ pub fn rename_path(
     let r_4t = r_4x.join(&r_4s);
     if r_4t.exists() {
         return Err(AppError::validation(
-            "VMOqbiDEkcOjIHThu5NuIHThuqFpIHRyb25nIHRoxrAgbeG7pWMu",
+            "Tên đã tồn tại trong thư mục.",
         ));
     }
-    std::fs::rename(&r_4w, &r_4t).map_err(|e| format!("xJHhu5VpIHTDqm4gbOG7l2k6IA=={e}"))?;
+    std::fs::rename(&r_4w, &r_4t).map_err(|e| format!("đổi tên lỗi: {e}"))?;
     let r_4v = r_4w.to_string_lossy().to_string();
     let r_4u = r_4t.to_string_lossy().to_string();
     {
@@ -575,18 +575,18 @@ pub fn create_subfolder(
     let r_50 = f_113(&app, &db, &args.parent_path)?;
     if !r_50.is_dir() {
         return Err(AppError::validation(
-            "VGjGsCBt4bulYyBjaGEga2jDtG5nIGjhu6NwIGzhu4cu",
+            "Thư mục cha không hợp lệ.",
         ));
     }
     let r_4z = storage::sanitize(&args.name, 90, false);
-    f_yd(&r_4z, "VMOqbiB0aMawIG3hu6Vj")?;
+    f_yd(&r_4z, "Tên thư mục")?;
     let r_4y = r_50.join(&r_4z);
     if r_4y.exists() {
         return Err(AppError::validation(
-            "VGjGsCBt4bulYyDEkcOjIHThu5NuIHThuqFpLg==",
+            "Thư mục đã tồn tại.",
         ));
     }
-    std::fs::create_dir_all(&r_4y).map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBs4buXaTog{e}"))?;
+    std::fs::create_dir_all(&r_4y).map_err(|e| format!("tạo thư mục lỗi: {e}"))?;
     Ok(Tgv {
         path: r_4y.to_string_lossy().to_string(),
     })
@@ -602,28 +602,28 @@ pub fn move_path(
     let r_58 = f_113(&app, &db, &args.path)?;
     let r_51 = f_29d(&app, f_112(&db).as_deref())?
         .canonicalize()
-        .map_err(|e| format!("4buVIGzGsHUgdHLhu68gbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("ổ lưu trữ lỗi: {e}"))?;
     let r_52 = Path::new(args.dest_dir.trim())
         .canonicalize()
-        .map_err(|_| AppError::not_found("VGjGsCBt4bulYyDEkcOtY2gga2jDtG5nIHThu5NuIHThuqFpLg=="))?;
+        .map_err(|_| AppError::not_found("Thư mục đích không tồn tại."))?;
     if !r_52.starts_with(&r_51) {
         return Err(AppError::validation(
-            "xJDDrWNoIG5nb8OgaSDhu5UgbMawdSB0cuG7ry4=",
+            "Đích ngoài ổ lưu trữ.",
         ));
     }
     if !r_52.is_dir() {
         return Err(AppError::validation(
-            "xJDDrWNoIGtow7RuZyBwaOG6o2kgdGjGsCBt4bulYy4=",
+            "Đích không phải thư mục.",
         ));
     }
     if r_52.starts_with(&r_58) {
         return Err(AppError::validation(
-            "S2jDtG5nIHRo4buDIGRpIGNodXnhu4NuIHRoxrAgbeG7pWMgdsOgbyBjaMOtbmggbsOzLg==",
+            "Không thể di chuyển thư mục vào chính nó.",
         ));
     }
     let r_54 = r_58
         .file_name()
-        .ok_or_else(|| AppError::validation("VMOqbiBraMO0bmcgaOG7o3AgbOG7hy4="))?;
+        .ok_or_else(|| AppError::validation("Tên không hợp lệ."))?;
     let r_55 = r_52.join(r_54);
     if r_55 == r_58 {
         return Ok(Tgv {
@@ -632,10 +632,10 @@ pub fn move_path(
     }
     if r_55.exists() {
         return Err(AppError::validation(
-            "xJDDrWNoIMSRw6MgY8OzIG3hu6VjIGPDuW5nIHTDqm4u",
+            "Đích đã có mục cùng tên.",
         ));
     }
-    std::fs::rename(&r_58, &r_55).map_err(|e| format!("ZGkgY2h1eeG7g24gbOG7l2k6IA=={e}"))?;
+    std::fs::rename(&r_58, &r_55).map_err(|e| format!("di chuyển lỗi: {e}"))?;
     let r_57 = r_58.to_string_lossy().to_string();
     let r_56 = r_55.to_string_lossy().to_string();
     {
@@ -661,15 +661,15 @@ pub fn read_dir(
     auth.require(Perm::Read)?;
     let r_5c = f_29d(&app, f_112(&db).as_deref())?
         .canonicalize()
-        .map_err(|e| format!("4buVIGzGsHUgdHLhu68gbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("ổ lưu trữ lỗi: {e}"))?;
     let r_5d = match args.path.as_deref() {
         Some(r_5e) if !r_5e.trim().is_empty() => {
             let r_5b = Path::new(r_5e).canonicalize().map_err(|_| {
-                AppError::not_found("xJHGsOG7nW5nIGThuqtuIGtow7RuZyB04buTbiB04bqhaQ==")
+                AppError::not_found("đường dẫn không tồn tại")
             })?;
             if !r_5b.starts_with(&r_5c) {
                 return Err(AppError::validation(
-                    "xJDGsOG7nW5nIGThuqtuIG5nb8OgaSDhu5UgbMawdSB0cuG7ry4=",
+                    "Đường dẫn ngoài ổ lưu trữ.",
                 ));
             }
             r_5b
@@ -677,14 +677,14 @@ pub fn read_dir(
         _ => r_5c,
     };
     if !r_5d.is_dir() {
-        return Err(AppError::validation("S2jDtG5nIHBo4bqjaSB0aMawIG3hu6VjLg=="));
+        return Err(AppError::validation("Không phải thư mục."));
     }
     f_1ns(&r_5d)
 }
 fn f_1ns(r_5f: &Path) -> Result<Vec<T4q>, AppError> {
     let mut r_5l: Vec<T4q> = Vec::new();
     for r_5g in std::fs::read_dir(r_5f)
-        .map_err(|e| format!("xJHhu41jIHRoxrAgbeG7pWMgbOG7l2k6IA=={e}"))?
+        .map_err(|e| format!("đọc thư mục lỗi: {e}"))?
         .flatten()
     {
         let r_5k = r_5g.file_name().to_string_lossy().into_owned();

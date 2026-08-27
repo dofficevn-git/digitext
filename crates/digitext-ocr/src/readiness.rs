@@ -7,7 +7,7 @@ pub struct Toj {
     pub models: Vec<(String, bool)>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("a2jDtG5nIGTDsiDEkcaw4bujYyBUcml0b246IA=={0}")]
+#[error("không dò được Triton: {0}")]
 pub struct Thj(pub String);
 pub trait Tol: Send + Sync {
     fn probe(&self, required_models: &[String]) -> impl Future<Output = Result<Toj, Thj>> + Send;
@@ -43,7 +43,7 @@ impl<P: Tol> Readiness<P> {
                 r_3d4.push(if r_3d6.server_ready {
                     Check::ok("triton_server", true)
                 } else {
-                    Check::fail("triton_server", true, "c2VydmVyIGNoxrBhIHJlYWR5")
+                    Check::fail("triton_server", true, "server chưa ready")
                 });
                 let r_3d8: Vec<&str> = r_3d6
                     .models
@@ -57,7 +57,7 @@ impl<P: Tol> Readiness<P> {
                     Check::fail(
                         "triton_models",
                         true,
-                        format!("bW9kZWwgY2jGsGEgcmVhZHk6IA=={}", r_3d8.join(", ")),
+                        format!("model chưa ready: {}", r_3d8.join(", ")),
                     )
                 });
             }

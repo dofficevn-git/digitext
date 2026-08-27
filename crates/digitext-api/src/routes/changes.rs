@@ -44,7 +44,7 @@ async fn changes(
         if let Err(r_be) = digitext_db::changes::prune(&r_bg.pool, digitext_db::changes::C_I8).await
         {
             tracing::warn!(
-                error = % r_be, "a2jDtG5nIGThu41uIMSRxrDhu6NjIGNoYW5nZV9sb2c="
+                error = % r_be, "không dọn được change_log"
             );
         }
     }

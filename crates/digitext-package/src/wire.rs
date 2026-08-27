@@ -78,7 +78,7 @@ impl Tq4 {
             );
             if !r_43t {
                 r_43q.push(format!(
-                    "bWV0YSBraMO0bmcga2jhu5twIGxv4bqhaSBnw7NpIA=={}",
+                    "meta không khớp loại gói {}",
                     kind.as_str()
                 ));
             }
@@ -86,13 +86,13 @@ impl Tq4 {
         if self.kind() == Ok(PackageKind::Dip) && self.dip_cert.is_none() {
             r_43q
                 .push(
-                    "ZGlwQ2VydDogZ8OzaSBESVAgYuG6r3QgYnXhu5ljIHThu4dwIHbEg24gYuG6o24geMOhYyB0aOG7sWMgMTEgdHLGsOG7nW5nICjEkGnhu4F1IDQyLjIp"
+                    "dipCert: gói DIP bắt buộc tệp văn bản xác thực 11 trường (Điều 42.2)"
                         .into(),
                 );
         }
         if self.documents.is_empty() {
             r_43q.push(
-                "ZG9jdW1lbnRzOiBnw7NpIHBo4bqjaSBjaOG7qWEgdOG7kWkgdGhp4buDdSAwMSB0w6BpIGxp4buHdQ=="
+                "documents: gói phải chứa tối thiểu 01 tài liệu"
                     .into(),
             );
         }
@@ -102,7 +102,7 @@ impl Tq4 {
                     r_43q
                         .push(
                             format!(
-                                "'{}JzogZG9jdW1lbnRJZCB2w6AgZmV0Y2ggbG/huqFpIHRy4burIGzhuqtuIG5oYXU=",
+                                "'{}': documentId và fetch loại trừ lẫn nhau",
                                 r_43p.file_name
                             ),
                         )
@@ -111,7 +111,7 @@ impl Tq4 {
                     r_43q
                         .push(
                             format!(
-                                "'{}JzogY+G6p24gZG9jdW1lbnRJZCAodMOgaSBsaeG7h3Ugc2VydmVyKSBob+G6t2MgZmV0Y2ggKHTDoGkgbGnhu4d1IGxpw6puIGvhur90KQ==",
+                                "'{}': cần documentId (tài liệu server) hoặc fetch (tài liệu liên kết)",
                                 r_43p.file_name
                             ),
                         )
@@ -131,7 +131,7 @@ impl Tq4 {
         let kind = self.kind()?;
         if resolved_bytes.len() != self.documents.len() {
             return Err(format!(
-                "resolved_bytes ({}KSBraMO0bmcga2jhu5twIHPhu5EgdMOgaSBsaeG7h3UgKA=={})",
+                "resolved_bytes ({}) không khớp số tài liệu ({})",
                 resolved_bytes.len(),
                 self.documents.len()
             ));
@@ -143,7 +143,7 @@ impl Tq4 {
                 (None, Some(b)) => DocumentContent::Bytes(b),
                 (None, None) => {
                     return Err(format!(
-                        "'{}JzogdGhp4bq/dSBieXRlcyB0w6BpIGxp4buHdQ==",
+                        "'{}': thiếu bytes tài liệu",
                         d.file_name
                     ));
                 }
@@ -199,7 +199,7 @@ impl Tq4 {
             r_444 => {
                 return Err(
                     format!(
-                        "Y2jhu4kgY2h1eeG7g24gxJHGsOG7o2MgZ8OzaSBTSVAgdGjDoG5oIEFJUCAoxJFhbmcgbMOgIA=={})",
+                        "chỉ chuyển được gói SIP thành AIP (đang là {})",
                         r_444.as_str()
                     ),
                 );

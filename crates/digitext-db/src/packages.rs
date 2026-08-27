@@ -168,7 +168,7 @@ pub async fn f_w8(r_29x: &PgPool, submission_id: Uuid) -> sqlx::Result<Vec<Tgc>>
 }
 pub async fn requeue_expired(r_29z: &PgPool, r_29y: i32) -> sqlx::Result<u64> {
     let r_2a0 = sqlx::query(
-            "VVBEQVRFIHBhY2thZ2VzIFNFVCBzdGF0dXMgPSBDQVNFIFdIRU4gYXR0ZW1wdHMgPj0gJDEgVEhFTiAnZmFpbGVkJyBFTFNFICdxdWV1ZWQnIEVORCwgZXJyb3IgPSBDQVNFIFdIRU4gYXR0ZW1wdHMgPj0gJDEgVEhFTiBDT0FMRVNDRShlcnJvciwgJ2xlYXNlIGjhur90IGjhuqFuIOKAlCB3b3JrZXIga2jDtG5nIHBo4bqjbiBo4buTaScpIEVMU0UgZXJyb3IgRU5ELCBsb2NrZWRfYnkgPSBOVUxMLCBsZWFzZV91bnRpbCA9IE5VTEwsIHVwZGF0ZWRfYXQgPSBub3coKSBXSEVSRSBzdGF0dXMgPSAnYnVpbGRpbmcnIEFORCBsZWFzZV91bnRpbCA8IG5vdygp",
+            "UPDATE packages SET status = CASE WHEN attempts >= $1 THEN 'failed' ELSE 'queued' END, error = CASE WHEN attempts >= $1 THEN COALESCE(error, 'lease hết hạn — worker không phản hồi') ELSE error END, locked_by = NULL, lease_until = NULL, updated_at = now() WHERE status = 'building' AND lease_until < now()",
         )
         .bind(r_29y)
         .execute(r_29z)

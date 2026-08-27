@@ -56,17 +56,17 @@ pub fn f_vb(mut r_z: T1d) -> Result<T83, AppError> {
         &[&r_z.phong_name, &r_z.hop_so, &r_z.ho_so_so],
         r_z.strip,
     );
-    std::fs::create_dir_all(&r_t).map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBs4buXaTog{e}"))?;
+    std::fs::create_dir_all(&r_t).map_err(|e| format!("tạo thư mục lỗi: {e}"))?;
     let r_r = r_z
         .root
         .canonicalize()
-        .map_err(|e| format!("dGjGsCBt4bulYyBn4buRYyBs4buXaTog{e}"))?;
+        .map_err(|e| format!("thư mục gốc lỗi: {e}"))?;
     let r_q = r_t
         .canonicalize()
-        .map_err(|e| format!("dGjGsCBt4bulYyBo4buTIHPGoSBs4buXaTog{e}"))?;
+        .map_err(|e| format!("thư mục hồ sơ lỗi: {e}"))?;
     if !r_q.starts_with(&r_r) {
         return Err(AppError::validation(
-            "xJHGsOG7nW5nIGThuqtuIHRoxrAgbeG7pWMga2jDtG5nIGjhu6NwIGzhu4c=",
+            "đường dẫn thư mục không hợp lệ",
         ));
     }
     let pdf_path = match r_z.pdf_out.take() {
@@ -75,18 +75,18 @@ pub fn f_vb(mut r_z: T1d) -> Result<T83, AppError> {
                 .parent()
                 .ok_or_else(|| {
                     AppError::validation(
-                        "xJHGsOG7nW5nIGThuqtuIFBERiBnaGkgxJHDqCBraMO0bmcgaOG7o3AgbOG7hw==",
+                        "đường dẫn PDF ghi đè không hợp lệ",
                     )
                 })?
                 .canonicalize()
-                .map_err(|e| format!("dGjGsCBt4bulYyBQREYgZ2hpIMSRw6ggbOG7l2k6IA=={e}"))?;
+                .map_err(|e| format!("thư mục PDF ghi đè lỗi: {e}"))?;
             if !r_14.starts_with(&r_r) {
                 return Err(AppError::validation(
-                    "xJHGsOG7nW5nIGThuqtuIFBERiBnaGkgxJHDqCBuZ2/DoGkg4buVIGzGsHUgdHLhu68=",
+                    "đường dẫn PDF ghi đè ngoài ổ lưu trữ",
                 ));
             }
             let r_11 = r_12.file_name().ok_or_else(|| {
-                AppError::validation("dMOqbiBmaWxlIFBERiBnaGkgxJHDqCBraMO0bmcgaOG7o3AgbOG7hw==")
+                AppError::validation("tên file PDF ghi đè không hợp lệ")
             })?;
             r_14.join(r_11)
         }
@@ -110,7 +110,7 @@ pub fn f_vb(mut r_z: T1d) -> Result<T83, AppError> {
     let file_stem = pdf_path
         .file_stem()
         .map(|r_17| r_17.to_string_lossy().into_owned())
-        .ok_or_else(|| AppError::validation("dMOqbiBmaWxlIFBERiBraMO0bmcgaOG7o3AgbOG7hw=="))?;
+        .ok_or_else(|| AppError::validation("tên file PDF không hợp lệ"))?;
     let mut r_16: Vec<Tgx> = Vec::with_capacity(r_z.pages.len());
     let mut trang: Vec<Tod> = Vec::with_capacity(r_z.pages.len());
     let mut r_y: Vec<PathBuf> = Vec::with_capacity(r_z.pages.len());
@@ -119,7 +119,7 @@ pub fn f_vb(mut r_z: T1d) -> Result<T83, AppError> {
         let no = (r_v as u32) + 1;
         let r_18 = scanner::f_295(&r_13.source_path)?;
         let r_w = image::open(&r_18)
-            .map_err(|e| format!("beG7nyDhuqNuaCB0cmFuZyA={no}IGzhu5dpOiA={e}"))?;
+            .map_err(|e| format!("mở ảnh trang {no} lỗi: {e}"))?;
         let (r_10, r_19, r_u) = storage::f_198(&r_w, r_z.quality)?;
         let r_x = format!("{file_stem}_trang{no:03}.jpg");
         let img_path = r_q.join(&r_x);
@@ -161,7 +161,7 @@ pub fn f_vb(mut r_z: T1d) -> Result<T83, AppError> {
 pub fn f_1sb(r_1h: Td9) -> Result<Tda, AppError> {
     if r_1h.pages.is_empty() {
         return Err(AppError::validation(
-            "Q2jGsGEgY2jhu41uIOG6o25oIG7DoG8gxJHhu4MgZ+G7mXAu",
+            "Chưa chọn ảnh nào để gộp.",
         ));
     }
     let r_1d = storage::f_1jt(
@@ -169,17 +169,17 @@ pub fn f_1sb(r_1h: Td9) -> Result<Tda, AppError> {
         &[&r_1h.phong_name, &r_1h.hop_so, &r_1h.ho_so_so],
         r_1h.strip,
     );
-    std::fs::create_dir_all(&r_1d).map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBs4buXaTog{e}"))?;
+    std::fs::create_dir_all(&r_1d).map_err(|e| format!("tạo thư mục lỗi: {e}"))?;
     let r_1b = r_1h
         .root
         .canonicalize()
-        .map_err(|e| format!("dGjGsCBt4bulYyBn4buRYyBs4buXaTog{e}"))?;
+        .map_err(|e| format!("thư mục gốc lỗi: {e}"))?;
     let r_1a = r_1d
         .canonicalize()
-        .map_err(|e| format!("dGjGsCBt4bulYyBo4buTIHPGoSBs4buXaTog{e}"))?;
+        .map_err(|e| format!("thư mục hồ sơ lỗi: {e}"))?;
     if !r_1a.starts_with(&r_1b) {
         return Err(AppError::validation(
-            "xJHGsOG7nW5nIGThuqtuIHRoxrAgbeG7pWMga2jDtG5nIGjhu6NwIGzhu4c=",
+            "đường dẫn thư mục không hợp lệ",
         ));
     }
     let mut r_1l: Vec<Tgx> = Vec::with_capacity(r_1h.pages.len());
@@ -187,7 +187,7 @@ pub fn f_1sb(r_1h: Td9) -> Result<Tda, AppError> {
         let no = r_1f + 1;
         let r_1m = scanner::f_295(&r_1j.source_path)?;
         let r_1g = image::open(&r_1m)
-            .map_err(|e| format!("beG7nyDhuqNuaCB0cmFuZyA={no}IGzhu5dpOiA={e}"))?;
+            .map_err(|e| format!("mở ảnh trang {no} lỗi: {e}"))?;
         let (r_1i, r_1n, r_1e) = storage::f_198(&r_1g, r_1h.quality)?;
         let r_1c = if r_1j.dpi == 0 {
             config::C_3U

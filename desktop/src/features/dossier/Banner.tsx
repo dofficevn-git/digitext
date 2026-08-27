@@ -20,7 +20,7 @@ export default function Banner({
       <span className="bx">{text}</span>
       {Vw9 && (
         <button className="linkbtn" onClick={Vw9}>
-          <Icon name="dong" size={14} label="xJDDs25n" />
+          <Icon name="dong" size={14} label="Đóng" />
         </button>
       )}
     </div>

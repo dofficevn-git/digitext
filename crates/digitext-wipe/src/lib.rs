@@ -11,8 +11,8 @@ pub enum Scope {
 impl Scope {
     pub fn as_str(self) -> &'static str {
         match self {
-            Scope::Local => "bcOheSBuw6B5IChkZXNrdG9wKQ==",
-            Scope::Server => "bcOheSBjaOG7pw==",
+            Scope::Local => "máy này (desktop)",
+            Scope::Server => "máy chủ",
         }
     }
 }
@@ -25,10 +25,10 @@ impl Depth {
     pub fn as_str(self) -> &'static str {
         match self {
             Depth::Data => {
-                "ZOG7ryBsaeG7h3UgbmdoaeG7h3AgduG7pSAoZ2nhu68gdMOgaSBraG/huqNuICsgZGFuaCBt4bulYyk="
+                "dữ liệu nghiệp vụ (giữ tài khoản + danh mục)"
             }
             Depth::All => {
-                "VE/DgE4gQuG7mCAoa+G7gyBj4bqjIHTDoGkga2hv4bqjbiwgZOG7sSDDoW4sIGRhbmggbeG7pWMp"
+                "TOÀN BỘ (kể cả tài khoản, dự án, danh mục)"
             }
         }
     }
@@ -88,20 +88,20 @@ impl Thd {
 impl fmt::Display for Thd {
     fn fmt(&self, r_5of: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.scope {
-            Scope::Local => writeln!(r_5of, "UGjhuqFtIHZpIDog{}", self.scope.as_str())?,
+            Scope::Local => writeln!(r_5of, "Phạm vi : {}", self.scope.as_str())?,
             Scope::Server => writeln!(
                 r_5of,
-                "UGjhuqFtIHZpIDog{} — {}",
+                "Phạm vi : {} — {}",
                 self.scope.as_str(),
                 self.depth.as_str()
             )?,
         }
-        writeln!(r_5of, "TeG7pWMgdGnDqnU6IA=={}", self.target_id)?;
+        writeln!(r_5of, "Mục tiêu: {}", self.target_id)?;
         writeln!(r_5of)?;
         if self.is_empty() {
             writeln!(
                 r_5of,
-                "ICAoa2jDtG5nIHTDrG0gdGjhuqV5IGThu68gbGnhu4d1IG7DoG8gxJHhu4MgeG/DoSk="
+                "  (không tìm thấy dữ liệu nào để xoá)"
             )?;
         } else {
             for r_5og in &self.items {
@@ -115,7 +115,7 @@ impl fmt::Display for Thd {
                     r_5og.label, r_5og.count, r_5oe, r_5og.target
                 )?;
             }
-            writeln!(r_5of, "CiAgVOG7lE5HOiA={}IG3hu6Vj", self.total())?;
+            writeln!(r_5of, "\n  TỔNG: {} mục", self.total())?;
         }
         for w in &self.warnings {
             writeln!(r_5of, "\n  ⚠ {w}")?;
@@ -139,11 +139,11 @@ impl Report {
 }
 impl fmt::Display for Report {
     fn fmt(&self, r_5oi: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(r_5oi, "xJDDoyB4b8OhIA=={}IG3hu6Vj", self.removed)?;
+        write!(r_5oi, "Đã xoá {} mục", self.removed)?;
         if self.errors.is_empty() {
-            write!(r_5oi, "IMK3IGtow7RuZyBs4buXaQ==")
+            write!(r_5oi, " · không lỗi")
         } else {
-            write!(r_5oi, " · {}IEzhu5ZJOg==", self.errors.len())?;
+            write!(r_5oi, " · {} LỖI:", self.errors.len())?;
             for e in &self.errors {
                 write!(r_5oi, "\n    - {e}")?;
             }

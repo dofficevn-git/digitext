@@ -138,14 +138,14 @@ pub async fn f_2fx(
             (
                 "sla_confirm_overdue",
                 format!(
-                    "TOG6p24gbuG7mXAg{ma_yeu_cau}OiBxdcOhIDA3IG5nw6B5IGzDoG0gdmnhu4djIGNoxrBhIHRy4bqjIGzhu51pIMSRxINuZyBrw70gKMSQaeG7gXUgMjEuNCk="
+                    "Lần nộp {ma_yeu_cau}: quá 07 ngày làm việc chưa trả lời đăng ký (Điều 21.4)"
                 ),
             )
         } else {
             (
                 "sla_approve_overdue",
                 format!(
-                    "TOG6p24gbuG7mXAg{ma_yeu_cau}OiBxdcOhIDYwIG5nw6B5IGvhu4MgdOG7qyB0aeG6v3Agbmjhuq1uIGNoxrBhIHBow6ogZHV54buHdCAoxJBp4buBdSAyNS42KQ=="
+                    "Lần nộp {ma_yeu_cau}: quá 60 ngày kể từ tiếp nhận chưa phê duyệt (Điều 25.6)"
                 ),
             )
         };
@@ -160,7 +160,7 @@ pub async fn f_2fx(
             continue;
         }
         let message = format!(
-            "WcOqdSBj4bqndSBjdW5nIGPhuqVwIHRow7RuZyB0aW4gIg=={chu_de}IjogcXXDoSAwNiBuZ8OgeSBsw6BtIHZp4buHYyBjaMawYSB4w6l0IGR1eeG7h3QgKMSQaeG7gXUgNDYuNSk="
+            "Yêu cầu cung cấp thông tin \"{chu_de}\": quá 06 ngày làm việc chưa xét duyệt (Điều 46.5)"
         );
         let mut r_26k: Vec<Uuid> = crate::projects::f_re(r_26g, project_id).await?;
         r_26k.extend(r_26h);

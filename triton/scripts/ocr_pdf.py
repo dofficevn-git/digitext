@@ -76,13 +76,13 @@ def q_db(client, model: str, image):
     return boxes, texts, confs
 
 def main(argv=None) -> int:
-    p_a65 = argparse.ArgumentParser(description="T0NSIG3hu5l0IFBERiBxdWEgb2NyX3BpcGVsaW5lICh4ZW0gb3V0cHV0IG1vZGVsKQ==")
-    p_a65.add_argument("pdf", help="xJHGsOG7nW5nIGThuqtuIGZpbGUgUERG")
+    p_a65 = argparse.ArgumentParser(description="OCR một PDF qua ocr_pipeline (xem output model)")
+    p_a65.add_argument("pdf", help="đường dẫn file PDF")
     p_a65.add_argument("--url", default="localhost:8001", help="Triton gRPC (loopback)")
     p_a65.add_argument("--model", default="ocr_pipeline")
-    p_a65.add_argument("--dpi", type=int, default=200, help="xJHhu5kgcGjDom4gZ2nhuqNpIHJlbmRlciB0cmFuZw==")
-    p_a65.add_argument("--pages", default=None, help="dsOtIGThu6UgMS0zLDUgKDEtYmFzZWQpOyBt4bq3YyDEkeG7i25oIHThuqV0IGPhuqM=")
-    p_a65.add_argument("--min-conf", type=float, default=0.0, help="4bqpbiBkw7JuZyBkxrDhu5tpIG5nxrDhu6FuZyBjb25m")
+    p_a65.add_argument("--dpi", type=int, default=200, help="độ phân giải render trang")
+    p_a65.add_argument("--pages", default=None, help="ví dụ 1-3,5 (1-based); mặc định tất cả")
+    p_a65.add_argument("--min-conf", type=float, default=0.0, help="ẩn dòng dưới ngưỡng conf")
     p_a66 = p_a65.parse_args(argv)
 
     import tritonclient.grpc as grpcclient
@@ -96,7 +96,7 @@ def main(argv=None) -> int:
     for p_a6d in p_a69:
         boxes, texts, confs = q_db(client, p_a66.model, p_a6a[p_a6d])
         p_a6c = q_149(boxes, texts, confs)
-        print(f"\n===== TRANG {p_a6d + 1} — {len(p_a6c)}IGTDsm5nIChkcGk9{p_a66.dpi}) =====")
+        print(f"\n===== TRANG {p_a6d + 1} — {len(p_a6c)} dòng (dpi={p_a66.dpi}) =====")
         for t, p_a67 in p_a6c:
             if p_a67 < p_a66.min_conf:
                 continue
@@ -105,7 +105,7 @@ def main(argv=None) -> int:
             p_a68 += p_a67
 
     p_a6b = p_a68 / p_a6e if p_a6e else 0.0
-    print(f"Ci0tLS0tIFThu5RORzog{p_a6e}IGTDsm5nIMK3IGNvbmYgVEIg{p_a6b:.3f} · "
+    print(f"\n----- TỔNG: {p_a6e} dòng · conf TB {p_a6b:.3f} · "
           f"engine=rec_vietocr v4 (det_dbnet→cls_angle→rec_vietocr) -----")
     return 0
 

@@ -12,7 +12,7 @@ from pathlib import Path
 def stratum_of(rel_path: str, level: int) -> str:
     p_5e9 = Path(rel_path).parts[:-1]
     if not p_5e9:
-        return "PGfhu5FjPg=="
+        return "<gốc>"
     return "/".join(p_5e9[:level])
 
 def doc_rank(rel_path: str) -> float:
@@ -21,7 +21,7 @@ def doc_rank(rel_path: str) -> float:
 
 def q_f1(sizes: dict[str, int], target: int, min_per: int = 1) -> dict[str, int]:
     if target <= 0:
-        raise ValueError(f"dGFyZ2V0IHBo4bqjaSA+IDAsIG5o4bqtbiA={target}")
+        raise ValueError(f"target phải > 0, nhận {target}")
     if not sizes:
         return {}
     p_5f0 = sum(sizes.values())
@@ -87,25 +87,25 @@ def q_122(silver_jsonl: Path) -> set[str]:
 def main(argv: list[str] | None = None) -> int:
     p_5f9 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_5f9.add_argument("data_dir")
-    p_5f9.add_argument("--target", type=int, default=2500, help="c+G7kSBQREYgbXXhu5FuIGzhuqV5")
+    p_5f9.add_argument("--target", type=int, default=2500, help="số PDF muốn lấy")
     p_5f9.add_argument("--level", type=int, default=2,
-                    help="xJHhu5kgc8OidSB0aMawIG3hu6VjIGTDuW5nIGzDoG0gdOG6p25nICgyIOKHkiB+MTE5IHThuqduZywgbeG7i24gaMahbiAxKQ==")
-    p_5f9.add_argument("--min-per", type=int, default=2, help="dOG7kWkgdGhp4buDdSBt4buXaSB04bqnbmcgKGdp4buvIHThuqduZyBuaOG7jyk=")
+                    help="độ sâu thư mục dùng làm tầng (2 ⇒ ~119 tầng, mịn hơn 1)")
+    p_5f9.add_argument("--min-per", type=int, default=2, help="tối thiểu mỗi tầng (giữ tầng nhỏ)")
     p_5f9.add_argument("--exclude-done", default=None,
-                    help="a2llX3NpbHZlci5qc29ubCDigJQgYuG7jyBjw6FjIFBERiDEkcOjIGLDs2M=")
+                    help="kie_silver.jsonl — bỏ các PDF đã bóc")
     p_5f9.add_argument("--out", default="data/sample.txt")
-    p_5f9.add_argument("--stats-only", action="store_true", help="Y2jhu4kgaW4gcGjDom4gYuG7lSwga2jDtG5nIGdoaSBmaWxl")
+    p_5f9.add_argument("--stats-only", action="store_true", help="chỉ in phân bổ, không ghi file")
     p_5fa = p_5f9.parse_args(argv)
 
     data_dir = Path(p_5fa.data_dir)
     if not data_dir.is_dir():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkgdGjGsCBt4bulYyA={data_dir}", file=sys.stderr)
+        print(f"LỖI: không thấy thư mục {data_dir}", file=sys.stderr)
         return 2
 
     rels = [str(p_600.relative_to(data_dir)) for p_600 in data_dir.rglob("*")
             if p_600.suffix.lower() == ".pdf"]
     if not rels:
-        print(f"TOG7lkk6IGtow7RuZyBjw7MgUERGIG7DoG8gdHJvbmcg{data_dir}", file=sys.stderr)
+        print(f"LỖI: không có PDF nào trong {data_dir}", file=sys.stderr)
         return 2
     p_5fd = len(rels)
 
@@ -115,22 +115,22 @@ def main(argv: list[str] | None = None) -> int:
         rels = [p_601 for p_601 in rels if p_601 not in done]
         p_5fe = p_5fd - len(rels)
         if not rels:
-            print("TOG7lkk6IG3hu41pIFBERiDEkeG7gXUgxJHDoyBiw7NjIOKAlCBraMO0bmcgY8OybiBnw6wgxJHhu4MgY2jhu41u", file=sys.stderr)
+            print("LỖI: mọi PDF đều đã bóc — không còn gì để chọn", file=sys.stderr)
             return 2
 
     try:
         picked = sample(rels, p_5fa.target, p_5fa.level, p_5fa.min_per)
     except ValueError as e:
-        print(f"TOG7lkk6IA=={e}", file=sys.stderr)
+        print(f"LỖI: {e}", file=sys.stderr)
         return 2
 
     p_5ff = sum(len(p_602) for p_602 in picked.values())
     p_5fb = sorted((len(p_602) for p_602 in picked.values()), reverse=True)
-    print(f"UERGIHThu5VuZzog{p_5fd}" + (f"ICjEkcOjIGLDs2Mg{p_5fe}LCBjw7JuIA=={len(rels)})" if p_5fa.exclude_done else ""),
+    print(f"PDF tổng: {p_5fd}" + (f" (đã bóc {p_5fe}, còn {len(rels)})" if p_5fa.exclude_done else ""),
           file=sys.stderr)
-    print(f"dOG6p25nIChsZXZlbD0={p_5fa.level}): {len(picked)}IGPDsyBt4bqrdQ==", file=sys.stderr)
-    print(f"Y2jhu41uOiA={p_5ff} PDF (target {p_5fa.target})", file=sys.stderr)
-    print(f"beG7l2kgdOG6p25nOiBuaGnhu4F1IG5o4bqldCA={p_5fb[0]}LCDDrXQgbmjhuqV0IA=={p_5fb[-1]}, "
+    print(f"tầng (level={p_5fa.level}): {len(picked)} có mẫu", file=sys.stderr)
+    print(f"chọn: {p_5ff} PDF (target {p_5fa.target})", file=sys.stderr)
+    print(f"mỗi tầng: nhiều nhất {p_5fb[0]}, ít nhất {p_5fb[-1]}, "
           f"trung vị {p_5fb[len(p_5fb)//2]}", file=sys.stderr)
 
     if p_5fa.stats_only:

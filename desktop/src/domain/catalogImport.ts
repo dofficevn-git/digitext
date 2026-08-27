@@ -27,54 +27,54 @@ interface V4b4 {
 }
 
 export const V4b5: V4b4[] = [
-  { key: "mang", label: "TeG6o25n", aliases: ["mang", "mang cong viec", "ten mang"] },
-  { key: "dossierId", label: "SUQgSOG7kyBzxqE=", aliases: ["id ho so", "ho so id", "dossier id"] },
-  { key: "hopSo", label: "SOG7mXAgc+G7kQ==", aliases: ["hop so", "so hop", "hop"] },
-  { key: "hoSoSo", label: "SOG7kyBzxqEgc+G7kQ==", aliases: ["ho so so", "so ho so", "so hs"] },
-  { key: "soTam", label: "U+G7kSB04bqhbQ==", aliases: ["so tam"] },
+  { key: "mang", label: "Mảng", aliases: ["mang", "mang cong viec", "ten mang"] },
+  { key: "dossierId", label: "ID Hồ sơ", aliases: ["id ho so", "ho so id", "dossier id"] },
+  { key: "hopSo", label: "Hộp số", aliases: ["hop so", "so hop", "hop"] },
+  { key: "hoSoSo", label: "Hồ sơ số", aliases: ["ho so so", "so ho so", "so hs"] },
+  { key: "soTam", label: "Số tạm", aliases: ["so tam"] },
   {
     key: "maHoSo",
-    label: "TcOjIGjhu5Mgc8ah",
+    label: "Mã hồ sơ",
     aliases: ["ma ho so", "ma hs", "ma h.s", "ma hoso", "ma so ho so"],
   },
   {
     key: "tieuDe",
-    label: "VGnDqnUgxJHhu4EgaOG7kyBzxqE=",
+    label: "Tiêu đề hồ sơ",
     aliases: ["tieu de ho so", "tieu de", "noi dung"],
   },
   {
     key: "thoiGian",
-    label: "VGjhu51pIGdpYW4gKELEkOKAk0tUKQ==",
+    label: "Thời gian (BĐ–KT)",
     aliases: ["ngay thang", "thoi gian", "ngay thang bd"],
   },
   {
     key: "ngayBatDau",
-    label: "TmfDoHkgQsSQ",
+    label: "Ngày BĐ",
     aliases: ["ngay bd", "ngay bat dau", "n.bd", "n bat dau", "ngaybd", "tu ngay"],
   },
   {
     key: "ngayKetThuc",
-    label: "TmfDoHkgS1Q=",
+    label: "Ngày KT",
     aliases: ["ngay kt", "ngay ket thuc", "n.kt", "n ket thuc", "ngaykt", "den ngay"],
   },
-  { key: "soTo", label: "U+G7kSB04bud", aliases: ["so to", "so trang", "so luong to"] },
+  { key: "soTo", label: "Số tờ", aliases: ["so to", "so trang", "so luong to"] },
   {
     key: "thbq",
-    label: "VGjhu51pIGjhuqFuIGLhuqNvIHF14bqjbg==",
+    label: "Thời hạn bảo quản",
     aliases: ["thbq", "thoi han bao quan", "bao quan"],
   },
-  { key: "trungThua", label: "VC5UaOG7q2E=", aliases: ["t.thua", "t thua", "trung thua", "thua"] },
+  { key: "trungThua", label: "T.Thừa", aliases: ["t.thua", "t thua", "trung thua", "thua"] },
   {
     key: "trangThai",
-    label: "VC5UaMOhaQ==",
+    label: "T.Thái",
     aliases: ["t.thai", "t thai", "trang thai", "trangthai", "tt"],
   },
   {
     key: "tongSoVanBan",
-    label: "VMOgaSBMaeG7h3U=",
+    label: "Tài Liệu",
     aliases: ["tai lieu", "so van ban", "tong so van ban", "so vb", "tong so vb", "sl vb"],
   },
-  { key: "ghiChu", label: "R2hpIGNow7o=", aliases: ["ghi chu", "note", "ghichu"] },
+  { key: "ghiChu", label: "Ghi chú", aliases: ["ghi chu", "note", "ghichu"] },
 ];
 
 const V4b6 = V4b5.map((f) => ({ ...f, aliases: f.aliases.map(V4b3) }));

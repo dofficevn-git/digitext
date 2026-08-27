@@ -58,7 +58,26 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT
 );
 "#;
-const C_JJ: &str = "CkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIGNvbGxlY3RlZF9kb2NzICgKICAgIGlkICAgICAgICAgICAgICBJTlRFR0VSIFBSSU1BUlkgS0VZLAogICAgc291cmNlX3VzZXJfaWQgIFRFWFQgTk9UIE5VTEwsICAgICAgICAgIC0tIG5nxrDhu51pIHF1w6l0IGfhu5FjIChvbkJlaGFsZk9mIGtoaSDEkeG6qXkgc2VydmVyKQogICAgc291cmNlX3VzZXJuYW1lIFRFWFQsCiAgICBwcm9qZWN0X2lkICAgICAgVEVYVCBOT1QgTlVMTCwgICAgICAgICAgLS0gcHJvamVjdElkIHBow61hIHNlcnZlcgogICAgaG9fc29fcmVmICAgICAgIFRFWFQsCiAgICBmaWxlbmFtZSAgICAgICAgVEVYVCBOT1QgTlVMTCwKICAgIHBhZ2VfY291bnQgICAgICBJTlRFR0VSLAogICAgc2l6ZV9ieXRlcyAgICAgIElOVEVHRVIgTk9UIE5VTEwsCiAgICBibGFrZTMgICAgICAgICAgVEVYVCBOT1QgTlVMTCwKICAgIHN0b3JhZ2VfcGF0aCAgICBURVhUIE5PVCBOVUxMLCAgICAgICAgICAtLSBmaWxlIHRyb25nIGtobyBtw6F5IGFkbWluCiAgICBjb2xsZWN0ZWRfYXQgICAgVEVYVCBOT1QgTlVMTCBERUZBVUxUIChkYXRldGltZSgnbm93JykpLAogICAgZm9yd2FyZGVkX2F0ICAgIFRFWFQsICAgICAgICAgICAgICAgICAgIC0tIE5VTEwgPSBjaMawYSDEkeG6qXkgbMOqbiBzZXJ2ZXIKICAgIGZvcndhcmRfZXJyb3IgICBURVhULCAgICAgICAgICAgICAgICAgICAtLSBs4buXaSBs4bqnbiDEkeG6qXkgZ+G6p24gbmjhuqV0ICjEkeG7gyB0aOG7rSBs4bqhaSkKICAgIGZvcndhcmRfdHJpZXMgICBJTlRFR0VSIE5PVCBOVUxMIERFRkFVTFQgMAopOwotLSBLaOG7rSB0csO5bmc6IGPDuW5nIChk4buxIMOhbiwgaGFzaCkgY2jhu4kgZ29tIDEgbOG6p24gZMO5IGvDqW8gbOG6oWkgbmhp4buBdSBs4bqnbi4KQ1JFQVRFIFVOSVFVRSBJTkRFWCBJRiBOT1QgRVhJU1RTIHV4X2NvbGxlY3RlZF9oYXNoIE9OIGNvbGxlY3RlZF9kb2NzIChwcm9qZWN0X2lkLCBibGFrZTMpOwo=";
+const C_JJ: &str = r#"
+CREATE TABLE IF NOT EXISTS collected_docs (
+    id              INTEGER PRIMARY KEY,
+    source_user_id  TEXT NOT NULL,          -- người quét gốc (onBehalfOf khi đẩy server)
+    source_username TEXT,
+    project_id      TEXT NOT NULL,          -- projectId phía server
+    ho_so_ref       TEXT,
+    filename        TEXT NOT NULL,
+    page_count      INTEGER,
+    size_bytes      INTEGER NOT NULL,
+    blake3          TEXT NOT NULL,
+    storage_path    TEXT NOT NULL,          -- file trong kho máy admin
+    collected_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    forwarded_at    TEXT,                   -- NULL = chưa đẩy lên server
+    forward_error   TEXT,                   -- lỗi lần đẩy gần nhất (để thử lại)
+    forward_tries   INTEGER NOT NULL DEFAULT 0
+);
+-- Khử trùng: cùng (dự án, hash) chỉ gom 1 lần dù kéo lại nhiều lần.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_collected_hash ON collected_docs (project_id, blake3);
+"#;
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     let mut r_1cw = Connection::open(path)?;
     r_1cw.busy_timeout(Duration::from_secs(5))?;

@@ -9,11 +9,11 @@ pub mod tsa;
 pub use pdf::{f_1cm, f_1cn, f_1co, f_2q1, f_2q2, f_xy, finalize, prepare, verify, Thg, Tpr};
 #[derive(Debug, thiserror::Error)]
 pub enum SignError {
-    #[error("bOG7l2kgREVSL0FTTi4xOiA={0}")]
+    #[error("lỗi DER/ASN.1: {0}")]
     Der(String),
-    #[error("bOG7l2kgQ01TOiA={0}")]
+    #[error("lỗi CMS: {0}")]
     Cms(String),
-    #[error("bOG7l2kgUERGIGNo4buvIGvDvTog{0}")]
+    #[error("lỗi PDF chữ ký: {0}")]
     Pdf(String),
 }
 impl SignError {

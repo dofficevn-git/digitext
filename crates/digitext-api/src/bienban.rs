@@ -17,17 +17,17 @@ fn f_2f9(r_y: &str, r_z: &str) -> FormBlock {
     FormBlock::Signatures {
         left: vec![
             r_y.to_string(),
-            "KEvDvSwgZ2hpIHLDtSBo4buNIHTDqm4p".to_string(),
+            "(Ký, ghi rõ họ tên)".to_string(),
         ],
         right: vec![
             r_z.to_string(),
-            "KEvDvSwgZ2hpIHLDtSBo4buNIHTDqm4sIMSRw7NuZyBk4bqldSk=".to_string(),
+            "(Ký, ghi rõ họ tên, đóng dấu)".to_string(),
         ],
     }
 }
 fn f_1ga(don_vi: &str, dia_diem: &str, ngay: &str) -> Vec<FormBlock> {
     vec![
-        FormBlock::Paragraph(format!("SMO0bSBuYXksIG5nw6B5IA=={ngay}LCB04bqhaSA={dia_diem}, {don_vi}IHRp4bq/biBow6BuaCBs4bqtcCBiacOqbiBi4bqjbiB24bubaSBu4buZaSBkdW5nIHNhdTo="))
+        FormBlock::Paragraph(format!("Hôm nay, ngày {ngay}, tại {dia_diem}, {don_vi} tiến hành lập biên bản với nội dung sau:"))
     ]
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,31 +57,31 @@ pub struct Tab {
 }
 fn f_27h(r_10: &Tab) -> (String, Vec<FormBlock>) {
     let mut b = f_1ga(&r_10.don_vi, &r_10.dia_diem, &r_10.ngay);
-    b.push(FormBlock::SectionHeading("SS4gVEjDgE5IIFBI4bqmTg==".into()));
+    b.push(FormBlock::SectionHeading("I. THÀNH PHẦN".into()));
     b.push(FormBlock::Bullets(r_10.thanh_phan.clone()));
     b.push(FormBlock::SectionHeading(
-        "SUkuIFBI4bqgTSBWSSBWw4AgTuG7mEkgRFVORyBLSeG7gk0gVFJB".into(),
+        "II. PHẠM VI VÀ NỘI DUNG KIỂM TRA".into(),
     ));
-    b.push(field("UGjhuqFtIHZpIGtp4buDbSB0cmE=", r_10.pham_vi.clone()));
+    b.push(field("Phạm vi kiểm tra", r_10.pham_vi.clone()));
     b.push(
         FormBlock::Paragraph(
-            "TuG7mWkgZHVuZyBraeG7g20gdHJhIHRoZW8ga2hv4bqjbiAzIMSQaeG7gXUgMjk6IChhKSBraOG6oyBuxINuZyB0aeG6v3AgY+G6rW4sIHPhu60gZOG7pW5nLCBj4bqtcCBuaOG6rXQgY+G7p2EgdGjDtG5nIHRpbiB24buBIGThu68gbGnhu4d1IGNo4bunOyAoYikgcXXDoSB0csOsbmggYuG6o28gcXXhuqNuIHbDoCBi4bqjbyDEkeG6o20gYW4gdG/DoG4gdGjDtG5nIHRpbjsgKGMpIHTDrW5oIGNow61uaCB4w6FjIHRow7RuZyB0aW4gduG7gSBk4buvIGxp4buHdSBjaOG7pyB24bubaSB04buHcCB0aW4gdMOgaSBsaeG7h3UgbMawdSB0cuG7ryBrw6htIHRoZW8u"
+            "Nội dung kiểm tra theo khoản 3 Điều 29: (a) khả năng tiếp cận, sử dụng, cập nhật của thông tin về dữ liệu chủ; (b) quá trình bảo quản và bảo đảm an toàn thông tin; (c) tính chính xác thông tin về dữ liệu chủ với tệp tin tài liệu lưu trữ kèm theo."
                 .into(),
         ),
     );
     b.push(FormBlock::SectionHeading(
-        "SUlJLiBL4bq+VCBRVeG6oiBLSeG7gk0gVFJB".into(),
+        "III. KẾT QUẢ KIỂM TRA".into(),
     ));
     b.push(field(
-        "VOG7lW5nIHPhu5EgdOG7h3Aga2nhu4NtIHRyYQ==",
+        "Tổng số tệp kiểm tra",
         r_10.tong_so_tep.to_string(),
     ));
-    b.push(field("U+G7kSB04buHcCDEkeG6oXQ=", r_10.so_dat.to_string()));
-    b.push(field("U+G7kSB04buHcCBs4buXaQ==", r_10.so_loi.to_string()));
+    b.push(field("Số tệp đạt", r_10.so_dat.to_string()));
+    b.push(field("Số tệp lỗi", r_10.so_loi.to_string()));
     if !r_10.tep_loi.is_empty() {
         b.push(
             FormBlock::Paragraph(
-                "RGFuaCBt4bulYyB04buHcCBraeG7g20gdHJhIGLhu4sgbOG7l2kgdsOgIMSR4buLYSBjaOG7iSBsxrB1IHRy4buvICjEkGnhu4F1IDI5LjQuxJEpOg=="
+                "Danh mục tệp kiểm tra bị lỗi và địa chỉ lưu trữ (Điều 29.4.đ):"
                     .into(),
             ),
         );
@@ -96,20 +96,20 @@ fn f_27h(r_10: &Tab) -> (String, Vec<FormBlock>) {
         ));
     }
     if let Some(x) = opt(
-        "UGjGsMahbmcgw6FuIGto4bqvYyBwaOG7pWMgbOG7l2kgKMSQaeG7gXUgMjkuNC5nKQ==",
+        "Phương án khắc phục lỗi (Điều 29.4.g)",
         &r_10.phuong_an_khac_phuc,
     ) {
         b.push(x);
     }
-    if let Some(x) = opt("S+G6v3QgbHXhuq1u", &r_10.ket_luan) {
+    if let Some(x) = opt("Kết luận", &r_10.ket_luan) {
         b.push(x);
     }
     b.push(f_2f9(
-        "TkfGr+G7nEkgTOG6rFAgQknDik4gQuG6ok4=",
-        "VEjhu6YgVFLGr+G7nk5HIMSQxqBOIFbhu4o=",
+        "NGƯỜI LẬP BIÊN BẢN",
+        "THỦ TRƯỞNG ĐƠN VỊ",
     ));
     (
-        "QmnDqm4gYuG6o24ga2nhu4NtIHRyYSB0w6BpIGxp4buHdSBsxrB1IHRy4buvIHPhu5E=".into(),
+        "Biên bản kiểm tra tài liệu lưu trữ số".into(),
         b,
     )
 }
@@ -133,9 +133,9 @@ pub struct Te7 {
 }
 fn f_27j(r_12: &Te7) -> (String, Vec<FormBlock>) {
     let mut b = vec![
-        field("xJDGoW4gduG7iw==", r_12.don_vi.clone()),
-        field("S+G7syBnaGkgbmjhuq10IGvDvQ==", r_12.ky.clone()),
-        FormBlock::SectionHeading("Q8OBQyBM4bqmTiBTQU8gTMavVQ==".into()),
+        field("Đơn vị", r_12.don_vi.clone()),
+        field("Kỳ ghi nhật ký", r_12.ky.clone()),
+        FormBlock::SectionHeading("CÁC LẦN SAO LƯU".into()),
     ];
     b.push(
         FormBlock::Bullets(
@@ -144,7 +144,7 @@ fn f_27j(r_12: &Te7) -> (String, Vec<FormBlock>) {
                 .iter()
                 .map(|e| {
                     format!(
-                        "{} | {}IHwgbmd14buTbjog{}IHwgcGjGsMahbmcgdGnhu4duOiA={}IHwga+G6v3QgcXXhuqM6IA=={}IHwgbmfGsOG7nWkgdGjhu7FjIGhp4buHbjog{}",
+                        "{} | {} | nguồn: {} | phương tiện: {} | kết quả: {} | người thực hiện: {}",
                         e.thoi_gian, e.loai, e.nguon_du_lieu, e.phuong_tien, e.ket_qua, e
                         .nguoi_thuc_hien
                     )
@@ -153,11 +153,11 @@ fn f_27j(r_12: &Te7) -> (String, Vec<FormBlock>) {
         ),
     );
     b.push(f_2f9(
-        "TkfGr+G7nEkgTOG6rFAgTkjhuqxUIEvDnQ==",
-        "UEjhu6QgVFLDgUNIIMSQxqBOIFbhu4o=",
+        "NGƯỜI LẬP NHẬT KÝ",
+        "PHỤ TRÁCH ĐƠN VỊ",
     ));
     (
-        "Tmjhuq10IGvDvSBzYW8gbMawdSB0w6BpIGxp4buHdSBsxrB1IHRy4buvIHPhu5E=".into(),
+        "Nhật ký sao lưu tài liệu lưu trữ số".into(),
         b,
     )
 }
@@ -179,36 +179,36 @@ pub struct Tkj {
 fn f_27k(r_13: &Tkj) -> (String, Vec<FormBlock>) {
     let mut b = f_1ga(&r_13.don_vi, &r_13.dia_diem, &r_13.ngay);
     b.push(field(
-        "TG/huqFpIHNhbyBsxrB1ICjEkGnhu4F1IDMwLjEp",
+        "Loại sao lưu (Điều 30.1)",
         r_13.loai_sao_luu.clone(),
     ));
     b.push(
         field(
-            "Tmd14buTbiBk4buvIGxp4buHdSBzYW8gbMawdSAoQ1NETCArIG3DoyBuZ3Xhu5NuIHBo4bqnbiBt4buBbSDigJQgxJBp4buBdSAzMC4zLmMp",
+            "Nguồn dữ liệu sao lưu (CSDL + mã nguồn phần mềm — Điều 30.3.c)",
             r_13.nguon_du_lieu.clone(),
         ),
     );
     b.push(field(
-        "UGjGsMahbmcgdGnhu4duIGzGsHUgdHLhu68=",
+        "Phương tiện lưu trữ",
         r_13.phuong_tien.clone(),
     ));
-    if let Some(r_14) = opt("TcO0IHThuqMgcGjGsMahbmcgdGnhu4du", &r_13.mo_ta_phuong_tien) {
+    if let Some(r_14) = opt("Mô tả phương tiện", &r_13.mo_ta_phuong_tien) {
         b.push(r_14);
     }
     b.push(field(
-        "S+G6v3QgcXXhuqMga2nhu4NtIHRyYSBzYXUgc2FvIGzGsHUgKMSQaeG7gXUgMzAuMy5kKQ==",
+        "Kết quả kiểm tra sau sao lưu (Điều 30.3.d)",
         r_13.ket_qua_kiem_tra.clone(),
     ));
     b.push(field(
-        "TsahaSBi4bqjbyBxdeG6o24gcGjGsMahbmcgdGnhu4duICjEkGnhu4F1IDMwLjMuxJEp",
+        "Nơi bảo quản phương tiện (Điều 30.3.đ)",
         r_13.noi_bao_quan.clone(),
     ));
     b.push(f_2f9(
-        "TkfGr+G7nEkgVEjhu7BDIEhJ4buGTiBTQU8gTMavVQ==",
-        "TkfGr+G7nEkgS0nhu4JNIFRSQQ==",
+        "NGƯỜI THỰC HIỆN SAO LƯU",
+        "NGƯỜI KIỂM TRA",
     ));
     (
-        "QmnDqm4gYuG6o24gc2FvIGzGsHUgdMOgaSBsaeG7h3UgbMawdSB0cuG7ryBz4buR".into(),
+        "Biên bản sao lưu tài liệu lưu trữ số".into(),
         b,
     )
 }
@@ -230,46 +230,46 @@ pub struct Tm4 {
 }
 fn f_27l(r_15: &Tm4) -> (String, Vec<FormBlock>) {
     let mut b = f_1ga(&r_15.don_vi, &r_15.dia_diem, &r_15.ngay);
-    b.push(FormBlock::SectionHeading("SS4gU+G7sCBD4buQ".into()));
+    b.push(FormBlock::SectionHeading("I. SỰ CỐ".into()));
     b.push(field(
-        "VGjhu51pIMSRaeG7g20geOG6o3kgcmEgc+G7sSBj4buR",
+        "Thời điểm xảy ra sự cố",
         r_15.thoi_diem_su_co.clone(),
     ));
-    b.push(field("TcO0IHThuqMgc+G7sSBj4buR", r_15.mo_ta_su_co.clone()));
+    b.push(field("Mô tả sự cố", r_15.mo_ta_su_co.clone()));
     b.push(field(
-        "Tmd1ecOqbiBuaMOibiAoxJBp4buBdSAzMS4xKQ==",
+        "Nguyên nhân (Điều 31.1)",
         r_15.nguyen_nhan.clone(),
     ));
     b.push(FormBlock::SectionHeading(
-        "SUkuIFjhu6wgTMOdIFbDgCBQSOG7pEMgSOG7kkk=".into(),
+        "II. XỬ LÝ VÀ PHỤC HỒI".into(),
     ));
     b.push(
         FormBlock::Paragraph(
-            "Q8OhYyBiaeG7h24gcGjDoXAgY8OhY2ggbHksIGto4bqvYyBwaOG7pWMgxJHDoyB0aOG7sWMgaGnhu4duICjEkGnhu4F1IDMxLjIvMzEuMyk6"
+            "Các biện pháp cách ly, khắc phục đã thực hiện (Điều 31.2/31.3):"
                 .into(),
         ),
     );
     b.push(FormBlock::Bullets(r_15.bien_phap.clone()));
     b.push(
         field(
-            "Tmd14buTbiBwaOG7pWMgaOG7k2kgKGLhuqNuIHNhbyBsxrB1IGfhuqduIG5o4bqldCDigJQgxJBp4buBdSAzMS40KQ==",
+            "Nguồn phục hồi (bản sao lưu gần nhất — Điều 31.4)",
             r_15.nguon_phuc_hoi.clone(),
         ),
     );
     b.push(field(
-        "UGjGsMahbmcgcGjDoXAgcGjhu6VjIGjhu5Np",
+        "Phương pháp phục hồi",
         r_15.phuong_phap_phuc_hoi.clone(),
     ));
     b.push(field(
-        "S+G6v3QgcXXhuqMga2nhu4NtIHRyYSBk4buvIGxp4buHdSBzYXUgcGjhu6VjIGjhu5NpICjEkGnhu4F1IDMxLjUp",
+        "Kết quả kiểm tra dữ liệu sau phục hồi (Điều 31.5)",
         r_15.ket_qua_kiem_tra.clone(),
     ));
     b.push(f_2f9(
-        "TkfGr+G7nEkgWOG7rCBMw50gU+G7sCBD4buQ",
-        "UEjhu6QgVFLDgUNIIMSQxqBOIFbhu4o=",
+        "NGƯỜI XỬ LÝ SỰ CỐ",
+        "PHỤ TRÁCH ĐƠN VỊ",
     ));
     (
-        "QmnDqm4gYuG6o24geOG7rSBsw70gc+G7sSBj4buRIHbDoCBwaOG7pWMgaOG7k2kgY8ahIHPhu58gZOG7ryBsaeG7h3UgdMOgaSBsaeG7h3UgbMawdSB0cuG7rw=="
+        "Biên bản xử lý sự cố và phục hồi cơ sở dữ liệu tài liệu lưu trữ"
             .into(),
         b,
     )
@@ -292,49 +292,49 @@ pub struct To3 {
 fn f_27n(r_16: &To3) -> (String, Vec<FormBlock>) {
     let mut b = vec![
         field(
-            "TcOjIMSRxINuZyBrw70gecOqdSBj4bqndSB0aHUgbuG7mXA=",
+            "Mã đăng ký yêu cầu thu nộp",
             r_16.ma_dang_ky.clone(),
         ),
         field(
-            "TcOjIGPGoSBxdWFuLCB04buVIGNo4bupYyBu4buZcA==",
+            "Mã cơ quan, tổ chức nộp",
             r_16.ma_co_quan.clone(),
         ),
         field(
-            "VMOqbiBjxqEgcXVhbiwgdOG7lSBjaOG7qWMgbuG7mXA=",
+            "Tên cơ quan, tổ chức nộp",
             r_16.ten_co_quan.clone(),
         ),
-        field("U+G7kSBs4bqnbiBu4buZcA==", r_16.so_lan_nop.to_string()),
+        field("Số lần nộp", r_16.so_lan_nop.to_string()),
         field(
-            "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IG7hu5lwIHRoZW8gxJHEg25nIGvDvQ==",
+            "Tổng số hồ sơ, tài liệu nộp theo đăng ký",
             r_16.tong_dang_ky.to_string(),
         ),
         field(
-            "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IHRodSBu4buZcCB0aGVvIMSRxINuZyBrw70=",
+            "Tổng số hồ sơ, tài liệu thu nộp theo đăng ký",
             r_16.tong_thu_nop.to_string(),
         ),
         field(
-            "VOG7lW5nIHPhu5EgxJHGsOG7o2MgZHV54buHdA==",
+            "Tổng số được duyệt",
             r_16.tong_duoc_duyet.to_string(),
         ),
         field(
-            "VOG7lW5nIHPhu5EgdHLhuqMgbOG6oWk=",
+            "Tổng số trả lại",
             r_16.tong_tra_lai.to_string(),
         ),
         field(
-            "VGjhu51pIGdpYW4gdGh1IG7hu5lw",
+            "Thời gian thu nộp",
             r_16.thoi_gian_thu_nop.clone(),
         ),
-        field("TmfGsOG7nWkgdGh1IG7hu5lw", r_16.nguoi_thu_nop.clone()),
+        field("Người thu nộp", r_16.nguoi_thu_nop.clone()),
     ];
-    if let Some(r_17) = opt("R2hpIGNow7o=", &r_16.ghi_chu) {
+    if let Some(r_17) = opt("Ghi chú", &r_16.ghi_chu) {
         b.push(r_17);
     }
     b.push(f_2f9(
-        "xJDhuqBJIERJ4buGTiBDxqAgUVVBTiBO4buYUA==",
-        "xJDhuqBJIERJ4buGTiBMxq9VIFRS4buuIEzhu4pDSCBT4bus",
+        "ĐẠI DIỆN CƠ QUAN NỘP",
+        "ĐẠI DIỆN LƯU TRỮ LỊCH SỬ",
     ));
     (
-        "QmnDqm4gYuG6o24gdGh1IG7hu5lwIGjhu5Mgc8ahLCB0w6BpIGxp4buHdSB2w6BvIGzGsHUgdHLhu68gbOG7i2NoIHPhu60="
+        "Biên bản thu nộp hồ sơ, tài liệu vào lưu trữ lịch sử"
             .into(),
         b,
     )
@@ -366,43 +366,43 @@ pub struct To5 {
 fn f_27p(r_18: &To5) -> (String, Vec<FormBlock>) {
     let mut b = Vec::new();
     if let Some(x) = opt(
-        "TcOjIMSRxINuZyBrw70gecOqdSBj4bqndSB0aHUgbuG7mXAgKG7hur91IGPDsyk=",
+        "Mã đăng ký yêu cầu thu nộp (nếu có)",
         &r_18.ma_dang_ky,
     ) {
         b.push(x);
     }
     b.push(field(
-        "TcOjIGPGoSBxdWFuLCB04buVIGNo4bupYyBu4buZcA==",
+        "Mã cơ quan, tổ chức nộp",
         r_18.ma_co_quan.clone(),
     ));
     b.push(field(
-        "VMOqbiBjxqEgcXVhbiwgdOG7lSBjaOG7qWMgbuG7mXA=",
+        "Tên cơ quan, tổ chức nộp",
         r_18.ten_co_quan.clone(),
     ));
     b.push(field(
-        "U+G7kSBs4bqnbiBu4buZcA==",
+        "Số lần nộp",
         r_18.so_lan_nop.to_string(),
     ));
     b.push(field(
-        "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IG7hu5lwIHRoZW8gxJHEg25nIGvDvQ==",
+        "Tổng số hồ sơ, tài liệu nộp theo đăng ký",
         r_18.tong_dang_ky.to_string(),
     ));
     b.push(field(
-        "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IGdpYW8gbmjhuq1u",
+        "Tổng số hồ sơ, tài liệu giao nhận",
         r_18.tong_giao_nhan.to_string(),
     ));
     b.push(field(
-        "VOG7lW5nIHPhu5EgZHVuZyBsxrDhu6NuZw==",
+        "Tổng số dung lượng",
         r_18.tong_dung_luong.clone(),
     ));
     b.push(field(
-        "VOG7lW5nIHPhu5EgdGhp4bq/dCBi4buLIGzGsHUgdHLhu68=",
+        "Tổng số thiết bị lưu trữ",
         r_18.thiet_bi.len().to_string(),
     ));
     if !r_18.thiet_bi.is_empty() {
         b.push(
             FormBlock::Paragraph(
-                "VMOsbmggdHLhuqFuZywgbcO0IHThuqMgY2hpIHRp4bq/dCB0aGnhur90IGLhu4sgKMSQaeG7gXUgMjIuMi7EkSk6"
+                "Tình trạng, mô tả chi tiết thiết bị (Điều 22.2.đ):"
                     .into(),
             ),
         );
@@ -417,17 +417,17 @@ fn f_27p(r_18: &To5) -> (String, Vec<FormBlock>) {
         ));
     }
     b.push(field(
-        "VGjhu51pIGdpYW4gZ2lhbyBuaOG6rW4=",
+        "Thời gian giao nhận",
         r_18.thoi_gian_giao_nhan.clone(),
     ));
-    b.push(field("TmfGsOG7nWkgZ2lhbw==", r_18.nguoi_giao.clone()));
-    b.push(field("TmfGsOG7nWkgbmjhuq1u", r_18.nguoi_nhan.clone()));
-    if let Some(x) = opt("R2hpIGNow7oga2jDoWM=", &r_18.ghi_chu) {
+    b.push(field("Người giao", r_18.nguoi_giao.clone()));
+    b.push(field("Người nhận", r_18.nguoi_nhan.clone()));
+    if let Some(x) = opt("Ghi chú khác", &r_18.ghi_chu) {
         b.push(x);
     }
-    b.push(f_2f9("TkfGr+G7nEkgR0lBTw==", "TkfGr+G7nEkgTkjhuqxO"));
+    b.push(f_2f9("NGƯỜI GIAO", "NGƯỜI NHẬN"));
     (
-        "QmnDqm4gYuG6o24gdGh1IG7hu5lwIGjhu5Mgc8ahLCB0w6BpIGxp4buHdSAoZ2lhbyBuaOG6rW4gdHLhu7FjIHRp4bq/cCk="
+        "Biên bản thu nộp hồ sơ, tài liệu (giao nhận trực tiếp)"
             .into(),
         b,
     )
@@ -448,40 +448,40 @@ pub struct T8q {
 }
 fn f_27f(r_1a: &T8q) -> (String, Vec<FormBlock>) {
     let mut b = vec![
-        field("TcOjIMSRxINuZyBrw70gecOqdSBj4bqndSB0aHUgbuG7mXA=", r_1a.ma_dang_ky
-        .clone()), field("TcOjIGPGoSBxdWFuLCB04buVIGNo4bupYyBu4buZcA==", r_1a.ma_co_quan
-        .clone()), field("VMOqbiBjxqEgcXVhbiwgdOG7lSBjaOG7qWMgbuG7mXA=", r_1a.ten_co_quan
-        .clone()), field("U+G7kSBs4bqnbiBu4buZcA==", r_1a.so_lan_nop.to_string()),
-        field("VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IGdpYW8gbmjhuq1uIHbDoG8gbMawdSB0cuG7ryBs4buLY2ggc+G7rQ==",
+        field("Mã đăng ký yêu cầu thu nộp", r_1a.ma_dang_ky
+        .clone()), field("Mã cơ quan, tổ chức nộp", r_1a.ma_co_quan
+        .clone()), field("Tên cơ quan, tổ chức nộp", r_1a.ten_co_quan
+        .clone()), field("Số lần nộp", r_1a.so_lan_nop.to_string()),
+        field("Tổng số hồ sơ, tài liệu giao nhận vào lưu trữ lịch sử",
         r_1a.tong_giao_nhan.to_string(),),
     ];
     if let Some(x) = opt(
-        "VOG7lW5nIHPhu5EgZHVuZyBsxrDhu6NuZw==",
+        "Tổng số dung lượng",
         &r_1a.tong_dung_luong,
     ) {
         b.push(x);
     }
     b.push(field(
-        "VGjhu51pIGdpYW4gZ2lhbyBuaOG6rW4=",
+        "Thời gian giao nhận",
         r_1a.thoi_gian.clone(),
     ));
     b.push(field(
-        "QsOqbiBnaWFvIChjxqEgcXVhbiwgdOG7lSBjaOG7qWMgbuG7mXAp",
+        "Bên giao (cơ quan, tổ chức nộp)",
         r_1a.ben_giao.clone(),
     ));
     b.push(field(
-        "QsOqbiBuaOG6rW4gKGzGsHUgdHLhu68gbOG7i2NoIHPhu60p",
+        "Bên nhận (lưu trữ lịch sử)",
         r_1a.ben_nhan.clone(),
     ));
-    if let Some(x) = opt("R2hpIGNow7oga2jDoWM=", &r_1a.ghi_chu) {
+    if let Some(x) = opt("Ghi chú khác", &r_1a.ghi_chu) {
         b.push(x);
     }
     b.push(f_2f9(
-        "xJDhuqBJIERJ4buGTiBDxqAgUVVBTiBO4buYUA==",
-        "xJDhuqBJIERJ4buGTiBMxq9VIFRS4buuIEzhu4pDSCBT4bus",
+        "ĐẠI DIỆN CƠ QUAN NỘP",
+        "ĐẠI DIỆN LƯU TRỮ LỊCH SỬ",
     ));
     (
-        "QmnDqm4gYuG6o24gZ2lhbyBuaOG6rW4gaOG7kyBzxqEsIHTDoGkgbGnhu4d1IHbDoG8gbMawdSB0cuG7ryBs4buLY2ggc+G7rQ=="
+        "Biên bản giao nhận hồ sơ, tài liệu vào lưu trữ lịch sử"
             .into(),
         b,
     )
@@ -512,27 +512,27 @@ pub struct Tob {
 fn f_27r(r_1b: &Tob) -> (String, Vec<FormBlock>) {
     let mut b = vec![
         field(
-            "TcOjIMSRxINuZyBrw70gecOqdSBj4bqndSB0aHUgbuG7mXA=",
+            "Mã đăng ký yêu cầu thu nộp",
             r_1b.ma_dang_ky.clone(),
         ),
         field(
-            "TcOjIGPGoSBxdWFuLCB04buVIGNo4bupYyBu4buZcA==",
+            "Mã cơ quan, tổ chức nộp",
             r_1b.ma_co_quan.clone(),
         ),
         field(
-            "VMOqbiBjxqEgcXVhbiwgdOG7lSBjaOG7qWMgbuG7mXA=",
+            "Tên cơ quan, tổ chức nộp",
             r_1b.ten_co_quan.clone(),
         ),
-        field("U+G7kSBs4bqnbiBu4buZcA==", r_1b.so_lan_nop.to_string()),
+        field("Số lần nộp", r_1b.so_lan_nop.to_string()),
         field(
-            "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IHRy4bqjIGzhuqFp",
+            "Tổng số hồ sơ, tài liệu trả lại",
             r_1b.tong_tra_lai.to_string(),
         ),
     ];
     if !r_1b.danh_sach.is_empty() {
         b.push(
             FormBlock::Paragraph(
-                "RGFuaCBzw6FjaCBo4buTIHPGoSwgdMOgaSBsaeG7h3Uga2jDtG5nIMSRxrDhu6NjIHBow6ogZHV54buHdCAoxJBp4buBdSAyNS4xLmEpOg=="
+                "Danh sách hồ sơ, tài liệu không được phê duyệt (Điều 25.1.a):"
                     .into(),
             ),
         );
@@ -549,58 +549,58 @@ fn f_27r(r_1b: &Tob) -> (String, Vec<FormBlock>) {
         ));
     }
     b.push(field(
-        "UGjGsMahbmcgdGjhu6ljIHRy4bqjIGzhuqFpICjEkGnhu4F1IDI1LjQp",
+        "Phương thức trả lại (Điều 25.4)",
         r_1b.phuong_thuc_tra.clone(),
     ));
     b.push(field(
-        "VGjhu51pIGdpYW4gdHLhuqMgbOG6oWk=",
+        "Thời gian trả lại",
         r_1b.thoi_gian.clone(),
     ));
     b.push(field(
-        "QsOqbiBnaWFvIChsxrB1IHRy4buvIGzhu4tjaCBz4butKQ==",
+        "Bên giao (lưu trữ lịch sử)",
         r_1b.ben_giao.clone(),
     ));
     b.push(field(
-        "QsOqbiBuaOG6rW4gKGPGoSBxdWFuLCB04buVIGNo4bupYyBu4buZcCk=",
+        "Bên nhận (cơ quan, tổ chức nộp)",
         r_1b.ben_nhan.clone(),
     ));
-    if let Some(r_1d) = opt("R2hpIGNow7oga2jDoWM=", &r_1b.ghi_chu) {
+    if let Some(r_1d) = opt("Ghi chú khác", &r_1b.ghi_chu) {
         b.push(r_1d);
     }
     b.push(f_2f9(
-        "xJDhuqBJIERJ4buGTiBMxq9VIFRS4buuIEzhu4pDSCBT4bus",
-        "xJDhuqBJIERJ4buGTiBDxqAgUVVBTiBO4buYUA==",
+        "ĐẠI DIỆN LƯU TRỮ LỊCH SỬ",
+        "ĐẠI DIỆN CƠ QUAN NỘP",
     ));
     (
-        "QmnDqm4gYuG6o24gaOG7kyBzxqEsIHTDoGkgbGnhu4d1IHRy4bqjIGzhuqFp".into(),
+        "Biên bản hồ sơ, tài liệu trả lại".into(),
         b,
     )
 }
 pub fn f_2i2(r_1e: &str) -> &'static str {
     match r_1e {
         "kiem_tra" => {
-            "KE3huqt1IHRoZW8gTeG7pWMgMSBQaOG7pSBs4bulYyBWSUkg4oCUIFRow7RuZyB0xrAgMDUvMjAyNS9UVC1CTlYsIMSQaeG7gXUgMjkp"
+            "(Mẫu theo Mục 1 Phụ lục VII — Thông tư 05/2025/TT-BNV, Điều 29)"
         }
         "nhat_ky_sao_luu" => {
-            "KE3huqt1IHRoZW8gTeG7pWMgMiBQaOG7pSBs4bulYyBWSUkg4oCUIFRow7RuZyB0xrAgMDUvMjAyNS9UVC1CTlYsIMSQaeG7gXUgMzAp"
+            "(Mẫu theo Mục 2 Phụ lục VII — Thông tư 05/2025/TT-BNV, Điều 30)"
         }
         "sao_luu" => {
-            "KE3huqt1IHRoZW8gTeG7pWMgMyBQaOG7pSBs4bulYyBWSUkg4oCUIFRow7RuZyB0xrAgMDUvMjAyNS9UVC1CTlYsIMSQaeG7gXUgMzAp"
+            "(Mẫu theo Mục 3 Phụ lục VII — Thông tư 05/2025/TT-BNV, Điều 30)"
         }
         "su_co" => {
-            "KE3huqt1IHRoZW8gTeG7pWMgNCBQaOG7pSBs4bulYyBWSUkg4oCUIFRow7RuZyB0xrAgMDUvMjAyNS9UVC1CTlYsIMSQaeG7gXUgMzEp"
+            "(Mẫu theo Mục 4 Phụ lục VII — Thông tư 05/2025/TT-BNV, Điều 31)"
         }
         "thu_nop" => {
-            "KFRoZW8ga2hv4bqjbiAyIMSQaeG7gXUgMjUg4oCUIFRow7RuZyB0xrAgMDUvMjAyNS9UVC1CTlYp"
+            "(Theo khoản 2 Điều 25 — Thông tư 05/2025/TT-BNV)"
         }
         "thu_nop_truc_tiep" => {
-            "KFRoZW8gxJFp4buDbSDEkSBraG/huqNuIDIgxJBp4buBdSAyMiDigJQgVGjDtG5nIHTGsCAwNS8yMDI1L1RULUJOVik="
+            "(Theo điểm đ khoản 2 Điều 22 — Thông tư 05/2025/TT-BNV)"
         }
         "giao_nhan" => {
-            "KFRoZW8gxJFp4buDbSBhIGtob+G6o24gNSDEkGnhu4F1IDI1IOKAlCBUaMO0bmcgdMawIDA1LzIwMjUvVFQtQk5WKQ=="
+            "(Theo điểm a khoản 5 Điều 25 — Thông tư 05/2025/TT-BNV)"
         }
         "tra_lai" => {
-            "KFRoZW8gxJFp4buDbSBhIGtob+G6o24gNSDEkGnhu4F1IDI1IOKAlCBUaMO0bmcgdMawIDA1LzIwMjUvVFQtQk5WKQ=="
+            "(Theo điểm a khoản 5 Điều 25 — Thông tư 05/2025/TT-BNV)"
         }
         _ => "",
     }
@@ -608,7 +608,7 @@ pub fn f_2i2(r_1e: &str) -> &'static str {
 pub fn render(r_1f: &str, payload: &serde_json::Value) -> Result<(String, Vec<FormBlock>), String> {
     fn de<T: serde::de::DeserializeOwned>(r_1g: &serde_json::Value) -> Result<T, String> {
         serde_json::from_value(r_1g.clone())
-            .map_err(|e| format!("cGF5bG9hZCBraMO0bmcgaOG7o3AgbOG7hzog{e}"))
+            .map_err(|e| format!("payload không hợp lệ: {e}"))
     }
     match r_1f {
         "kiem_tra" => Ok(f_27h(&de::<Tab>(payload)?)),
@@ -620,7 +620,7 @@ pub fn render(r_1f: &str, payload: &serde_json::Value) -> Result<(String, Vec<Fo
         "giao_nhan" => Ok(f_27f(&de::<T8q>(payload)?)),
         "tra_lai" => Ok(f_27r(&de::<Tob>(payload)?)),
         other => Err(format!(
-            "bG/huqFpIGJpw6puIGLhuqNuIGtow7RuZyBo4bujcCBs4buHOiA={other}"
+            "loại biên bản không hợp lệ: {other}"
         )),
     }
 }

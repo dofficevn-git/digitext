@@ -196,9 +196,9 @@ export default function Sidebar() {
             type="button"
             className="grid size-7 place-items-center rounded border border-border bg-surface text-fg-muted transition-colors hover:border-border-strong hover:bg-gray-100 hover:text-fg"
             onClick={() => Veb((c) => !c)}
-            title={collapsed ? "TeG7nyBy4buZbmcgdGhhbmggYsOqbg==" : "VGh1IGfhu41uIHRoYW5oIGLDqm4="}
+            title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
             aria-label={
-              collapsed ? "TeG7nyBy4buZbmcgdGhhbmggYsOqbg==" : "VGh1IGfhu41uIHRoYW5oIGLDqm4="
+              collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"
             }
           >
             <Icon name={collapsed ? "moRong" : "thuGon"} size={15} />
@@ -207,7 +207,7 @@ export default function Sidebar() {
       </div>
 
       {}
-      <nav className="nav-scroll" aria-label="xJBp4buBdSBoxrDhu5tuZyBjaMOtbmg=">
+      <nav className="nav-scroll" aria-label="Điều hướng chính">
         {rail ? (
           <div className="flex flex-col items-center gap-1">
             {NAV_TREE.filter(Ve2).map((n) => (
@@ -239,7 +239,7 @@ export default function Sidebar() {
             <button
               type="button"
               className="flex min-w-0 flex-1 items-center gap-2 rounded p-1 text-left transition-colors hover:bg-gray-100 data-[state=open]:bg-gray-100"
-              aria-label="VHLDrG5oIMSRxqFuIHTDoGkga2hv4bqjbg=="
+              aria-label="Trình đơn tài khoản"
             >
               <span className="grid size-7 flex-none place-items-center rounded-full bg-brand-500 text-xs font-semibold text-white">
                 {Veo}
@@ -248,11 +248,11 @@ export default function Sidebar() {
                 <>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-fg">
-                      {user || "Q2jGsGEgxJHEg25nIG5o4bqtcA=="}
+                      {user || "Chưa đăng nhập"}
                     </span>
                     <span className="block truncate text-xs text-fg-subtle">
                       {Vdv ? V3za(Vdv.role) : ""}
-                      {Vdv?.mode === "offline" ? "IMK3IG5nb+G6oWkgdHV54bq/bg==" : ""}
+                      {Vdv?.mode === "offline" ? " · ngoại tuyến" : ""}
                     </span>
                   </span>
                   <Icon name="moNhanh" size={14} className="flex-none text-fg-subtle" />
@@ -262,7 +262,7 @@ export default function Sidebar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
             <DropdownMenuLabel className="truncate">
-              {user || "Q2jGsGEgxJHEg25nIG5o4bqtcA=="}
+              {user || "Chưa đăng nhập"}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {Vdx("settings") && (

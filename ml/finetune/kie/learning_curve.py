@@ -23,7 +23,7 @@ def doc_rank(document_id: str) -> float:
 
 def q_16b(records: list[dict], frac: float) -> list[dict]:
     if not 0.0 < frac <= 1.0:
-        raise ValueError(f"ZnJhY3Rpb24gcGjhuqNpIHRyb25nICgwLDFdLCBuaOG6rW4g{frac}")
+        raise ValueError(f"fraction phải trong (0,1], nhận {frac}")
     return [p_47e for p_47e in records if doc_rank(p_47e["document_id"]) < frac]
 
 def q_136(s: str) -> list[float]:
@@ -34,10 +34,10 @@ def q_136(s: str) -> list[float]:
             continue
         p_47f = float(p_480)
         if not 0.0 < p_47f <= 1.0:
-            raise ValueError(f"ZnJhY3Rpb24gcGjhuqNpIHRyb25nICgwLDFdLCBuaOG6rW4g{p_47f}")
+            raise ValueError(f"fraction phải trong (0,1], nhận {p_47f}")
         out.append(p_47f)
     if not out:
-        raise ValueError("Y+G6p24gw610IG5o4bqldCBt4buZdCBmcmFjdGlvbg==")
+        raise ValueError("cần ít nhất một fraction")
     return sorted(set(out))
 
 def q_11e(points: list[dict], key: str = "f1_macro", eps: float = 0.01) -> bool:
@@ -54,7 +54,7 @@ def q_fa(points: list[dict], meta: dict) -> dict:
             "ĐI NGANG — thêm data CÙNG LOẠI gần như không giúp; ưu tiên gold người soát "
             "hoặc data ĐA DẠNG hơn (cơ quan/layout khác)."
             if p_481 else
-            "Q8OSTiBE4buQQyDigJQgdGjDqm0gZGF0YSBjw7JuIGdpw7pwOyBuaMawbmcgduG6q24gYuG7iyBjaOG6t24gdHLDqm4gYuG7n2kgY2jhuqV0IGzGsOG7o25nIFZMTSArIFRyaXRvbiBPQ1Iu"
+            "CÒN DỐC — thêm data còn giúp; nhưng vẫn bị chặn trên bởi chất lượng VLM + Triton OCR."
         ),
         "meta": meta,
         "note": (
@@ -125,27 +125,27 @@ def main(argv: list[str] | None = None) -> int:
     p_48b.add_argument("--val-bucket", type=int, default=0)
     p_48b.add_argument("--mod", type=int, default=10)
     p_48b.add_argument("--seed", type=int, default=42)
-    p_48b.add_argument("--dry-run", action="store_true", help="Y2jhu4kgeGVtIGNoaWEgYmFvIG5oacOqdSwga2jDtG5nIGPhuqduIHRvcmNo")
+    p_48b.add_argument("--dry-run", action="store_true", help="chỉ xem chia bao nhiêu, không cần torch")
     args = p_48b.parse_args(argv)
 
     try:
         p_48d = q_136(args.fractions)
     except ValueError as e:
-        print(f"TOG7lkk6IA=={e}", file=sys.stderr)
+        print(f"LỖI: {e}", file=sys.stderr)
         return 2
 
     p_495 = Path(args.bio_jsonl)
     if not p_495.exists():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_495}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_495}", file=sys.stderr)
         return 2
     records = [p_492 for p_492 in q_121(p_495) if q_118(p_492)]
     if not records:
-        print("TOG7lkk6IGtow7RuZyBjw7MgdHJhbmcgbsOgbyBtYW5nIG5ow6NuIGtow6FjIE8=", file=sys.stderr)
+        print("LỖI: không có trang nào mang nhãn khác O", file=sys.stderr)
         return 2
 
     p_48e, val_recs = q_166(records, args.val_bucket, args.mod)
     if not val_recs:
-        print("TOG7lkk6IHThuq1wIHZhbCBy4buXbmcg4oCUIGNo4buJbmggLS12YWwtYnVja2V0Ly0tbW9k", file=sys.stderr)
+        print("LỖI: tập val rỗng — chỉnh --val-bucket/--mod", file=sys.stderr)
         return 2
 
     if args.dry_run:
@@ -168,10 +168,10 @@ def main(argv: list[str] | None = None) -> int:
     for p_48c in p_48d:
         p_496 = q_16b(p_48e, p_48c)
         if not p_496:
-            print(f"YuG7jyBt4bupYyA={p_48c}OiBzdWJzZXQgcuG7l25n", file=sys.stderr)
+            print(f"bỏ mức {p_48c}: subset rỗng", file=sys.stderr)
             continue
         p_491 = len({p_492["document_id"] for p_492 in p_496})
-        print(f"Cj09PSBt4bupYyA={p_48c:.0%}: {len(p_496)} trang / {p_491}IHTDoGkgbGnhu4d1ID09PQ==", file=sys.stderr)
+        print(f"\n=== mức {p_48c:.0%}: {len(p_496)} trang / {p_491} tài liệu ===", file=sys.stderr)
         p_490 = q_176(p_496, val_recs, args)
         points.append({
             "fraction": p_48c, "train_pages": len(p_496), "train_docs": p_491,

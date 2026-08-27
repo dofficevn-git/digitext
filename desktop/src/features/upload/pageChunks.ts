@@ -30,19 +30,19 @@ export interface V4hy {
 }
 
 export function V4hz(d: V4hy | null): string {
-  if (!d) return "xJBhbmcgbeG7nyB0w6BpIGxp4buHdeKApg==";
+  if (!d) return "Đang mở tài liệu…";
   if (d.total && d.total > 0) {
     const V1ir = Math.min(100, Math.round((d.received / d.total) * 100));
-    return `xJBhbmcgdOG6o2kgdMOgaSBsaeG7h3UgdOG7qyBtw6F5IGNo4bun4oCmIA==${V1ir}% (${V4hx(d.received)}/${V4hx(d.total)})`;
+    return `Đang tải tài liệu từ máy chủ… ${V1ir}% (${V4hx(d.received)}/${V4hx(d.total)})`;
   }
   if (d.received > 0)
-    return `xJBhbmcgdOG6o2kgdMOgaSBsaeG7h3UgdOG7qyBtw6F5IGNo4bun4oCmIA==${V4hx(d.received)}`;
-  return "xJBhbmcgdOG6o2kgdMOgaSBsaeG7h3UgdOG7qyBtw6F5IGNo4bun4oCm";
+    return `Đang tải tài liệu từ máy chủ… ${V4hx(d.received)}`;
+  return "Đang tải tài liệu từ máy chủ…";
 }
 
 export function V4i0(V1is: number, V1it: boolean, V1iu: boolean): string {
-  if (V1iu) return `xJBhbmcgbuG6oXAgdGjDqm0gdHJhbmfigKYgKMSRw6MgaGnhu4duIA==${V1is})`;
+  if (V1iu) return `Đang nạp thêm trang… (đã hiện ${V1is})`;
   if (V1it)
-    return `xJDDoyBoaeG7h24g${V1is}IHRyYW5nIOKAlCBjdeG7mW4geHXhu5FuZyDEkeG7gyB4ZW0gdGnhur9w`;
-  return `xJDDoyBoaeG7h24gxJHhu6cg${V1is} trang`;
+    return `Đã hiện ${V1is} trang — cuộn xuống để xem tiếp`;
+  return `Đã hiện đủ ${V1is} trang`;
 }

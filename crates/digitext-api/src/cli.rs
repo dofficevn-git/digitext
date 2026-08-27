@@ -15,7 +15,7 @@ pub fn cli_main(r_1q: &[String]) -> ExitCode {
     {
         Ok(rt) => rt,
         Err(e) => {
-            eprintln!("a2jDtG5nIHThuqFvIMSRxrDhu6NjIHRva2lvIHJ1bnRpbWU6IA=={e}");
+            eprintln!("không tạo được tokio runtime: {e}");
             return ExitCode::FAILURE;
         }
     };
@@ -34,7 +34,7 @@ async fn run(r_1r: &[String]) -> anyhow::Result<()> {
         Some("backfill-source-pdfs") => backfill_source_pdfs().await,
         Some(other) => {
             bail!(
-                "bOG7h25oIGtow7RuZyBo4bujcCBs4buHOiA={other}IChkw7luZzogc2VydmUgfCBib290c3RyYXAtc3VwZXJhZG1pbiAtLXVzZXJuYW1lIDx0w6puPiB8IGJhY2tmaWxsLXNvdXJjZS1wZGZzKQ=="
+                "lệnh không hợp lệ: {other} (dùng: serve | bootstrap-superadmin --username <tên> | backfill-source-pdfs)"
             )
         }
     }
@@ -45,13 +45,13 @@ async fn backfill_source_pdfs() -> anyhow::Result<()> {
         .minio
         .clone()
         .context(
-            "dGhp4bq/dSBj4bqldSBow6xuaCBNaW5JTyAoRElHSVRFWFRfTUlOSU9fKikg4oCUIGtow7RuZyB0aOG7gyBiYWNrZmlsbCAoYuG6rXQgc291cmNlX3N0b3JlIHRyxrDhu5tjKQ==",
+            "thiếu cấu hình MinIO (DIGITEXT_MINIO_*) — không thể backfill (bật source_store trước)",
         )?;
     let r_1u = digitext_db::connect(&r_1s.database_url)
         .await
-        .context("a+G6v3QgbuG7kWkgUG9zdGdyZXMgdGjhuqV0IGLhuqFp")?;
+        .context("kết nối Postgres thất bại")?;
     let store = digitext_storage::MinioObjectStore::new(&r_1t)
-        .context("ZOG7sW5nIE1pbklPIG9iamVjdCBzdG9yZSB0aOG6pXQgYuG6oWk=")?;
+        .context("dựng MinIO object store thất bại")?;
     eprintln!(
         "→ backfill: DB ok, MinIO bucket={} endpoint={}, data_dir={}",
         r_1t.bucket, r_1t.endpoint, r_1s.data_dir
@@ -64,12 +64,12 @@ async fn backfill_source_pdfs() -> anyhow::Result<()> {
     )
     .await?;
     println!(
-        "QmFja2ZpbGwgeG9uZzogdOG7lW5nPQ=={}IMK3IMSRw6MgxJHhuql5PQ=={}IMK3IGLhu48gcXVhICjEkcOjIGPDsyk9{}IMK3IHRoaeG6v3UgZmlsZT0={}IMK3IGzhu5dpPQ=={}",
+        "Backfill xong: tổng={} · đã đẩy={} · bỏ qua (đã có)={} · thiếu file={} · lỗi={}",
         r_1v.total, r_1v.uploaded, r_1v.skipped, r_1v.missing, r_1v.errors
     );
     if r_1v.errors > 0 {
         bail!(
-            "Y8OzIA=={}IGzhu5dpIGtoaSBiYWNrZmlsbCDigJQgeGVtIGxvZw==",
+            "Y8OzIA=={} lỗi khi backfill — xem log",
             r_1v.errors
         );
     }
@@ -84,13 +84,13 @@ async fn serve() -> anyhow::Result<()> {
     let r_1w = Config::from_env()?;
     let r_21 = digitext_db::f_11d(&r_1w.database_url)
         .await
-        .context("a+G6v3QgbuG7kWkvbWlncmF0ZSBQb3N0Z3JlcyB0aOG6pXQgYuG6oWk=")?;
+        .context("kết nối/migrate Postgres thất bại")?;
     let r_1x = JwtKeys::load_or_generate(&r_1w.jwt_key_path)?;
     let r_1y = tokio::net::TcpListener::bind(&r_1w.bind)
         .await
-        .with_context(|| format!("a2jDtG5nIGJpbmQgxJHGsOG7o2Mg{}", r_1w.bind))?;
+        .with_context(|| format!("không bind được {}", r_1w.bind))?;
     tracing::info!(
-        "ZGlnaXRleHQtYXBpIGzhuq9uZyBuZ2hlIHThuqFpIGh0dHA6Ly8={}",
+        "digitext-api lắng nghe tại http://{}",
         r_1w.bind
     );
     let r_25 = r_21.clone();
@@ -102,20 +102,20 @@ async fn serve() -> anyhow::Result<()> {
         r_1w.pdf_store_bucket.as_deref(),
         r_1w.pdf_store_dir.as_deref(),
     )
-    .context("ZOG7sW5nIGtobyBQREYgMiBs4bubcCB0aOG6pXQgYuG6oWk=")?
+    .context("dựng kho PDF 2 lớp thất bại")?
     .map(|r_23| {
         Arc::new(digitext_storage::WormGuard::new(r_23)) as Arc<dyn digitext_storage::ObjectStore>
     });
     if r_1w.pdf_store_bucket.is_none() && r_1w.pdf_store_dir.is_some() {
         tracing::warn!(
-            "a2hvIFBERiAyIGzhu5twIGTDuW5nIMSQxKhBIEPhu6RDIELhu5gg4oCUIGNo4buJIMSRw7puZyBraGkgd29ya2VyIE9DUiBjaOG6oXkgQ8OZTkcgbcOheS4gICAgICAgICAgICAgIFdvcmtlciDhu58gbcOheSBraMOhYyB0aMOsIMSR4bq3dCBESUdJVEVYVF9QREZfU1RPUkVfQlVDS0VUIChNaW5JTykgY2hvIGPhuqMgaGFpLg=="
+            "kho PDF 2 lớp dùng ĐĨA CỤC BỘ — chỉ đúng khi worker OCR chạy CÙNG máy.              Worker ở máy khác thì đặt DIGITEXT_PDF_STORE_BUCKET (MinIO) cho cả hai."
         );
     }
     if let Some(store) = r_20 {
         r_24 = r_24.with_store(store);
         tracing::info!(
             minio = r_1w.pdf_store_bucket.is_some(),
-            "bHXhu5NuZyBrw70gc+G7kSArIGtp4buDbSBQREYvQSBC4bqsVCAoa2hvIG9iamVjdCBj4bqldSBow6xuaCk="
+            "luồng ký số + kiểm PDF/A BẬT (kho object cấu hình)"
         );
         f_2gp(r_25);
     }
@@ -124,20 +124,20 @@ async fn serve() -> anyhow::Result<()> {
             Ok(store) => {
                 tracing::info!(
                     bucket = % r_1z.bucket, endpoint = % r_1z.endpoint,
-                    "a2hvIFBERiBuZ3Xhu5NuIE1pbklPIELhuqxUICh1cGxvYWQg4oaSIE9DUik="
+                    "kho PDF nguồn MinIO BẬT (upload → OCR)"
                 );
                 r_24 = r_24.with_source_store(Arc::new(store));
             }
             Err(e) => {
                 tracing::error!(
                     error = % e,
-                    "ZOG7sW5nIE1pbklPIFBERiBuZ3Xhu5NuIGzhu5dpIOKAlCB0w6BpIGxp4buHdSB1cGxvYWQgc+G6vSBLSMOUTkcgT0NSIMSRxrDhu6Nj"
+                    "dựng MinIO PDF nguồn lỗi — tài liệu upload sẽ KHÔNG OCR được"
                 );
             }
         },
         None => {
             tracing::warn!(
-                "TWluSU8gUERGIG5ndeG7k24gQ0jGr0EgY+G6pXUgaMOsbmggKERJR0lURVhUX01JTklPXyopIOKAlCB0w6BpIGxp4buHdSB1cGxvYWQgY2jhu4kgbMawdSDEkcSpYSBBUEksIHdvcmtlciBPQ1Igc+G6vSBraMO0bmcgZmV0Y2ggxJHGsOG7o2M="
+                "MinIO PDF nguồn CHƯA cấu hình (DIGITEXT_MINIO_*) — tài liệu upload chỉ lưu đĩa API, worker OCR sẽ không fetch được"
             )
         }
     }
@@ -146,28 +146,28 @@ async fn serve() -> anyhow::Result<()> {
             let pem = std::fs::read_to_string(path)
                 .unwrap_or_else(|e| {
                     panic!(
-                        "a2jDtG5nIMSR4buNYyDEkcaw4bujYyBESUdJVEVYVF9TSUdOX1RSVVNUX1JPT1RTPSc={path}': {e}"
+                        "không đọc được DIGITEXT_SIGN_TRUST_ROOTS='{path}': {e}"
                     )
                 });
             let roots =
                 digitext_sign_verify::chain::TrustStore::from_pem(&pem).unwrap_or_else(|e| {
-                    panic!("DIGITEXT_SIGN_TRUST_ROOTS='{path}JyBraMO0bmcgaOG7o3AgbOG7hzog{e}")
+                    panic!("DIGITEXT_SIGN_TRUST_ROOTS='{path}' không hợp lệ: {e}")
                 });
             tracing::info!(
                 path = % path, roots = roots.len(),
-                "dHJ1c3Qgc3RvcmUgY2jhu68ga8O9IMSQw4MgbuG6oXA="
+                "trust store chữ ký ĐÃ nạp"
             );
             r_24 = r_24.with_trust_roots(roots);
         }
         None => {
             tracing::warn!(
-                "RElHSVRFWFRfU0lHTl9UUlVTVF9ST09UUyBjaMawYSBj4bqldSBow6xuaCDigJQgS0jDlE5HIGtp4buDbSDEkcaw4bujYyBjaHXhu5dpIGNo4bupbmcgdGjGsCBuw6puIG3hu41pIHnDqnUgY+G6p3Uga8O9IHPhur0gYuG7iyB04burIGNo4buRaSAoxJHhurd0IGJ1bmRsZSBQRU0gcm9vdCBj4bunYSBDQSBwaMOhdCBow6BuaCB0b2tlbiDEkeG7gyBi4bqtdCBrw70gc+G7kTsgdG9rZW4gSS1DQSBkw7luZyB0cnVzdC9pY2Etc2lnbi10cnVzdC1yb290cy5wZW0gdHJvbmcgcmVwbyk="
+                "DIGITEXT_SIGN_TRUST_ROOTS chưa cấu hình — KHÔNG kiểm được chuỗi chứng thư nên mọi yêu cầu ký sẽ bị từ chối (đặt bundle PEM root của CA phát hành token để bật ký số; token I-CA dùng trust/ica-sign-trust-roots.pem trong repo)"
             )
         }
     }
     if let Some(r_27) = r_1w.tsa_url {
         tracing::info!(
-            tsa = % r_27, "xJHDs25nIGThuqV1IHRo4budaSBnaWFuIFRTQSBC4bqsVCAoUEFkRVMtVCk="
+            tsa = % r_27, "đóng dấu thời gian TSA BẬT (PAdES-T)"
         );
         r_24 = r_24.with_tsa_url(r_27);
     }
@@ -176,28 +176,28 @@ async fn serve() -> anyhow::Result<()> {
             let pem = std::fs::read_to_string(path)
                 .unwrap_or_else(|e| {
                     panic!(
-                        "a2jDtG5nIMSR4buNYyDEkcaw4bujYyBESUdJVEVYVF9UU0FfVFJVU1RfUk9PVFM9Jw=={path}': {e}"
+                        "không đọc được DIGITEXT_TSA_TRUST_ROOTS='{path}': {e}"
                     )
                 });
             let roots =
                 digitext_sign_verify::chain::TrustStore::from_pem(&pem).unwrap_or_else(|e| {
-                    panic!("DIGITEXT_TSA_TRUST_ROOTS='{path}JyBraMO0bmcgaOG7o3AgbOG7hzog{e}")
+                    panic!("DIGITEXT_TSA_TRUST_ROOTS='{path}' không hợp lệ: {e}")
                 });
             tracing::info!(
                 path = % path, roots = roots.len(),
-                "dHJ1c3Qgc3RvcmUgVFNBIMSQw4MgbuG6oXA="
+                "trust store TSA ĐÃ nạp"
             );
             r_24 = r_24.with_tsa_trust_roots(roots);
         }
         None => {
             tracing::warn!(
-                "RElHSVRFWFRfVFNBX1RSVVNUX1JPT1RTIGNoxrBhIGPhuqV1IGjDrG5oIOKAlCB0ZW0gdGjhu51pIGdpYW4gY2jhu4kg4bufIG3hu6ljIGPhuqV1IHRyw7pjLCBLSMOUTkcgdGluIMSRxrDhu6NjIGtoaSB0w6FpIHjDoWMgbWluaCAoxJHhurd0IGJ1bmRsZSBQRU0gcm9vdCBUU0EgxJHhu4MgYuG6rXQga2nhu4NtIGNodeG7l2kgdGVtIOKAlCBIMyk="
+                "DIGITEXT_TSA_TRUST_ROOTS chưa cấu hình — tem thời gian chỉ ở mức cấu trúc, KHÔNG tin được khi tái xác minh (đặt bundle PEM root TSA để bật kiểm chuỗi tem — H3)"
             )
         }
     }
     if r_1w.pades_lt {
         tracing::info!(
-            "UEFkRVMtTFQgQuG6rFQg4oCUIGNvbXBsZXRlIHPhur0gdOG6o2kgT0NTUC9DUkwgKyBuaMO6bmcgL0RTUyAobG9uZy10ZXJtIHZhbGlkYXRpb24p"
+            "PAdES-LT BẬT — complete sẽ tải OCSP/CRL + nhúng /DSS (long-term validation)"
         );
         r_24 = r_24.with_pades_lt(true);
     }
@@ -205,18 +205,18 @@ async fn serve() -> anyhow::Result<()> {
     match f_1pw(r_1w.pades_lta, r_1w.pades_lt, r_24.tsa_url.is_some()) {
         LtaStartup::Enable => {
             tracing::info!(
-                "UEFkRVMtTFRBIELhuqxUIOKAlCBjb21wbGV0ZSBz4bq9IMSRw7NuZyBEb2NUaW1lU3RhbXAgcGjhu6cgL0RTUyAoYXJjaGl2ZS10aW1lc3RhbXApIHNhdSBMVA=="
+                "PAdES-LTA BẬT — complete sẽ đóng DocTimeStamp phủ /DSS (archive-timestamp) sau LT"
             );
             r_24 = r_24.with_pades_lta(true);
         }
         LtaStartup::MissingLt => {
             tracing::error!(
-                "RElHSVRFWFRfUEFERVNfTFRBIGLhuq10IG5oxrBuZyBESUdJVEVYVF9QQURFU19MVCBU4bquVCDigJQgTFRBIGPhuqduIC9EU1MgxJHhu4MgcGjhu6c7IELhu44gUVVBIExUQSAoYuG6rXQgRElHSVRFWFRfUEFERVNfTFQp"
+                "DIGITEXT_PADES_LTA bật nhưng DIGITEXT_PADES_LT TẮT — LTA cần /DSS để phủ; BỎ QUA LTA (bật DIGITEXT_PADES_LT)"
             )
         }
         LtaStartup::MissingTsa => {
             tracing::error!(
-                "RElHSVRFWFRfUEFERVNfTFRBIGLhuq10IG5oxrBuZyB0aGnhur91IERJR0lURVhUX1RTQV9VUkwg4oCUIExUQSBj4bqnbiBUU0EgKGh0dHBzLCBSU0EpIMSR4buDIMSRw7NuZyBhcmNoaXZlLXRpbWVzdGFtcDsgQuG7jiBRVUEgTFRB"
+                "DIGITEXT_PADES_LTA bật nhưng thiếu DIGITEXT_TSA_URL — LTA cần TSA (https, RSA) để đóng archive-timestamp; BỎ QUA LTA"
             )
         }
         LtaStartup::Off => {}
@@ -224,11 +224,11 @@ async fn serve() -> anyhow::Result<()> {
     r_24 = r_24.with_sign_appearance(r_1w.sign_visible, r_1w.sign_stamp);
     if r_1w.sign_stamp {
         tracing::warn!(
-            "RElHSVRFWFRfU0lHTl9TVEFNUCBi4bqtdDoga8O9IGvDqG0gQ09OIEThuqRVIFRSw5JOIOKAlCBs4buHY2ggxJBp4buBdSA4LjEuYyBUVCAwNS8yMDI1IChUaMO0bmcgdMawIHF1eSDEkeG7i25oIGto4buRaSB0ZXh0IFRpbWVzIDEwIHbDoCBj4bqlbSBoaeG7g24gdGjhu4sgaMOsbmgg4bqjbmggZOG6pXUp"
+            "DIGITEXT_SIGN_STAMP bật: ký kèm CON DẤU TRÒN — lệch Điều 8.1.c TT 05/2025 (Thông tư quy định khối text Times 10 và cấm hiển thị hình ảnh dấu)"
         );
     } else if !r_1w.sign_visible {
         tracing::warn!(
-            "RElHSVRFWFRfU0lHTl9WSVNJQkxFIHThuq90OiBrw70gVsOUIEjDjE5IIOKAlCBs4buHY2ggxJBp4buBdSA4LjEuYyBUVCAwNS8yMDI1"
+            "DIGITEXT_SIGN_VISIBLE tắt: ký VÔ HÌNH — lệch Điều 8.1.c TT 05/2025"
         );
     }
     crate::routes::documents::f_2id(r_24.data_dir.as_path()).await;
@@ -253,14 +253,14 @@ fn f_2gp(r_29: sqlx::PgPool) {
                 Ok(r_28) if r_28 > 0 => {
                     tracing::info!(
                         released = r_28,
-                        "c3dlZXBlcjogcmVsZWFzZSBwaGnDqm4ga8O9IGjhur90IGjhuqFuIOKGkiB0b19zaWdu"
+                        "sweeper: release phiên ký hết hạn → to_sign"
                     )
                 }
                 Ok(_) => {}
                 Err(e) => {
                     tracing::warn!(
                         error = % e,
-                        "c3dlZXBlciBwaGnDqm4ga8O9IGzhu5dpIChz4bq9IHRo4butIGzhuqFpKQ=="
+                        "sweeper phiên ký lỗi (sẽ thử lại)"
                     )
                 }
             }
@@ -291,14 +291,14 @@ fn f_2gs(r_2d: sqlx::PgPool) {
                     tracing::info!(
                         abandoned = r_2c,
                         hours = C_V,
-                        "cmVhcGVyOiDEkcOzbmcgxJHhu6N0IG7hu5lwIGLhu48gZOG7nyDihpIgYWJhbmRvbmVk"
+                        "reaper: đóng đợt nộp bỏ dở → abandoned"
                     )
                 }
                 Ok(_) => {}
                 Err(e) => {
                     tracing::warn!(
                         error = % e,
-                        "cmVhcGVyIMSR4bujdCBu4buZcCBs4buXaSAoc+G6vSB0aOG7rSBs4bqhaSk="
+                        "reaper đợt nộp lỗi (sẽ thử lại)"
                     )
                 }
             }
@@ -313,10 +313,10 @@ fn f_1ye(r_2g: &[String]) -> anyhow::Result<(String, Option<String>)> {
         match r_2f.as_str() {
             "--username" => username = r_2i.next().map(String::as_str),
             "--display-name" => r_2h = r_2i.next().map(String::as_str),
-            other => bail!("dGhhbSBz4buRIGtow7RuZyBo4bujcCBs4buHOiA={other}"),
+            other => bail!("tham số không hợp lệ: {other}"),
         }
     }
-    let username = username.context("dGhp4bq/dSAtLXVzZXJuYW1lIDx0w6puPg==")?;
+    let username = username.context("thiếu --username <tên>")?;
     Ok((username.to_owned(), r_2h.map(str::to_owned)))
 }
 async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
@@ -325,16 +325,16 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
     let r_2m = digitext_db::f_11d(&r_2k.database_url).await?;
     if users::count(&r_2m).await? > 0 {
         bail!(
-            "YuG6o25nIHVzZXJzIMSRw6MgY8OzIGThu68gbGnhu4d1IOKAlCBib290c3RyYXAtc3VwZXJhZG1pbiBjaOG7iSBjaOG6oXkgdHLDqm4gaOG7hyB0aOG7kW5nIHRy4buRbmc="
+            "bảng users đã có dữ liệu — bootstrap-superadmin chỉ chạy trên hệ thống trống"
         );
     }
-    let r_2n = rpassword::prompt_password("TeG6rXQga2jhuql1IHN1cGVyIGFkbWluOiA=")?;
-    let r_2o = rpassword::prompt_password("Tmjhuq1wIGzhuqFpIG3huq10IGto4bqpdTog")?;
+    let r_2n = rpassword::prompt_password("Mật khẩu super admin: ")?;
+    let r_2o = rpassword::prompt_password("Nhập lại mật khẩu: ")?;
     if r_2n != r_2o {
-        bail!("aGFpIGzhuqduIG5o4bqtcCBt4bqtdCBraOG6qXUga2jDtG5nIGto4bubcA==");
+        bail!("hai lần nhập mật khẩu không khớp");
     }
     if r_2n.chars().count() < 8 {
-        bail!("beG6rXQga2jhuql1IHBo4bqjaSB04buRaSB0aGnhu4N1IDgga8O9IHThu7E=");
+        bail!("mật khẩu phải tối thiểu 8 ký tự");
     }
     let r_2p = users::create(
         &r_2m,
@@ -350,7 +350,7 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
     )
     .await?;
     println!(
-        "xJDDoyB04bqhbyBzdXBlciBhZG1pbiAn{}' (id {}).",
+        "Đã tạo super admin '{}' (id {}).",
         r_2p.username, r_2p.id
     );
     Ok(())

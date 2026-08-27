@@ -89,10 +89,10 @@ pub async fn record_download(
         Ok(r_2ak.to_string_lossy().into_owned())
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyBsxrB1IGZpbGUgbOG7l2k6IA=={e}")))?
-    .map_err(|e| AppError::internal(format!("bMawdSBmaWxlIGzhu5dpOiA={e}")))?;
+    .map_err(|e| AppError::internal(format!("luồng lưu file lỗi: {e}")))?
+    .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     tracing::info!(
-        record = % args.id, "cmVjb3JkX2Rvd25sb2FkOiDEkcOjIGzGsHUgUERGIGJpw6puIGLhuqNu"
+        record = % args.id, "record_download: đã lưu PDF biên bản"
     );
     Ok(r_2al)
 }

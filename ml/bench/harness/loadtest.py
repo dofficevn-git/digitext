@@ -48,10 +48,10 @@ def run(manifest, triton_url: str, model: str, concurrency: int, requests: int) 
     p_ef = [cv2.imread(p_f1["image"]) for p_f1 in manifest]
     p_ef = [p_ed for p_ed in p_ef if p_ed is not None]
     if not p_ef:
-        raise SystemExit("4p2MIGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mg4bqjbmggbsOgbyB04burIG1hbmlmZXN0")
+        raise SystemExit("❌ không đọc được ảnh nào từ manifest")
     p_eb = grpcclient.InferenceServerClient(url=triton_url)
     if not p_eb.is_server_ready():
-        raise SystemExit(f"4p2MIFRyaXRvbiBjaMawYSBz4bq1biBzw6BuZzog{triton_url}")
+        raise SystemExit(f"❌ Triton chưa sẵn sàng: {triton_url}")
 
     def one(i):
         p_ee = p_ef[i % len(p_ef)]

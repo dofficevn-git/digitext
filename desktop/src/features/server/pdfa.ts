@@ -20,11 +20,11 @@ export interface V4w4 {
 export function V4w5(V336: V4w3): string {
   switch (V336) {
     case "missing":
-      return "VGhp4bq/dSB04buHcCBQREY=";
+      return "Thiếu tệp PDF";
     case "invalid":
-      return "UERGIGjhu49uZw==";
+      return "PDF hỏng";
     case "not-pdfa":
-      return "Q2jGsGEgxJHhuqF0IFBERi9BLTJi";
+      return "Chưa đạt PDF/A-2b";
   }
 }
 
@@ -40,16 +40,16 @@ export function V4w7(r: V4f9, V337: V4w3): string {
     r.reason && r.reason.trim() !== ""
       ? r.reason.trim()
       : V337 === "missing"
-        ? "S2jDtG5nIHTDrG0gdGjhuqV5IHThu4dwIFBERiAyIGzhu5twIHRyw6puIGtobyBtw6F5IGNo4bun"
+        ? "Không tìm thấy tệp PDF 2 lớp trên kho máy chủ"
         : V337 === "invalid"
-          ? "VOG7h3AgUERGIDIgbOG7m3Agc2FpIGPhuqV1IHRyw7pj"
-          : "R2jDqXAgYuG7n2kgYuG6o24gY8WpIOKAlCB0aGnhur91IFhNUCBwZGZhaWQvT3V0cHV0SW50ZW50L0lEL2ZvbnQgbmjDum5n";
+          ? "Tệp PDF 2 lớp sai cấu trúc"
+          : "Ghép bởi bản cũ — thiếu XMP pdfaid/OutputIntent/ID/font nhúng";
   const V338 = [base];
   if (r.expectedPages !== null && r.pages !== r.expectedPages) {
-    V338.push(`xJHhu41jIMSRxrDhu6NjIA==${r.pages}/${r.expectedPages} trang`);
+    V338.push(`đọc được ${r.pages}/${r.expectedPages} trang`);
   }
   if (V337 !== "missing" && r.pagesWithText === 0 && r.pages > 0) {
-    V338.push("a2jDtG5nIHRyYW5nIG7DoG8gY8OzIGzhu5twIGNo4buv");
+    V338.push("không trang nào có lớp chữ");
   }
   return V338.join(" · ");
 }

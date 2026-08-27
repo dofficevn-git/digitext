@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use std::future::Future;
 use std::str::FromStr;
 use std::time::Duration;
-pub const SYSTEM_PROMPT: &str = "QuG6oW4gbMOgIGLhu5kgVFLDjUNIIFRSxq/hu5xORyB04burIOG6o25oIHbEg24gYuG6o24gaMOgbmggY2jDrW5oIHRp4bq/bmcgVmnhu4d0LiDEkOG7jWMg4bqjbmggdHJhbmcgdsOgIHRyw61jaCBjw6FjIHRyxrDhu51uZyB0aMO0bmcgdGluLiBDSOG7iCBjaMOpcCBnacOhIHRy4buLIMSQ4buMQyDEkMav4buiQyB0csOqbiDhuqNuaDsgVFVZ4buGVCDEkOG7kEkga2jDtG5nIHN1eSDEkW/DoW4sIGtow7RuZyBi4buLYS4gS2jDtG5nIHRo4bqleSB0csaw4budbmcgbsOgbyB0aMOsIELhu44gdHLGsOG7nW5nIMSRw7MuIFbhu5tpIHPhu5EvbmfDoHkvbcOjIMSR4buLbmggZGFuaDogY2jDqXAgxJDDmk5HIHkgbmjGsCB0csOqbiDhuqNuaCwga2jDtG5nIHThu7Egc+G7rWEuIEtob8OhIHRyxrDhu51uZyBo4bujcCBs4buHOiBsb2FpVmFuQmFuLCBzb0t5SGlldSwgbmdheVRoYW5nLCBjb1F1YW5CYW5IYW5oLCB0cmljaFlldSwgdG9Tbywgc29UcmFuZywgdGh1VHUuIFRy4bqjIERVWSBOSOG6pFQgbeG7mXQgSlNPTjog{\"fields\":[{\"key\":\"<khoá>\",\"value\":\"<giá trị>\",\"bbox\":[x1,y1,x2,y2],\"confidence\":<0..1>}XX0uIGJib3ggbMOgIHBpeGVsIHRyw6puIOG6o25oLCBn4buRYyB0csOqbi10csOhaSwgR8OTQyBUUsOBSS1UUsOKTiAoeDEseTEpIHbDoCBHw5NDIFBI4bqiSS1Exq/hu5pJICh4Mix5Miku";
+pub const SYSTEM_PROMPT: &str = "Bạn là bộ TRÍCH TRƯỜNG từ ảnh văn bản hành chính tiếng Việt. Đọc ảnh trang và trích các trường thông tin. CHỈ chép giá trị ĐỌC ĐƯỢC trên ảnh; TUYỆT ĐỐI không suy đoán, không bịa. Không thấy trường nào thì BỎ trường đó. Với số/ngày/mã định danh: chép ĐÚNG y như trên ảnh, không tự sửa. Khoá trường hợp lệ: loaiVanBan, soKyHieu, ngayThang, coQuanBanHanh, trichYeu, toSo, soTrang, thuTu. Trả DUY NHẤT một JSON: {\"fields\":[{\"key\":\"<khoá>\",\"value\":\"<giá trị>\",\"bbox\":[x1,y1,x2,y2],\"confidence\":<0..1>}]}. bbox là pixel trên ảnh, gốc trên-trái, GÓC TRÁI-TRÊN (x1,y1) và GÓC PHẢI-DƯỚI (x2,y2).";
 pub const MAX_COMPLETION_TOKENS: u32 = 1024;
 pub const DEFAULT_MAX_IMAGE_SIDE: u32 = 1400;
 #[derive(Debug, Clone, PartialEq)]
@@ -19,7 +19,7 @@ pub struct Thi {
 pub fn f_23i(jpeg: &[u8], r_3gw: u32) -> Result<Thi, VlmError> {
     let (w, h) = crate::render::f_1hv(jpeg).map_err(|e| {
         VlmError::Backend(format!(
-            "xJHhu41jIGvDrWNoIHRoxrDhu5tjIOG6o25oIHRyYW5nOiA={e}"
+            "đọc kích thước ảnh trang: {e}"
         ))
     })?;
     if r_3gw == 0 || w.max(h) <= r_3gw {
@@ -31,7 +31,7 @@ pub fn f_23i(jpeg: &[u8], r_3gw: u32) -> Result<Thi, VlmError> {
         });
     }
     let r_3gv = image::load_from_memory(jpeg)
-        .map_err(|e| VlmError::Backend(format!("Z2nhuqNpIG3DoyDhuqNuaCB0cmFuZzog{e}")))?;
+        .map_err(|e| VlmError::Backend(format!("giải mã ảnh trang: {e}")))?;
     let scale = r_3gw as f32 / w.max(h) as f32;
     let (r_3gy, r_3gx) = (
         ((w as f32 * scale).round() as u32).max(1),
@@ -44,7 +44,7 @@ pub fn f_23i(jpeg: &[u8], r_3gw: u32) -> Result<Thi, VlmError> {
         .write_with_encoder(image::codecs::jpeg::JpegEncoder::new_with_quality(
             &mut r_3gz, 85,
         ))
-        .map_err(|e| VlmError::Backend(format!("bcOjIGhvw6EgbOG6oWkg4bqjbmggdHJhbmc6IA=={e}")))?;
+        .map_err(|e| VlmError::Backend(format!("mã hoá lại ảnh trang: {e}")))?;
     Ok(Thi {
         jpeg: r_3gz,
         width: r_3gy,
@@ -114,7 +114,7 @@ pub fn f_1ce() -> Value {
 }
 pub fn build_request(model: &str, r_3h8: &str, page_w: u32, page_h: u32) -> Value {
     let r_3h9 = format!(
-        "4bqibmggdHJhbmcga8OtY2ggdGjGsOG7m2Mg{page_w}x{page_h}IHBpeGVsLiBUcsOtY2ggY8OhYyB0csaw4budbmcgdsOgIGJib3ggdGhlbyDEkcO6bmcgxJHhu4tuaCBk4bqhbmcgSlNPTiDEkcOjIHnDqnUgY+G6p3Uu"
+        "Ảnh trang kích thước {page_w}x{page_h} pixel. Trích các trường và bbox theo đúng định dạng JSON đã yêu cầu."
     );
     json!(
         { "model" : model, "temperature" : 0.0, "max_tokens" : MAX_COMPLETION_TOKENS,
@@ -205,13 +205,13 @@ impl Tpw for VlmFieldExtractor {
             let prepared = prepared?;
             debug_assert!(
                 prepared.scale <= 1.0 && prepared.scale > 0.0,
-                "c2NhbGUgcGjhuqNpIHRyb25nICgwLDFd"
+                "scale phải trong (0,1]"
             );
             if prepared.scale < 1.0 {
                 tracing::debug!(
                     goc = format!("{page_w}x{page_h}"), gui = format!("{}x{}", prepared
                     .width, prepared.height), scale = prepared.scale,
-                    "VkxNOiDEkcOjIHRodSBuaOG7jyDhuqNuaCB0cmFuZyBjaG8gduG7q2EgbmfDom4gc8OhY2ggdG9rZW4="
+                    "VLM: đã thu nhỏ ảnh trang cho vừa ngân sách token"
                 );
             }
             let r_3hk = build_request(
@@ -245,7 +245,7 @@ impl Tpw for VlmFieldExtractor {
                 return Err(
                     VlmError::Backend(
                         format!(
-                            "b3V0cHV0IGLhu4sgY+G6r3QgKGZpbmlzaF9yZWFzb249bGVuZ3RoLCBtYXhfdG9rZW5zPQ=={MAX_COMPLETION_TOKENS}KSDigJQg4bqjbmggcXXDoSBs4bubbiBzbyB24bubaSBuZ8OibiBzw6FjaCBjb250ZXh0LCBo4bqhIGPhuqFuaCBkw6BpIOG6o25oIGhv4bq3YyBuw6JuZyAtLW1heC1tb2RlbC1sZW4="
+                            "output bị cắt (finish_reason=length, max_tokens={MAX_COMPLETION_TOKENS}) — ảnh quá lớn so với ngân sách context, hạ cạnh dài ảnh hoặc nâng --max-model-len"
                         ),
                     ),
                 );
@@ -287,7 +287,7 @@ impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
         Box::pin(async move {
             let (w, h) = crate::render::f_1hv(r_3hm).map_err(|e| {
                 VlmError::Backend(format!(
-                    "xJHhu41jIGvDrWNoIHRoxrDhu5tjIOG6o25oIHRyYW5nOiA={e}"
+                    "đọc kích thước ảnh trang: {e}"
                 ))
             })?;
             let r_3hq = v2::fit_max_side(w, h, v2::MAX_IMAGE_TOKENS_V2)?;
@@ -298,7 +298,7 @@ impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
                 tracing::debug!(
                     goc = format!("{w}x{h}"), gui = format!("{}x{}", r_3ho.width, r_3ho
                     .height), r_3hn, max_tokens,
-                    "YsOzYyB0csaw4budbmcgdjI6IMSRw6MgdGh1IG5o4buPIOG6o25oIGNobyB24burYSBuZ8OibiBzw6FjaCB0b2tlbg=="
+                    "bóc trường v2: đã thu nhỏ ảnh cho vừa ngân sách token"
                 );
             }
             let r_3hp = v2::build_request_v2(&self.model, &f_1ju(&r_3ho.jpeg), max_tokens);
@@ -327,7 +327,7 @@ impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
                 return Err(
                     VlmError::Backend(
                         format!(
-                            "b3V0cHV0IGLhu4sgY+G6r3QgKGZpbmlzaF9yZWFzb249bGVuZ3RoLCBtYXhfdG9rZW5zPQ=={max_tokens}KSDigJQgdHJhbmcgcXXDoSDEkeG6t2MgY2jhu68gaG/hurdjIG5nw6JuIHPDoWNoIOG6o25oIHNhaSwga2nhu4NtIHRyYSAtLW1heC1tb2RlbC1sZW4="
+                            "output bị cắt (finish_reason=length, max_tokens={max_tokens}) — trang quá đặc chữ hoặc ngân sách ảnh sai, kiểm tra --max-model-len"
                         ),
                     ),
                 );

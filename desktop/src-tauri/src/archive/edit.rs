@@ -39,7 +39,7 @@ where
                     let r_6q = scanner::f_2bx(&r_6j, r_6g, idx);
                     if r_6q.is_empty() {
                         Err(format!(
-                            "a2jDtG5nIGzGsHUgxJHGsOG7o2Mg4bqjbmggdOG6oW0gY2hvIHRyYW5nIA=={idx}"
+                            "không lưu được ảnh tạm cho trang {idx}"
                         ))
                     } else {
                         Ok(scanner::f_1xn(&r_6j, idx, dpi, r_6q))
@@ -108,7 +108,7 @@ fn f_1ou(trang: &[db::Toe], r_76: &str) -> Result<Vec<Tkt>, String> {
         let r_79 = &trang[i];
         let r_78 = image::open(&r_79.image_path).map_err(|e| {
             format!(
-                "beG7nyDhuqNuaCB0cmFuZyA={}IGzhu5dpICg={}): {e}",
+                "mở ảnh trang {} lỗi ({}): {e}",
                 i + 1,
                 r_79.image_path
             )
@@ -127,7 +127,7 @@ fn f_2h0(pdf: &Path, r_7a: &str) -> Result<Vec<Tkt>, String> {
             .lock()
             .unwrap()
             .take()
-            .ok_or_else(|| "4bqjbmggUERGIMSRw6MgxJHGsOG7o2MgbOG6pXk=".to_string())
+            .ok_or_else(|| "ảnh PDF đã được lấy".to_string())
     })
 }
 #[tauri::command]
@@ -141,7 +141,7 @@ pub async fn open_ho_so_for_edit(
     let (full, trang) = {
         let r_7f = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
         let full = db::f_1em(&r_7f, r_7g)?
-            .ok_or_else(|| AppError::not_found("S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahLg=="))?;
+            .ok_or_else(|| AppError::not_found("Không tìm thấy hồ sơ."))?;
         let r_7j = args.pdf_path.clone().or_else(|| full.pdf_path.clone());
         let trang = match r_7j.as_deref() {
             Some(p) => db::f_1oj(&r_7f, r_7g, p)?,
@@ -158,21 +158,21 @@ pub async fn open_ho_so_for_edit(
             }
             let Some(pdf) = r_7i else {
                 return Err(
-                    "SOG7kyBzxqEgY2jGsGEgY8OzIHRyYW5nIOG6o25oIG7DoG8gxJHhu4MgY2jhu4luaCBz4butYSAoY2jGsGEgxJHDs25nIGfDs2kgdsOgIGtow7RuZyBjw7MgUERGKS4="
+                    "Hồ sơ chưa có trang ảnh nào để chỉnh sửa (chưa đóng gói và không có PDF)."
                         .into(),
                 );
             };
             let p = Path::new(&pdf);
             if !p.is_file() {
                 return Err(
-                    "S2jDtG5nIHTDrG0gdGjhuqV5IGZpbGUgUERGIGPhu6dhIGjhu5Mgc8ahIMSR4buDIG3hu58gY2jhu4luaCBz4butYS4="
+                    "Không tìm thấy file PDF của hồ sơ để mở chỉnh sửa."
                         .into(),
                 );
             }
             f_2h0(p, &r_7e)
         })
         .await
-        .map_err(|e| format!("bHXhu5NuZyB0w6FpIG7huqFwIGzhu5dpOiA={e}"))??;
+        .map_err(|e| format!("luồng tái nạp lỗi: {e}"))??;
     tracing::info!(r_7g, r_7h = r_7h.len(), r_7d = % r_7d, "open_ho_so_for_edit");
     Ok(T6s {
         batch_id: r_7d,
@@ -191,7 +191,7 @@ pub async fn open_pdf_for_edit(
     let pdf = f_113(&app, &db, &args.pdf_path)?;
     if !pdf.is_file() {
         return Err(AppError::not_found(
-            "RmlsZSBQREYga2jDtG5nIHThu5NuIHThuqFpLg==",
+            "File PDF không tồn tại.",
         ));
     }
     let r_7q = pdf.to_string_lossy().into_owned();
@@ -222,11 +222,11 @@ pub async fn open_pdf_for_edit(
             }
         })
         .await
-        .map_err(|e| format!("bHXhu5NuZyB0w6FpIG7huqFwIGzhu5dpOiA={e}"))??;
+        .map_err(|e| format!("luồng tái nạp lỗi: {e}"))??;
         tracing::info!(
             ho_so_id = r_7m.id,
             pages = pages.len(),
-            "b3Blbl9wZGZfZm9yX2VkaXQgKMSRxINuZyBrw70p"
+            "open_pdf_for_edit (đăng ký)"
         );
         return Ok(T6s {
             batch_id: r_7k,
@@ -237,7 +237,7 @@ pub async fn open_pdf_for_edit(
     let pdf_for_thread = pdf.clone();
     let pages = tauri::async_runtime::spawn_blocking(move || f_2h0(&pdf_for_thread, &r_7l))
         .await
-        .map_err(|e| format!("bHXhu5NuZyB0w6FpIG7huqFwIGzhu5dpOiA={e}"))??;
+        .map_err(|e| format!("luồng tái nạp lỗi: {e}"))??;
     let r_7t = pdf
         .file_stem()
         .map(|r_7s| r_7s.to_string_lossy().into_owned())
@@ -278,7 +278,7 @@ pub async fn rebuild_pdf(
     auth.require_perm(digitext_core::Permission::EditorEdit)?;
     if args.pages.is_empty() {
         return Err(AppError::validation(
-            "S2jDtG5nIGPDsyB0cmFuZyBuw6BvIMSR4buDIMSRw7NuZyBnw7NpLg==",
+            "Không có trang nào để đóng gói.",
         ));
     }
     let r_7w = f_113(&app, &db, &args.pdf_out)?;
@@ -291,7 +291,7 @@ pub async fn rebuild_pdf(
                 let no = (i as u32) + 1;
                 let r_82 = scanner::f_295(&r_7x.source_path)?;
                 let r_7v = image::open(&r_82)
-                    .map_err(|e| format!("beG7nyDhuqNuaCB0cmFuZyA={no}IGzhu5dpOiA={e}"))?;
+                    .map_err(|e| format!("mở ảnh trang {no} lỗi: {e}"))?;
                 let (jpeg, w, h) = crate::storage::f_198(&r_7v, r_80)?;
                 let dpi = if r_7x.dpi == 0 {
                     config::C_3U
@@ -314,7 +314,7 @@ pub async fn rebuild_pdf(
             ))
         })
         .await
-        .map_err(|e| format!("bHXhu5NuZyBk4buxbmcgUERGIGzhu5dpOiA={e}"))??;
+        .map_err(|e| format!("luồng dựng PDF lỗi: {e}"))??;
     tracing::info!(pdf = % r_81.0, r_7y = r_81.2, "rebuild_pdf");
     Ok(RebuildResult {
         pdf_path: r_81.0,
@@ -327,7 +327,7 @@ fn f_2gz(r_83: &str, r_84: &image::DynamicImage, dpi: u32) -> Result<Tkt, String
     let idx = C_9K.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let r_85 = scanner::f_2bw(r_84, r_83, idx);
     if r_85.is_empty() {
-        return Err("a2jDtG5nIGzGsHUgxJHGsOG7o2Mg4bqjbmggdHJhbmcgY2jDqG4=".into());
+        return Err("không lưu được ảnh trang chèn".into());
     }
     Ok(scanner::f_1xn(r_84, idx, dpi, r_85))
 }
@@ -343,7 +343,7 @@ pub async fn insert_pages(
     } = args;
     if r_8b.is_empty() {
         return Err(AppError::validation(
-            "Q2jGsGEgY2jhu41uIHThu4dwIMSR4buDIGNow6huLg==",
+            "Chưa chọn tệp để chèn.",
         ));
     }
     let r_8a = tauri::async_runtime::spawn_blocking(move || -> Result<Vec<Tkt>, String> {
@@ -361,20 +361,20 @@ pub async fn insert_pages(
                 }
             } else {
                 let img = image::open(r_89)
-                    .map_err(|e| format!("beG7nyDhuqNuaCAn{path}JyBs4buXaTog{e}"))?;
+                    .map_err(|e| format!("mở ảnh '{path}' lỗi: {e}"))?;
                 r_88.push(f_2gz(&r_86, &img, config::C_3U)?);
             }
         }
         if r_88.is_empty() {
             return Err(
-                "S2jDtG5nIHRyw61jaCDEkcaw4bujYyB0cmFuZyBuw6BvIHThu6sgdOG7h3AgxJHDoyBjaOG7jW4u"
+                "Không trích được trang nào từ tệp đã chọn."
                     .into(),
             );
         }
         Ok(r_88)
     })
     .await
-    .map_err(|e| format!("bHXhu5NuZyBjaMOobiB0cmFuZyBs4buXaTog{e}"))??;
+    .map_err(|e| format!("luồng chèn trang lỗi: {e}"))??;
     Ok(r_8a)
 }
 #[tauri::command]
@@ -389,7 +389,7 @@ pub async fn render_pdf_pages(
     let (r_8e, r_8d) = (args.from, args.count);
     let r_8f = tauri::async_runtime::spawn_blocking(move || f_214(&pdf, r_8e, r_8d))
         .await
-        .map_err(|e| format!("bHXhu5NuZyByZW5kZXIgbOG7l2k6IA=={e}"))??;
+        .map_err(|e| format!("luồng render lỗi: {e}"))??;
     Ok(r_8f)
 }
 fn f_1y0(
@@ -405,7 +405,7 @@ fn f_1y0(
 }
 fn f_214(pdf: &Path, r_8l: Option<u32>, r_8k: Option<u32>) -> Result<Vec<String>, String> {
     if !pdf.is_file() {
-        return Err("S2jDtG5nIHTDrG0gdGjhuqV5IGZpbGUgUERGIMSR4buDIGhp4buDbiB0aOG7iy4=".into());
+        return Err("Không tìm thấy file PDF để hiển thị.".into());
     }
     let r_8o = f_1b8(pdf, r_8l, r_8k)?;
     f_1y7(r_8o, |r_8n| {
@@ -426,14 +426,14 @@ enum RawPageImage {
 fn f_ul(doc: &Document, page_no: u32, r_8y: ObjectId) -> Result<RawPageImage, String> {
     let r_8v = doc
         .get_page_images(r_8y)
-        .map_err(|e| format!("xJHhu41jIOG6o25oIHRyYW5nIA=={page_no}IGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("đọc ảnh trang {page_no} lỗi: {e}"))?;
     let r_8q = r_8v
         .into_iter()
         .max_by_key(|i| (i.width.max(0) as i128) * (i.height.max(0) as i128));
     let Some(r_8u) = r_8q else {
         return Err(
             format!(
-                "Trang {page_no}IGPhu6dhIFBERiBraMO0bmcgY2jhu6lhIOG6o25oIOKAlCBjaMawYSBo4buXIHRy4bujIGNow6huIFBERiB2xINuIGLhuqNuL3ZlY3Rvci4="
+                "Trang {page_no} của PDF không chứa ảnh — chưa hỗ trợ chèn PDF văn bản/vector."
             ),
         );
     };
@@ -445,13 +445,13 @@ fn f_ul(doc: &Document, page_no: u32, r_8y: ObjectId) -> Result<RawPageImage, St
     let r_8z = doc
         .get_object(r_8u.id)
         .and_then(|r_8x| r_8x.as_stream())
-        .map_err(|e| format!("trang {page_no}OiDEkeG7jWMgc3RyZWFtIOG6o25oIGzhu5dpOiA={e}"))?
+        .map_err(|e| format!("trang {page_no}: đọc stream ảnh lỗi: {e}"))?
         .decompressed_content()
-        .map_err(|e| format!("trang {page_no}OiBnaeG6o2kgbsOpbiDhuqNuaCBs4buXaTog{e}"))?;
+        .map_err(|e| format!("trang {page_no}: giải nén ảnh lỗi: {e}"))?;
     if r_8u.bits_per_component.unwrap_or(8) != 8 {
         return Err(
             format!(
-                "trang {page_no}OiDhuqNuaCBQREYga2jDtG5nIHBo4bqjaSA4LWJpdCAodmQgxJFlbi10cuG6r25nIDEtYml0KSDigJQgY2jGsGEgaOG7lyB0cuG7oy4="
+                "trang {page_no}: ảnh PDF không phải 8-bit (vd đen-trắng 1-bit) — chưa hỗ trợ."
             ),
         );
     }
@@ -461,7 +461,7 @@ fn f_ul(doc: &Document, page_no: u32, r_8y: ObjectId) -> Result<RawPageImage, St
         other => {
             return Err(
                 format!(
-                    "trang {page_no}OiBraMO0bmcgZ2lhbiBtw6B1ICc={other}JyBjaMawYSBo4buXIHRy4bujIGtoaSB0csOtY2ggdOG7qyBQREYu"
+                    "trang {page_no}: không gian màu '{other}' chưa hỗ trợ khi trích từ PDF."
                 ),
             );
         }
@@ -476,20 +476,20 @@ fn f_ul(doc: &Document, page_no: u32, r_8y: ObjectId) -> Result<RawPageImage, St
 fn f_13k(r_91: RawPageImage) -> Result<image::DynamicImage, String> {
     match r_91 {
         RawPageImage::Encoded(r_90) => image::load_from_memory(&r_90)
-            .map_err(|e| format!("Z2nhuqNpIG3DoyDhuqNuaCBuw6luIHRyb25nIFBERiBs4buXaTog{e}")),
+            .map_err(|e| format!("giải mã ảnh nén trong PDF lỗi: {e}")),
         RawPageImage::Raw8 { data, w, h, gray } => {
             if gray {
                 image::GrayImage::from_raw(w, h, data)
                     .map(image::DynamicImage::ImageLuma8)
                     .ok_or_else(|| {
-                        "ZOG7ryBsaeG7h3Ug4bqjbmggeMOhbSBraMO0bmcga2jhu5twIGvDrWNoIHRoxrDhu5tj"
+                        "dữ liệu ảnh xám không khớp kích thước"
                             .to_string()
                     })
             } else {
                 image::RgbImage::from_raw(w, h, data)
                     .map(image::DynamicImage::ImageRgb8)
                     .ok_or_else(|| {
-                        "ZOG7ryBsaeG7h3Ug4bqjbmggUkdCIGtow7RuZyBraOG7m3Aga8OtY2ggdGjGsOG7m2M="
+                        "dữ liệu ảnh RGB không khớp kích thước"
                             .to_string()
                     })
             }
@@ -497,10 +497,10 @@ fn f_13k(r_91: RawPageImage) -> Result<image::DynamicImage, String> {
     }
 }
 fn f_1b8(path: &Path, r_93: Option<u32>, r_92: Option<u32>) -> Result<Vec<RawPageImage>, String> {
-    let doc = Document::load(path).map_err(|e| format!("xJHhu41jIFBERiBs4buXaTog{e}"))?;
+    let doc = Document::load(path).map_err(|e| format!("đọc PDF lỗi: {e}"))?;
     let r_96 = doc.get_pages();
     if r_96.is_empty() {
-        return Err("UERGIGtow7RuZyBjw7MgdHJhbmcgbsOgby4=".into());
+        return Err("PDF không có trang nào.".into());
     }
     let lat = f_1y0(&r_96, r_93, r_92);
     let mut r_94 = Vec::with_capacity(lat.len());
@@ -510,10 +510,10 @@ fn f_1b8(path: &Path, r_93: Option<u32>, r_92: Option<u32>) -> Result<Vec<RawPag
     Ok(r_94)
 }
 pub fn f_1b7(path: &Path) -> Result<Vec<(image::DynamicImage, u32)>, String> {
-    let doc = Document::load(path).map_err(|e| format!("xJHhu41jIFBERiBs4buXaTog{e}"))?;
+    let doc = Document::load(path).map_err(|e| format!("đọc PDF lỗi: {e}"))?;
     let r_9a = doc.get_pages();
     if r_9a.is_empty() {
-        return Err("UERGIGtow7RuZyBjw7MgdHJhbmcgbsOgby4=".into());
+        return Err("PDF không có trang nào.".into());
     }
     let mut r_98 = Vec::with_capacity(r_9a.len());
     for (page_no, r_99) in r_9a {

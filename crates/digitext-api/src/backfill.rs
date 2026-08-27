@@ -49,7 +49,7 @@ pub async fn backfill_source_pdfs(
                 Err(e) => {
                     tracing::warn!(
                         document = % id, r_h = % r_h, error = % e,
-                        "a2nhu4NtIG9iamVjdCB0csOqbiBraG8gbOG7l2kg4oCUIHbhuqtuIHRo4butIFBVVA=="
+                        "kiểm object trên kho lỗi — vẫn thử PUT"
                     );
                 }
             }
@@ -58,7 +58,7 @@ pub async fn backfill_source_pdfs(
             r_l.missing += 1;
             tracing::warn!(
                 document = % id, r_h = % r_h,
-                "a2jDtG5nIHRo4bqleSBmaWxlIFBERiBsb2NhbCDigJQgYuG7jyBxdWE="
+                "không thấy file PDF local — bỏ qua"
             );
             continue;
         };
@@ -68,14 +68,14 @@ pub async fn backfill_source_pdfs(
                     r_l.uploaded += 1;
                     tracing::info!(
                         document = % id, r_h = % r_h, r_f = r_f.len(),
-                        "YmFja2ZpbGwgUFVUIFBERiBuZ3Xhu5Nu"
+                        "backfill PUT PDF nguồn"
                     );
                 }
                 Err(e) => {
                     r_l.errors += 1;
                     tracing::error!(
                         document = % id, r_h = % r_h, error = % e,
-                        "YmFja2ZpbGwgUFVUIGzhu5dp"
+                        "backfill PUT lỗi"
                     );
                 }
             },
@@ -83,7 +83,7 @@ pub async fn backfill_source_pdfs(
                 r_l.errors += 1;
                 tracing::error!(
                     document = % id, r_h = % r_h, error = % e,
-                    "YmFja2ZpbGwgxJHhu41jIGZpbGUgbOG7l2k="
+                    "backfill đọc file lỗi"
                 );
             }
         }

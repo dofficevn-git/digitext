@@ -217,7 +217,7 @@ export default function LapHoSoView() {
   };
 
   const V12n = async (r: V4bm) => {
-    if (!window.confirm(`WMOzYSBo4buTIHPGoSAi${r.tieuDe || r.soTam}"?`)) return;
+    if (!window.confirm(`Xóa hồ sơ "${r.tieuDe || r.soTam}"?`)) return;
     try {
       await V4bx(r.id);
       V128();
@@ -228,10 +228,10 @@ export default function LapHoSoView() {
 
   const V12p = async () => {
     if (V11q.size === 0) {
-      window.alert("Q2jGsGEgY2jhu41uIGjhu5Mgc8ahIG7DoG8gxJHhu4MgeMOzYS4=");
+      window.alert("Chưa chọn hồ sơ nào để xóa.");
       return;
     }
-    if (!window.confirm(`WMOzYSA=${V11q.size}IGjhu5Mgc8ahIMSRw6MgY2jhu41uPw==`)) return;
+    if (!window.confirm(`WMOzYSA=${V11q.size} hồ sơ đã chọn?`)) return;
     try {
       await Promise.all([...V11q].map((V12q) => V4bx(V12q)));
       V11r(new Set());
@@ -253,11 +253,11 @@ export default function LapHoSoView() {
       const V12x = V4d5(V115);
       const V12y = V12v.records.map((h) => V4d3(h, V12w, V12x)).filter((d) => d.soTam);
       if (V12y.length === 0) {
-        window.alert("S2jDtG5nIMSR4buNYyDEkcaw4bujYyBo4buTIHPGoSBuw6BvIHThu6sgdOG7h3Au");
+        window.alert("Không đọc được hồ sơ nào từ tệp.");
         return;
       }
       const n = await V4c4(maDa || undefined, V12y);
-      window.alert(`xJDDoyBj4bqtcCBuaOG6rXQg${n}IGjhu5Mgc8ahIHThu6sgdOG7h3Au`);
+      window.alert(`Đã cập nhật ${n} hồ sơ từ tệp.`);
       V128();
     } catch (V12z) {
       window.alert(V12z instanceof Error ? V12z.message : String(V12z));
@@ -280,7 +280,7 @@ export default function LapHoSoView() {
           if (V139.length > 0) {
             const n = await V4c4(maDa || undefined, V139);
             window.alert(
-              `VOG7h3AgbsOgeSBjw7MgZOG6oW5nIG3hu6VjIGzhu6VjIGjhu5Mgc8ahLiDEkMOjIGPhuq1wIG5o4bqtdCA=${n}IGjhu5Mgc8ahIHbDoG8gTOG6rXAgaOG7kyBzxqEgxJFp4buHbiB04butLg==`,
+              `Tệp này có dạng mục lục hồ sơ. Đã cập nhật ${n} hồ sơ vào Lập hồ sơ điện tử.`,
             );
             V128();
             return;
@@ -290,14 +290,14 @@ export default function LapHoSoView() {
         const V13a = V4di(V133);
         window.alert(
           V13a
-            ? `S2jDtG5nIMSR4buNYyDEkcaw4bujYyB2xINuIGLhuqNuIGjhu6NwIGzhu4cgbsOgby4KCg==${V13a}`
-            : "S2jDtG5nIMSR4buNYyDEkcaw4bujYyB2xINuIGLhuqNuIGjhu6NwIGzhu4cgbsOgbyAoY+G6p24geMOhYyDEkeG7i25oIMSRxrDhu6NjIGjhu5Mgc8ahIHThu6sgJ0jhu5Mgc8ahIGlkJyBob+G6t2MgJ03Doy9I4buTIHPGoSBz4buRJywgdsOgIGPDsyB0csOtY2ggeeG6v3Uvc+G7kSBrw70gaGnhu4d1IGhv4bq3YyB0acOqdSDEkeG7gSBo4buTIHPGoSku",
+            ? `Không đọc được văn bản hợp lệ nào.\n\n${V13a}`
+            : "Không đọc được văn bản hợp lệ nào (cần xác định được hồ sơ từ 'Hồ sơ id' hoặc 'Mã/Hồ sơ số', và có trích yếu/số ký hiệu hoặc tiêu đề hồ sơ).",
         );
         return;
       }
       const n = await V4cg(V131);
       window.alert(
-        `xJDDoyBuaOG6rXAg${n}IHbEg24gYuG6o24=${V132 ? `IChi4buPIHF1YSA=${V132}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
+        `Đã nhập ${n} văn bản${V132 ? `IChi4buPIHF1YSA=${V132}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
       );
       V128();
     } catch (V13b) {
@@ -307,7 +307,7 @@ export default function LapHoSoView() {
 
   const V13c = async () => {
     if (V129.length === 0) {
-      window.alert("S2jDtG5nIGPDsyBo4buTIHPGoSBuw6BvIMSR4buDIGNodXnhu4NuIMSR4buVaS94deG6pXQu");
+      window.alert("Không có hồ sơ nào để chuyển đổi/xuất.");
       return;
     }
     try {
@@ -474,7 +474,7 @@ export default function LapHoSoView() {
             <input
               className="form-control solo searchInput"
               value={V11g}
-              placeholder="Tmjhuq1wIGvDvSB04buxIGLhuqV0IGvhu7MgdsOgIG5o4bqlbiBwaMOtbSBFbnRlciDEkeG7gyB0w6xtIGtp4bq/bQ=="
+              placeholder="Nhập ký tự bất kỳ và nhấn phím Enter để tìm kiếm"
               onChange={(V140) => V11h(V140.target.value)}
               onKeyDown={(V141) => V141.key === "Enter" && V128()}
             />
@@ -518,7 +518,7 @@ export default function LapHoSoView() {
                   <input
                     className="form-control"
                     value={V11o.draft.soTam}
-                    placeholder="U+G7kSB04bqhbQ=="
+                    placeholder="Số tạm"
                     onChange={(V144) => V12i({ soTam: V144.target.value })}
                   />
                 </div>
@@ -529,7 +529,7 @@ export default function LapHoSoView() {
                   <input
                     className="form-control"
                     value={V11o.draft.tieuDe ?? ""}
-                    placeholder="VGnDqnUgxJHhu4E="
+                    placeholder="Tiêu đề"
                     onChange={(V145) => V12i({ tieuDe: V145.target.value })}
                   />
                 </div>
@@ -630,7 +630,7 @@ export default function LapHoSoView() {
                   <label className="input-group-addon">Ngôn ngữ</label>
                   <input
                     className="form-control"
-                    placeholder="TmfDtG4gbmfhu68="
+                    placeholder="Ngôn ngữ"
                     value={V11o.draft.ngonNgu ?? ""}
                     onChange={(V14d) => V12i({ ngonNgu: V14d.target.value })}
                   />
@@ -755,18 +755,18 @@ export default function LapHoSoView() {
                 <th className="w-2.5">
                   <input type="checkbox" checked={V13k} onChange={V13l} />
                 </th>
-                {cols.mang && <V13r label="TeG6o25n" sortKey="mang" />}
-                {cols.id && <V13r label="SUQgSOG7kyBzxqE=" sortKey="id" />}
-                <V13r label="TcOjIEjhu5MgU8ah" sortKey="maHoSo" className="w-22.5" />
-                <V13r label="U+G7kSBU4bqhbQ==" sortKey="soTam" className="w-17.5" />
-                <V13r label="VGnDqnUgxJDhu4E=" sortKey="tieuDe" />
+                {cols.mang && <V13r label="Mảng" sortKey="mang" />}
+                {cols.id && <V13r label="ID Hồ sơ" sortKey="id" />}
+                <V13r label="Mã Hồ Sơ" sortKey="maHoSo" className="w-22.5" />
+                <V13r label="Số Tạm" sortKey="soTam" className="w-17.5" />
+                <V13r label="Tiêu Đề" sortKey="tieuDe" />
                 <V13r label="THBQ" sortKey="thbq" className="w-25" />
-                <V13r label="U+G7kSBU4bud" sortKey="soTo" className="w-12.5" />
-                <V13r label="TmfDoHkgQsSQ" sortKey="ngayBatDau" className="w-20" />
-                <V13r label="TmfDoHkgS1Q=" sortKey="ngayKetThuc" className="w-20" />
-                {cols.tthua && <V13r label="VC5UaOG7q2E=" sortKey="trungThua" className="w-15" />}
-                {cols.tthai && <V13r label="VC5UaMOhaQ==" sortKey="trangThai" className="w-27.5" />}
-                <V13r label="VMOgaSBMaeG7h3U=" sortKey="taiLieu" className="w-25" />
+                <V13r label="Số Tờ" sortKey="soTo" className="w-12.5" />
+                <V13r label="Ngày BĐ" sortKey="ngayBatDau" className="w-20" />
+                <V13r label="Ngày KT" sortKey="ngayKetThuc" className="w-20" />
+                {cols.tthua && <V13r label="T.Thừa" sortKey="trungThua" className="w-15" />}
+                {cols.tthai && <V13r label="T.Thái" sortKey="trangThai" className="w-27.5" />}
+                <V13r label="Tài Liệu" sortKey="taiLieu" className="w-25" />
                 <th className="w-20">Chức Năng</th>
               </tr>
             </thead>
@@ -797,7 +797,7 @@ export default function LapHoSoView() {
                         <a
                           className="tbllink"
                           onClick={() => V12h(r)}
-                          title="U+G7rWEgdGjDtG5nIHRpbiBo4buTIHPGoQ=="
+                          title="Sửa thông tin hồ sơ"
                         >
                           {r.tieuDe}
                         </a>
@@ -820,7 +820,7 @@ export default function LapHoSoView() {
                         <a
                           className="ic-word"
                           onClick={() => V11t(r)}
-                          title="VGjDqm0gdGjDtG5nIHRpbiB2xINuIGLhuqNu"
+                          title="Thêm thông tin văn bản"
                         >
                           <Icon name="tepWord" />
                         </a>
@@ -828,7 +828,7 @@ export default function LapHoSoView() {
                         <button
                           type="button"
                           className="ic-btn"
-                          title="VOG6o2kgbeG6q3UgbOG6rXAgdsSDbiBi4bqjbg=="
+                          title="Tải mẫu lập văn bản"
                           onClick={() => void V4e7()}
                         >
                           <Icon name="taiVe" size={14} />
@@ -836,7 +836,7 @@ export default function LapHoSoView() {
                         <button
                           type="button"
                           className="ic-btn"
-                          title="VOG6o2kgbeG6q3Ugbmjhuq1wIGZpbGUgxJHDrW5oIGvDqG0="
+                          title="Tải mẫu nhập file đính kèm"
                           onClick={() => void V4e7()}
                         >
                           <Icon name="taiVe" size={14} />
@@ -847,7 +847,7 @@ export default function LapHoSoView() {
                           <a
                             className="ic-edit"
                             onClick={() => V12h(r)}
-                            title="U+G7rWEgdGjDtG5nIHRpbiBo4buTIHPGoQ=="
+                            title="Sửa thông tin hồ sơ"
                           >
                             <Icon name="sua" />
                           </a>
@@ -856,7 +856,7 @@ export default function LapHoSoView() {
                           <a
                             className="ic-del"
                             onClick={() => void V12n(r)}
-                            title="WMOzYSB0aMO0bmcgdGluIGjhu5Mgc8ah"
+                            title="Xóa thông tin hồ sơ"
                           >
                             <Icon name="xoa" />
                           </a>
@@ -872,7 +872,7 @@ export default function LapHoSoView() {
                 <td className="footer-restore" colSpan={V13u}>
                   <a
                     className="toggle-vis"
-                    title="SGnhu4NuIHRo4buLIHRvw6BuIGLhu5kgY+G7mXQ="
+                    title="Hiển thị toàn bộ cột"
                     onClick={() => V11y({ mang: true, id: true, tthua: true, tthai: true })}
                   >
                     <Icon name="luoi" />

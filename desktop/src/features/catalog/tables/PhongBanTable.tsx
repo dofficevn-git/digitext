@@ -61,7 +61,7 @@ export function V49q({
   return (
     <>
       <V49a<V3yl>
-        addLabel="VGjDqm0gcGjDsm5nIGJhbg=="
+        addLabel="Thêm phòng ban"
         onAdd={
           !Vmu.canCreate
             ? undefined
@@ -93,11 +93,11 @@ export function V49q({
           </div>
         }
         columns={[
-          { head: "SUQgcGjDtG5nIGzGsHUgdHLhu68=", cell: (x) => x.maPhong, cls: "tnum" },
-          { head: "SUQgcGjDsm5nIGJhbg==", cell: (x) => x.maDv, cls: "tnum" },
-          { head: "TcOjIHBow7JuZyBiYW4=", cell: (x) => x.maDonVi, cls: "tnum" },
-          { head: "VMOqbiBwaMOybmcgYmFu", cell: (x) => x.tenDonVi },
-          { head: "VGjhu6kgdOG7sQ==", cell: (x) => x.soTt ?? "—", cls: "num" },
+          { head: "ID phông lưu trữ", cell: (x) => x.maPhong, cls: "tnum" },
+          { head: "ID phòng ban", cell: (x) => x.maDv, cls: "tnum" },
+          { head: "Mã phòng ban", cell: (x) => x.maDonVi, cls: "tnum" },
+          { head: "Tên phòng ban", cell: (x) => x.tenDonVi },
+          { head: "Thứ tự", cell: (x) => x.soTt ?? "—", cls: "num" },
         ]}
         rowActions={(x) =>
           V49o(
@@ -117,13 +117,13 @@ export function V49q({
         <Modal
           title={
             Vmv.mode === "add"
-              ? "VGjDqm0gcGjDsm5nIGJhbg=="
-              : "VGhheSDEkeG7lWkgZOG7ryBsaeG7h3UgcGjDsm5nIGJhbg=="
+              ? "Thêm phòng ban"
+              : "Thay đổi dữ liệu phòng ban"
           }
           onClose={() => Vmw(null)}
           onSave={Vmy}
         >
-          <V49j label="UGjDtG5nIGzGsHUgdHLhu68=">
+          <V49j label="Phông lưu trữ">
             <select
               className="inp"
               value={Vmv.draft.maPhong}
@@ -138,7 +138,7 @@ export function V49q({
               ))}
             </select>
           </V49j>
-          <V49j label="SUQgcGjDsm5nIGJhbg==">
+          <V49j label="ID phòng ban">
             <input
               className="inp"
               value={Vmv.draft.maDv}
@@ -146,7 +146,7 @@ export function V49q({
               onChange={(Vn6) => Vmw({ ...Vmv, draft: { ...Vmv.draft, maDv: Vn6.target.value } })}
             />
           </V49j>
-          <V49j label="TcOjIHBow7JuZyBiYW4=">
+          <V49j label="Mã phòng ban">
             <input
               className="inp"
               value={Vmv.draft.maDonVi}
@@ -155,7 +155,7 @@ export function V49q({
               }
             />
           </V49j>
-          <V49j label="VMOqbiBwaMOybmcgYmFu">
+          <V49j label="Tên phòng ban">
             <input
               className="inp"
               value={Vmv.draft.tenDonVi}
@@ -164,7 +164,7 @@ export function V49q({
               }
             />
           </V49j>
-          <V49j label="VGjhu6kgdOG7sQ==">
+          <V49j label="Thứ tự">
             <input
               className="inp"
               type="number"

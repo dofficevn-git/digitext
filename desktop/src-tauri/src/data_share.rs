@@ -223,7 +223,7 @@ impl SessionStore {
         }
         if !r_16d.seen_rn.insert(rn.to_string()) {
             tracing::warn!(
-                "dOG7qyBjaOG7kWkgcmVxdWVzdCBMQU4gcGjDoXQgbOG6oWkgKG5vbmNlIHJlcXVlc3QgxJHDoyBkw7luZyk="
+                "từ chối request LAN phát lại (nonce request đã dùng)"
             );
             return None;
         }
@@ -299,7 +299,7 @@ pub(crate) fn f_1zw(r_16u: Option<&str>) -> Result<Option<u16>, String> {
         _ => {
             Err(
                 format!(
-                    "Q+G7lW5nIGNoaWEgc+G6uyBraMO0bmcgaOG7o3AgbOG7hyDigJQgbmjhuq1wIHPhu5EgMTAyNOKAkzY1NTM1IChi4buPIHRy4buRbmcgPSBj4buVbmcgY2h1bmcg{DEFAULT_SHARE_PORT})."
+                    "Cổng chia sẻ không hợp lệ — nhập số 1024–65535 (bỏ trống = cổng chung {DEFAULT_SHARE_PORT})."
                 ),
             )
         }
@@ -430,11 +430,11 @@ fn f_22q(r_177: &std::path::Path) -> Option<String> {
     (!name.is_empty()).then(|| name.to_string())
 }
 pub(crate) const C_OZ: &str = "chua-phan-loai";
-pub(crate) const C_P0: &str = "Q2jGsGEgcGjDom4gbG/huqFp";
+pub(crate) const C_P0: &str = "Chưa phân loại";
 fn f_29b(row: &db::Tln) -> Result<(std::path::PathBuf, String, String), String> {
     let r_178 = crate::dossier::store::f_299(row.folder_path.as_deref(), Some(&row.pdf_path))
         .ok_or_else(|| {
-            "a2jDtG5nIHTDrG0gdGjhuqV5IHRoxrAgbeG7pWMgaOG7kyBzxqEgdHLDqm4gxJHEqWE=".to_string()
+            "không tìm thấy thư mục hồ sơ trên đĩa".to_string()
         })?;
     let phong_ma = row
         .phong_ma
@@ -452,7 +452,7 @@ fn f_29b(row: &db::Tln) -> Result<(std::path::PathBuf, String, String), String> 
 pub(crate) fn f_1p5(r_179: &AppHandle) -> Result<Shareable, String> {
     let r_17b = r_179.state::<Db>();
     let r_17g = {
-        let r_17a = r_17b.0.lock().map_err(|_| "REIgYuG6rW4=".to_string())?;
+        let r_17a = r_17b.0.lock().map_err(|_| "DB bận".to_string())?;
         db::f_2er(&r_17a).map_err(|e| e.to_string())?
     };
     let mut r_17f = Shareable::default();
@@ -533,7 +533,7 @@ fn f_1gf(r_17s: &tiny_http::Request, r_17r: &str) -> Option<String> {
 fn f_2k4(r_17u: u16, r_17t: &str) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
     tiny_http::Response::from_string(r_17t).with_status_code(r_17u)
 }
-pub(crate) const C_AF: &str = "R2lhbyB0aOG7qWMgTEFOIGPFqSDEkcOjIGLhu4sgZ+G7oSAobsOzIGfhu61pIG3DoyBzaXRlIGThuqFuZyB0cuG6p24gdHLDqm4gbeG6oW5nIGtow7RuZyBtw6MgaG/DoSkuIEjDo3kgY+G6rXAgbmjhuq10IERpZ2lUZXh0IHRyw6puIE3hu4xJIG3DoXkgdHJvbmcgc2l0ZSBy4buTaSB0aHUgdGjhuq1wIGzhuqFpLg==";
+pub(crate) const C_AF: &str = "Giao thức LAN cũ đã bị gỡ (nó gửi mã site dạng trần trên mạng không mã hoá). Hãy cập nhật DigiText trên MỌI máy trong site rồi thu thập lại.";
 fn f_1jz() -> tiny_http::Header {
     tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).expect("header")
 }
@@ -586,7 +586,7 @@ fn serve_loop(
                     }
                     Err(e) => {
                         tracing::warn!(
-                            error = % e, "YuG6r3QgdGF5IHBoacOqbiBMQU4gbOG7l2k="
+                            error = % e, "bắt tay phiên LAN lỗi"
                         );
                         let _ = r_182.respond(f_2k4(400, ""));
                     }
@@ -654,7 +654,7 @@ fn f_2dj(
     if !f_20k(std::path::Path::new(&path), &f_2et(&r_18a)) {
         tracing::warn!(
             hash = % hash,
-            "dOG7qyBjaOG7kWkgcGjhu6VjIHbhu6U6IGZpbGUga2jDtG5nIG7hurFtIHRyb25nIHbDuW5nIGNoaWEgc+G6uw=="
+            "từ chối phục vụ: file không nằm trong vùng chia sẻ"
         );
         let _ = r_18d.respond(f_2k4(404, ""));
         return;
@@ -751,7 +751,7 @@ fn f_uq(r_193: Option<u16>, r_192: &[u16]) -> Result<tiny_http::Server, AppError
                 AppError::new(
                     "share_port",
                     format!(
-                        "S2jDtG5nIG3hu58gxJHGsOG7o2MgY+G7lW5nIGNoaWEgc+G6uyBj4buRIMSR4buLbmgg{p} ({e}KSDigJQgY+G7lW5nIMSRYW5nIGLhu4sgY2jGsMahbmcgdHLDrG5oIGtow6FjIGNoaeG6v20/IFPhu61hIGhv4bq3YyBi4buPIHRy4buRbmcgY+G7lW5nIHRyb25nIG3DoG4g4oCcxJDhu5NuZyBi4buZIGThu68gbGnhu4d14oCdLg=="
+                        "Không mở được cổng chia sẻ cố định {p} ({e}) — cổng đang bị chương trình khác chiếm? Sửa hoặc bỏ trống cổng trong màn “Đồng bộ dữ liệu”."
                     ),
                 )
             });
@@ -763,10 +763,10 @@ fn f_uq(r_193: Option<u16>, r_192: &[u16]) -> Result<tiny_http::Server, AppError
     }
     tracing::warn!(
         ? r_192,
-        "Y+G6oyB0aGFuZyBj4buVbmcgY2hpYSBz4bq7IMSR4buBdSBi4bqtbiDigJQgZMO5bmcgY+G7lW5nIG5n4bqrdSBuaGnDqm4gKG3DoXkgYWRtaW4ga2jDtG5nIHF1w6l0IHRo4bqleSwgduG6q24gdMOsbSDEkcaw4bujYyBxdWEgbUROUy9icm9hZGNhc3Qvbmjhuq1wIHRheSk="
+        "cả thang cổng chia sẻ đều bận — dùng cổng ngẫu nhiên (máy admin không quét thấy, vẫn tìm được qua mDNS/broadcast/nhập tay)"
     );
     tiny_http::Server::http("0.0.0.0:0")
-        .map_err(|e| AppError::internal(format!("beG7nyBsaXN0ZW5lciBjaGlhIHPhursgbOG7l2k6IA=={e}")))
+        .map_err(|e| AppError::internal(format!("mở listener chia sẻ lỗi: {e}")))
 }
 pub(crate) fn f_2gm(
     r_196: &'static T4u,
@@ -782,7 +782,7 @@ pub(crate) fn f_2gm(
         .set_read_timeout(Some(Duration::from_millis(250)))
         .ok()?;
     let r_19b = r_19a.local_addr().ok()?.port();
-    tracing::info!(r_19b, tcp_port, "bmdoZSBnw7NpIGjhu49pIFVEUCBicm9hZGNhc3Q=");
+    tracing::info!(r_19b, tcp_port, "nghe gói hỏi UDP broadcast");
     std::thread::Builder::new()
         .name("lan-discovery-reply".into())
         .spawn(move || {
@@ -827,7 +827,7 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
             code = lan_session::f_1e9();
             db::f_2ei(&conn, C_KA, Some(&code))?;
             tracing::info!(
-                "bcOheSBxdeG6o24gdHLhu4sgY2jGsGEgY8OzIG3DoyBzaXRlIOKAlCDEkcOjIHThu7Egc2luaCBtw6Mgbmfhuqt1IG5oacOqbiAxNTAgYml0"
+                "máy quản trị chưa có mã site — đã tự sinh mã ngẫu nhiên 150 bit"
             );
         }
         let signing_key = crate::lan_identity::f_19x(&conn)?;
@@ -837,7 +837,7 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
             Err(e) => {
                 tracing::warn!(
                     error = % e,
-                    "Z2nDoSB0cuG7iyBj4buVbmcgY2hpYSBz4bq7IGPhu5EgxJHhu4tuaCBo4buPbmcg4oCUIGTDuW5nIGPhu5VuZyBuZ+G6q3Ugbmhpw6pu"
+                    "giá trị cổng chia sẻ cố định hỏng — dùng cổng ngẫu nhiên"
                 );
                 None
             }
@@ -851,22 +851,22 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
     }
     if lan_session::f_2ft(&code) == CodeStrength::Weak {
         tracing::warn!(
-            "bcOjIHNpdGUgTEFOIGhp4buHbiB04bqhaSBZ4bq+VSAoZMOyIMSRxrDhu6NjKSDigJQgduG6q24gY2jhuqF5IMSR4buDIGtow7RuZyBsw6BtIGdpw6FuIMSRb+G6oW4gc2l0ZSwgbmjGsG5nIGjDo3kgYuG6pW0g4oCcU2luaCBtw6MgbeG6oW5o4oCdIOG7nyBtw6BuIMSQ4buTbmcgYuG7mSBk4buvIGxp4buHdSBy4buTaSBwaMOhdCBs4bqhaSBjw6J5IHRoxrAgbeG7pWM="
+            "mã site LAN hiện tại YẾU (dò được) — vẫn chạy để không làm gián đoạn site, nhưng hãy bấm “Sinh mã mạnh” ở màn Đồng bộ dữ liệu rồi phát lại cây thư mục"
         );
     }
     let r_19i = lan_session::code_key(&code).map_err(|e| {
         AppError::internal(format!(
-            "ZOG6q24geHXhuqV0IGtob8OhIG3DoyBzaXRlIGzhu5dpOiA={e}"
+            "dẫn xuất khoá mã site lỗi: {e}"
         ))
     })?;
     if let Ok(conn) = r_19g.state::<Db>().0.lock() {
         match db::f_24i(&conn) {
             Ok(n) if n > 0 => {
-                tracing::info!(removed = n, "ZOG7jW4gY2FjaGUgaGFzaCBQREYgbeG7kyBjw7Rp")
+                tracing::info!(removed = n, "dọn cache hash PDF mồ côi")
             }
             Err(e) => {
                 tracing::warn!(
-                    error = % e, "ZOG7jW4gY2FjaGUgaGFzaCBQREYgbOG7l2kgKGLhu48gcXVhKQ=="
+                    error = % e, "dọn cache hash PDF lỗi (bỏ qua)"
                 )
             }
             _ => {}
@@ -878,10 +878,10 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
         .to_ip()
         .map(|a| a.port())
         .ok_or_else(|| {
-            AppError::internal("a2jDtG5nIGzhuqV5IMSRxrDhu6NjIGPhu5VuZyBsaXN0ZW5lcg==")
+            AppError::internal("không lấy được cổng listener")
         })?;
     let daemon = ServiceDaemon::new()
-        .map_err(|e| AppError::internal(format!("bUROUyBraOG7n2kgdOG6oW8gbOG7l2k6IA=={e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS khởi tạo lỗi: {e}")))?;
     let instance = format!("digitext-data-{}-{}", sanitize(&device), port);
     let r_19o = crate::lan_identity::pubkey_b64(&signing_key);
     let r_19n: [(&str, &str); 2] = [("v", "1"), ("pk", r_19o.as_str())];
@@ -893,12 +893,12 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
         port,
         &r_19n[..],
     )
-    .map_err(|e| AppError::internal(format!("bUROUyBzZXJ2aWNlIGluZm8gbOG7l2k6IA=={e}")))?
+    .map_err(|e| AppError::internal(format!("mDNS service info lỗi: {e}")))?
     .enable_addr_auto();
     let fullname = info.get_fullname().to_string();
     daemon
         .register(info)
-        .map_err(|e| AppError::internal(format!("bUROUyDEkcSDbmcga8O9IGzhu5dpOiA={e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS đăng ký lỗi: {e}")))?;
     let stop = Arc::new(AtomicBool::new(false));
     let discovery = f_2gm(&C_3M, port, None, stop.clone()).map(|(_, join)| join);
     let r_19r = stop.clone();
@@ -914,7 +914,7 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
             let _ = daemon.shutdown();
             stop.store(true, Ordering::SeqCst);
             return Err(AppError::internal(format!(
-                "dOG6oW8gbHXhu5NuZyBjaGlhIHPhursgbOG7l2k6IA=={e}"
+                "tạo luồng chia sẻ lỗi: {e}"
             )));
         }
     };
@@ -930,7 +930,7 @@ pub fn f_2h9(r_19g: &AppHandle) -> Result<bool, AppError> {
     }
     tracing::info!(
         port,
-        "ZGF0YV9zaGFyZTogYuG6r3QgxJHhuqd1IGNoaWEgc+G6uyBxdWEgTEFO"
+        "data_share: bắt đầu chia sẻ qua LAN"
     );
     Ok(true)
 }
@@ -1008,7 +1008,7 @@ pub(crate) fn f_265(r_19z: &AppHandle, code: Option<&str>, r_1a5: SiteCodeSource
             } else {
                 if r_1a5 == SiteCodeSource::Lan {
                     tracing::info!(
-                        "bcOjIHNpdGUgxJHhur9uIHF1YSBMQU4gS0jDlE5HIHThu7EgZ2hpIOKAlCBjaOG7nSBuZ8aw4budaSB24bqtbiBow6BuaCB4w6FjIG5o4bqtbiB2w6JuIHRheSBtw6F5IHBow6F0IChjaOG6t24gcGVlciBtRE5TIGdp4bqjIGNoaeG6v20ga8OqbmggY2hpYSBz4bq7KQ=="
+                        "mã site đến qua LAN KHÔNG tự ghi — chờ người vận hành xác nhận vân tay máy phát (chặn peer mDNS giả chiếm kênh chia sẻ)"
                     );
                 } else if matches!(
                     r_1a2.as_deref().map(str::trim), Some(r_1a0) if ! r_1a0.is_empty() &&
@@ -1016,7 +1016,7 @@ pub(crate) fn f_265(r_19z: &AppHandle, code: Option<&str>, r_1a5: SiteCodeSource
                 ) {
                     tracing::warn!(
                         ?r_1a5,
-                        "YuG7jyBxdWEgbcOjIHNpdGUgxJHhur9uIGvDqG0gY8OieSB0aMawIG3hu6Vj"
+                        "bỏ qua mã site đến kèm cây thư mục"
                     );
                 }
                 false
@@ -1028,7 +1028,7 @@ pub(crate) fn f_265(r_19z: &AppHandle, code: Option<&str>, r_1a5: SiteCodeSource
         let _ = f_2h9(r_19z);
         tracing::info!(
             ? r_1a5,
-            "bmjhuq1uIG3DoyBzaXRlIExBTiBrw6htIGPDonkgdGjGsCBt4bulYyDihpIgKGLhuq10IGzhuqFpKSBjaGlhIHPhurs="
+            "nhận mã site LAN kèm cây thư mục → (bật lại) chia sẻ"
         );
     }
 }
@@ -1077,7 +1077,7 @@ pub struct Tlj {
     pub allow_weak: bool,
 }
 pub(crate) fn f_2qt() -> String {
-    "TcOjIHNpdGUgbsOgeSBxdcOhIHnhur91IChkw7IgxJHGsOG7o2MgdHJvbmcgdsOgaSBnacOieSB0csOqbiBt4bqhbmcgbuG7mWkgYuG7mSkuIELhuqVtIOKAnFNpbmggbcOjIG3huqFuaOKAnSDEkeG7gyBs4bqleSBtw6Mgbmfhuqt1IG5oacOqbiAzMCBrw70gdOG7sSwgcuG7k2kgcGjDoXQgbOG6oWkgY8OieSB0aMawIG3hu6VjIMSR4buDIGPDoWMgbcOheSBuaMOibiB2acOqbiB04buxIG5o4bqtbiBtw6MgbeG7m2ku"
+    "Mã site này quá yếu (dò được trong vài giây trên mạng nội bộ). Bấm “Sinh mã mạnh” để lấy mã ngẫu nhiên 30 ký tự, rồi phát lại cây thư mục để các máy nhân viên tự nhận mã mới."
         .to_string()
 }
 pub(crate) fn f_2fu(r_1aa: &str, allow_weak: bool) -> Result<Option<String>, String> {
@@ -1108,7 +1108,7 @@ pub fn lan_site_code_set(
     if args.allow_weak && matches!(& r_1af, Some(c) if lan_session::f_2ft(c) == CodeStrength::Weak)
     {
         tracing::warn!(
-            "bmjhuq1uIG3DoyBzaXRlIFnhur5VIHRoZW8geMOhYyBuaOG6rW4gY+G7p2EgbmfGsOG7nWkgduG6rW4gaMOgbmgg4oCUIGPhuqduIHhvYXkgdsOybmc="
+            "nhận mã site YẾU theo xác nhận của người vận hành — cần xoay vòng"
         );
     }
     f_2hp(&app, &db, r_1af.as_deref())

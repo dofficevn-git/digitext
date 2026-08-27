@@ -73,8 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     p_4a9.add_argument("gold_jsonl")
     p_4a9.add_argument("data_dir")
     p_4a9.add_argument("--fields", default=",".join(DEFAULT_CROP_FIELDS),
-                    help="dHLGsOG7nW5nIGzhuqV5IGNyb3AgKG3hurdjIMSR4buLbmggc29LeUhpZXUsbmdheVRoYW5nIOKAlCDEkeG7i25oIGRhbmggY8OzIHRyw6puIHRyYW5nKQ==")
-    p_4a9.add_argument("--dpi", type=int, default=150, help="UEjhuqJJIGto4bubcCBidWlsZF9iaW8gLS1kcGkgKGJib3ggY8O5bmcgaOG7hyk=")
+                    help="trường lấy crop (mặc định soKyHieu,ngayThang — định danh có trên trang)")
+    p_4a9.add_argument("--dpi", type=int, default=150, help="PHẢI khớp build_bio --dpi (bbox cùng hệ)")
     p_4a9.add_argument("--pad", type=int, default=6)
     p_4a9.add_argument("--out-dir", default="data/ocr_crops")
     p_4aa = p_4a9.parse_args(argv)
@@ -82,10 +82,10 @@ def main(argv: list[str] | None = None) -> int:
     p_4ac, p_4af, data_dir = Path(p_4aa.decisions_jsonl), Path(p_4aa.gold_jsonl), Path(p_4aa.data_dir)
     for p_4b8 in (p_4ac, p_4af):
         if not p_4b8.is_file():
-            print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_4b8}", file=sys.stderr)
+            print(f"LỖI: không thấy {p_4b8}", file=sys.stderr)
             return 2
     if not data_dir.is_dir():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{data_dir}", file=sys.stderr)
+        print(f"LỖI: không thấy {data_dir}", file=sys.stderr)
         return 2
 
     fields = {f.strip() for f in p_4aa.fields.split(",") if f.strip()}
@@ -129,9 +129,9 @@ def main(argv: list[str] | None = None) -> int:
         for p_4b2 in p_4b3:
             p_4ad.write(json.dumps(p_4b2, ensure_ascii=False) + "\n")
 
-    print(f"crop ocr_wrong: {p_4b5}IOG6o25oIChi4buPIA=={p_4b6}) → {p_4b7}/", file=sys.stderr)
-    print(f"dGhlbyB0csaw4budbmc6IA=={dict(sorted(p_4ab.items()))}", file=sys.stderr)
-    print(f"→ {p_4b4}OiBt4buXaSBkw7JuZyBjw7MgJ29jcl9yZWFkaW5nJyAoVHJpdG9uIMSR4buNYyBzYWkpICsgJ3RydXRoJyBS4buWTkcgY2jhu50gbmfGsOG7nWkgZ8O1Lg==",
+    print(f"crop ocr_wrong: {p_4b5} ảnh (bỏ {p_4b6}) → {p_4b7}/", file=sys.stderr)
+    print(f"theo trường: {dict(sorted(p_4ab.items()))}", file=sys.stderr)
+    print(f"→ {p_4b4}: mỗi dòng có 'ocr_reading' (Triton đọc sai) + 'truth' RỖNG chờ người gõ.",
           file=sys.stderr)
     return 0
 

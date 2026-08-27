@@ -94,18 +94,18 @@ export function V4pj(b: V4pa): V4pi {
 
 export function V4pk(b: V4pa): string {
   if (b.status === "abandoned") {
-    return `UGhpw6puIGfhu61pIGLhu4sgYuG7jyBk4bufIOKAlCBtw6F5IGNo4bunIMSRw6MgdOG7sSDEkcOzbmcuIMSQw6Mgbmjhuq1uIA==${b.received}IHTDoGkgbGnhu4d1OyBi4bqlbSDigJzikaEgR+G7rWkgbMOqbiBtw6F5IGNo4bun4oCdIMSR4buDIHRp4bq/cCB04bulYyBwaOG6p24gY8OybiBs4bqhaS4=`;
+    return `Phiên gửi bị bỏ dở — máy chủ đã tự đóng. Đã nhận ${b.received} tài liệu; bấm “② Gửi lên máy chủ” để tiếp tục phần còn lại.`;
   }
   if (b.status !== "completed") {
-    return "xJBhbmcgZ+G7rWkgaG/hurdjIHBoacOqbiBi4buLIGdpw6FuIMSRb+G6oW4g4oCUIGNoxrBhIGNo4buRdC4=";
+    return "Đang gửi hoặc phiên bị gián đoạn — chưa chốt.";
   }
-  const V2bk: string[] = [`${b.forwarded}IGfhu61pIG3hu5tp`];
-  if (b.skipped > 0) V2bk.push(`${b.skipped}IMSRw6MgY8Oz`);
-  if (b.failed > 0) V2bk.push(`${b.failed}IGzhu5dpIHThuqFtIChz4bq9IHRo4butIGzhuqFpKQ==`);
-  if (b.rejected > 0) V2bk.push(`${b.rejected}IGLhu4sgdOG7qyBjaOG7kWk=`);
+  const V2bk: string[] = [`${b.forwarded} gửi mới`];
+  if (b.skipped > 0) V2bk.push(`${b.skipped} đã có`);
+  if (b.failed > 0) V2bk.push(`${b.failed} lỗi tạm (sẽ thử lại)`);
+  if (b.rejected > 0) V2bk.push(`${b.rejected} bị từ chối`);
   let s = V2bk.join(", ");
   if (b.received < b.forwarded) {
-    s += `IOKAlCBtw6F5IGNo4bunIGNo4buJIG5o4bqtbiA=${b.received}/${b.forwarded}LCBraeG7g20gdHJhIGzhuqFp`;
+    s += ` — máy chủ chỉ nhận ${b.received}/${b.forwarded}, kiểm tra lại`;
   }
   return s;
 }

@@ -2,11 +2,11 @@
 
 import type { V4ej } from "@/api/docs";
 
-export const V4ve = "KENoxrBhIHLDtSBwaMO0bmcp";
+export const V4ve = "(Chưa rõ phông)";
 
-export const V4vf = "KENoxrBhIHBow6JuIGxv4bqhaSk=";
+export const V4vf = "(Chưa phân loại)";
 
-export const V4vg = "KENoxrBhIHLDtSBk4buxIMOhbik=";
+export const V4vg = "(Chưa rõ dự án)";
 
 export const V4vh = 0;
 export const V4vi = 1;

@@ -88,11 +88,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_574 = Path(p_56e.eval_jsonl)
     if not p_574.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_574}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_574}", file=sys.stderr)
         return 2
     p_576 = [json.loads(p_572) for p_572 in p_574.open(encoding="utf-8") if p_572.strip()]
     if not p_576:
-        print("TOG7lkk6IGV2YWwgcuG7l25n", file=sys.stderr)
+        print("LỖI: eval rỗng", file=sys.stderr)
         return 2
 
     import cv2

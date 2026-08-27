@@ -58,14 +58,14 @@ export default function V4o9<T>({
 
   const V22a = async () => {
     if (V21z.length === 0) {
-      window.alert("S2jDtG5nIGPDsyBk4buvIGxp4buHdSDEkeG7gyB4deG6pXQu");
+      window.alert("Không có dữ liệu để xuất.");
       return;
     }
     try {
       await V4e3(V4o7(columns, V21z), V21w, `${V21x}.xlsx`);
     } catch (V22b) {
       window.alert(
-        `WHXhuqV0IEV4Y2VsIHRo4bqldCBi4bqhaTog${V22b instanceof Error ? V22b.message : String(V22b)}`,
+        `Xuất Excel thất bại: ${V22b instanceof Error ? V22b.message : String(V22b)}`,
       );
     }
   };
@@ -127,7 +127,7 @@ export default function V4o9<T>({
             {V21z.length === 0 && (
               <tr>
                 <td colSpan={columns.length + 1} className="muted text-center p-4.5">
-                  {V221 ? "xJBhbmcgdOG6o2nigKY=" : V225 ? "S2jDtG5nIGPDsyBk4buvIGxp4buHdS4=" : ""}
+                  {V221 ? "Đang tải…" : V225 ? "Không có dữ liệu." : ""}
                 </td>
               </tr>
             )}

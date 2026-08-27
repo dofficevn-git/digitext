@@ -50,7 +50,7 @@ export default function V4x4() {
   const V39c = async () => {
     try {
       await V3zn(V393.trim() || null);
-      V396("xJDDoyBsxrB1");
+      V396("Đã lưu");
     } catch (V39d) {
       V396(V39d instanceof Error ? V39d.message : String(V39d));
     }
@@ -134,7 +134,7 @@ export default function V4x4() {
             className="btn primary lg w-full"
             disabled={!V38t.trim() || !V38v || V38x || !V397.ready}
           >
-            {V38x ? "xJBhbmcgxJHEg25nIG5o4bqtcOKApg==" : "xJDEg25nIG5o4bqtcA=="}
+            {V38x ? "Đang đăng nhập…" : "Đăng nhập"}
           </button>
         </form>
 
@@ -155,7 +155,7 @@ export default function V4x4() {
               </button>
               {V395 && (
                 <span className="inline-flex items-center gap-1 text-sm text-fg-subtle">
-                  {V395 === "xJDDoyBsxrB1" && (
+                  {V395 === "Đã lưu" && (
                     <Icon name="duyet" size={13} className="text-success-700" />
                   )}
                   {V395}
@@ -175,7 +175,7 @@ export default function V4x4() {
             className="server-gear inline-flex items-center gap-1.5"
             onClick={() => V392((v) => !v)}
             aria-expanded={V391}
-            title="Q+G6pXUgaMOsbmggbcOheSBjaOG7pw=="
+            title="Cấu hình máy chủ"
           >
             <Icon name="mayChu" size={13} />
             Máy chủ

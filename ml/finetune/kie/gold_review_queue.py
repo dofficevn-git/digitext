@@ -75,15 +75,15 @@ def main(argv: list[str] | None = None) -> int:
     p_416 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_416.add_argument("decisions_jsonl")
     p_416.add_argument("--crops", default="data/ocr_crops/crops.jsonl",
-                    help="Y3JvcHMuanNvbmwgxJHhu4MgxJHDrW5oIOG6o25oICsgYmnhur90IHRydXRoIMSRw6MgZ8O1IGNoxrBhICh0deG7sywgY8OzIHRow6wgdOG7kXQp")
+                    help="crops.jsonl để đính ảnh + biết truth đã gõ chưa (tuỳ, có thì tốt)")
     p_416.add_argument("--fields", default=",".join(sorted(PAGE_IDENTIFIER_FIELDS)),
-                    help="dHLGsOG7nW5nIHNvw6F0ICht4bq3YyDEkeG7i25oIHNvS3lIaWV1LG5nYXlUaGFuZyk=")
+                    help="trường soát (mặc định soKyHieu,ngayThang)")
     p_416.add_argument("--out", default="data/gold_review_queue.jsonl")
     p_417 = p_416.parse_args(argv)
 
     p_419 = Path(p_417.decisions_jsonl)
     if not p_419.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_419}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_419}", file=sys.stderr)
         return 2
     fields = frozenset(p_41a.strip() for p_41a in p_417.fields.split(",") if p_41a.strip())
     p_418 = Path(p_417.crops)
@@ -97,11 +97,11 @@ def main(argv: list[str] | None = None) -> int:
             p_41b.write(json.dumps(e, ensure_ascii=False) + "\n")
 
     p_41d = summarize(entries)
-    print(f"aMOgbmcgxJHhu6NpIHNvw6F0IOKGkiA={p_41c} ({p_41d['total']}IHF1eeG6v3QgxJHhu4tuaCDEkeG7i25oIGRhbmgp", file=sys.stderr)
-    print(f"ICBBVVRPLW5o4bqtbiAob2spOiAgICAg{p_41d['auto_accept']}", file=sys.stderr)
-    print(f"ICBOR8av4bucSSBzb8OhdCAoxJHDoyBz4butYSk6IA=={p_41d['human_queue']}  ({p_41d['human_pct']}%)", file=sys.stderr)
-    print(f"ICB0aGVvIMawdSB0acOqbjog{p_41d['by_priority']}", file=sys.stderr)
-    print(f"ICB0aGVvIHRyxrDhu51uZy/GsHUgdGnDqm46IA=={p_41d['by_field_priority']}", file=sys.stderr)
+    print(f"hàng đợi soát → {p_41c} ({p_41d['total']} quyết định định danh)", file=sys.stderr)
+    print(f"  AUTO-nhận (ok):     {p_41d['auto_accept']}", file=sys.stderr)
+    print(f"  NGƯỜI soát (đã sửa): {p_41d['human_queue']}  ({p_41d['human_pct']}%)", file=sys.stderr)
+    print(f"  theo ưu tiên: {p_41d['by_priority']}", file=sys.stderr)
+    print(f"  theo trường/ưu tiên: {p_41d['by_field_priority']}", file=sys.stderr)
     return 0
 
 if __name__ == "__main__":

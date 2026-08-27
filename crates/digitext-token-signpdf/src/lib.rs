@@ -64,22 +64,22 @@ fn attr_bytes(r_5i8: &Session, r_5i7: ObjectHandle, r_5i9: AttributeType) -> Opt
 }
 fn context(module: &str) -> Result<Pkcs11, String> {
     let pkcs11 = Pkcs11::new(module)
-        .map_err(|e| format!("a2jDtG5nIG7huqFwIMSRxrDhu6NjIG1vZHVsZSAn{module}': {e}"))?;
+        .map_err(|e| format!("không nạp được module '{module}': {e}"))?;
     pkcs11
         .initialize(CInitializeArgs::OsThreads)
-        .map_err(|e| format!("a2jhu59pIHThuqFvIFBLQ1MjMTEgbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("khởi tạo PKCS#11 lỗi: {e}"))?;
     Ok(pkcs11)
 }
 fn f_29c(pkcs11: &Pkcs11) -> Result<Vec<Slot>, String> {
     let r_5ic = pkcs11
         .get_slots_with_token()
-        .map_err(|e| format!("bGnhu4d0IGvDqiBzbG90IGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("liệt kê slot lỗi: {e}"))?;
     if !r_5ic.is_empty() {
         return Ok(r_5ic);
     }
     let r_5ia = pkcs11
         .get_all_slots()
-        .map_err(|e| format!("bGnhu4d0IGvDqiB0b8OgbiBi4buZIHNsb3QgbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("liệt kê toàn bộ slot lỗi: {e}"))?;
     let present: Vec<Slot> = r_5ia
         .iter()
         .copied()
@@ -92,14 +92,14 @@ fn f_29c(pkcs11: &Pkcs11) -> Result<Vec<Slot>, String> {
         .collect();
     if !present.is_empty() {
         eprintln!(
-            "KGNow7ogw706IGdldF9zbG90c193aXRoX3Rva2VuKCkgcuG7l25nIOKAlCBkw7luZyBmYWxsYmFjayBjYXJkLXByZXNlbnQsIA=={} slot)",
+            "(chú ý: get_slots_with_token() rỗng — dùng fallback card-present, {} slot)",
             present.len()
         );
         return Ok(present);
     }
     if !r_5ia.is_empty() {
         eprintln!(
-            "KGNow7ogw706IGtow7RuZyBzbG90IG7DoG8gYsOhbyB0b2tlbi1wcmVzZW50IOKAlCB0aOG7rSB0cuG7sWMgdGnhur9wIA=={} slot)",
+            "(chú ý: không slot nào báo token-present — thử trực tiếp {} slot)",
             r_5ia.len()
         );
     }
@@ -120,7 +120,7 @@ fn f_23u(tag: &str, r_5id: &[u8]) {
         }
         Err(e) => {
             println!(
-                "  [{tag}] {}IGJ5dGVzIERFUiAoa2jDtG5nIHBhcnNlIMSRxrDhu6NjOiA={e})",
+                "  [{tag}] {} bytes DER (không parse được: {e})",
                 r_5id.len()
             )
         }
@@ -226,7 +226,7 @@ struct Tl0 {
 fn f_2d8(r_5iy: &Session) -> Result<Tl0, String> {
     let r_5is = r_5iy
         .find_objects(&[Attribute::Class(ObjectClass::CERTIFICATE)])
-        .map_err(|e| format!("dMOsbSBjZXJ0IGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("tìm cert lỗi: {e}"))?;
     let mut r_5it: Vec<(Vec<u8>, Option<Vec<u8>>)> = Vec::new();
     for r_5iu in r_5is {
         if let Some(der) = attr_bytes(r_5iy, r_5iu, AttributeType::Value) {
@@ -235,10 +235,10 @@ fn f_2d8(r_5iy: &Session) -> Result<Tl0, String> {
         }
     }
     if r_5it.is_empty() {
-        return Err("dG9rZW4ga2jDtG5nIGPDsyBjaOG7qW5nIHRoxrAgKGNlcnRpZmljYXRlKQ==".into());
+        return Err("token không có chứng thư (certificate)".into());
     }
     println!(
-        "\n── {}IGNo4bupbmcgdGjGsCB0csOqbiB0b2tlbiDilIDilIA=",
+        "\n── {} chứng thư trên token ──",
         r_5it.len()
     );
     for (i, (der, _)) in r_5it.iter().enumerate() {
@@ -250,7 +250,7 @@ fn f_2d8(r_5iy: &Session) -> Result<Tl0, String> {
         .filter_map(|(i, (der, _))| parse_cert_meta(i, der))
         .collect();
     let r_5ix = select_signer(&r_5iw, f_1vc())
-        .ok_or("a2jDtG5nIGNo4buNbiDEkcaw4bujYyBjaOG7qW5nIHRoxrAgbmfGsOG7nWkga8O9")?;
+        .ok_or("không chọn được chứng thư người ký")?;
     let cert = r_5it[r_5ix.leaf].0.clone();
     let leaf_id = r_5it[r_5ix.leaf].1.clone();
     let intermediates: Vec<Vec<u8>> = r_5ix
@@ -259,12 +259,12 @@ fn f_2d8(r_5iy: &Session) -> Result<Tl0, String> {
         .map(|&i| r_5it[i].0.clone())
         .collect();
     println!(
-        "CuKUgOKUgCDEkMODIENI4buMTiBuZ8aw4budaSBrw70gKGxlYWYgPSBjZXJ0Ww=={}]) ──",
+        "\n── ĐÃ CHỌN người ký (leaf = cert[{}]) ──",
         r_5ix.leaf
     );
     f_23u("leaf", &cert);
     println!(
-        "U+G7kSBjZXJ0IHRydW5nIGdpYW4gbmjDum5nIHbDoG8gQ01TOiA={}",
+        "Số cert trung gian nhúng vào CMS: {}",
         intermediates.len()
     );
     for (i, c) in intermediates.iter().enumerate() {
@@ -282,7 +282,7 @@ fn f_1cy(r_5j2: &Session, leaf_id: &Option<Vec<u8>>) -> Result<ObjectHandle, Str
             Attribute::Class(ObjectClass::PRIVATE_KEY),
             Attribute::Sign(true),
         ])
-        .map_err(|e| format!("dMOsbSBraG/DoSBrw70gbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("tìm khoá ký lỗi: {e}"))?;
     let r_5j1 = leaf_id
         .as_deref()
         .and_then(|r_5j4| {
@@ -291,13 +291,13 @@ fn f_1cy(r_5j2: &Session, leaf_id: &Option<Vec<u8>>) -> Result<ObjectHandle, Str
             })
         })
         .or_else(|| r_5j3.first().copied())
-        .ok_or("dG9rZW4ga2jDtG5nIGPDsyBraG/DoSBrw70gKENLQV9TSUdOKQ==")?;
+        .ok_or("token không có khoá ký (CKA_SIGN)")?;
     if let Ok(r_5iz) = r_5j2.get_attributes(r_5j1, &[AttributeType::KeyType]) {
         if let Some(Attribute::KeyType(kt)) = r_5iz.into_iter().next() {
             if kt != KeyType::RSA {
                 return Err(
                     format!(
-                        "a2hvw6Ega2jDtG5nIHBo4bqjaSBSU0EgKA=={kt:?}KSDigJQgY8O0bmcgY+G7pSBuw6B5IGNo4buJIGvDvSBSU0E="
+                        "khoá không phải RSA ({kt:?}) — công cụ này chỉ ký RSA"
                     ),
                 );
             }
@@ -311,16 +311,16 @@ fn f_23v(r: &Tpr) {
     println!("  digest_ok             : {}", r.digest_ok);
     println!("  cert_binding_ok       : {}", r.cert_binding_ok);
     println!(
-        "  signer_chain_ok       : {}IChj4bqnbiB0cnVzdCBzdG9yZSBpQ0EgxJHhu4MgdHJ1ZSk=",
+        "  signer_chain_ok       : {} (cần trust store iCA để true)",
         r.signer_chain_ok
     );
     println!("  timestamp_present     : {}", r.timestamp_present);
     println!(
-        "  timestamp_structural_ok: {}IChpbXByaW50ICsgY2jhu68ga8O9IFRTQSBraOG7m3Ap",
+        "  timestamp_structural_ok: {} (imprint + chữ ký TSA khớp)",
         r.timestamp_structural_ok
     );
     println!(
-        "  timestamp_trusted     : {}IChj4bqnbiAtLXRzYSA8cm9vdCBUU0E+IMSR4buDIHRydWUp",
+        "  timestamp_trusted     : {} (cần --tsa <root TSA> để true)",
         r.timestamp_trusted
     );
     if let Some(t) = r.timestamp_time_unix {
@@ -332,19 +332,19 @@ fn f_23v(r: &Tpr) {
     }
     println!("  has_dss               : {}", r.has_dss);
     println!(
-        "  revocation_ok         : {}IChPQ1NQL0NSTCBuw7NpIEdvb2QgdOG6oWkgbeG7kWMg{:?})",
+        "  revocation_ok         : {} (OCSP/CRL nói Good tại mốc {:?})",
         r.revocation_ok, r.revocation_reference_unix
     );
     println!(
-        "  revocation_trusted    : {}ICht4buRYyB0csOqbiBkbyBUU0EgxJHDs25nLCBraMO0bmcgcGjhuqNpIHNpZ25pbmdUaW1lIHThu7Ega2hhaSk=",
+        "  revocation_trusted    : {} (mốc trên do TSA đóng, không phải signingTime tự khai)",
         r.revocation_trusted
     );
     println!(
-        "  has_archive_timestamp : {}ICht4bubaSDhu58gbeG7qWMgQ+G6pFUgVFLDmkMp",
+        "  has_archive_timestamp : {} (mới ở mức CẤU TRÚC)",
         r.has_archive_timestamp
     );
     println!(
-        "  archive_ts_trusted    : {}IChj4bqnbiAtLXRzYSA8cm9vdCBUU0E+IMSR4buDIHRydWUp",
+        "  archive_ts_trusted    : {} (cần --tsa <root TSA> để true)",
         r.archive_timestamp_trusted
     );
     println!("  → is_valid() PAdES-B  : {}", r.is_valid());
@@ -353,26 +353,26 @@ fn f_23v(r: &Tpr) {
 }
 fn f_1ow(path: &str) -> Result<TrustStore, String> {
     let pem = std::fs::read_to_string(path)
-        .map_err(|e| format!("xJHhu41jIHRydXN0IHN0b3JlICc={path}JyBs4buXaTog{e}"))?;
+        .map_err(|e| format!("đọc trust store '{path}' lỗi: {e}"))?;
     TrustStore::from_pem(&pem)
-        .map_err(|e| format!("buG6oXAgdHJ1c3Qgc3RvcmUgJw=={path}JyBs4buXaTog{e}"))
+        .map_err(|e| format!("nạp trust store '{path}' lỗi: {e}"))
 }
 fn f_15w(input: &str, roots: Option<&str>, tsa: Option<&str>) -> Result<(), String> {
     let pdf =
-        std::fs::read(input).map_err(|e| format!("xJHhu41jIFBERiAn{input}JyBs4buXaTog{e}"))?;
+        std::fs::read(input).map_err(|e| format!("đọc PDF '{input}' lỗi: {e}"))?;
     println!("PDF     : {input} ({} bytes)", pdf.len());
     let r_5j6 = roots.map(f_1ow).transpose()?;
     let r_5j7 = tsa.map(f_1ow).transpose()?;
     match &r_5j6 {
         Some(s) => {
             println!(
-                "VHJ1c3Qgc3RvcmUgbmfGsOG7nWkga8O9OiA={} cert (anchor)",
+                "Trust store người ký: {} cert (anchor)",
                 s.len()
             )
         }
         None => {
             println!(
-                "VHJ1c3Qgc3RvcmUgbmfGsOG7nWkga8O9OiAoa2jDtG5nKSDihpIgc2lnbmVyX2NoYWluX29rIGNo4buJIOG7nyBt4bupYyBj4bqldSB0csO6Yw=="
+                "Trust store người ký: (không) → signer_chain_ok chỉ ở mức cấu trúc"
             )
         }
     }
@@ -380,40 +380,44 @@ fn f_15w(input: &str, roots: Option<&str>, tsa: Option<&str>) -> Result<(), Stri
         println!("Trust store TSA     : {} cert", s.len());
     }
     let r_5j5 = f_2q1(&pdf, r_5j6.as_ref(), r_5j7.as_ref())
-        .map_err(|e| format!("dmVyaWZ5IGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("verify lỗi: {e}"))?;
     f_23v(&r_5j5);
     if r_5j5.is_lt() {
         println!(
-            "CuKchSBQQWRFUy1MVCDigJQgY2jhu68ga8O9IGjhu6NwIGzhu4csIG5lbyB04bubaSByb290IHRpbiBj4bqteSwgY8OzIERTUywgdsOgIGtow7RuZyBi4buLIHRodSBo4buTaSBU4bqgSSBN4buQQyBUSOG7nEkgR0lBTiBETyBUU0EgxJDDk05HLg=="
+            r#"
+✅ PAdES-LT — chữ ký hợp lệ, neo tới root tin cậy, có DSS, và không bị thu hồi TẠI MỐC THỜI GIAN DO TSA ĐÓNG."#
         );
     } else if r_5j5.signer_chain_ok && r_5j5.is_valid() && r_5j5.has_dss {
         println!(
-            "CuKXiyBDaOG7ryBrw70gaOG7o3AgbOG7hyArIG5lbyByb290ICsgY8OzIERTUywgbmjGsG5nIENIxq9BIMSR4bunIExUOiBi4bqxbmcgY2jhu6luZyB0aHUgaOG7k2kgcGjhuqNpIMSR4buRaSBjaGnhur91"
+            r#"
+○ Chữ ký hợp lệ + neo root + có DSS, nhưng CHƯA đủ LT: bằng chứng thu hồi phải đối chiếu"#
         );
         println!(
-            "ICB24bubaSBt4buRYyB0aOG7nWkgZ2lhbiBUSU4gxJDGr+G7okMgKHRlbSBUU0EgbmVvIHJvb3Qg4oCUIGPhuqVwIC0tdHNhIDxidW5kbGUgcm9vdCBUU0E+KTsgY2jhu4kgZOG7sWE="
+            "  với mốc thời gian TIN ĐƯỢC (tem TSA neo root — cấp --tsa <bundle root TSA>); chỉ dựa"
         );
         println!(
-            "ICBzaWduaW5nVGltZSBkbyBuZ8aw4budaSBrw70gdOG7sSBraGFpIHRow6wga2jDtG5nIGvhur90IGx14bqtbiDEkcaw4bujYyAoeGVtIHJldm9jYXRpb25fdHJ1c3RlZCku"
+            "  signingTime do người ký tự khai thì không kết luận được (xem revocation_trusted)."
         );
     } else if r_5j5.signer_chain_ok && r_5j5.is_valid() {
         println!(
-            "CuKchSBDaOG7ryBrw70gaOG7o3AgbOG7hyBWw4AgbmVvIHThu5tpIHJvb3QgdGluIGPhuq15IChzaWduZXJfY2hhaW5fb2s9dHJ1ZSkuIENoxrBhIGPDsyBEU1Mg4oeSIGNoxrBhIExULg=="
+            r#"
+✅ Chữ ký hợp lệ VÀ neo tới root tin cậy (signer_chain_ok=true). Chưa có DSS ⇒ chưa LT."#
         );
     } else if r_5j5.is_valid() {
         println!(
-            "CuKXiyBDaOG7ryBrw70gaOG7o3AgbOG7hyAoUEFkRVMtQikgbmjGsG5nIENIxq9BIG5lbyByb290IHRpbiBj4bqteSDigJQgY+G6pXAgLS1yb290cyA8YnVuZGxlIGlDQT4gxJHhu4Mga2nhu4NtLg=="
+            r#"
+○ Chữ ký hợp lệ (PAdES-B) nhưng CHƯA neo root tin cậy — cấp --roots <bundle iCA> để kiểm."#
         );
     } else {
         return Err(
-            "Y2jhu68ga8O9IEtIw5RORyBo4bujcCBs4buHIOKAlCB4ZW0gY8OhYyBj4budIOG7nyB0csOqbg==".into(),
+            "chữ ký KHÔNG hợp lệ — xem các cờ ở trên".into(),
         );
     }
     Ok(())
 }
 fn f_220(path: &str) -> Result<Vec<Vec<u8>>, String> {
-    let r_5ja = std::fs::read(path).map_err(|e| format!("xJHhu41jICc={path}JyBs4buXaTog{e}"))?;
-    let r_5j8 = pem::parse_many(&r_5ja).map_err(|e| format!("PEM '{path}JyBo4buPbmc6IA=={e}"))?;
+    let r_5ja = std::fs::read(path).map_err(|e| format!("đọc '{path}' lỗi: {e}"))?;
+    let r_5j8 = pem::parse_many(&r_5ja).map_err(|e| format!("PEM '{path}' hỏng: {e}"))?;
     let r_5j9: Vec<Vec<u8>> = r_5j8
         .into_iter()
         .filter(|p| p.tag() == "CERTIFICATE")
@@ -421,7 +425,7 @@ fn f_220(path: &str) -> Result<Vec<Vec<u8>>, String> {
         .collect();
     if r_5j9.is_empty() {
         return Err(format!(
-            "'{path}JyBraMO0bmcgY8OzIGto4buRaSBDRVJUSUZJQ0FURQ=="
+            "'{path}' không có khối CERTIFICATE"
         ));
     }
     Ok(r_5j9)
@@ -451,7 +455,7 @@ fn f_1ho(r_5jc: &ureq::Agent, url: &str, r_5jf: &str, r_5jd: &[u8]) -> Result<Ve
         .into_reader()
         .take(8 * 1024 * 1024)
         .read_to_end(&mut r_5je)
-        .map_err(|e| format!("xJHhu41jIHBo4bqjbiBo4buTaSA={url}: {e}"))?;
+        .map_err(|e| format!("đọc phản hồi {url}: {e}"))?;
     Ok(r_5je)
 }
 fn f_1hn(r_5jh: &ureq::Agent, url: &str) -> Result<Vec<u8>, String> {
@@ -465,7 +469,7 @@ fn f_1hn(r_5jh: &ureq::Agent, url: &str) -> Result<Vec<u8>, String> {
         .into_reader()
         .take(32 * 1024 * 1024)
         .read_to_end(&mut r_5ji)
-        .map_err(|e| format!("xJHhu41jIHBo4bqjbiBo4buTaSA={url}: {e}"))?;
+        .map_err(|e| format!("đọc phản hồi {url}: {e}"))?;
     Ok(r_5ji)
 }
 const C_42: &str = "http://timestamp.digicert.com";
@@ -476,15 +480,15 @@ fn fetch_timestamp(
 ) -> Result<Vec<u8>, String> {
     let r_5jl = rand::random::<u64>();
     let r_5jm = tsa::build_request(signature, Some(r_5jl), true)
-        .map_err(|e| format!("ZOG7sW5nIFRpbWVTdGFtcFJlcSBs4buXaTog{e}"))?;
+        .map_err(|e| format!("dựng TimeStampReq lỗi: {e}"))?;
     let r_5jn = f_1ho(r_5jk, tsa_url, "application/timestamp-query", &r_5jm)?;
-    tsa::f_2le(&r_5jn).map_err(|e| format!("VFNBIHThu6sgY2jhu5FpL2tow7RuZyB0cuG6oyB0b2tlbjog{e}"))
+    tsa::f_2le(&r_5jn).map_err(|e| format!("TSA từ chối/không trả token: {e}"))
 }
 fn f_1c9(tsa_url: Option<&str>, signature: &[u8]) -> Result<Option<Vec<u8>>, String> {
     match tsa_url {
         None => Ok(None),
         Some(url) => {
-            println!("CuKUgOKUgCBURU0gVEjhu5xJIEdJQU4gKFBBZEVTLVQpIOKUgOKUgAogIFRTQTog{url}");
+            println!("\n── TEM THỜI GIAN (PAdES-T) ──\n  TSA: {url}");
             let token = fetch_timestamp(&f_1hl(), url, signature)?;
             println!("  ✓ token TSA: {} bytes", token.len());
             Ok(Some(token))
@@ -499,9 +503,9 @@ fn f_15s(
     r_5k3: Option<&str>,
 ) -> Result<(), String> {
     let pdf =
-        std::fs::read(input).map_err(|e| format!("xJHhu41jIFBERiAn{input}JyBs4buXaTog{e}"))?;
+        std::fs::read(input).map_err(|e| format!("đọc PDF '{input}' lỗi: {e}"))?;
     println!("PDF     : {input} ({} bytes)", pdf.len());
-    let leaf = f_220(r_5jw)?.into_iter().next().ok_or("bGVhZiBy4buXbmc=")?;
+    let leaf = f_220(r_5jw)?.into_iter().next().ok_or("leaf rỗng")?;
     let r_5jq = f_220(r_5jr)?;
     let (mut root, mut intermediate) = (None, None);
     for r_5jv in &r_5jq {
@@ -514,8 +518,8 @@ fn f_15s(
         }
     }
     let intermediate = intermediate
-        .ok_or("YnVuZGxlIC0tY2hhaW4gdGhp4bq/dSBjZXJ0IHRydW5nIGdpYW4gKENBIGPhuqVwIHBow6F0KQ==")?;
-    let ocsp_url = ocsp::f_1vw(&leaf).ok_or("Y2VydCBsZWFmIGtow7RuZyBraGFpIE9DU1AgVVJMIChBSUEp")?;
+        .ok_or("bundle --chain thiếu cert trung gian (CA cấp phát)")?;
+    let ocsp_url = ocsp::f_1vw(&leaf).ok_or("cert leaf không khai OCSP URL (AIA)")?;
     let r_5jt = ocsp::f_12o(&leaf);
     println!("OCSP    : {ocsp_url}");
     if let Some(u) = &r_5jt {
@@ -526,12 +530,12 @@ fn f_15s(
     match ocsp::f_vl(&intermediate, &leaf) {
         Ok(r_5k0) => match f_1ho(&r_5jo, &ocsp_url, "application/ocsp-request", &r_5k0) {
             Ok(r_5k1) => {
-                println!("ICDinJMgT0NTUCBwaOG6o24gaOG7k2k6IA=={} bytes", r_5k1.len());
+                println!("  ✓ OCSP phản hồi: {} bytes", r_5k1.len());
                 r_5jx.push(r_5k1);
             }
-            Err(e) => println!("ICDimqAgT0NTUCB0aOG6pXQgYuG6oWk6IA=={e}"),
+            Err(e) => println!("  ⚠ OCSP thất bại: {e}"),
         },
-        Err(e) => println!("ICDimqAgZOG7sW5nIE9DU1AgcmVxdWVzdCBs4buXaTog{e}"),
+        Err(e) => println!("  ⚠ dựng OCSP request lỗi: {e}"),
     }
     if let Some(u) = &r_5jt {
         match f_1hn(&r_5jo, u) {
@@ -539,12 +543,12 @@ fn f_15s(
                 println!("  ✓ CRL: {} bytes", r_5js.len());
                 r_5ju.push(r_5js);
             }
-            Err(e) => println!("ICDimqAgQ1JMIHRo4bqldCBi4bqhaTog{e}"),
+            Err(e) => println!("  ⚠ CRL thất bại: {e}"),
         }
     }
     if r_5jx.is_empty() && r_5ju.is_empty() {
         println!(
-            "ICDimqAgS2jDtG5nIGzhuqV5IMSRxrDhu6NjIE9DU1AgbOG6q24gQ1JMIOKGkiBEU1MgY2jhu4kgY8OzIGNlcnQsIHJldm9jYXRpb25fb2sgc+G6vSA9IGZhbHNl"
+            "  ⚠ Không lấy được OCSP lẫn CRL → DSS chỉ có cert, revocation_ok sẽ = false"
         );
     }
     let mut r_5jp = vec![leaf.clone(), intermediate.clone()];
@@ -557,76 +561,81 @@ fn f_15s(
         ocsps: r_5jx,
     };
     let lt = embed_dss(&pdf, &r_5k5)
-        .map_err(|e| format!("ZW1iZWRfZHNzIChuaMO6bmcgL0RTUykgbOG7l2k6IA=={e}"))?;
-    std::fs::write(output, &lt).map_err(|e| format!("ghi '{output}JyBs4buXaTog{e}"))?;
-    println!("CsSQw4MgR0hJIFBBZEVTLUxUOiA={output} ({} bytes)", lt.len());
+        .map_err(|e| format!("embed_dss (nhúng /DSS) lỗi: {e}"))?;
+    std::fs::write(output, &lt).map_err(|e| format!("ghi '{output}' lỗi: {e}"))?;
+    println!("\nĐÃ GHI PAdES-LT: {output} ({} bytes)", lt.len());
     let store = f_1ow(r_5jr)?;
     let r_5k4 = match r_5k3 {
         Some(r_5jy) => Some(f_1ow(r_5jy)?),
         None => None,
     };
     let r_5jz = f_2q1(&lt, Some(&store), r_5k4.as_ref())
-        .map_err(|e| format!("dmVyaWZ5IExUIGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("verify LT lỗi: {e}"))?;
     f_23v(&r_5jz);
     if r_5jz.is_lt() {
         println!(
-            "CuKchSBQQWRFUy1MVCDigJQgY2jhu68ga8O9IGjhu6NwIGzhu4csIG5lbyByb290IHRpbiBj4bqteSwgY8OzIERTUywga2jDtG5nIGLhu4sgdGh1IGjhu5NpLiBU4buxIGNo4bupbmcgbWluaCBkw6BpIGjhuqFuLg=="
+            r#"
+✅ PAdES-LT — chữ ký hợp lệ, neo root tin cậy, có DSS, không bị thu hồi. Tự chứng minh dài hạn."#
         );
         Ok(())
     } else if r_5jz.has_dss && r_5jz.signer_chain_ok && r_5jz.revocation_ok {
         if r_5k3.is_none() {
             println!(
-                "CuKaoO+4jyAgQ0jGr0EgS+G6vlQgTFXhuqxOIMSRxrDhu6NjIG3hu6ljIFBBZEVTLUxUOiB0aGnhur91IGJ1bmRsZSByb290IFRTQSBuw6puIG3hu5FjIMSR4buRaSBjaGnhur91IHRodSBo4buTaSByxqFpIHbhu4Egc2lnbmluZ1RpbWUgTkfGr+G7nEkgS8OdIFThu7AgS0hBSSAocmV2b2NhdGlvbl90cnVzdGVkPWZhbHNlKS4="
+                r#"
+⚠️  CHƯA KẾT LUẬN được mức PAdES-LT: thiếu bundle root TSA nên mốc đối chiếu thu hồi rơi về signingTime NGƯỜI KÝ TỰ KHAI (revocation_trusted=false)."#
             );
             println!(
-                "ICAgVOG7h3AgxJHDoyBnaGkgxJHDum5nIChEU1MgKyBuZW8gcm9vdCArIGLhurFuZyBjaOG7qW5nIEdvb2QpLiBL4bq/dCBsdeG6rW4gYuG6sW5nOgogICBkaWdpdGV4dCBzaWduIG1ha2UtbHQgPGluPiA8b3V0PiAtLWNoYWluIDxidW5kbGUgQ0E+IC0tbGVhZiA8bGVhZi5wZW0+IC0tdHNhLXJvb3RzIDxidW5kbGUgcm9vdCBUU0E+CiAgIGhv4bq3YzogZGlnaXRleHQgc2lnbiB2ZXJpZnkgPG91dD4gLS1yb290cyA8YnVuZGxlIENBPiAtLXRzYSA8YnVuZGxlIHJvb3QgVFNBPg=="
+                r#"   Tệp đã ghi đúng (DSS + neo root + bằng chứng Good). Kết luận bằng:
+   digitext sign make-lt <in> <out> --chain <bundle CA> --leaf <leaf.pem> --tsa-roots <bundle root TSA>
+   hoặc: digitext sign verify <out> --roots <bundle CA> --tsa <bundle root TSA>"#
             );
             return Ok(());
         }
         Err(
-            "xJHDoyBuaMO6bmcgRFNTICsgbmVvIHJvb3QgKyBi4bqxbmcgY2jhu6luZyBuw7NpIEdvb2QsIG5oxrBuZyBt4buRYyDEkeG7kWkgY2hp4bq/dSBsw6Agc2lnbmluZ1RpbWUgVOG7sCBLSEFJIChyZXZvY2F0aW9uX3RydXN0ZWQ9ZmFsc2UpIETDmSDEkMODIMSRxrBhIHJvb3QgVFNBOiBQREYgcGjhuqNpIGPDsyB0ZW0gdGjhu51pIGdpYW4gVFNBIG5lbyDEkcaw4bujYyB04bubaSByb290IMSRw7MgKFBBZEVTLVQpIG3hu5tpIMSR4bqhdCBQQWRFUy1MVA=="
+            "đã nhúng DSS + neo root + bằng chứng nói Good, nhưng mốc đối chiếu là signingTime TỰ KHAI (revocation_trusted=false) DÙ ĐÃ đưa root TSA: PDF phải có tem thời gian TSA neo được tới root đó (PAdES-T) mới đạt PAdES-LT"
                 .into(),
         )
     } else if r_5jz.has_dss && r_5jz.signer_chain_ok {
         Err(
-            "xJHDoyBuaMO6bmcgRFNTICsgbmVvIHJvb3QgbmjGsG5nIHJldm9jYXRpb25fb2s9ZmFsc2UgKE9DU1AvQ1JMIHRoaeG6v3UsIGtow7RuZyB2ZXJpZnkgxJHGsOG7o2MsIGhv4bq3YyBi4bqxbmcgY2jhu6luZyBjxakgaMahbiB0aOG7nWkgxJFp4buDbSBrw70gcXXDoSBj4butYSBz4buVIG7hu5tpKSDigJQgeGVtIGPhu50="
+            "đã nhúng DSS + neo root nhưng revocation_ok=false (OCSP/CRL thiếu, không verify được, hoặc bằng chứng cũ hơn thời điểm ký quá cửa sổ nới) — xem cờ"
                 .into(),
         )
     } else {
-        Err("Y2jGsGEgxJHhuqF0IFBBZEVTLUxUIOKAlCB4ZW0gY8OhYyBj4budIOG7nyB0csOqbg==".into())
+        Err("chưa đạt PAdES-LT — xem các cờ ở trên".into())
     }
 }
 fn f_15t(input: &str, output: &str, tsa_url: &str) -> Result<(), String> {
-    let lt = std::fs::read(input).map_err(|e| format!("xJHhu41jIFBERiAn{input}JyBs4buXaTog{e}"))?;
+    let lt = std::fs::read(input).map_err(|e| format!("đọc PDF '{input}' lỗi: {e}"))?;
     println!("PDF LT  : {input} ({} bytes)", lt.len());
-    let r_5k6 = f_23h(&lt).map_err(|e| format!("cHJlcGFyZSBEb2NUaW1lU3RhbXAgbOG7l2k6IA=={e}"))?;
+    let r_5k6 = f_23h(&lt).map_err(|e| format!("prepare DocTimeStamp lỗi: {e}"))?;
     println!(
-        "ICBWw7luZyBhcmNoaXZlLVRTIHBo4bunIDog{} bytes",
+        "  Vùng archive-TS phủ : {} bytes",
         r_5k6.tbs.len()
     );
     println!("\n── ARCHIVE-TIMESTAMP (PAdES-LTA) ──\n  TSA: {tsa_url}");
     let token = fetch_timestamp(&f_1hl(), tsa_url, &r_5k6.tbs)?;
     println!("  ✓ token TSA: {} bytes", token.len());
     let lta = f_1cp(&r_5k6, &token)
-        .map_err(|e| format!("ZmluYWxpemUgRG9jVGltZVN0YW1wIGzhu5dpOiA={e}"))?;
-    std::fs::write(output, &lta).map_err(|e| format!("ghi '{output}JyBs4buXaTog{e}"))?;
-    println!("CsSQw4MgR0hJIFBBZEVTLUxUQTog{output} ({} bytes)", lta.len());
-    let r_5k7 = verify(&lta).map_err(|e| format!("dmVyaWZ5IExUQSBs4buXaTog{e}"))?;
+        .map_err(|e| format!("finalize DocTimeStamp lỗi: {e}"))?;
+    std::fs::write(output, &lta).map_err(|e| format!("ghi '{output}' lỗi: {e}"))?;
+    println!("\nĐÃ GHI PAdES-LTA: {output} ({} bytes)", lta.len());
+    let r_5k7 = verify(&lta).map_err(|e| format!("verify LTA lỗi: {e}"))?;
     f_23v(&r_5k7);
     if r_5k7.has_archive_timestamp {
         println!(
-            "CuKchSBQQWRFUy1MVEEg4oCUIGFyY2hpdmUtdGltZXN0YW1wIHBo4bunIHRy4buNbiB0w6BpIGxp4buHdSAoZ+G7k20gL0RTUykgxJHDum5nIFbhu4AgQ+G6pFUgVFLDmkM7IGNo4buvIGvDvSBn4buRYyArIERTUyB24bqrbiBuZ3V5w6puLg=="
+            r#"
+✅ PAdES-LTA — archive-timestamp phủ trọn tài liệu (gồm /DSS) đúng VỀ CẤU TRÚC; chữ ký gốc + DSS vẫn nguyên."#
         );
         println!(
-            "ICAgaXNfbHRhKCk9dHJ1ZSBjw7JuIGPhuqduOiBzaWduZXJfY2hhaW5fb2sgKyByZXZvY2F0aW9uX3RydXN0ZWQgKyBjZXJ0IFRTQSBj4bunYSBhcmNoaXZlLXRpbWVzdGFtcA=="
+            "   is_lta()=true còn cần: signer_chain_ok + revocation_trusted + cert TSA của archive-timestamp"
         );
         println!(
-            "ICAgbmVvIHThu5tpIHJvb3QgVFNBIOKAlCBraeG7g20gYuG6sW5nIGB2ZXJpZnkgLS1yb290cyA8YnVuZGxlIENBPiAtLXRzYSA8YnVuZGxlIHJvb3QgVFNBPmAu"
+            "   neo tới root TSA — kiểm bằng `verify --roots <bundle CA> --tsa <bundle root TSA>`."
         );
         Ok(())
     } else {
         Err(
-            "xJHDoyBuaMO6bmcgRG9jVGltZVN0YW1wIG5oxrBuZyB2ZXJpZnkga2jDtG5nIHRo4bqleSBhcmNoaXZlLXRpbWVzdGFtcCBo4bujcCBs4buHIOKAlCB4ZW0gY8OhYyBj4bud"
+            "đã nhúng DocTimeStamp nhưng verify không thấy archive-timestamp hợp lệ — xem các cờ"
                 .into(),
         )
     }
@@ -774,12 +783,12 @@ fn f_w4(r_5kz: [f64; 4], font: &str, signer: &str, when: &str) -> String {
 }
 fn f_qu(pdf: &[u8], signer: &str, when: &str) -> Result<Vec<u8>, String> {
     let mut r_5l7 =
-        Document::load_mem(pdf).map_err(|e| format!("buG6oXAgUERGIChsb3BkZikgbOG7l2k6IA=={e}"))?;
+        Document::load_mem(pdf).map_err(|e| format!("nạp PDF (lopdf) lỗi: {e}"))?;
     let (_num, r_5ld) = r_5l7
         .get_pages()
         .into_iter()
         .next()
-        .ok_or("UERGIGtow7RuZyBjw7MgdHJhbmcgbsOgbyDEkeG7gyDEkcOzbmcgZOG6pXU=")?;
+        .ok_or("PDF không có trang nào để đóng dấu")?;
     let r_5lb = f_28z(&r_5l7, r_5ld);
     let r_5l9 = r_5l7.add_object(dictionary! {
         "Type" => "Font", "Subtype" => "Type1", "BaseFont" => "Helvetica-Bold",
@@ -799,9 +808,9 @@ fn f_qu(pdf: &[u8], signer: &str, when: &str) -> Result<Vec<u8>, String> {
     {
         let r_5lc = r_5l7
             .get_object_mut(r_5ld)
-            .map_err(|e| format!("xJHhu41jIHRyYW5nIGzhu5dpOiA={e}"))?
+            .map_err(|e| format!("đọc trang lỗi: {e}"))?
             .as_dict_mut()
-            .map_err(|e| format!("dHJhbmcga2jDtG5nIHBo4bqjaSBkaWN0OiA={e}"))?;
+            .map_err(|e| format!("trang không phải dict: {e}"))?;
         r_5lc.set("Resources", Object::Reference(r_5lf));
         let r_5l6 = match r_5lc.get(b"Contents") {
             Ok(Object::Reference(r_5la)) => {
@@ -819,7 +828,7 @@ fn f_qu(pdf: &[u8], signer: &str, when: &str) -> Result<Vec<u8>, String> {
     let mut out = Vec::new();
     r_5l7
         .save_to(&mut out)
-        .map_err(|e| format!("bMawdSBQREYgKGxvcGRmKSBs4buXaTog{e}"))?;
+        .map_err(|e| format!("lưu PDF (lopdf) lỗi: {e}"))?;
     Ok(out)
 }
 fn f_15v(
@@ -831,14 +840,14 @@ fn f_15v(
 ) -> Result<(), String> {
     println!("Module : {module}");
     let pdf =
-        std::fs::read(input).map_err(|e| format!("xJHhu41jIFBERiAn{input}JyBs4buXaTog{e}"))?;
-    println!("UERGIHbDoG86IA=={input} ({} bytes)", pdf.len());
+        std::fs::read(input).map_err(|e| format!("đọc PDF '{input}' lỗi: {e}"))?;
+    println!("PDF vào: {input} ({} bytes)", pdf.len());
     let pkcs11 = context(module)?;
     let r_5lr = f_29c(&pkcs11)?;
     let idx = slot_index();
     let slot = *r_5lr.get(idx).ok_or_else(|| {
         format!(
-            "a2jDtG5nIGPDsyB0b2tlbiDhu58gc2xvdCA={idx}IChjaOG7iSBjw7Mg{} slot)",
+            "không có token ở slot {idx} (chỉ có {} slot)",
             r_5lr.len()
         )
     })?;
@@ -846,16 +855,16 @@ fn f_15v(
         .get_token_info(slot)
         .map(|t| t.label().trim().to_string())
         .unwrap_or_default();
-    println!("Token  : slot[{idx}XSBuaMOjbiA9IA=={label:?}");
+    println!("Token  : slot[{idx}] nhãn = {label:?}");
     let r_5lp = pkcs11
         .open_ro_session(slot)
-        .map_err(|e| format!("beG7nyBwaGnDqm4gdG9rZW4gbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("mở phiên token lỗi: {e}"))?;
     let r_5lo = f_2d8(&r_5lp)?;
     let r_5lq = f_1vc().max(0) as u64;
     let r_5lk = if stamp {
         let out = f_qu(&pdf, &f_2ff(&r_5lo.cert), &f_1d8(r_5lq))?;
         println!(
-            "CuKUgOKUgCBE4bqkVSDEkOG7jiDilIDilIAKICDEkMOjIHbhur0gY29uIGThuqV1IMSR4buPIOG7nyDEkeG6p3UgdHJhbmcgMSAo{} → {} bytes)",
+            "\n── DẤU ĐỎ ──\n  Đã vẽ con dấu đỏ ở đầu trang 1 ({} → {} bytes)",
             pdf.len(), out.len()
         );
         out
@@ -863,28 +872,29 @@ fn f_15v(
         pdf.clone()
     };
     let r_5lm = prepare(&r_5lk, &r_5lo.cert, r_5lq)
-        .map_err(|e| format!("cHJlcGFyZSAoUEFkRVMpIGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("prepare (PAdES) lỗi: {e}"))?;
     println!("\n── PREPARE ──");
     println!("  PDF sau placeholder : {} bytes", r_5lm.pdf.len());
     println!("  tbs_digest (SHA-256): {}", hex(&r_5lm.tbs_digest));
-    let r_5ll = rpassword::prompt_password("Ck5o4bqtcCBQSU4gdG9rZW4gKOG6qW4pOiA=")
-        .map_err(|e| format!("xJHhu41jIFBJTiBs4buXaTog{e}"))?;
+    let r_5ll = rpassword::prompt_password(r#"
+Nhập PIN token (ẩn): "#)
+        .map_err(|e| format!("đọc PIN lỗi: {e}"))?;
     r_5lp
         .login(UserType::User, Some(&AuthPin::new(r_5ll)))
-        .map_err(|_| "UElOIGtow7RuZyDEkcO6bmcgaG/hurdjIHRva2VuIGLhu4sga2hvw6E=".to_string())?;
-    println!("xJDEg25nIG5o4bqtcCB0b2tlbjogT0s=");
+        .map_err(|_| "PIN không đúng hoặc token bị khoá".to_string())?;
+    println!("Đăng nhập token: OK");
     let r_5lj = f_1cy(&r_5lp, &r_5lo.leaf_id)?;
     let r_5li = digestinfo_sha256(&r_5lm.tbs_digest);
     let signature = r_5lp
         .sign(&Mechanism::RsaPkcs, r_5lj, &r_5li)
-        .map_err(|e| format!("Q19TaWduIHRyw6puIHRva2VuIGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("C_Sign trên token lỗi: {e}"))?;
     println!("\n── C_SIGN (token) ──");
     println!(
-        "ICBjaOG7ryBrw70gUlNBICAgICAgICAgIDog{} bytes",
+        "  chữ ký RSA          : {} bytes",
         signature.len()
     );
     println!(
-        "ICBjaOG7ryBrw70gKMSR4bqndSAxNkIpICAgIDog{}…",
+        "  chữ ký (đầu 16B)    : {}…",
         hex(&signature[..signature.len().min(16)])
     );
     let r_5ls = f_1c9(tsa_url, &signature)?;
@@ -896,34 +906,34 @@ fn f_15v(
         &r_5lo.intermediates,
         r_5ls.as_deref(),
     )
-    .map_err(|e| format!("ZmluYWxpemUgKGzhuq9wIENNUyArIG5ow7puZykgbOG7l2k6IA=={e}"))?;
+    .map_err(|e| format!("finalize (lắp CMS + nhúng) lỗi: {e}"))?;
     println!("\n── FINALIZE ──");
-    println!("ICBQREYgxJHDoyBrw70gICAgICAgICAgIDog{} bytes", signed.len());
-    let r_5ln = verify(&signed).map_err(|e| format!("dmVyaWZ5IFBERiDEkcOjIGvDvSBs4buXaTog{e}"))?;
+    println!("  PDF đã ký           : {} bytes", signed.len());
+    let r_5ln = verify(&signed).map_err(|e| format!("verify PDF đã ký lỗi: {e}"))?;
     f_23v(&r_5ln);
-    std::fs::write(output, &signed).map_err(|e| format!("ghi PDF '{output}JyBs4buXaTog{e}"))?;
-    println!("CsSQw4MgR0hJOiA={output} ({} bytes)", signed.len());
+    std::fs::write(output, &signed).map_err(|e| format!("ghi PDF '{output}' lỗi: {e}"))?;
+    println!("\nĐÃ GHI: {output} ({} bytes)", signed.len());
     if r_5ln.is_valid() {
         let level = if r_5ln.timestamp_present {
-            "UEFkRVMtVCAoY8OzIHRlbSB0aOG7nWkgZ2lhbik="
+            "PAdES-T (có tem thời gian)"
         } else {
             "PAdES-B"
         };
         println!(
-            "CuKchSBLw50gVEjhuqxUIFRIw4BOSCBDw5RORyDigJQgY2jhu68ga8O9IA=={level}IHThu6sgdG9rZW4gaUNBIGjhu6NwIGzhu4cgKHNpZ25hdHVyZSArIGRpZ2VzdCArIHLDoG5nIGNlcnQpLg=="
+            "\n✅ KÝ THẬT THÀNH CÔNG — chữ ký {level} từ token iCA hợp lệ (signature + digest + ràng cert)."
         );
         if r_5ln.timestamp_present {
             println!(
-                "ICAgdGltZXN0YW1wX3RydXN0ZWQ9ZmFsc2UgbMOgIGLDrG5oIHRoxrDhu51uZyBraGkgY2jGsGEgbuG6oXAgdHJ1c3Qgc3RvcmUgcm9vdCBUU0EgKC0tdHNhIGzDumMgdmVyaWZ5KS4="
+                "   timestamp_trusted=false là bình thường khi chưa nạp trust store root TSA (--tsa lúc verify)."
             );
         }
         println!(
-            "ICAgc2lnbmVyX2NoYWluX29rPWZhbHNlIGzDoCBiw6xuaCB0aMaw4budbmcga2hpIGNoxrBhIG7huqFwIHRydXN0IHN0b3JlIGfhu5FjIGlDQSAoY2jhu4kg4bufIG3hu6ljIGPhuqV1IHRyw7pjKS4="
+            "   signer_chain_ok=false là bình thường khi chưa nạp trust store gốc iCA (chỉ ở mức cấu trúc)."
         );
         Ok(())
     } else {
         Err(
-            "UERGIMSRw6MgZ2hpIG5oxrBuZyBWRVJJRlkgS0jDlE5HIGjhu6NwIGzhu4cg4oCUIHhlbSBjw6FjIGPhu50g4bufIHRyw6pu"
+            "PDF đã ghi nhưng VERIFY KHÔNG hợp lệ — xem các cờ ở trên"
                 .into(),
         )
     }
@@ -940,25 +950,25 @@ fn f_2gd() -> Result<(rsa::pkcs1v15::SigningKey<sha2::Sha256>, Vec<u8>), String>
     use x509_cert::time::Validity;
     let mut r_5lv = rand::thread_rng();
     let r_5lu =
-        RsaPrivateKey::new(&mut r_5lv, 2048).map_err(|e| format!("a2V5Z2VuIGzhu5dpOiA={e}"))?;
+        RsaPrivateKey::new(&mut r_5lv, 2048).map_err(|e| format!("keygen lỗi: {e}"))?;
     let r_5lw = SigningKey::<sha2::Sha256>::new(r_5lu.clone());
     let spki = SubjectPublicKeyInfoOwned::from_key(r_5lu.to_public_key())
-        .map_err(|e| format!("c3BraSBs4buXaTog{e}"))?;
+        .map_err(|e| format!("spki lỗi: {e}"))?;
     let cert = CertificateBuilder::new(
         Profile::Root,
         SerialNumber::from(1u32),
         Validity::from_now(core::time::Duration::from_secs(365 * 24 * 3600))
-            .map_err(|e| format!("dmFsaWRpdHkgbOG7l2k6IA=={e}"))?,
-        Name::from_str("CN=DigiText Soft Selftest").map_err(|e| format!("bmFtZSBs4buXaTog{e}"))?,
+            .map_err(|e| format!("validity lỗi: {e}"))?,
+        Name::from_str("CN=DigiText Soft Selftest").map_err(|e| format!("name lỗi: {e}"))?,
         spki,
         &r_5lw,
     )
-    .map_err(|e| format!("YnVpbGRlciBs4buXaTog{e}"))?
+    .map_err(|e| format!("builder lỗi: {e}"))?
     .build()
-    .map_err(|e| format!("YnVpbGQgY2VydCBs4buXaTog{e}"))?;
+    .map_err(|e| format!("build cert lỗi: {e}"))?;
     let r_5lt = cert
         .to_der()
-        .map_err(|e| format!("Y2VydCB0b19kZXIgbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("cert to_der lỗi: {e}"))?;
     Ok((r_5lw, r_5lt))
 }
 fn f_15u(
@@ -969,11 +979,11 @@ fn f_15u(
 ) -> Result<(), String> {
     use rsa::signature::{SignatureEncoding, Signer};
     let pdf =
-        std::fs::read(input).map_err(|e| format!("xJHhu41jIFBERiAn{input}JyBs4buXaTog{e}"))?;
-    println!("UERGIHbDoG8gOiA={input} ({} bytes)", pdf.len());
+        std::fs::read(input).map_err(|e| format!("đọc PDF '{input}' lỗi: {e}"))?;
+    println!("PDF vào : {input} ({} bytes)", pdf.len());
     println!(
-        "Q2jhur8gxJHhu5kgIDogU0VMRlRFU1QgKGtob8OhIHBo4bqnbiBt4buBbSDigJQgS0jDlE5HIHRva2VuKQ=={}{}",
-        if stamp { "ICsgROG6pFUgxJDhu44=" } else { "" },
+        "Chế độ  : SELFTEST (khoá phần mềm — KHÔNG token){}{}",
+        if stamp { " + DẤU ĐỎ" } else { "" },
         if tsa_url.is_some() { " + PAdES-T" } else { "" }
     );
     let (r_5m2, r_5lx) = f_2gd()?;
@@ -981,7 +991,7 @@ fn f_15u(
     let r_5ly = if stamp {
         let out = f_qu(&pdf, &f_2ff(&r_5lx), &f_1d8(r_5m1))?;
         println!(
-            "CuKUgOKUgCBE4bqkVSDEkOG7jiDilIDilIAKICDEkMOjIHbhur0gY29uIGThuqV1IMSR4buPIOG7nyDEkeG6p3UgdHJhbmcgMSAo{} → {} bytes)",
+            "\n── DẤU ĐỎ ──\n  Đã vẽ con dấu đỏ ở đầu trang 1 ({} → {} bytes)",
             pdf.len(), out.len()
         );
         out
@@ -989,14 +999,15 @@ fn f_15u(
         pdf.clone()
     };
     let r_5lz = prepare(&r_5ly, &r_5lx, r_5m1)
-        .map_err(|e| format!("cHJlcGFyZSAoUEFkRVMpIGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("prepare (PAdES) lỗi: {e}"))?;
     println!("\n── PREPARE ──");
     println!("  PDF sau placeholder : {} bytes", r_5lz.pdf.len());
     println!("  tbs_digest (SHA-256): {}", hex(&r_5lz.tbs_digest));
     let signature = r_5m2.sign(&r_5lz.signed_attrs_der).to_bytes();
-    println!("CuKUgOKUgCBTSUdOIChraG/DoSBwaOG6p24gbeG7gW0pIOKUgOKUgA==");
+    println!(r#"
+── SIGN (khoá phần mềm) ──"#);
     println!(
-        "ICBjaOG7ryBrw70gUlNBICAgICAgICAgIDog{} bytes",
+        "  chữ ký RSA          : {} bytes",
         signature.len()
     );
     let r_5m3 = f_1c9(tsa_url, &signature)?;
@@ -1008,25 +1019,26 @@ fn f_15u(
         &[],
         r_5m3.as_deref(),
     )
-    .map_err(|e| format!("ZmluYWxpemUgbOG7l2k6IA=={e}"))?;
+    .map_err(|e| format!("finalize lỗi: {e}"))?;
     println!("\n── FINALIZE ──");
-    println!("ICBQREYgxJHDoyBrw70gICAgICAgICAgIDog{} bytes", signed.len());
-    let r_5m0 = verify(&signed).map_err(|e| format!("dmVyaWZ5IGzhu5dpOiA={e}"))?;
+    println!("  PDF đã ký           : {} bytes", signed.len());
+    let r_5m0 = verify(&signed).map_err(|e| format!("verify lỗi: {e}"))?;
     f_23v(&r_5m0);
     if let Some(out) = output {
-        std::fs::write(out, &signed).map_err(|e| format!("ghi PDF '{out}JyBs4buXaTog{e}"))?;
+        std::fs::write(out, &signed).map_err(|e| format!("ghi PDF '{out}' lỗi: {e}"))?;
         println!(
-            "CsSQw4MgR0hJIChrw70gYuG6sW5nIGtob8OhIHBo4bqnbiBt4buBbSwgS0jDlE5HIHBo4bqjaSB0b2tlbik6IA=={out}"
+            "\nĐÃ GHI (ký bằng khoá phần mềm, KHÔNG phải token): {out}"
         );
     }
     if r_5m0.is_valid() {
         println!(
-            "CuKchSBTRUxGVEVTVCBQQVNTIOKAlCBQREYgbsOgeSBrw70gKyB2ZXJpZnkgxJHGsOG7o2MuIEzhu4duaCBgc2lnbmAgdGjhuq10IHRyw6puIMSRw7puZyBmaWxlIHPhur0gY2jhuqF5Lg=="
+            r#"
+✅ SELFTEST PASS — PDF này ký + verify được. Lệnh `sign` thật trên đúng file sẽ chạy."#
         );
         Ok(())
     } else {
         Err(
-            "U0VMRlRFU1QgS0jDlE5HIGjhu6NwIGzhu4cg4oCUIFBERiBjw7MgdGjhu4Mga2jDtG5nIHTGsMahbmcgdGjDrWNoIGx14buTbmcga8O9OyB4ZW0gY8OhYyBj4budIHRyw6pu"
+            "SELFTEST KHÔNG hợp lệ — PDF có thể không tương thích luồng ký; xem các cờ trên"
                 .into(),
         )
     }
@@ -1036,7 +1048,7 @@ fn hex(b: &[u8]) -> String {
 }
 fn f_2ob(prog: &str) -> String {
     format!(
-        "RMO5bmc6CiAg{prog}IHNpZ24gICAgICAgICAgICA8aW5wdXQucGRmPiA8b3V0cHV0LnBkZj4gWy0tdGltZXN0YW1wIHwgLS10c2EtdXJsIDx1cmw+XSAgIyBrw70gVEjhuqxUIGLhurFuZyB0b2tlbiAodsO0IGjDrG5oKQogIA=={prog}IHNpZ24tc3RhbXAgICAgICA8aW5wdXQucGRmPiA8b3V0cHV0LnBkZj4gWy0tdGltZXN0YW1wIHwgLS10c2EtdXJsIDx1cmw+XSAgIyBrw70gVEjhuqxUICsgROG6pFUgxJDhu44gxJHhuqd1IHRyYW5nIDEKICA={prog}IHNlbGZ0ZXN0ICAgICAgICA8aW5wdXQucGRmPiBbb3V0cHV0LnBkZl0gIFstLXRpbWVzdGFtcCB8IC0tdHNhLXVybCA8dXJsPl0gICMga8O9IHRo4butIGtob8OhIHBo4bqnbiBt4buBbSAoS0jDlE5HIHRva2VuKQogIA=={prog}IHNlbGZ0ZXN0LXN0YW1wICA8aW5wdXQucGRmPiA8b3V0cHV0LnBkZj4gWy0tdGltZXN0YW1wIHwgLS10c2EtdXJsIDx1cmw+XSAgIyBrw70gdGjhu60ga2hvw6EgcGjhuqduIG3hu4FtICsgROG6pFUgxJDhu44KICA={prog}IHZlcmlmeSAgICAgICAgICA8c2lnbmVkLnBkZj4gWy0tcm9vdHMgPGJ1bmRsZS5wZW0+XSBbLS10c2EgPHRzYS1yb290LnBlbT5dICAjIHjDoWMgbWluaCArIGtp4buDbSB0aW4gY+G6rXkKICA={prog}IG1ha2UtbHQgICAgICAgICA8c2lnbmVkLnBkZj4gPG91dC1sdC5wZGY+IC0tY2hhaW4gPGJ1bmRsZS5wZW0+IC0tbGVhZiA8bGVhZi5wZW0+IFstLXRzYS1yb290cyA8YnVuZGxlIHJvb3QgVFNBPl0gICMgbsOibmcgbMOqbiBQQWRFUy1MVCAoT0NTUC9DUkwpCiAg{prog}IG1ha2UtbHRhICAgICAgICA8bHQucGRmPiA8b3V0LWx0YS5wZGY+IFstLXRpbWVzdGFtcCB8IC0tdHNhLXVybCA8dXJsPl0gICMgbsOibmcgbMOqbiBQQWRFUy1MVEEgKGFyY2hpdmUtdGltZXN0YW1wKQoKLS10aW1lc3RhbXAgICAgOiBkw7luZyBUU0EgbeG6t2MgxJHhu4tuaCAoRGlnaUNlcnQgUlNBIOKAlCBjaOG7iSDEkeG7gyBUSOG7rDsgU+G6ok4gWFXhuqRUIGTDuW5nIFRTQSBWTiDEkeG7pyDEkWnhu4F1IGtp4buHbikuCiAgLS10c2EtdXJsIDx1PiAgOiBQQWRFUy1UIHbhu5tpIFRTQSBjaOG7iSDEkeG7i25oIChSRkMgMzE2MSwgYXBwbGljYXRpb24vdGltZXN0YW1wLXF1ZXJ5KS4KICBLaMO0bmcgY8OzIGzhu4duaCArIMSRw7puZyAyIHRoYW0gc+G7kSDih5IgaGnhu4N1IGzDoCBgc2lnbmAgKHTGsMahbmcgdGjDrWNoIGPFqSku"
+        "Dùng:\n  {prog} sign            <input.pdf> <output.pdf> [--timestamp | --tsa-url <url>]  # ký THẬT bằng token (vô hình)\n  {prog} sign-stamp      <input.pdf> <output.pdf> [--timestamp | --tsa-url <url>]  # ký THẬT + DẤU ĐỎ đầu trang 1\n  {prog} selftest        <input.pdf> [output.pdf]  [--timestamp | --tsa-url <url>]  # ký thử khoá phần mềm (KHÔNG token)\n  {prog} selftest-stamp  <input.pdf> <output.pdf> [--timestamp | --tsa-url <url>]  # ký thử khoá phần mềm + DẤU ĐỎ\n  {prog} verify          <signed.pdf> [--roots <bundle.pem>] [--tsa <tsa-root.pem>]  # xác minh + kiểm tin cậy\n  {prog} make-lt         <signed.pdf> <out-lt.pdf> --chain <bundle.pem> --leaf <leaf.pem> [--tsa-roots <bundle root TSA>]  # nâng lên PAdES-LT (OCSP/CRL)\n  {prog} make-lta        <lt.pdf> <out-lta.pdf> [--timestamp | --tsa-url <url>]  # nâng lên PAdES-LTA (archive-timestamp)\n\n--timestamp    : dùng TSA mặc định (DigiCert RSA — chỉ để THỬ; SẢN XUẤT dùng TSA VN đủ điều kiện).\n  --tsa-url <u>  : PAdES-T với TSA chỉ định (RFC 3161, application/timestamp-query).\n  Không có lệnh + đúng 2 tham số ⇒ hiểu là `sign` (tương thích cũ)."
     )
 }
 fn f_1d6(r_5m4: &[String], name: &str) -> Option<String> {
@@ -1078,7 +1090,7 @@ fn f_1tz() -> Result<String, CliError> {
     f_13r()
         .ok_or_else(|| {
             CliError::Fatal2(
-                "S2jDtG5nIHTDrG0gdGjhuqV5IG1vZHVsZSBQS0NTIzExLiDEkOG6t3QgRElHSVRFWFRfUEtDUzExX01PRFVMRT08xJHGsOG7nW5nLWThuqtuIC5zby8uZGxsLy5keWxpYj4u"
+                "Không tìm thấy module PKCS#11. Đặt DIGITEXT_PKCS11_MODULE=<đường-dẫn .so/.dll/.dylib>."
                     .into(),
             )
         })
@@ -1146,7 +1158,7 @@ fn run(r_5m8: &[String]) -> Result<(), CliError> {
                 }
                 _ => {
                     eprintln!(
-                        "bWFrZS1sdCBj4bqnbjogLS1jaGFpbiA8YnVuZGxlLnBlbT4gLS1sZWFmIDxsZWFmLnBlbT4="
+                        "make-lt cần: --chain <bundle.pem> --leaf <leaf.pem>"
                     );
                     Err(CliError::Usage)
                 }

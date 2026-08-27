@@ -24,7 +24,7 @@ const V4i1 = (V1iv: unknown) =>
 
 const V4i2 = (V1iw: number, V1ix: string) => `${V1iw}|${V1ix}`;
 
-const V4i3 = "KGNoxrBhIGPDsyDigJQgbmjhuq1wIHRheSBu4bq/dSB2xINuIGLhuqNuIGPDsyk=";
+const V4i3 = "(chưa có — nhập tay nếu văn bản có)";
 
 const V4i4 = (m: Record<string, unknown>) => Object.keys(m).length > 0;
 
@@ -246,20 +246,20 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
       const V1ku = V1kn.length === 0 && (V4i4(V1jq) || V4i4(V1js));
       const V1kv =
         V1kn.length > 0
-          ? `xJDDoyBsxrB1IA==${V1kn.length}IHRyxrDhu51uZy4g`
+          ? `Đã lưu ${V1kn.length} trường. `
           : V1ku
-            ? "S2jDtG5nIGPDsyB0aGF5IMSR4buVaSB0aOG7sWMgc+G7sSAoY2jhu4kga2jDoWMga2hv4bqjbmcgdHLhuq9uZy9jw6FjaCBnw7UpIG7Dqm4ga2jDtG5nIGdoaSBnw6wuIA=="
+            ? "Không có thay đổi thực sự (chỉ khác khoảng trắng/cách gõ) nên không ghi gì. "
             : "";
       if (!V1j6) {
         V1k3(
-          `${V1kv}QuG6oW4ga2jDtG5nIGPDsyBxdXnhu4FuIGR1eeG7h3QgdMOgaSBsaeG7h3UgbsOqbiB0cuG6oW5nIHRow6FpIGR1eeG7h3QgZ2nhu68gbmd1ecOqbi4=`,
+          `${V1kv}Bạn không có quyền duyệt tài liệu nên trạng thái duyệt giữ nguyên.`,
         );
       } else if (review.reviewStatus === "approved") {
-        V1k3(`${V1kv}VMOgaSBsaeG7h3UgxJHDoyDhu58gdHLhuqFuZyB0aMOhaSDEkcOjIGR1eeG7h3Qu`);
+        V1k3(`${V1kv}Tài liệu đã ở trạng thái đã duyệt.`);
       } else {
         const r = await V4f5(doc.id, "approved");
         V1j7((v) => ({ ...v, ...r }));
-        V1k3(`${V1kv}xJDDoyBkdXnhu4d0IHTDoGkgbGnhu4d1IG7DoHku`);
+        V1k3(`${V1kv}Đã duyệt tài liệu này.`);
       }
     } catch (V1kw) {
       V1k1(V4i1(V1kw));
@@ -287,10 +287,10 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
               V1k1(null);
               V1k3(
                 r.reviewStatus === "approved"
-                  ? "xJDDoyBkdXnhu4d0IHTDoGkgbGnhu4d1IG7DoHku"
+                  ? "Đã duyệt tài liệu này."
                   : r.reviewStatus === "rejected"
-                    ? "xJDDoyB04burIGNo4buRaSB0w6BpIGxp4buHdSBuw6B5Lg=="
-                    : "xJDDoyBt4bufIGzhuqFpIMSR4buDIHNvw6F0IHRp4bq/cC4=",
+                    ? "Đã từ chối tài liệu này."
+                    : "Đã mở lại để soát tiếp.",
               );
             }}
             onError={V1k1}
@@ -320,7 +320,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
           ) : V1j8.length === 0 ? (
             <div className={`muted p-4${V1ji ? " text-danger-700" : ""}`}>
               {V1ji ??
-                "S2jDtG5nIGhp4buDbiB0aOG7iyDEkcaw4bujYyBu4buZaSBkdW5nIChraMO0bmcgcGjhuqNpIFBERiDhuqNuaCku"}
+                "Không hiển thị được nội dung (không phải PDF ảnh)."}
             </div>
           ) : (
             V1j8.map((src, i) => {
@@ -415,7 +415,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       aria-hidden
-                      title="TcOgdSDDtCB0csOqbiB0cmFuZyB0xrDGoW5nIOG7qW5n"
+                      title="Màu ô trên trang tương ứng"
                       style={{
                         width: 10,
                         height: 10,
@@ -429,7 +429,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
                     {f.placeholder ? (
                       <span
                         className="badge gray"
-                        title="TcOheSBjaMawYSBiw7NjIMSRxrDhu6NjIHRyxrDhu51uZyBuw6B5"
+                        title="Máy chưa bóc được trường này"
                       >
                         chưa có
                       </span>
@@ -439,7 +439,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
                       <span className="badge gray">máy bóc</span>
                     )}
                     {V1l2 && (
-                      <span className="badge gray" title="S2h1bmcgxJHDoyBjaOG7iW5oLCBjaMawYSBsxrB1">
+                      <span className="badge gray" title="Khung đã chỉnh, chưa lưu">
                         khung đã sửa
                       </span>
                     )}
@@ -447,7 +447,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
                     {V1kq(f) && (
                       <span
                         className="badge warn"
-                        title="U+G7rWEgxJHhu5VpIGNoxrBhIGzGsHUg4oCUIGLhuqVtIER1eeG7h3Qg4bufIGN14buRaSBtw6BuIMSR4buDIGdoaQ=="
+                        title="Sửa đổi chưa lưu — bấm Duyệt ở cuối màn để ghi"
                       >
                         chưa lưu
                       </span>
@@ -488,8 +488,8 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
       <div className="sticky bottom-0 flex items-center gap-2.5 border-t border-border bg-surface px-4 py-2.5">
         <span className="muted">
           {V1kn.length > 0
-            ? `${V1kn.length}IHRoYXkgxJHhu5VpIGNoxrBhIGzGsHUu`
-            : "S2jDtG5nIGPDsyB0aGF5IMSR4buVaSBuw6BvIGNoxrBhIGzGsHUu"}
+            ? `${V1kn.length} thay đổi chưa lưu.`
+            : "Không có thay đổi nào chưa lưu."}
         </span>
         <div className="flex-1" />
         <button className="btn" onClick={V1j4} disabled={V1jy}>
@@ -501,12 +501,12 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
           disabled={V1jy || V1jw}
           title={
             V1j6
-              ? "TMawdSBjw6FjIHPhu61hIMSR4buVaSBy4buTaSDEkcOhbmggZOG6pXUgdMOgaSBsaeG7h3UgxJHDoyBkdXnhu4d0"
-              : "TMawdSBjw6FjIHPhu61hIMSR4buVaSAoYuG6oW4ga2jDtG5nIGPDsyBxdXnhu4FuIGR1eeG7h3QgdMOgaSBsaeG7h3Up"
+              ? "Lưu các sửa đổi rồi đánh dấu tài liệu đã duyệt"
+              : "Lưu các sửa đổi (bạn không có quyền duyệt tài liệu)"
           }
         >
           {V1jy ? (
-            "xJBhbmcgbMawdeKApg=="
+            "Đang lưu…"
           ) : V1j6 ? (
             <>
               <Icon name="duyet" />

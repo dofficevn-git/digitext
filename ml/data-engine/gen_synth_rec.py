@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 import synth_text as T
 
-def q_ed(font_dirs, sample="SOG7hyB0aOG7kW5nIMaw4budIMSQIOG6ryDhu4cg4buX"):
+def q_ed(font_dirs, sample="Hệ thống ườ Đ ắ ệ ỗ"):
     from PIL import Image, ImageDraw, ImageFont
 
     fonts = []
@@ -76,17 +76,17 @@ def q_d4(split, n, out, fonts, charset, rng, start_idx, max_chars):
         p_21c += 1
     with open(os.path.join(out, f"{split}_list.txt"), "w", encoding="utf-8") as p_21a:
         p_21a.write("\n".join(p_21e) + "\n")
-    print(f"· {split}: {len(p_21e)}IG3huqt1IOKGkiA={split}_list.txt")
+    print(f"· {split}: {len(p_21e)} mẫu → {split}_list.txt")
     return p_21c
 
 def main(argv=None):
-    p_221 = argparse.ArgumentParser(description="U2luaCBkYXRhIHN5bnRoZXRpYyByZWMgdGnhur9uZyBWaeG7h3QgKFNWVFIp")
+    p_221 = argparse.ArgumentParser(description="Sinh data synthetic rec tiếng Việt (SVTR)")
     p_221.add_argument("--out", default="train_data/rec")
     p_221.add_argument("--dict", default="triton/models/ocr_pipeline/1/dict_VI.txt")
     p_221.add_argument("--n-train", type=int, default=60000)
     p_221.add_argument("--n-val", type=int, default=3000)
     p_221.add_argument("--fonts", nargs="*", default=["/usr/share/fonts"])
-    p_221.add_argument("--max-chars", type=int, default=25, help="xJHhu5kgZMOgaSBkw7JuZyB04buRaSDEkWEgKGto4bubcCBjcm9wIHJlYyAzMjBweCk=")
+    p_221.add_argument("--max-chars", type=int, default=25, help="độ dài dòng tối đa (khớp crop rec 320px)")
     p_221.add_argument("--seed", type=int, default=1234)
     p_222 = p_221.parse_args(argv)
 
@@ -94,15 +94,15 @@ def main(argv=None):
     charset = T.charset_from_dict(p_222.dict)
     fonts = q_ed(p_222.fonts)
     if not fonts:
-        raise SystemExit("S2jDtG5nIHTDrG0gxJHGsOG7o2MgZm9udCByZW5kZXIgdGnhur9uZyBWaeG7h3Qg4oCUIGPDoGkgZm9udHMtbm90by9saWJlcmF0aW9uLg==")
-    print(f"· {len(fonts)}IGZvbnQgVmnhu4d0IHwgZGljdCA={len(charset)}IGvDvSB04bux")
+        raise SystemExit("Không tìm được font render tiếng Việt — cài fonts-noto/liberation.")
+    print(f"· {len(fonts)} font Việt | dict {len(charset)} ký tự")
     rng = random.Random(p_222.seed)
     import numpy as np
 
     np.random.seed(p_222.seed)
     p_223 = q_d4("train", p_222.n_train, p_222.out, fonts, charset, rng, 1, p_222.max_chars)
     q_d4("val", p_222.n_val, p_222.out, fonts, charset, rng, p_223, p_222.max_chars)
-    print(f"4pyFIERhdGEg4bufIA=={p_222.out}/ (img/ + train_list.txt + val_list.txt)")
+    print(f"✅ Data ở {p_222.out}/ (img/ + train_list.txt + val_list.txt)")
 
 if __name__ == "__main__":
     main()

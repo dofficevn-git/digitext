@@ -34,35 +34,35 @@ fn f_1dg(r_3ux: &DateTime<FixedOffset>) -> String {
 fn f_2pc(r_3v0: &Tga) -> Vec<String> {
     let mut e = Vec::new();
     if r_3v0.fond_code.is_empty() {
-        e.push("Zm9uZF9jb2RlOiBraMO0bmcgxJHGsOG7o2MgcuG7l25n".into());
+        e.push("fond_code: không được rỗng".into());
     }
     if r_3v0.archive_org_code.is_empty() {
-        e.push("YXJjaGl2ZV9vcmdfY29kZToga2jDtG5nIMSRxrDhu6NjIHLhu5duZw==".into());
+        e.push("archive_org_code: không được rỗng".into());
     }
     if r_3v0.documents.is_empty() {
         e.push(
-            "ZG9jdW1lbnRzOiBnw7NpIHBo4bqjaSBjaOG7qWEgdOG7kWkgdGhp4buDdSAwMSB0w6BpIGxp4buHdQ=="
+            "documents: gói phải chứa tối thiểu 01 tài liệu"
                 .into(),
         );
     }
     if r_3v0.kind.single_document() && r_3v0.documents.len() > 1 {
         e.push(
             format!(
-                "ZG9jdW1lbnRzOiBnw7NpIA=={}IGNo4buJIGNo4bupYSDEkcO6bmcgMDEgdMOgaSBsaeG7h3UgY2jDrW5oICjEkWFuZyBjw7Mg{})",
+                "documents: gói {} chỉ chứa đúng 01 tài liệu chính (đang có {})",
                 r_3v0.kind.as_str(), r_3v0.documents.len()
             ),
         );
     }
     if r_3v0.kind.requires_submission_agreement() && r_3v0.submission_agreement.is_none() {
         e.push(
-            "c3VibWlzc2lvbl9hZ3JlZW1lbnQ6IFNJUCBi4bqvdCBideG7mWMgbcOjIHnDqnUgY+G6p3UgbuG7mXAgKGFsdFJlY29yZElEKQ=="
+            "submission_agreement: SIP bắt buộc mã yêu cầu nộp (altRecordID)"
                 .into(),
         );
     }
     match (r_3v0.kind, &r_3v0.dip_cert) {
         (PackageKind::Dip, None) => {
             e.push(
-                "ZGlwX2NlcnQ6IGfDs2kgRElQIGLhuq90IGJ14buZYyB04buHcCB2xINuIGLhuqNuIHjDoWMgdGjhu7FjICjEkGnhu4F1IDQyLjIp"
+                "dip_cert: gói DIP bắt buộc tệp văn bản xác thực (Điều 42.2)"
                     .into(),
             )
         }
@@ -79,20 +79,20 @@ fn f_2pc(r_3v0: &Tga) -> Vec<String> {
                 ("ngayCap", &c.ngay_cap),
             ] {
                 if r_3v2.trim().is_empty() {
-                    e.push(format!("dip_cert.{field}OiBraMO0bmcgxJHGsOG7o2MgcuG7l25n"));
+                    e.push(format!("dip_cert.{field}: không được rỗng"));
                 }
             }
             if c.so_luong_ban == 0 {
-                e.push("ZGlwX2NlcnQuc29MdW9uZ0JhbjogdOG7kWkgdGhp4buDdSAx".into());
+                e.push("dip_cert.soLuongBan: tối thiểu 1".into());
             }
             if r_3v0.cert_font_ttf.is_none() {
                 e.push(
-                    "Y2VydF9mb250X3R0ZjogdGhp4bq/dSBmb250IFRURiDEkeG7gyBzaW5oIHbEg24gYuG6o24geMOhYyB0aOG7sWMgICAgICAgICAgICAgICAgICAgICAgKMSR4bq3dCBESUdJVEVYVF9DRVJUX0ZPTlQgaG/hurdjIGPDoGkgZm9udCBo4buHIHRo4buRbmcp"
+                    "cert_font_ttf: thiếu font TTF để sinh văn bản xác thực                      (đặt DIGITEXT_CERT_FONT hoặc cài font hệ thống)"
                         .into(),
                 );
             }
         }
-        (_, Some(_)) => e.push("ZGlwX2NlcnQ6IGNo4buJIGTDoG5oIGNobyBnw7NpIERJUA==".into()),
+        (_, Some(_)) => e.push("dip_cert: chỉ dành cho gói DIP".into()),
         _ => {}
     }
     match (&r_3v0.meta, r_3v0.kind) {
@@ -106,7 +106,7 @@ fn f_2pc(r_3v0: &Tga) -> Vec<String> {
             e.extend(ead::f_2ox(d));
         }
         _ => e.push(format!(
-            "bWV0YTogYmnhur9uIHRo4buDIG1ldGFkYXRhIGtow7RuZyBraOG7m3AgbG/huqFpIGfDs2kg{}",
+            "meta: biến thể metadata không khớp loại gói {}",
             r_3v0.kind.as_str()
         )),
     }
@@ -114,26 +114,26 @@ fn f_2pc(r_3v0: &Tga) -> Vec<String> {
     for r_3uy in &r_3v0.documents {
         if r_3uy.file_name.is_empty() || r_3uy.file_name.contains('/') {
             e.push(format!(
-                "ZmlsZV9uYW1lIGtow7RuZyBo4bujcCBs4buHOiAn{}'",
+                "file_name không hợp lệ: '{}'",
                 r_3uy.file_name
             ));
         }
         if !r_3v1.insert(r_3uy.file_name.clone()) {
             e.push(format!(
-                "ZmlsZV9uYW1lIHRyw7luZyBs4bq3cDogJw=={}'",
+                "file_name trùng lặp: '{}'",
                 r_3uy.file_name
             ));
         }
         for a in &r_3uy.attachments {
             if a.file_name.is_empty() || a.file_name.contains('/') {
                 e.push(format!(
-                    "YXR0YWNobWVudCBraMO0bmcgaOG7o3AgbOG7hzogJw=={}'",
+                    "attachment không hợp lệ: '{}'",
                     a.file_name
                 ));
             }
             if !r_3v1.insert(a.file_name.clone()) {
                 e.push(format!(
-                    "ZmlsZV9uYW1lIHRyw7luZyBs4bq3cDogJw=={}'",
+                    "file_name trùng lặp: '{}'",
                     a.file_name
                 ));
             }
@@ -142,21 +142,21 @@ fn f_2pc(r_3v0: &Tga) -> Vec<String> {
         if r_3uz && !r_3v0.kind.allows_fetch() {
             e.push(
                 format!(
-                    "dMOgaSBsaeG7h3UgbGnDqm4ga+G6v3QgLmZldGNoLnR4dCBjaOG7iSBkw7luZyBjaG8gZ8OzaSBt4bupYyBo4buTIHPGoSAoa2luZD0={})",
+                    "tài liệu liên kết .fetch.txt chỉ dùng cho gói mức hồ sơ (kind={})",
                     r_3v0.kind.as_str()
                 ),
             );
         }
         if r_3uz && !fetch::f_1j0(&r_3uy.file_name) {
             e.push(format!(
-                "dMOgaSBsaeG7h3UgbGnDqm4ga+G6v3QgcGjhuqNpIGPDsyB0w6puICcqLmZldGNoLnR4dCc6ICc={}'",
+                "tài liệu liên kết phải có tên '*.fetch.txt': '{}'",
                 r_3uy.file_name
             ));
         }
         if !r_3uz && fetch::f_1j0(&r_3uy.file_name) {
             e.push(
                 format!(
-                    "dMOqbiAnKi5mZXRjaC50eHQnIGTDoG5oIHJpw6puZyBjaG8gdMOgaSBsaeG7h3UgbGnDqm4ga+G6v3Q6ICc={}'",
+                    "tên '*.fetch.txt' dành riêng cho tài liệu liên kết: '{}'",
                     r_3uy.file_name
                 ),
             );
@@ -461,41 +461,41 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
         );
         let r_3vt = vec![
             (
-                "YSkgTcOjIHjDoWMgdGjhu7FjIGzGsHUgdHLhu68=",
+                "a) Mã xác thực lưu trữ",
                 r_3vf.ma_xac_thuc.clone(),
             ),
             (
-                "YikgVMOqbiBsxrB1IHRy4buvIGzhu4tjaCBz4but",
+                "b) Tên lưu trữ lịch sử",
                 r_3vf.ten_luu_tru_lich_su.clone(),
             ),
-            ("YykgTmfGsOG7nWkgbmjhuq1u", r_3w1),
+            ("c) Người nhận", r_3w1),
             (
-                "ZCkgTcOjIGzGsHUgdHLhu68gY+G7p2EgdMOgaSBsaeG7h3UgZ+G7kWM=",
+                "d) Mã lưu trữ của tài liệu gốc",
                 r_3vf.ma_luu_tru_goc.clone(),
             ),
             (
-                "xJEpIFPhu5EgdsOgIGvDvSBoaeG7h3UgY+G7p2EgdMOgaSBsaeG7h3UgZ+G7kWM=",
+                "đ) Số và ký hiệu của tài liệu gốc",
                 r_3vf.so_ky_hieu_goc.clone().unwrap_or_else(|| "—".into()),
             ),
             (
-                "ZSkgVMOqbiBsb+G6oWkgdMOgaSBsaeG7h3U=",
+                "e) Tên loại tài liệu",
                 r_3vf.ten_loai.clone(),
             ),
             (
-                "ZykgVHLDrWNoIHnhur91IG7hu5lpIGR1bmcgLyB0acOqdSDEkeG7gQ==",
+                "g) Trích yếu nội dung / tiêu đề",
                 r_3vf.trich_yeu.clone(),
             ),
             (
-                "aCkgTeG7pWMgxJHDrWNoIHPhu60gZOG7pW5n",
+                "h) Mục đích sử dụng",
                 r_3vf.muc_dich.clone(),
             ),
-            ("aSkgTmfDoHkgY+G6pXA=", r_3vf.ngay_cap.clone()),
+            ("i) Ngày cấp", r_3vf.ngay_cap.clone()),
             (
-                "aykgVGjhu51pIGjhuqFuIHPhu60gZOG7pW5n",
+                "k) Thời hạn sử dụng",
                 r_3vf.thoi_han_su_dung.clone().unwrap_or_else(|| "—".into()),
             ),
             (
-                "bCkgU+G7kSBsxrDhu6NuZyBi4bqjbg==",
+                "l) Số lượng bản",
                 r_3vf.so_luong_ban.to_string(),
             ),
         ];
@@ -507,7 +507,7 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
             })
             .collect();
         let pdf = digitext_pdf::f_v8(
-            "VsSCTiBC4bqiTiBYw4FDIFRI4buwQyBC4bqiTiBTQU8gVMOASSBMSeG7hlUgTMavVSBUUuG7riBT4buQ",
+            "VĂN BẢN XÁC THỰC BẢN SAO TÀI LIỆU LƯU TRỮ SỐ",
             &r_3vf.ten_luu_tru_lich_su.to_uppercase(),
             &r_3vg,
             font,

@@ -39,12 +39,12 @@ pub async fn tree_publish(
 ) -> Result<i32, AppError> {
     if args.project_id.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBk4buxIMOhbiDEkcOtY2ggxJHhu4MgcGjDoXQgY8OieSB0aMawIG3hu6VjLg==",
+            "Thiếu dự án đích để phát cây thư mục.",
         ));
     }
     if args.phong.ma_du_an.trim().is_empty() || args.phong.ten_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0aMO0bmcgdGluIGPGoSBxdWFuIChQaMO0bmcpLg==",
+            "Thiếu thông tin cơ quan (Phông).",
         ));
     }
     let site_code = {
@@ -59,7 +59,7 @@ pub async fn tree_publish(
     })
     .map_err(|e| {
         AppError::internal(format!(
-            "xJHDs25nIGfDs2kgY8OieSB0aMawIG3hu6VjIGzhu5dpOiA={e}"
+            "đóng gói cây thư mục lỗi: {e}"
         ))
     })?;
     let project_id = args.project_id;
@@ -113,7 +113,7 @@ pub async fn tree_pull(
         .ok_or_else(|| {
             AppError::new(
                 "no_project",
-                "VMOgaSBraG/huqNuIGNoxrBhIGfhuq9uIGThu7Egw6FuIG7DoG8g4oCUIGxpw6puIGjhu4cgcXXhuqNuIHRy4buLLg==",
+                "Tài khoản chưa gắn dự án nào — liên hệ quản trị.",
             )
         })?;
     let pid = project_id.clone();
@@ -126,7 +126,7 @@ pub async fn tree_pull(
         if e.code() == "not_found" {
             AppError::new(
                 "no_tree",
-                "UXXhuqNuIHRy4buLIGNoxrBhIHBow6F0IGPDonkgdGjGsCBt4bulYyBjaG8gZOG7sSDDoW4gbsOgeS4=",
+                "Quản trị chưa phát cây thư mục cho dự án này.",
             )
         } else {
             e
@@ -167,7 +167,7 @@ pub async fn tree_pull(
     }
     tracing::info!(
         project = % project_id, version = tree.version, created = r_32j.created,
-        "dHJlZV9wdWxsOiDEkcOjIMOhcCBjw6J5IHRoxrAgbeG7pWMgbeG7m2k="
+        "tree_pull: đã áp cây thư mục mới"
     );
     Ok(Thy {
         applied: true,

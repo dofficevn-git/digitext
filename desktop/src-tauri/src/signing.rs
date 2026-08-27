@@ -24,7 +24,7 @@ fn b64(r_2od: &[u8]) -> String {
 fn unb64(r_2oe: &str) -> Result<Vec<u8>, String> {
     base64::engine::general_purpose::STANDARD
         .decode(r_2oe)
-        .map_err(|e| format!("YmFzZTY0IGtow7RuZyBo4bujcCBs4buHOiA={e}"))
+        .map_err(|e| format!("base64 không hợp lệ: {e}"))
 }
 fn f_ug(r_2of: &[u8], r_2og: &[Vec<u8>]) -> serde_json::Value {
     serde_json::json!(
@@ -127,21 +127,21 @@ pub(crate) fn f_290(
             .cloned()
             .ok_or_else(|| {
                 format!(
-                    "a2jDtG5nIHRo4bqleSB0aMawIHZp4buHbiBQS0NTIzExIG7DoG8gdHLDqm4gbcOheSDigJQgY8OgaSBwaOG6p24gbeG7gW0gdG9rZW4gY+G7p2EgQ0EgKGlDQSBTbWFydFRva2VuLCBWaWV0dGVsLUNB4oCmKSBy4buTaSB0aOG7rSBs4bqhaSwgaG/hurdjIG5o4bqtcCDEkcaw4budbmcgZOG6q24gbW9kdWxlIChob+G6t2MgxJHhurd0IGJp4bq/biBtw7RpIHRyxrDhu51uZyA={MODULE_ENV})"
+                    "không thấy thư viện PKCS#11 nào trên máy — cài phần mềm token của CA (iCA SmartToken, Viettel-CA…) rồi thử lại, hoặc nhập đường dẫn module (hoặc đặt biến môi trường {MODULE_ENV})"
                 )
             });
     }
     if !r_2or(requested) {
         let goi_y = if r_2os.is_empty() {
-            "a2jDtG5nIGTDsiDEkcaw4bujYyBtb2R1bGUgbsOgbyBraMOhYyB0csOqbiBtw6F5".to_string()
+            "không dò được module nào khác trên máy".to_string()
         } else {
             format!(
-                "bW9kdWxlIGTDsiDEkcaw4bujYyB0csOqbiBtw6F5OiA={}",
+                "module dò được trên máy: {}",
                 r_2os.join(", ")
             )
         };
         return Err(format!(
-            "a2jDtG5nIHRo4bqleSB0aMawIHZp4buHbiBQS0NTIzExIHThuqFpICc={requested}' — {goi_y}"
+            "không thấy thư viện PKCS#11 tại '{requested}' — {goi_y}"
         ));
     }
     Ok(requested.to_string())
@@ -185,7 +185,7 @@ pub async fn sign_list_tokens(auth: State<'_, AuthState>, args: Taz) -> Result<V
     .map_err(AppError::validation)?;
     tauri::async_runtime::spawn_blocking(move || token::f_1oh(&module))
         .await
-        .map_err(|e| AppError::internal(format!("bHXhu5NuZyB0b2tlbiBs4buXaTog{e}")))?
+        .map_err(|e| AppError::internal(format!("luồng token lỗi: {e}")))?
         .map_err(AppError::validation)
 }
 #[derive(Debug, Deserialize)]
@@ -216,7 +216,7 @@ pub async fn sign_execute(
         token::Thb::open(&module_path, slot_index, &pin)
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyB0b2tlbiBs4buXaTog{e}")))?
+    .map_err(|e| AppError::internal(format!("luồng token lỗi: {e}")))?
     .map_err(AppError::validation)?;
     let cert = r_2ow.certificate().to_vec();
     let inters = r_2ow.intermediates().to_vec();
@@ -329,18 +329,18 @@ mod token {
     use cryptoki::types::AuthPin;
     fn context(module_path: &str) -> Result<Pkcs11, String> {
         let pkcs11 = Pkcs11::new(module_path).map_err(|e| {
-            format!("a2jDtG5nIG7huqFwIMSRxrDhu6NjIG1vZHVsZSBQS0NTIzExICc={module_path}': {e}")
+            format!("không nạp được module PKCS#11 '{module_path}': {e}")
         })?;
         pkcs11
             .initialize(CInitializeArgs::OsThreads)
-            .map_err(|e| format!("a2jhu59pIHThuqFvIFBLQ1MjMTEgbOG7l2k6IA=={e}"))?;
+            .map_err(|e| format!("khởi tạo PKCS#11 lỗi: {e}"))?;
         Ok(pkcs11)
     }
     pub fn f_1oh(module_path: &str) -> Result<Vec<Toa>, String> {
         let pkcs11 = context(module_path)?;
         let r_2pd = pkcs11
             .get_slots_with_token()
-            .map_err(|e| format!("bGnhu4d0IGvDqiBzbG90IGzhu5dpOiA={e}"))?;
+            .map_err(|e| format!("liệt kê slot lỗi: {e}"))?;
         Ok(r_2pd
             .iter()
             .enumerate()
@@ -373,21 +373,21 @@ mod token {
             let pkcs11 = context(module_path)?;
             let r_2pr = pkcs11
                 .get_slots_with_token()
-                .map_err(|e| format!("bGnhu4d0IGvDqiBzbG90IGzhu5dpOiA={e}"))?;
+                .map_err(|e| format!("liệt kê slot lỗi: {e}"))?;
             let slot = *r_2pr
                 .get(slot_index)
-                .ok_or_else(|| format!("a2jDtG5nIGPDsyB0b2tlbiDhu58gc2xvdCA={slot_index}"))?;
+                .ok_or_else(|| format!("không có token ở slot {slot_index}"))?;
             let session = pkcs11
                 .open_rw_session(slot)
-                .map_err(|e| format!("beG7nyBwaGnDqm4gdG9rZW4gbOG7l2k6IA=={e}"))?;
+                .map_err(|e| format!("mở phiên token lỗi: {e}"))?;
             session
                 .login(UserType::User, Some(&AuthPin::new(pin.to_owned())))
                 .map_err(|_| {
-                    "UElOIGtow7RuZyDEkcO6bmcgaG/hurdjIHRva2VuIGLhu4sga2hvw6E=".to_string()
+                    "PIN không đúng hoặc token bị khoá".to_string()
                 })?;
             let r_2pi = session
                 .find_objects(&[Attribute::Class(ObjectClass::CERTIFICATE)])
-                .map_err(|e| format!("dMOsbSBjZXJ0IGzhu5dpOiA={e}"))?;
+                .map_err(|e| format!("tìm cert lỗi: {e}"))?;
             let mut r_2pj: Vec<(Vec<u8>, Option<Vec<u8>>)> = Vec::new();
             for r_2pk in r_2pi {
                 if let Some(der) = attr_bytes(&session, r_2pk, AttributeType::Value) {
@@ -396,7 +396,7 @@ mod token {
                 }
             }
             if r_2pj.is_empty() {
-                return Err("dG9rZW4ga2jDtG5nIGPDsyBjaOG7qW5nIHRoxrAgKGNlcnRpZmljYXRlKQ==".into());
+                return Err("token không có chứng thư (certificate)".into());
             }
             let r_2pn: Vec<super::CertMeta> = r_2pj
                 .iter()
@@ -405,7 +405,7 @@ mod token {
                 .collect();
             let r_2po = chrono::Utc::now().timestamp();
             let r_2pp = super::select_signer(&r_2pn, r_2po).ok_or(
-                "a2jDtG5nIGNo4buNbiDEkcaw4bujYyBjaOG7qW5nIHRoxrAgbmfGsOG7nWkga8O9IHRyw6puIHRva2Vu",
+                "không chọn được chứng thư người ký trên token",
             )?;
             let cert = r_2pj[r_2pp.leaf].0.clone();
             let r_2pm = r_2pj[r_2pp.leaf].1.clone();
@@ -419,7 +419,7 @@ mod token {
                     Attribute::Class(ObjectClass::PRIVATE_KEY),
                     Attribute::Sign(true),
                 ])
-                .map_err(|e| format!("dMOsbSBraG/DoSBrw70gbOG7l2k6IA=={e}"))?;
+                .map_err(|e| format!("tìm khoá ký lỗi: {e}"))?;
             let key = r_2pm
                 .as_deref()
                 .and_then(|r_2ps| {
@@ -428,7 +428,7 @@ mod token {
                     })
                 })
                 .or_else(|| r_2pq.first().copied())
-                .ok_or("dG9rZW4ga2jDtG5nIGPDsyBraG/DoSBrw70gKENLQV9TSUdOKQ==")?;
+                .ok_or("token không có khoá ký (CKA_SIGN)")?;
             Ok(Self {
                 _pkcs11: pkcs11,
                 session,
@@ -449,7 +449,7 @@ mod token {
             let r_2pt = super::digestinfo_sha256(r_2pu);
             self.session
                 .sign(&Mechanism::RsaPkcs, self.key, &r_2pt)
-                .map_err(|e| format!("Q19TaWduIHRyw6puIHRva2VuIGzhu5dpOiA={e}"))
+                .map_err(|e| format!("C_Sign trên token lỗi: {e}"))
         }
     }
 }

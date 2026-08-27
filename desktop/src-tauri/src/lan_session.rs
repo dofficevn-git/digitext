@@ -41,20 +41,20 @@ impl std::fmt::Display for SessionError {
     fn fmt(&self, r_24h: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let r_24i = match self {
             Self::BadEphemeralKey => {
-                "a2hvw6EgcGhpw6puIChYMjU1MTkpIGtow7RuZyBo4bujcCBs4buH"
+                "khoá phiên (X25519) không hợp lệ"
             }
-            Self::BadSignature => "Y2jhu68ga8O9IGLhuq90IHRheSBraMO0bmcgaOG7o3AgbOG7hw==",
-            Self::Kdf => "ZOG6q24geHXhuqV0IGtob8OhIHBoacOqbiBs4buXaQ==",
+            Self::BadSignature => "chữ ký bắt tay không hợp lệ",
+            Self::Kdf => "dẫn xuất khoá phiên lỗi",
             Self::Frame => {
-                "a2h1bmcgZOG7ryBsaeG7h3Uga2jDtG5nIGdp4bqjaSBtw6MgxJHGsOG7o2MgKHNhaSBraG/DoS90aOG7qSB04buxL2Lhu4sgc+G7rWEp"
+                "khung dữ liệu không giải mã được (sai khoá/thứ tự/bị sửa)"
             }
             Self::FrameTooBig => {
-                "a2h1bmcgZOG7ryBsaeG7h3Ugdsaw4bujdCBrw61jaCB0aMaw4bubYyBjaG8gcGjDqXA="
+                "khung dữ liệu vượt kích thước cho phép"
             }
             Self::BadFraming => {
-                "dGjDom4gZOG7ryBsaeG7h3Uga2jDtG5nIMSRw7puZyBraHXDtG4ga2h1bmcgKG5naGkgYuG7iyBj4bqvdCBuZ+G6r24p"
+                "thân dữ liệu không đúng khuôn khung (nghi bị cắt ngắn)"
             }
-            Self::CounterOverflow => "YuG7mSDEkeG6v20ga2h1bmcgdHLDoG4=",
+            Self::CounterOverflow => "bộ đếm khung tràn",
         };
         r_24h.write_str(r_24i)
     }

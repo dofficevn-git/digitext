@@ -102,8 +102,8 @@ export function V44l({ children: V93 }: { children: ReactNode }) {
         V95((s) => V9t.reduce(V44e, s));
         V9c(
           V9t.length === 1
-            ? "VOG7h3AgbsOgeSBraMO0bmcgY8OybiB0cm9uZyBow6BuZyBjaOG7nSAoxJHDoyBsw6puIG3DoXkgY2jhu6cgaG/hurdjIMSRw6MgYuG7iyBn4buhKSDigJQgxJHDoyBi4buPIGto4buPaSBi4bqjbmcu"
-            : `${V9t.length}IHThu4dwIGtow7RuZyBjw7JuIHRyb25nIGjDoG5nIGNo4budIOKAlCDEkcOjIGLhu48ga2jhu49pIGLhuqNuZy4=`,
+            ? "Tệp này không còn trong hàng chờ (đã lên máy chủ hoặc đã bị gỡ) — đã bỏ khỏi bảng."
+            : `${V9t.length} tệp không còn trong hàng chờ — đã bỏ khỏi bảng.`,
         );
       }
     },
@@ -118,7 +118,7 @@ export function V44l({ children: V93 }: { children: ReactNode }) {
       if (V9o.current) {
         V9e((q) => V44d(q, V9w));
         V9c(
-          "xJDDoyB44bq/cCBow6BuZyBn4butaSBs4bqhaSDigJQgc+G6vSBjaOG6oXkgbmdheSBraGkgcGhpw6puIGhp4buHbiB04bqhaSB4b25nLg==",
+          "Đã xếp hàng gửi lại — sẽ chạy ngay khi phiên hiện tại xong.",
         );
         return;
       }
@@ -156,6 +156,6 @@ export function V44l({ children: V93 }: { children: ReactNode }) {
 
 export function V44m(): V44f {
   const v = useContext(V44k);
-  if (!v) throw new Error("dXNlVXBsb2FkcyBwaOG6o2kgbuG6sW0gdHJvbmcgPFVwbG9hZHNQcm92aWRlcj4=");
+  if (!v) throw new Error("useUploads phải nằm trong <UploadsProvider>");
   return v;
 }

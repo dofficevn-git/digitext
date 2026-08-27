@@ -43,8 +43,8 @@ function V48c({ node }: { node: V3y1 }) {
     Vhm("");
     try {
       const Vht = await confirm(
-        `WMOzYSAi${node.name}"${Vhn ? "IHbDoCB0b8OgbiBi4buZIG7hu5lpIGR1bmcgYsOqbiB0cm9uZw==" : ""}PyBLaMO0bmcgdGjhu4MgaG/DoG4gdMOhYy4=`,
-        { title: "WMOhYyBuaOG6rW4geMOzYQ==", kind: "warning" },
+        `Xóa "${node.name}"${Vhn ? " và toàn bộ nội dung bên trong" : ""}? Không thể hoàn tác.`,
+        { title: "Xác nhận xóa", kind: "warning" },
       );
       if (!Vht) return;
       await V412(path);
@@ -62,7 +62,7 @@ function V48c({ node }: { node: V3y1 }) {
             className="inp"
             autoFocus
             placeholder={
-              Vhh === "rename" ? "VMOqbiBt4bubaeKApg==" : "VMOqbiB0aMawIG3hu6VjIGNvbuKApg=="
+              Vhh === "rename" ? "Tên mới…" : "Tên thư mục con…"
             }
             value={Vhj}
             onChange={(Vhv) => Vhk(Vhv.target.value)}
@@ -154,7 +154,7 @@ export default function V48d() {
       const Vif = await V419(Vid);
       if (!Vif) {
         Vi9(
-          "S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahIMSRw6MgxJHDs25nIGfDs2kgY2hvIHTDoGkgbGnhu4d1IG7DoHku",
+          "Không tìm thấy hồ sơ đã đóng gói cho tài liệu này.",
         );
         return;
       }
@@ -219,20 +219,20 @@ export default function V48d() {
                 goto("scan");
               } else {
                 void message(
-                  "VGjGsCBt4bulYyBuw6B5IGNoxrBhIGfhuq9uIGjhu5Mgc8ahIG7Dqm4ga2jDtG5nIGzGsHUgUERGIHbDoG8gxJHDonkgxJHGsOG7o2MuIEjDo3kgY2jhu41uIMSRw7puZyA=" +
-                    "dGjGsCBt4bulYyBI4buSIFPGoCAoQ8ahIHF1YW4g4oaSIEjhu5lwIOKGkiBI4buTIHPGoSkgcuG7k2kgYuG6pW0gUXXDqXQu",
-                  { title: "Q2jGsGEgY2jhu41uIHRoxrAgbeG7pWMgaOG7kyBzxqE=", kind: "warning" },
+                  "Thư mục này chưa gắn hồ sơ nên không lưu PDF vào đây được. Hãy chọn đúng " +
+                    "thư mục HỒ SƠ (Cơ quan → Hộp → Hồ sơ) rồi bấm Quét.",
+                  { title: "Chưa chọn thư mục hồ sơ", kind: "warning" },
                 );
               }
             }}
           >
             <Icon name="quet" />
-            {Vi4 ? "UXXDqXQgdGnhur9wIHbDoG8gaOG7kyBzxqEgbsOgeQ==" : "UXXDqXQgdsOgbyDEkcOieQ=="}
+            {Vi4 ? "Quét tiếp vào hồ sơ này" : "Quét vào đây"}
           </button>
           {Vi4 && n.path && (
             <button className="btn" disabled={Vi6} onClick={() => void Vic(n.path!)}>
               {Vi6 ? (
-                "xJBhbmcgbeG7n+KApg=="
+                "Đang mở…"
               ) : (
                 <>
                   <Icon name="anh" />
@@ -292,10 +292,10 @@ export default function V48d() {
             className="btn"
             disabled={Vi6}
             onClick={() => void Vii(n.path!)}
-            title="TeG7nyBs4bqhaSBjw6FjIHRyYW5nIMSR4buDIHhvYXkvY+G6r3Qva2jhu60gbmdoacOqbmcsIHhvw6Evc+G6r3AgeOG6v3AvY2jDqG4gdHJhbmcgcuG7k2kgxJHDs25nIGfDs2kgbOG6oWkgKGdoaSDEkcOoIFBERiku"
+            title="Mở lại các trang để xoay/cắt/khử nghiêng, xoá/sắp xếp/chèn trang rồi đóng gói lại (ghi đè PDF)."
           >
             {Vi6 ? (
-              "xJBhbmcgbeG7n+KApg=="
+              "Đang mở…"
             ) : (
               <>
                 <Icon name="anh" />

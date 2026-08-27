@@ -104,9 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     p_593 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_593.add_argument("rows_jsonl")
     p_593.add_argument("model_dir")
-    p_593.add_argument("--tag", required=True, help="bmjDo24gZ2hpIHbDoG8gcm93cyAodmQgdzI1NiAvIHc1MTIp")
+    p_593.add_argument("--tag", required=True, help="nhãn ghi vào rows (vd w256 / w512)")
     p_593.add_argument("--expect-cer", type=float, default=None,
-                    help="Q0VSIGvhu7MgduG7jW5nIMSR4buDIFThu7AgS0nhu4JNIGhhcm5lc3MgKGzhu4djaCA+MCwwMiDih5IgY+G6o25oIGLDoW8p")
+                    help="CER kỳ vọng để TỰ KIỂM harness (lệch >0,02 ⇒ cảnh báo)")
     p_592 = p_593.parse_args(argv)
 
     rows = [json.loads(p_596) for p_596 in open(p_592.rows_jsonl, encoding="utf-8") if p_596.strip()]

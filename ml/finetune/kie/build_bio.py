@@ -30,7 +30,7 @@ LABEL2ID: dict[str, int] = {lab: i for i, lab in enumerate(BIO_LABELS)}
 
 def q_147(data: bytes) -> tuple[int, int, bytes]:
     if not data.startswith(b"P6"):
-        raise ValueError("a2jDtG5nIHBo4bqjaSBQUE0gUDY=")
+        raise ValueError("không phải PPM P6")
     p_270, p_273 = 2, []
     while len(p_273) < 3:
         while p_270 < len(data) and data[p_270 : p_270 + 1].isspace():
@@ -47,7 +47,7 @@ def q_147(data: bytes) -> tuple[int, int, bytes]:
     w, h, p_26f = p_273
     p_271 = w * h * 3
     if len(data) - p_270 < p_271:
-        raise ValueError(f"UFBNIGPhu6V0OiBj4bqnbiA={p_271}IGJ5dGUsIGPDsyA={len(data) - p_270}")
+        raise ValueError(f"PPM cụt: cần {p_271} byte, có {len(data) - p_270}")
     return w, h, data[p_270 : p_270 + p_271]
 
 def q_163(a: str, b: str) -> float:
@@ -60,10 +60,10 @@ def q_170(value: str) -> list[str]:
     if p_274:
         d, p_275, p_278 = (int(p_277) for p_277 in p_274.groups())
         out += [
-            f"bmfDoHkg{d:02d}IHRow6FuZyA={p_275:02d}IG7Eg20g{p_278}",
-            f"bmfDoHkg{d:02d}IHRow6FuZyA={p_275}IG7Eg20g{p_278}",
-            f"bmfDoHkg{d}IHRow6FuZyA={p_275}IG7Eg20g{p_278}",
-            f"{d:02d}IHRow6FuZyA={p_275}IG7Eg20g{p_278}",
+            f"ngày {d:02d} tháng {p_275:02d} năm {p_278}",
+            f"ngày {d:02d} tháng {p_275} năm {p_278}",
+            f"ngày {d} tháng {p_275} năm {p_278}",
+            f"{d:02d} tháng {p_275} năm {p_278}",
             f"{d:02d}/{p_275}/{p_278}",
             f"{d}/{p_275}/{p_278}",
         ]
@@ -207,15 +207,15 @@ def load_done_ids(out_path: Path) -> set[str]:
 def main(argv: list[str] | None = None) -> int:
     p_2a7 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_2a7.add_argument("filtered_jsonl")
-    p_2a7.add_argument("data_dir", help="dGjGsCBt4bulYyBQREYgZ+G7kWM=")
+    p_2a7.add_argument("data_dir", help="thư mục PDF gốc")
     p_2a7.add_argument("--out", default="data/bio.jsonl")
     p_2a7.add_argument("--report", default="data/bio_report.json")
     p_2a7.add_argument("--url", default=TRITON_URL)
-    p_2a7.add_argument("--dpi", type=int, default=150, help="MTUwIOKHkiBPQ1IgxJHhu41jIHThu5F0IGjGoW4gMTAw")
+    p_2a7.add_argument("--dpi", type=int, default=150, help="150 ⇒ OCR đọc tốt hơn 100")
     p_2a7.add_argument("--timeout", type=int, default=300)
     p_2a7.add_argument("--limit", type=int, default=0)
     p_2a7.add_argument("--concurrency", type=int, default=6,
-                    help="c+G7kSB0cmFuZyBn4butaSBzb25nIHNvbmcgKGto4bubcCBjb3VudCB0cm9uZyBjb25maWcucGJ0eHQp")
+                    help="số trang gửi song song (khớp count trong config.pbtxt)")
     p_2a7.add_argument("--resume", action="store_true",
                     help="nối tiếp bio.jsonl sẵn có: bỏ qua trang đã ghi, ghi thêm (an toàn reboot). "
                          "Cũng bật nếu env BIO_RESUME=1.")
@@ -223,14 +223,14 @@ def main(argv: list[str] | None = None) -> int:
 
     p_2b5, data_dir = Path(p_2a8.filtered_jsonl), Path(p_2a8.data_dir).resolve()
     if not p_2b5.exists():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_2b5}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_2b5}", file=sys.stderr)
         return 2
 
     p_2b3 = [json.loads(l) for l in p_2b5.open(encoding="utf-8") if l.strip()]
     p_2b3 = [r for r in p_2b3 if r.get("fields")]
     if p_2a8.limit:
         p_2b3 = p_2b3[: p_2a8.limit]
-    print(f"VHJhbmcgY8OzIG5ow6NuOiA={len(p_2b3)}", file=sys.stderr)
+    print(f"Trang có nhãn: {len(p_2b3)}", file=sys.stderr)
 
     out_path = Path(p_2a8.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,8 +240,8 @@ def main(argv: list[str] | None = None) -> int:
     if p_2aa:
         p_2a9 = len(p_2b3)
         p_2b3 = [r for r in p_2b3 if r["id"] not in p_2aa]
-        print(f"UkVTVU1FOiDEkcOjIGPDsyA={len(p_2aa)} trang trong {out_path.name}, "
-              f"còn {len(p_2b3)}/{p_2a9}IHRyYW5nIGPhuqduIGThu7FuZy4=", file=sys.stderr)
+        print(f"RESUME: đã có {len(p_2aa)} trang trong {out_path.name}, "
+              f"còn {len(p_2b3)}/{p_2a9} trang cần dựng.", file=sys.stderr)
     p_2bb = "a" if p_2aa else "w"
 
     p_2b7: Counter = Counter()
@@ -260,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
             except (subprocess.CalledProcessError, urllib.error.URLError,
                     urllib.error.HTTPError, ValueError, KeyError, TimeoutError) as exc:
                 p_2ab += 1
-                print(f"ICBM4buWSSA={rec['id']}: {type(exc).__name__}: {exc}", file=sys.stderr)
+                print(f"  LỖI {rec['id']}: {type(exc).__name__}: {exc}", file=sys.stderr)
                 continue
             p_2b7.update(p_2b6)
             matched_by_field.update(p_2b0)
@@ -275,8 +275,8 @@ def main(argv: list[str] | None = None) -> int:
             if p_2af % 50 == 0:
                 p_2b2 = p_2af / max(time.monotonic() - p_2b8, 1e-9) * 60
                 p_2ac = (len(p_2b3) - p_2af) / max(p_2b2, 1e-9)
-                print(f"  [{p_2af}/{len(p_2b3)}] ok={ok}IGzhu5dpPQ=={p_2ab} "
-                      f"{p_2b2:.1f}IHRyYW5nL3Bow7p0IEVUQSA={p_2ac:.0f}IHBow7p0", file=sys.stderr)
+                print(f"  [{p_2af}/{len(p_2b3)}] ok={ok} lỗi={p_2ab} "
+                      f"{p_2b2:.1f} trang/phút ETA {p_2ac:.0f} phút", file=sys.stderr)
 
     p_2b9 = sum(1 for l in out_path.open(encoding="utf-8") if l.strip())
     report = {

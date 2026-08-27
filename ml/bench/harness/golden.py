@@ -51,41 +51,41 @@ def validate_gold(
 
     for p_be, p_c0 in enumerate(rows):
         if not isinstance(p_c0, dict):
-            errors.append(f"ZMOybmcg{p_be}OiBraMO0bmcgcGjhuqNpIG9iamVjdCBKU09O")
+            errors.append(f"dòng {p_be}: không phải object JSON")
             continue
         rid = p_c0.get("id")
         if not isinstance(rid, str) or not rid.strip():
-            errors.append(f"ZMOybmcg{p_be}OiB0aGnhur91ICdpZCc=")
+            errors.append(f"dòng {p_be}: thiếu 'id'")
             continue
         if rid in p_c1:
-            errors.append(f"aWQgdHLDuW5nOiA={rid}")
+            errors.append(f"id trùng: {rid}")
         p_c1.add(rid)
 
         ref = p_c0.get("ref")
         if not isinstance(ref, str) or not ref.strip():
-            errors.append(f"{rid}OiAncmVmJyBy4buXbmcvdGhp4bq/dQ==")
+            errors.append(f"{rid}: 'ref' rỗng/thiếu")
         elif normalize_vi(ref) != ref:
-            errors.append(f"{rid}OiByZWYgY2jGsGEgY2h14bqpbiBob8OhIChub3JtYWxpemVfdmk6IE5GQyArIHbhu4sgdHLDrSBk4bqldSDigJQgwqdTMTMuQi4xKQ==")
+            errors.append(f"{rid}: ref chưa chuẩn hoá (normalize_vi: NFC + vị trí dấu — §S13.B.1)")
 
         p_c2 = p_c0.get("stratum")
         if not isinstance(p_c2, str) or not p_c2:
-            errors.append(f"{rid}OiB0aGnhur91ICdzdHJhdHVtJw==")
+            errors.append(f"{rid}: thiếu 'stratum'")
         else:
             if allowed and p_c2 not in allowed:
-                errors.append(f"{rid}: stratum '{p_c2}JyBraMO0bmcgdGh14buZYyA={sorted(allowed)}")
+                errors.append(f"{rid}: stratum '{p_c2}' không thuộc {sorted(allowed)}")
             counts[p_c2] = counts.get(p_c2, 0) + 1
 
         if image_dir is not None and not q_d9(image_dir, rid, exts):
-            errors.append(f"{rid}OiB0aGnhur91IOG6o25oIHRyb25nIA=={image_dir}")
+            errors.append(f"{rid}: thiếu ảnh trong {image_dir}")
         if leak_ids and rid in leak_ids:
-            errors.append(f"{rid}OiBpZCBSw5IgUuG7iCDigJQgdHLDuW5nIHThuq1wIGZpbmUtdHVuZSAowqdTMTMuQi4xIHTDoWNoIGJp4buHdCk=")
+            errors.append(f"{rid}: id RÒ RỈ — trùng tập fine-tune (§S13.B.1 tách biệt)")
         if p_bf and isinstance(ref, str) and normalize_vi(ref) in p_bf:
-            warnings.append(f"{rid}OiByZWYgdHLDuW5nIGPDonUgdHJvbmcgZmluZS10dW5lIChraOG6oyBuxINuZyByw7IgcuG7iSk=")
+            warnings.append(f"{rid}: ref trùng câu trong fine-tune (khả năng rò rỉ)")
 
     if min_per_stratum and allowed:
         for p_c2 in allowed:
             if counts.get(p_c2, 0) < min_per_stratum:
-                errors.append(f"dOG6p25nICc={p_c2}': {counts.get(p_c2, 0)}IDwgdOG7kWkgdGhp4buDdSA={min_per_stratum}")
+                errors.append(f"tầng '{p_c2}': {counts.get(p_c2, 0)} < tối thiểu {min_per_stratum}")
 
     return q_3(not errors, errors, warnings, counts, len(rows))
 
@@ -116,7 +116,7 @@ def adjudicate(rows_a, rows_b, strata_map=None):
                 "ref_a": normalize_vi(p_c8["ref"]) if p_c8 else None,
                 "ref_b": normalize_vi(p_c9["ref"]) if p_c9 else None,
                 "stratum": stratum_of(rid, p_c8, p_c9),
-                "note": "Y2jhu4kgbeG7mXQgbmfGsOG7nWkgZ8Ohbg==",
+                "note": "chỉ một người gán",
             }
         )
     return gold, p_c4
@@ -131,7 +131,7 @@ def _load_jsonl(path: str) -> list:
             try:
                 rows.append(json.loads(p_cc))
             except json.JSONDecodeError as e:
-                raise SystemExit(f"❌ {path}OiBKU09OIGjhu49uZyBkw7JuZyA={p_cd}: {e}")
+                raise SystemExit(f"❌ {path}: JSON hỏng dòng {p_cd}: {e}")
     return rows
 
 def _write_jsonl(path: str, rows) -> None:
@@ -170,7 +170,7 @@ def q_c8(args) -> int:
     )
     for w in p_d6.warnings:
         print(f"⚠ {w}")
-    print(f"dOG6p25nOiA={dict(sorted(p_d6.counts.items()))}IMK3IHThu5VuZyA={p_d6.n}IGTDsm5n")
+    print(f"tầng: {dict(sorted(p_d6.counts.items()))} · tổng {p_d6.n} dòng")
     if p_d6.ok:
         print("PASS")
         return 0
@@ -187,10 +187,10 @@ def q_c5(args) -> int:
     _write_jsonl(args.out, gold)
     p_d9 = len(gold) + len(p_d7)
     p_d8 = len(gold) / p_d9 if p_d9 else 0.0
-    print(f"✅ {args.out}: {len(gold)}IGTDsm5nIHRo4buRbmcgbmjhuqV0IMK3IA=={len(p_d7)}IGPhuqduIMSR4buRaSBjaGnhur91IMK3IMSR4buTbmcgdGh14bqtbiA={p_d8:.1%}")
+    print(f"✅ {args.out}: {len(gold)} dòng thống nhất · {len(p_d7)} cần đối chiếu · đồng thuận {p_d8:.1%}")
     if args.disagreements and p_d7:
         _write_jsonl(args.disagreements, p_d7)
-        print(f"→ ghi {len(p_d7)}IGjDoG5nIGzhu4djaCB2w6BvIA=={args.disagreements}")
+        print(f"→ ghi {len(p_d7)} hàng lệch vào {args.disagreements}")
     return 0
 
 def q_c7(args) -> int:
@@ -216,30 +216,30 @@ def q_c6(args) -> int:
             continue
         out.append({"id": rid, "image": os.path.join(args.images, p_dc), "stratum": p_de.get("stratum")})
     _write_jsonl(args.out, out)
-    print(f"✅ {args.out}: {len(out)}IG3hu6Vj" + (f"IMK3IOKaoCBi4buPIA=={p_dd}ICh0aGnhur91IOG6o25oKQ==" if p_dd else ""))
+    print(f"✅ {args.out}: {len(out)} mục" + (f" · ⚠ bỏ {p_dd} (thiếu ảnh)" if p_dd else ""))
     return 0
 
 def main(argv=None) -> int:
-    p_df = argparse.ArgumentParser(description="ROG7sW5nICsga2nhu4NtIGdvbGRlbiBzZXQgT0NSICjCp1MxMy5CLjEp")
+    p_df = argparse.ArgumentParser(description="Dựng + kiểm golden set OCR (§S13.B.1)")
     p_e2 = p_df.add_subparsers(dest="cmd", required=True)
 
-    p_e3 = p_e2.add_parser("validate", help="a2nhu4NtIHRvw6BuIHbhurluIGdvbGRlbiBzZXQgKENJKQ==")
+    p_e3 = p_e2.add_parser("validate", help="kiểm toàn vẹn golden set (CI)")
     p_e3.add_argument("--gold", required=True)
-    p_e3.add_argument("--strata", default=None, help="J2RlZmF1bHQnIGhv4bq3YyAncm8seGF1X21vLC4uLicgKGLhu48gPSBraMO0bmcgcsOgbmcp")
+    p_e3.add_argument("--strata", default=None, help="'default' hoặc 'ro,xau_mo,...' (bỏ = không ràng)")
     p_e3.add_argument("--min-per-stratum", type=int, default=0)
-    p_e3.add_argument("--images", default=None, help="dGjGsCBt4bulYyDhuqNuaCAoa2nhu4NtIG3hu5dpIGlkIGPDsyDhuqNuaCk=")
-    p_e3.add_argument("--fine-tune", default=None, help="anNvbmwgdOG6rXAgZmluZS10dW5lIChraeG7g20gcsOyIHLhu4kp")
+    p_e3.add_argument("--images", default=None, help="thư mục ảnh (kiểm mỗi id có ảnh)")
+    p_e3.add_argument("--fine-tune", default=None, help="jsonl tập fine-tune (kiểm rò rỉ)")
     p_e3.set_defaults(fn=q_c8)
 
-    b = p_e2.add_parser("build", help="xJHhu5FpIGNoaeG6v3UgbmjDo24gMiBuZ8aw4budaSDihpIgZ29sZCArIGjDoG5nIGzhu4djaA==")
+    b = p_e2.add_parser("build", help="đối chiếu nhãn 2 người → gold + hàng lệch")
     b.add_argument("--labels-a", required=True)
     b.add_argument("--labels-b", required=True)
-    b.add_argument("--strata-csv", default=None, help="aWQsc3RyYXR1bSAoY8OzIGhlYWRlcik=")
+    b.add_argument("--strata-csv", default=None, help="id,stratum (có header)")
     b.add_argument("--out", required=True)
     b.add_argument("--disagreements", default=None)
     b.set_defaults(fn=q_c5)
 
-    p_e1 = p_e2.add_parser("stats", help="xJHhur9tIGTDsm5nIHRoZW8gdOG6p25n")
+    p_e1 = p_e2.add_parser("stats", help="đếm dòng theo tầng")
     p_e1.add_argument("--gold", required=True)
     p_e1.set_defaults(fn=q_c7)
 

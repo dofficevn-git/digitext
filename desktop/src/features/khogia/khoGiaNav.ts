@@ -8,9 +8,9 @@ export interface V46l {
 }
 
 export const KHOGIA_NAV: V46l[] = [
-  { key: "kho", label: "S2hvIGzGsHUgdHLhu68=" },
-  { key: "gia", label: "R2nDoSBsxrB1IHRy4buv" },
-  { key: "khaithac", label: "S2hhaSB0aMOhYyBk4buvIGxp4buHdQ==" },
+  { key: "kho", label: "Kho lưu trữ" },
+  { key: "gia", label: "Giá lưu trữ" },
+  { key: "khaithac", label: "Khai thác dữ liệu" },
 ];
 
 export const V46m: V3xw[] = KHOGIA_NAV.map((i) => i.key);

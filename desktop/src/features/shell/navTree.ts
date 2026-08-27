@@ -27,20 +27,20 @@ export interface V46s {
 export const NAV_TREE: V46s[] = [
   {
     id: "khotailieu",
-    label: "S2hvIHTDoGkgbGnhu4d1",
+    label: "Kho tài liệu",
     icon: "kho",
     gate: "drive",
     leaf: { kind: "view", view: "drive" },
   },
   {
     id: "chinhly",
-    label: "Q2jhu4luaCBsw70=",
+    label: "Chỉnh lý",
     icon: "chinhly",
     gate: "dossier",
     children: [
       {
         id: "danhmuc",
-        label: "UXXhuqNuIGzDvSBkYW5oIG3hu6Vj",
+        label: "Quản lý danh mục",
         icon: "danhmuc",
         gate: "catalog",
         children: CATALOG_NAV.map((c) => ({
@@ -52,19 +52,19 @@ export const NAV_TREE: V46s[] = [
       },
       {
         id: "laphoso",
-        label: "TOG6rXAgaOG7kyBzxqEgxJFp4buHbiB04but",
+        label: "Lập hồ sơ điện tử",
         gate: "dossier",
         leaf: { kind: "hoso", pane: "laphoso" },
       },
       {
         id: "hethonghoa",
-        label: "SOG7hyB0aOG7kW5nIGhvw6EgaOG7kyBzxqE=",
+        label: "Hệ thống hoá hồ sơ",
         gate: "dossier",
         leaf: { kind: "hoso", pane: "hethonghoa" },
       },
       {
         id: "capnhat",
-        label: "Q+G6rXAgbmjhuq10IGPGoSBz4bufIGThu68gbGnhu4d1",
+        label: "Cập nhật cơ sở dữ liệu",
         gate: "dossier",
         leaf: { kind: "hoso", pane: "capnhat" },
       },
@@ -72,27 +72,27 @@ export const NAV_TREE: V46s[] = [
   },
   {
     id: "sohoa",
-    label: "U+G7kSBob8Oh",
+    label: "Số hoá",
     icon: "sohoa",
     gate: "dossier",
     children: [
       {
         id: "taolap",
-        label: "VOG6oW8gbOG6rXAgY8ahIHPhu58gZOG7ryBsaeG7h3U=",
+        label: "Tạo lập cơ sở dữ liệu",
         gate: "dossier",
         leaf: { kind: "hoso", pane: "sohoa" },
       },
       {
         id: "dongbo",
-        label: "xJDhu5NuZyBi4buZIGThu68gbGnhu4d1",
+        label: "Đồng bộ dữ liệu",
         gate: "upload",
         leaf: { kind: "view", view: "upload" },
       },
       { id: "ocr", label: "OCR", gate: "dossier", leaf: { kind: "hoso", pane: "ocr" } },
-      { id: "kyso", label: "S8O9IHPhu5E=", gate: "sign", leaf: { kind: "view", view: "sign" } },
+      { id: "kyso", label: "Ký số", gate: "sign", leaf: { kind: "view", view: "sign" } },
       {
         id: "donggoi",
-        label: "xJDDs25nIGfDs2kgdGhlbyB0acOqdSBjaHXhuqlu",
+        label: "Đóng gói theo tiêu chuẩn",
         gate: "package",
         leaf: { kind: "view", view: "package" },
       },
@@ -100,7 +100,7 @@ export const NAV_TREE: V46s[] = [
   },
   {
     id: "khaithac",
-    label: "S2hhaSB0aMOhYyBo4buTIHPGoQ==",
+    label: "Khai thác hồ sơ",
     icon: "khaithac",
     gate: "khogia",
     children: KHOGIA_NAV.map((k) => ({
@@ -112,7 +112,7 @@ export const NAV_TREE: V46s[] = [
   },
   {
     id: "thongke",
-    label: "VGjhu5FuZyBrw6o=",
+    label: "Thống kê",
     icon: "thongke",
     gate: "report",
     children: [
@@ -125,7 +125,7 @@ export const NAV_TREE: V46s[] = [
 
       {
         id: "bienban",
-        label: "QmnDqm4gYuG6o24gKFBo4bulIGzhu6VjIFZJSSk=",
+        label: "Biên bản (Phụ lục VII)",
         gate: "records" as V3xt,
         leaf: { kind: "view", view: "records" } as V46r,
       },
@@ -133,28 +133,28 @@ export const NAV_TREE: V46s[] = [
   },
   {
     id: "mayho",
-    label: "TcOheSBjaOG7pw==",
+    label: "Máy chủ",
     icon: "mayChu",
     gate: "server",
     leaf: { kind: "view", view: "server" },
   },
   {
     id: "huy",
-    label: "SOG7p3kgdMOgaSBsaeG7h3UgaOG6v3QgZ2nDoSB0cuG7iw==",
+    label: "Hủy tài liệu hết giá trị",
     icon: "huy",
     gate: "disposal",
     leaf: { kind: "view", view: "disposal" },
   },
   {
     id: "baoquan",
-    label: "QuG6o28gcXXhuqNuICYgc2FvIGzGsHU=",
+    label: "Bảo quản & sao lưu",
     icon: "baoquan",
     gate: "bk",
     leaf: { kind: "view", view: "bk" },
   },
   {
     id: "users",
-    label: "UXXhuqNuIGzDvSBuZ8aw4budaSBkw7luZw==",
+    label: "Quản lý người dùng",
     icon: "nguoiDung",
     gate: "users",
     leaf: { kind: "view", view: "users" },

@@ -25,13 +25,13 @@ export default function V4wu() {
   return (
     <div className="overlay" onClick={V36x}>
       <div className="dialog wide" onClick={(V376) => V376.stopPropagation()}>
-        <h3>{V36w || "VOG6oW8gZOG7sSDDoW4gbeG7m2k="}</h3>
+        <h3>{V36w || "Tạo dự án mới"}</h3>
         <div className="field">
           <label>Tên dự án / thư mục</label>
           <input
             type="text"
             className="inp w-full"
-            placeholder="VkQ6IELhuq9jIEdpYW5nIOKAlCBT4bufIE7hu5lpIHbhu6U="
+            placeholder="VD: Bắc Giang — Sở Nội vụ"
             value={name}
             onChange={(V377) => V36z(V377.target.value)}
             autoFocus
@@ -41,7 +41,7 @@ export default function V4wu() {
           <label>Mô tả (tùy chọn)</label>
           <textarea
             className="inp"
-            placeholder="UGjhuqFtIHZpLCBnaGkgY2jDuiDEkeG7o3Qgc+G7kSBow7Nh4oCm"
+            placeholder="Phạm vi, ghi chú đợt số hóa…"
           />
         </div>
         <div className="field">
@@ -62,7 +62,7 @@ export default function V4wu() {
           <input
             type="text"
             className="inp w-full"
-            placeholder="KyBUaMOqbSBuZ8aw4budaSBkw7luZyB0aGVvIHTDqm4gLyBlbWFpbOKApg=="
+            placeholder="+ Thêm người dùng theo tên / email…"
           />
         </div>
         <div className="field">

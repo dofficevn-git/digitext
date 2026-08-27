@@ -57,8 +57,8 @@ enum PeerSource {
 fn f_2gh(source: PeerSource) -> &'static str {
     match source {
         PeerSource::Mdns => "mDNS",
-        PeerSource::Manual => "Z8O1IHRheQ==",
-        PeerSource::Scan => "cXXDqXQgZOG6o2kgbeG6oW5n",
+        PeerSource::Manual => "gõ tay",
+        PeerSource::Scan => "quét dải mạng",
         PeerSource::Broadcast => "broadcast",
     }
 }
@@ -105,7 +105,7 @@ pub(crate) fn f_1ze(raw: Option<&str>) -> Result<ManualTargets, String> {
         }
         if let Some((net, prefix)) = t.split_once('/') {
             let ip = net.parse::<std::net::Ipv4Addr>().map_err(|_| {
-                format!("ZOG6o2kgIg=={t}IiBraMO0bmcgaOG7o3AgbOG7hyAodmQgMTkyLjE2OC41LjAvMjQp")
+                format!("dải \"{t}\" không hợp lệ (vd 192.168.5.0/24)")
             })?;
             let prefix = prefix
                 .parse::<u8>()
@@ -113,7 +113,7 @@ pub(crate) fn f_1ze(raw: Option<&str>) -> Result<ManualTargets, String> {
                 .filter(|p| *p <= 32)
                 .ok_or_else(|| {
                     format!(
-                        "ZOG6o2kgIg=={t}IiBjw7MgxJHhu5kgZMOgaSB0aeG7gW4gdOG7kSBraMO0bmcgaOG7o3AgbOG7hyAoMOKAkzMyKQ=="
+                        "dải \"{t}\" có độ dài tiền tố không hợp lệ (0–32)"
                     )
                 })?;
             let n = Tb9 { ip, prefix };
@@ -129,7 +129,7 @@ pub(crate) fn f_1ze(raw: Option<&str>) -> Result<ManualTargets, String> {
         if ip.parse::<std::net::Ipv4Addr>().is_err() {
             return Err(
                 format!(
-                    "beG7pWMgIg=={t}IiBwaOG6o2kgY8OzIGThuqFuZyBJUCwgSVA6Y+G7lW5nIGhv4bq3YyBk4bqjaSBDSURSICh2ZCAxOTIuMTY4LjEuMTgsIDE5Mi4xNjguMS4xODo2NDA0MCBoYXkgMTkyLjE2OC41LjAvMjQp"
+                    "mục \"{t}\" phải có dạng IP, IP:cổng hoặc dải CIDR (vd 192.168.1.18, 192.168.1.18:64040 hay 192.168.5.0/24)"
                 ),
             );
         }
@@ -139,7 +139,7 @@ pub(crate) fn f_1ze(raw: Option<&str>) -> Result<ManualTargets, String> {
                 Ok(p) if p > 0 => p,
                 _ => {
                     return Err(format!(
-                        "Y+G7lW5nICI={s}IiBraMO0bmcgaOG7o3AgbOG7hyAoMeKAkzY1NTM1KQ=="
+                        "cổng \"{s}\" không hợp lệ (1–65535)"
                     ));
                 }
             },
@@ -387,10 +387,10 @@ pub(crate) async fn f_v5(
 }
 fn discover(r_se: Duration, r_s8: Option<String>) -> Result<Discovery, AppError> {
     let r_s4 = ServiceDaemon::new()
-        .map_err(|e| AppError::internal(format!("bUROUyBraOG7n2kgdOG6oW8gbOG7l2k6IA=={e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS khởi tạo lỗi: {e}")))?;
     let r_sb = r_s4
         .browse(SERVICE_TYPE)
-        .map_err(|e| AppError::internal(format!("bUROUyBxdcOpdCBs4buXaTog{e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS quét lỗi: {e}")))?;
     let r_s5 = std::time::Instant::now() + r_se;
     let mut r_sc = SeenMap::new();
     let mut self_skipped = std::collections::BTreeSet::<String>::new();
@@ -424,14 +424,14 @@ fn discover(r_se: Duration, r_s8: Option<String>) -> Result<Discovery, AppError>
         if r_s3.is_empty() {
             tracing::warn!(
                 device = % device,
-                "bcOheSBjaGlhIHPhursga2jDtG5nIHF14bqjbmcgYsOhIElQdjQgbsOgbyDigJQgYuG7jyBxdWE="
+                "máy chia sẻ không quảng bá IPv4 nào — bỏ qua"
             );
             out.no_ipv4 += 1;
             continue;
         }
         tracing::info!(
             device = % device, candidates = ? r_s3,
-            "dGjhuqV5IG3DoXkgY2hpYSBz4bq7IHRyb25nIExBTg=="
+            "thấy máy chia sẻ trong LAN"
         );
         out.peers.push(Peer {
             candidates: r_s3.into_iter().map(|(_, a, r_s9)| (a, r_s9)).collect(),
@@ -561,7 +561,7 @@ async fn f_1wx(db: &State<'_, Db>, r_sp: &State<'_, AuthState>) -> Tho {
             if !r_sr.is_empty() {
                 tracing::warn!(
                     error = % e, n = r_sr.len(),
-                    "a2jDtG5nIGzhuqV5IMSRxrDhu6NjIGRhbmggc8OhY2ggZOG7sSDDoW4g4oCUIGTDuW5nIGNhY2hl"
+                    "không lấy được danh sách dự án — dùng cache"
                 );
                 return Tho {
                     allowed: r_sr,
@@ -575,7 +575,7 @@ async fn f_1wx(db: &State<'_, Db>, r_sp: &State<'_, AuthState>) -> Tho {
                 .collect();
             tracing::warn!(
                 error = % e, n = r_st.len(),
-                "a2jDtG5nIGzhuqV5IMSRxrDhu6NjIGRhbmggc8OhY2ggZOG7sSDDoW4gdsOgIGNoxrBhIGPDsyBjYWNoZSDigJQgY2jhu4kgZ29tIGThu7Egw6FuIGPhu6dhIHTDoGkga2hv4bqjbiBhZG1pbg=="
+                "không lấy được danh sách dự án và chưa có cache — chỉ gom dự án của tài khoản admin"
             );
             Tho {
                 allowed: r_st,
@@ -662,7 +662,7 @@ pub async fn data_collect(
         .ok_or_else(|| {
             AppError::new(
                 "collect_busy",
-                "xJBhbmcgY8OzIG3hu5l0IHBoacOqbiB0aHUgdGjhuq1wIGNo4bqheSBk4bufIOKAlCBjaOG7nSBuw7MgeG9uZyBy4buTaSBi4bqlbSBs4bqhaS4=",
+                "Đang có một phiên thu thập chạy dở — chờ nó xong rồi bấm lại.",
             )
         })?;
     let session_id = control.begin();
@@ -671,7 +671,7 @@ pub async fn data_collect(
     let r_te = SessionGuard::new(&rep, |s| control.end(s));
     rep.stage(
         cprog::Stage::Local,
-        "xJBhbmcgeGVtIGLhuqNuIHF1w6l0IHRyw6puIG3DoXkgbsOgeeKApg==",
+        "Đang xem bản quét trên máy này…",
         0,
     );
     let root = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
@@ -682,16 +682,16 @@ pub async fn data_collect(
     if gate.is_empty() {
         f_24v(
             &mut r_to,
-            "Q2jGsGEgeMOhYyDEkeG7i25oIMSRxrDhu6NjIGThu7Egw6FuIG3DoXkgbsOgeSBxdeG6o24gbMO9IChraMO0bmcga+G6v3QgbuG7kWkgxJHGsOG7o2MgbcOheSBjaOG7pyB2w6AgY2jGsGEgY8OzIGLhuqNuIGzGsHUpIOKAlCBk4burbmcgdGh1IHRo4bqtcCDEkeG7gyBraMO0bmcgZ29tIG5o4bqnbSBk4buvIGxp4buHdSBj4bunYSBhZG1pbiBraMOhYy4gSMOjeSBr4bq/dCBu4buRaSBtw6F5IGNo4bunIG3hu5l0IGzhuqduIHLhu5NpIHRodSB0aOG6rXAgbOG6oWku",
+            "Chưa xác định được dự án máy này quản lý (không kết nối được máy chủ và chưa có bản lưu) — dừng thu thập để không gom nhầm dữ liệu của admin khác. Hãy kết nối máy chủ một lần rồi thu thập lại.",
         );
-        tracing::warn!("Y+G7lW5nIGzhu41jIGThu7Egw6FuIHLhu5duZyDigJQgZOG7q25nIHRodSB0aOG6rXA=");
+        tracing::warn!("cổng lọc dự án rỗng — dừng thu thập");
         return Ok(f_1cz(r_te, r_to));
     }
     let r_tf = f_1i6(&app, &db, &gate, &mut r_to).await?;
     rep.stage(
         cprog::Stage::Kho,
         format!(
-            "xJDDoyBu4bqhcCA={}IGLhuqNuIHF1w6l0IHRyw6puIG3DoXkgbsOgeSDCtyDEkWFuZyByw6AgY8OieSBLaG/igKY=",
+            "Đã nạp {} bản quét trên máy này · đang rà cây Kho…",
             r_to.local
         ),
         0,
@@ -704,14 +704,14 @@ pub async fn data_collect(
     if code.trim().is_empty() {
         tracing::info!(
             local = r_to.local,
-            "Y2jGsGEgxJHhurd0IG3DoyBzaXRlIExBTiDigJQgY2jhu4kgbuG6oXAgYuG6o24gc2NhbiBj4bulYyBi4buZLCBi4buPIHF1YSBxdcOpdCBMQU4="
+            "chưa đặt mã site LAN — chỉ nạp bản scan cục bộ, bỏ qua quét LAN"
         );
         return Ok(f_1cz(r_te, r_to));
     }
     if crate::lan_session::f_2ft(&code) == crate::lan_session::CodeStrength::Weak {
         f_24v(
             &mut r_to,
-            "4pqg77iPIE3DoyBzaXRlIExBTiBoaeG7h24gdOG6oWkgWeG6vlUgKGTDsiDEkcaw4bujYyB0cm9uZyB2w6BpIGdpw6J5KS4gVuG6q24gZ29tIGLDrG5oIHRoxrDhu51uZywgbmjGsG5nIGjDo3kgYuG6pW0g4oCcU2luaCBtw6MgbeG6oW5o4oCdIHLhu5NpIHBow6F0IGzhuqFpIGPDonkgdGjGsCBt4bulYyDEkeG7gyBjw6FjIG3DoXkgbmjDom4gdmnDqm4gbmjhuq1uIG3DoyBt4bubaS4=",
+            "⚠️ Mã site LAN hiện tại YẾU (dò được trong vài giây). Vẫn gom bình thường, nhưng hãy bấm “Sinh mã mạnh” rồi phát lại cây thư mục để các máy nhân viên nhận mã mới.",
         );
     }
     let r_tb = {
@@ -720,12 +720,12 @@ pub async fn data_collect(
             .await
             .map_err(|e| {
                 AppError::internal(format!(
-                    "bHXhu5NuZyBk4bqrbiB4deG6pXQga2hvw6EgbcOjIHNpdGUgbOG7l2k6IA=={e}"
+                    "luồng dẫn xuất khoá mã site lỗi: {e}"
                 ))
             })?
             .map_err(|e| {
                 AppError::internal(format!(
-                    "ZOG6q24geHXhuqV0IGtob8OhIG3DoyBzaXRlIGzhu5dpOiA={e}"
+                    "dẫn xuất khoá mã site lỗi: {e}"
                 ))
             })?
     };
@@ -746,7 +746,7 @@ pub async fn data_collect(
             f_24v(
                 &mut r_to,
                 &format!(
-                    "RGFuaCBzw6FjaCBtw6F5IHVzZXIgY+G7kSDEkeG7i25oIGLhu4sgbOG7l2kgKA=={e}KSDigJQgxJHDoyBi4buPIHF1YTsgc+G7rWEgbOG6oWkgdHJvbmcgw7QgY8OgaSDEkeG6t3Qu"
+                    "Danh sách máy user cố định bị lỗi ({e}) — đã bỏ qua; sửa lại trong ô cài đặt."
                 ),
             );
             ManualTargets::default()
@@ -754,7 +754,7 @@ pub async fn data_collect(
     };
     rep.stage(
         cprog::Stage::Discover,
-        "xJBhbmcgdMOsbSBtw6F5IG5ow6JuIHZpw6puIHRyb25nIG3huqFuZyAobUROUyDCtyBicm9hZGNhc3QgwrcgcXXDqXQgZOG6o2kp4oCm",
+        "Đang tìm máy nhân viên trong mạng (mDNS · broadcast · quét dải)…",
         0,
     );
     let nets = f_1p4();
@@ -773,7 +773,7 @@ pub async fn data_collect(
     let scan_clamped = plan.clamped;
     tracing::info!(
         ranges = ? plan.ranges, targets = plan.targets.len(),
-        "a+G6vyBob+G6oWNoIHF1w6l0IGThuqNpIG3huqFuZw=="
+        "kế hoạch quét dải mạng"
     );
     let r_tn = {
         let r_tm = f_2c6(plan.targets.len());
@@ -781,12 +781,12 @@ pub async fn data_collect(
     };
     let mut r_tc = tauri::async_runtime::spawn_blocking(move || discover(r_tq, r_tk))
         .await
-        .map_err(|e| AppError::internal(format!("bHXhu5NuZyBxdcOpdCBMQU4gbOG7l2k6IA=={e}")))??;
+        .map_err(|e| AppError::internal(format!("luồng quét LAN lỗi: {e}")))??;
     let added = f_qo(&mut r_tc, r_th.peers, PeerSource::Manual);
     if added > 0 {
         tracing::info!(
             r_th = added,
-            "dGjDqm0gbcOheSB1c2VyIGNo4buJIMSR4buLbmggdGF5IHbDoG8gZGFuaCBzw6FjaCBnb20="
+            "thêm máy user chỉ định tay vào danh sách gom"
         );
     }
     if let Ok(hits) = r_ta.await {
@@ -800,7 +800,7 @@ pub async fn data_collect(
         if found > 0 {
             tracing::info!(
                 broadcast = found,
-                "bcOheSB1c2VyIHThu7Ega2hhaSBxdWEgVURQIGJyb2FkY2FzdA=="
+                "máy user tự khai qua UDP broadcast"
             );
         }
     }
@@ -815,7 +815,7 @@ pub async fn data_collect(
         if found > 0 {
             tracing::info!(
                 scan = found,
-                "cXXDqXQgZOG6o2kgbeG6oW5nIHRo4bqleSB0aMOqbSBtw6F5IG3hu58gY+G7lW5nIGNodW5n"
+                "quét dải mạng thấy thêm máy mở cổng chung"
             );
         }
     }
@@ -827,7 +827,7 @@ pub async fn data_collect(
         f_24v(
             &mut r_to,
             &format!(
-                "{no_ipv4}IG3DoXkgY2jhu4kgcXXhuqNuZyBiw6EgxJHhu4thIGNo4buJIElQdjYg4oCUIGNoxrBhIGvDqW8gxJHGsOG7o2MgKGPhuqduIElQdjQgdHJvbmcgTEFOKQ=="
+                "{no_ipv4} máy chỉ quảng bá địa chỉ IPv6 — chưa kéo được (cần IPv4 trong LAN)"
             ),
         );
     }
@@ -835,7 +835,7 @@ pub async fn data_collect(
         f_24v(
             &mut r_to,
             &format!(
-                "xJHDoyBsb+G6oWkg{self_skipped}IGThu4tjaCB24bulIHRyw7luZyDEkeG7i25oIGRhbmggKGRldmljZV9pZCkgduG7m2kgbcOheSBuw6B5IOKAlCBiw6xuaCB0aMaw4budbmcgbuG6v3UgbMOgIGLhuqNuIGdoaSBjxakgY+G7p2EgY2jDrW5oIG3DoXk7IG5oxrBuZyBu4bq/dSBtw6F5IG5ow6JuIHZpw6puIMSRxrDhu6NjIGPDoGkgYuG6sW5nIGPDoWNoIFNBTyBDSMOJUCBk4buvIGxp4buHdSB04burIG3DoXkgbsOgeSB0aMOsIG7DsyDEkWFuZyBi4buLIGxv4bqhaSBuaOG6p206IMSRxINuZyBuaOG6rXAgbOG6oWkgbcOheSBuaMOibiB2acOqbiBraGkga+G6v3QgbuG7kWkgxJHGsOG7o2MgbcOheSBjaOG7pyDEkeG7gyBj4bqlcCDEkeG7i25oIGRhbmggcmnDqm5n"
+                "đã loại {self_skipped} dịch vụ trùng định danh (device_id) với máy này — bình thường nếu là bản ghi cũ của chính máy; nhưng nếu máy nhân viên được cài bằng cách SAO CHÉP dữ liệu từ máy này thì nó đang bị loại nhầm: đăng nhập lại máy nhân viên khi kết nối được máy chủ để cấp định danh riêng"
             ),
         );
     }
@@ -847,11 +847,11 @@ pub async fn data_collect(
     rep.stage(
         cprog::Stage::Discover,
         if r_to.peers == 0 {
-            "S2jDtG5nIHRo4bqleSBtw6F5IG5ow6JuIHZpw6puIG7DoG8gxJFhbmcgY2hpYSBz4bq7IHRyb25nIG3huqFuZy4="
+            "Không thấy máy nhân viên nào đang chia sẻ trong mạng."
                 .to_string()
         } else {
             format!(
-                "VGjhuqV5IA=={}IG3DoXkgbmjDom4gdmnDqm4g4oCUIMSRYW5nIMSR4buNYyBkYW5oIHPDoWNoIHTDoGkgbGnhu4d14oCm",
+                "Thấy {} máy nhân viên — đang đọc danh sách tài liệu…",
                 r_to.peers
             )
         },
@@ -868,7 +868,7 @@ pub async fn data_collect(
             .unwrap_or("?");
         rep.stage(
             cprog::Stage::Peer,
-            format!("xJBhbmcgxJHhu41jIGRhbmggc8OhY2ggY+G7p2EgbcOheSA={label}…"),
+            format!("Đang đọc danh sách của máy {label}…"),
             r_to.peers,
         );
         let r_tj = f_1c6(&http, peer, &r_tb, &db).await;
@@ -883,7 +883,7 @@ pub async fn data_collect(
             Err(e) => {
                 tracing::warn!(
                     addr = % label, error = % e,
-                    "bOG6pXkgbWFuaWZlc3QgbcOheSB1c2VyIGzhu5dp"
+                    "lấy manifest máy user lỗi"
                 );
                 continue;
             }
@@ -911,13 +911,13 @@ pub async fn data_collect(
             let Some(r_tl) = f.project_id.clone() else {
                 tracing::warn!(
                     file = % f.filename,
-                    "YuG7jyBnb206IG5nxrDhu51pIHF1w6l0IGNoxrBhIGfhuq9uIGThu7Egw6Fu"
+                    "bỏ gom: người quét chưa gắn dự án"
                 );
                 rep.file(
                     &ticket
                         .error(
                             0,
-                            "TmfGsOG7nWkgcXXDqXQgY2jGsGEgxJHGsOG7o2MgZ+G6r24gZOG7sSDDoW4g4oCUIGfhuq9uIHRyw6puIG3DoXkgY2jhu6cgcuG7k2kgZ29tIGzhuqFpLg==",
+                            "Người quét chưa được gắn dự án — gắn trên máy chủ rồi gom lại.",
                         ),
                 );
                 r_to.failed += 1;
@@ -926,12 +926,12 @@ pub async fn data_collect(
             if !gate.allows(&r_tl) {
                 tracing::debug!(
                     file = % f.filename, project = % r_tl,
-                    "YuG7jyBnb206IGThu7Egw6FuIGtow7RuZyB0aHXhu5ljIG3DoXkgYWRtaW4gbsOgeQ=="
+                    "bỏ gom: dự án không thuộc máy admin này"
                 );
                 rep.file(
                     &ticket
                         .skipped(
-                            "VGh14buZYyBk4buxIMOhbiBtw6F5IG7DoHkga2jDtG5nIHF14bqjbiDigJQgYWRtaW4ga2jDoWMgc+G6vSBnb20u",
+                            "Thuộc dự án máy này không quản — admin khác sẽ gom.",
                         ),
                 );
                 r_to.foreign += 1;
@@ -940,13 +940,13 @@ pub async fn data_collect(
             if !valid_blake3(&f.blake3) || f.size <= 0 {
                 tracing::warn!(
                     file = % f.filename,
-                    "YuG7jyBnb206IGJsYWtlMyBraMO0bmcgaOG7o3AgbOG7hyBob+G6t2MgZmlsZSBy4buXbmc="
+                    "bỏ gom: blake3 không hợp lệ hoặc file rỗng"
                 );
                 rep.file(
                     &ticket
                         .error(
                             0,
-                            "TcOheSBuaMOibiB2acOqbiBraGFpIG3DoyBu4buZaSBkdW5nL2vDrWNoIHRoxrDhu5tjIGtow7RuZyBo4bujcCBs4buHLg==",
+                            "Máy nhân viên khai mã nội dung/kích thước không hợp lệ.",
                         ),
                 );
                 r_to.failed += 1;
@@ -958,7 +958,7 @@ pub async fn data_collect(
             };
             if r_td {
                 rep.file(
-                    &ticket.skipped("TcOheSBuw6B5IMSRw6MgZ29tIGLhuqNuIG7DoHkgdOG7qyB0csaw4bubYy4="),
+                    &ticket.skipped("Máy này đã gom bản này từ trước."),
                 );
                 r_to.skipped += 1;
                 continue;
@@ -968,7 +968,7 @@ pub async fn data_collect(
                 Err(e) => {
                     tracing::warn!(
                         file = % f.filename, error = % e,
-                        "a2jDtG5nIGThu7FuZyDEkcaw4bujYyBjaOG7lyB0cm9uZyBLaG8="
+                        "không dựng được chỗ trong Kho"
                     );
                     rep.file(&ticket.error(0, e.clone()));
                     r_to.failed += 1;
@@ -998,7 +998,7 @@ pub async fn data_collect(
                     Err(e) => {
                         tracing::warn!(
                             file = % f.filename, error = % e,
-                            "a8OpbyBmaWxlIHThu6sgdXNlciBs4buXaQ=="
+                            "kéo file từ user lỗi"
                         );
                         rep.file(&ticket.error(r_tp.received(), e));
                         r_to.failed += 1;
@@ -1018,7 +1018,7 @@ pub async fn data_collect(
                     Err(e) => {
                         tracing::warn!(
                             file = % f.filename, error = % e,
-                            "Z2hpIG3hu6VjIGzhu6VjIGzhu5dp"
+                            "ghi mục lục lỗi"
                         )
                     }
                 }
@@ -1099,7 +1099,7 @@ async fn f_2ia(db: &Db, root: &Path) -> usize {
     if r_ty > 0 {
         tracing::info!(
             r_ty,
-            "xJHDoyBk4buNbiBraG8gdOG6oW0gX2luYm94IGPhu6dhIGLhuqNuIGPFqQ=="
+            "đã dọn kho tạm _inbox của bản cũ"
         );
     }
     r_ty
@@ -1118,7 +1118,7 @@ async fn f_233(db: &Db, root: &Path, f: &Td1) -> Result<Tm, String> {
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .ok_or(
-            "dGhp4bq/dSBtw6MgcGjDtG5nIOKAlCBtw6F5IG5ow6JuIHZpw6puIGPhuqduIGPhuq1wIG5o4bqtdCBob+G6t2MgZ8OhbiBwaMO0bmcgY2hvIGjhu5Mgc8ah",
+            "thiếu mã phông — máy nhân viên cần cập nhật hoặc gán phông cho hồ sơ",
         )?;
     let r_u3 = f
         .phong_ten
@@ -1126,7 +1126,7 @@ async fn f_233(db: &Db, root: &Path, f: &Td1) -> Result<Tm, String> {
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .ok_or(
-            "dGhp4bq/dSB0w6puIHBow7RuZyDigJQgbcOheSBuaMOibiB2acOqbiBj4bqnbiBj4bqtcCBuaOG6rXQgaG/hurdjIGfDoW4gcGjDtG5nIGNobyBo4buTIHPGoQ==",
+            "thiếu tên phông — máy nhân viên cần cập nhật hoặc gán phông cho hồ sơ",
         )?;
     let (hop_so, ho_so_so) = f
         .ho_so_ref
@@ -1135,11 +1135,11 @@ async fn f_233(db: &Db, root: &Path, f: &Td1) -> Result<Tm, String> {
     let folder = crate::storage::f_1jt(root, &[r_u3, hop_so, ho_so_so], false);
     tokio::fs::create_dir_all(&folder)
         .await
-        .map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBLaG8gbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("tạo thư mục Kho lỗi: {e}"))?;
     let r_u2 = f_14v(&f.filename);
     let mut dest = folder.join(&r_u2);
     let r_tz = {
-        let conn = db.0.lock().map_err(|_| "REIgYuG6rW4=".to_string())?;
+        let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
         db::f_1hb(&conn, Some(phong_ma), hop_so, ho_so_so).map_err(|e| e.to_string())?
     };
     let mut up_to_date = matches!(
@@ -1150,7 +1150,7 @@ async fn f_233(db: &Db, root: &Path, f: &Td1) -> Result<Tm, String> {
         let r_u5 = !r_tz
             && match r_u1.as_deref() {
                 Some(h) => {
-                    let conn = db.0.lock().map_err(|_| "REIgYuG6rW4=".to_string())?;
+                    let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
                     db::f_10m(&conn, h)
                         .map_err(|e| e.to_string())?
                         .is_some_and(|r_u4| r_u4 == f.source_user_id)
@@ -1161,7 +1161,7 @@ async fn f_233(db: &Db, root: &Path, f: &Td1) -> Result<Tm, String> {
             let r_u0 = f_1t9(&r_u2, &f.blake3);
             tracing::warn!(
                 file = % f.filename, r_u0 = % r_u0,
-                "S2hvIMSRw6MgY8OzIGZpbGUga2jDoWMgbuG7mWkgZHVuZyBjw7luZyB0w6puIOKAlCBnaGkgc2FuZyB0w6puIHJpw6puZywga2jDtG5nIMSRw6g="
+                "Kho đã có file khác nội dung cùng tên — ghi sang tên riêng, không đè"
             );
             dest = folder.join(&r_u0);
             up_to_date = matches!(
@@ -1199,7 +1199,7 @@ fn write_catalog(db: &Db, f: &Td1, r_ub: &Tm) -> Result<(), String> {
         ngay_bat_dau: None,
         ngay_ket_thuc: None,
     };
-    let mut r_u8 = db.0.lock().map_err(|_| "REIgYuG6rW4=".to_string())?;
+    let mut r_u8 = db.0.lock().map_err(|_| "DB bận".to_string())?;
     let r_uc = r_u8.transaction().map_err(|e| e.to_string())?;
     db::f_2o6(
         &r_uc,
@@ -1245,7 +1245,7 @@ async fn f_1i6(
             .await
             .map_err(|e| {
                 AppError::internal(format!(
-                    "bHXhu5NuZyBsaeG7h3Qga8OqIGPhu6VjIGLhu5kgbOG7l2k6IA=={e}"
+                    "luồng liệt kê cục bộ lỗi: {e}"
                 ))
             })?
     };
@@ -1253,7 +1253,7 @@ async fn f_1i6(
         Ok(s) => s.files,
         Err(e) => {
             tracing::warn!(
-                error = % e, "bGnhu4d0IGvDqiBi4bqjbiBzY2FuIGPhu6VjIGLhu5kgbOG7l2k="
+                error = % e, "liệt kê bản scan cục bộ lỗi"
             );
             return Ok(Vec::new());
         }
@@ -1265,7 +1265,7 @@ async fn f_1i6(
         let Some(r_uh) = f.project_id.clone() else {
             tracing::warn!(
                 file = % f.filename,
-                "YuG7jyBu4bqhcCBj4bulYyBi4buZOiBo4buTIHPGoSBjaMawYSBn4bqvbiBk4buxIMOhbg=="
+                "bỏ nạp cục bộ: hồ sơ chưa gắn dự án"
             );
             r_uk.failed += 1;
             continue;
@@ -1273,7 +1273,7 @@ async fn f_1i6(
         if !valid_blake3(&f.blake3) || f.size <= 0 {
             tracing::warn!(
                 file = % f.filename,
-                "YuG7jyBu4bqhcCBj4bulYyBi4buZOiBibGFrZTMga2jDtG5nIGjhu6NwIGzhu4cgaG/hurdjIGZpbGUgcuG7l25n"
+                "bỏ nạp cục bộ: blake3 không hợp lệ hoặc file rỗng"
             );
             r_uk.failed += 1;
             continue;
@@ -1281,7 +1281,7 @@ async fn f_1i6(
         if !gate.allows(&r_uh) {
             tracing::debug!(
                 file = % f.filename, project = % r_uh,
-                "YuG7jyBu4bqhcCBj4bulYyBi4buZOiBuZ2/DoGkgZOG7sSDDoW4gbcOheSBhZG1pbiBxdeG6o24="
+                "bỏ nạp cục bộ: ngoài dự án máy admin quản"
             );
             r_uk.foreign += 1;
             continue;
@@ -1390,7 +1390,7 @@ async fn f_1i7(
     let Some(r_v2) = f_1wl(session.project_id.as_deref(), gate) else {
         f_24v(
             r_v4,
-            "Q8OzIHRo4buDIGPDsm4gdMOgaSBsaeG7h3UgcuG7nWkgdHJvbmcgS2hvIChraMO0bmcgdGh14buZYyBo4buTIHPGoSBuw6BvKSBjaMawYSBnb20gxJHGsOG7o2M6IG3DoXkgbsOgeSBxdeG6o24gbmhp4buBdSBk4buxIMOhbiBtw6AgdMOgaSBraG/huqNuIMSRYW5nIMSRxINuZyBuaOG6rXAga2jDtG5nIGfhuq9uIGThu7Egw6FuIGPhu6UgdGjhu4MuIETDuW5nIG7DunQg4oCc4pGiIFRow6ptIHTDoGkgbGnhu4d1IHThu6sg4buVIGPhu6luZ+KAnSDEkeG7gyBjaOG7jW4gZOG7sSDDoW4gY2hvIGNow7puZy4=",
+            "Có thể còn tài liệu rời trong Kho (không thuộc hồ sơ nào) chưa gom được: máy này quản nhiều dự án mà tài khoản đang đăng nhập không gắn dự án cụ thể. Dùng nút “③ Thêm tài liệu từ ổ cứng” để chọn dự án cho chúng.",
         );
         return;
     };
@@ -1428,7 +1428,7 @@ async fn f_1i7(
     let (r_uz, truncated) = match scan {
         Ok(v) => v,
         Err(e) => {
-            tracing::warn!(error = % e, "bHXhu5NuZyBxdcOpdCBLaG8gbOG7l2k=");
+            tracing::warn!(error = % e, "luồng quét Kho lỗi");
             return;
         }
     };
@@ -1448,7 +1448,7 @@ async fn f_1i7(
             }
             Ok(None) => {}
             Err(e) => {
-                tracing::warn!(error = % e, "dHJhIHRyw7luZyBu4buZaSBkdW5nIGzhu5dp");
+                tracing::warn!(error = % e, "tra trùng nội dung lỗi");
                 r_v4.failed += 1;
                 continue;
             }
@@ -1477,7 +1477,7 @@ async fn f_1i7(
             Err(e) => {
                 tracing::warn!(
                     error = % e,
-                    "Z2hpIHTDoGkgbGnhu4d1IHLhu51pIHbDoG8ga2hvIGdvbSBs4buXaQ=="
+                    "ghi tài liệu rời vào kho gom lỗi"
                 );
                 r_v4.failed += 1;
             }
@@ -1487,13 +1487,13 @@ async fn f_1i7(
         tracing::info!(
             orphans = r_v4.orphans,
             truncated,
-            "bmjhurd0IHTDoGkgbGnhu4d1IHLhu51pIHRyb25nIEtobw=="
+            "nhặt tài liệu rời trong Kho"
         );
     }
     if truncated {
         f_24v(
             r_v4,
-            "S2hvIGPDsyBy4bqldCBuaGnhu4F1IHThu4dwIOKAlCBsxrDhu6N0IG7DoHkgbeG7m2kgcXXDqXQgbeG7mXQgcGjhuqduLiBC4bqlbSDigJzikaAgVGh1IHRo4bqtcOKAnSB0aMOqbSB2w6BpIGzhuqduIG7hu69hIMSR4buDIG5o4bq3dCBo4bq/dCB0w6BpIGxp4buHdSBy4budaS4=",
+            "Kho có rất nhiều tệp — lượt này mới quét một phần. Bấm “① Thu thập” thêm vài lần nữa để nhặt hết tài liệu rời.",
         );
     }
 }
@@ -1505,7 +1505,7 @@ pub(crate) async fn f_25n(mut r_vl: reqwest::Response, max: usize) -> Result<Vec
     while let Some(r_vk) = r_vl.chunk().await.map_err(|e| e.to_string())? {
         if f_2rk(r_vj.len() as u64, r_vk.len(), max as u64) {
             return Err(format!(
-                "cGjhuqNuIGjhu5NpIHbGsOG7o3Qg{max}IGJ5dGUgKG5naGkgcGVlciBi4bqldCB0aMaw4budbmcp"
+                "phản hồi vượt {max} byte (nghi peer bất thường)"
             ));
         }
         r_vj.extend_from_slice(&r_vk);
@@ -1534,22 +1534,22 @@ impl SessionVerdict {
             Self::Ok(_) => return None,
             Self::Mismatch => {
                 format!(
-                        "{addr}:{port}OiBraG/DoSBkYW5oIHTDrW5oIEtIw4FDIGtob8OhIMSRw6MgZ2hpbSAobmdoaSBt4bqhbyBkYW5oKSDigJQgQuG7jg=="
+                        "{addr}:{port}: khoá danh tính KHÁC khoá đã ghim (nghi mạo danh) — BỎ"
                     )
             }
             Self::BadSig => {
                 format!(
-                    "{addr}:{port}OiBjaOG7ryBrw70gYuG6r3QgdGF5IGtow7RuZyBo4bujcCBs4buHIOKAlCBC4buO"
+                    "{addr}:{port}: chữ ký bắt tay không hợp lệ — BỎ"
                 )
             }
             Self::Downgrade => {
                 format!(
-                        "{addr}:{port}OiBtw6F5IHThu6tuZyBjw7MgZGFuaCB0w61uaCBuYXkga2jDtG5nIG7Ds2kgxJHGsOG7o2MgZ2lhbyB0aOG7qWMgcGhpw6puIChuZ2hpIGjhuqEgY+G6pXAgxJHhu4Mgw6lwIHbhu4Ega8Oqbmgga2jDtG5nIG3DoyBob8OhKSDigJQgQuG7jg=="
+                        "{addr}:{port}: máy từng có danh tính nay không nói được giao thức phiên (nghi hạ cấp để ép về kênh không mã hoá) — BỎ"
                     )
             }
             Self::OldProtocol => {
                 format!(
-                        "{addr}:{port}OiBwZWVyIMSRYW5nIGNo4bqheSBi4bqjbiBjxaksIGPhuqduIGPhuq1wIG5o4bqtdCAoa8OqbmggTEFOIGtow7RuZyBtw6MgaG/DoSDEkcOjIGLhu4sgZ+G7oSDigJQgS0jDlE5HIGPDsyBjaOG6vyDEkeG7mSB0xrDGoW5nIHRow61jaCBuZ8aw4bujYyk="
+                        "{addr}:{port}: peer đang chạy bản cũ, cần cập nhật (kênh LAN không mã hoá đã bị gỡ — KHÔNG có chế độ tương thích ngược)"
                     )
             }
             Self::Unreachable(e) => format!("{addr}:{port}: {e}"),
@@ -1602,14 +1602,14 @@ pub(crate) async fn f_1wf(
     let pinned = {
         let r_vp = match db.0.lock() {
             Ok(c) => c,
-            Err(_) => return SessionVerdict::Unreachable("REIgYuG6rW4=".into()),
+            Err(_) => return SessionVerdict::Unreachable("DB bận".into()),
         };
         db::f_22x(&r_vp, &session.device_id, &session.pubkey, Some(addr)).ok()
     };
     match pinned {
         Some(r_vs) if r_vs == session.pubkey => SessionVerdict::Ok(Box::new(session)),
         Some(_) => SessionVerdict::Mismatch,
-        None => SessionVerdict::Unreachable("Z2hpbSBraG/DoSBs4buXaQ==".into()),
+        None => SessionVerdict::Unreachable("ghim khoá lỗi".into()),
     }
 }
 pub(crate) fn f_2dt(
@@ -1644,19 +1644,19 @@ pub(crate) fn f_ya(
         .headers()
         .get(crate::data_share::SESSION_PROOF_HEADER)
         .and_then(|v| v.to_str().ok())
-        .ok_or("bcOheSBuZ3Xhu5NuIGtow7RuZyBn4butaSBi4bqxbmcgY2jhu6luZyBiaeG6v3QgbcOjIHNpdGU=")?;
+        .ok_or("máy nguồn không gửi bằng chứng biết mã site")?;
     let r_w1 = base64::engine::general_purpose::STANDARD
         .decode(r_w4)
-        .map_err(|_| "YuG6sW5nIGNo4bupbmcgY+G7p2EgbcOheSBuZ3Xhu5NuIGjhu49uZw==".to_string())?;
+        .map_err(|_| "bằng chứng của máy nguồn hỏng".to_string())?;
     let r_w2 = r_w3
         .open(0, true, &r_w1)
         .map_err(|_| {
-            "YuG6sW5nIGNo4bupbmcgY+G7p2EgbcOheSBuZ3Xhu5NuIGtow7RuZyBt4bufIMSRxrDhu6NjIChzYWkga2hvw6EgcGhpw6puKQ=="
+            "bằng chứng của máy nguồn không mở được (sai khoá phiên)"
                 .to_string()
         })?;
     if !lan_session::f_24d(&r_w2, &lan_session::f_2dp(r_w0, &session.sid)) {
         return Err(
-            "bcOheSBuZ3Xhu5NuIGtow7RuZyBjaOG7qW5nIG1pbmggxJHGsOG7o2MgYmnhur90IG3DoyBzaXRlIOKAlCBC4buO"
+            "máy nguồn không chứng minh được biết mã site — BỎ"
                 .into(),
         );
     }
@@ -1672,10 +1672,10 @@ pub(crate) struct Th1 {
 fn f_1hm(status: reqwest::StatusCode) -> String {
     match status.as_u16() {
         403 => {
-            "bcOjIHNpdGUga2jDtG5nIMSRw7puZyAoaG/hurdjIHBoacOqbiDEkcOjIGjhur90IGjhuqFuKQ==".into()
+            "mã site không đúng (hoặc phiên đã hết hạn)".into()
         }
-        426 => "cGVlciDEkWFuZyBjaOG6oXkgYuG6o24gY8WpLCBj4bqnbiBj4bqtcCBuaOG6rXQ=".into(),
-        _ => format!("bcOheSB1c2VyIHRy4bqjIGzhu5dpIA=={status}"),
+        426 => "peer đang chạy bản cũ, cần cập nhật".into(),
+        _ => format!("máy user trả lỗi {status}"),
     }
 }
 async fn f_1c6(
@@ -1730,9 +1730,9 @@ async fn f_1c6(
         f_ya(&r_wb, &mut r_w8, &session, r_w6)?;
         let r_wc = f_25n(r_wb, C_BR).await?;
         let r_w9 = lan_session::f_1w6(&mut r_w8, &r_wc)
-            .map_err(|e| format!("bWFuaWZlc3Qga2jDtG5nIGdp4bqjaSBtw6MgxJHGsOG7o2M6IA=={e}"))?;
+            .map_err(|e| format!("manifest không giải mã được: {e}"))?;
         let files: Vec<Td1> = serde_json::from_slice(&r_w9)
-            .map_err(|e| format!("bWFuaWZlc3Qga2jDtG5nIGjhu6NwIGzhu4c6IA=={e}"))?;
+            .map_err(|e| format!("manifest không hợp lệ: {e}"))?;
         return Ok(Th1 {
             addr: addr.clone(),
             port: *port,
@@ -1741,7 +1741,7 @@ async fn f_1c6(
         });
     }
     Err(if r_w7.is_empty() {
-        "a2jDtG5nIGPDsyDEkeG7i2EgY2jhu4kgSVB2NCBuw6BvIMSR4buDIGvhur90IG7hu5Fp".into()
+        "không có địa chỉ IPv4 nào để kết nối".into()
     } else {
         r_w7.join("; ")
     })
@@ -1771,12 +1771,12 @@ async fn f_176(
     if r_we != f.blake3 {
         let _ = tokio::fs::remove_file(&part).await;
         return Err(
-            "aGFzaCBraMO0bmcga2jhu5twIHNhdSBraGkgdOG6o2kgKGThu68gbGnhu4d1IGjhu49uZyk=".into(),
+            "hash không khớp sau khi tải (dữ liệu hỏng)".into(),
         );
     }
     tokio::fs::rename(&part, dest)
         .await
-        .map_err(|e| format!("Y2jhu5F0IGZpbGUgbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("chốt file lỗi: {e}"))?;
     Ok(Downloaded::Complete)
 }
 #[derive(Debug, PartialEq, Eq)]
@@ -1858,10 +1858,10 @@ async fn f_17f(
     use DownloadFail::{Interrupted, Suspect};
     let net = |e: String| Interrupted(e);
     if !valid_blake3(&f.blake3) {
-        return Err(Suspect("Ymxha2UzIGtow7RuZyBo4bujcCBs4buH".into()));
+        return Err(Suspect("blake3 không hợp lệ".into()));
     }
     let r_x0 = u64::try_from(f.size).map_err(|_| {
-        Suspect("a8OtY2ggdGjGsOG7m2Mga2hhaSBiw6FvIGtow7RuZyBo4bujcCBs4buH".to_string())
+        Suspect("kích thước khai báo không hợp lệ".to_string())
     })?;
     let r_wu = lan_session::f_1md(r_x0);
     let r_wn = lan_session::f_zd(r_x0);
@@ -1931,7 +1931,7 @@ async fn f_17f(
         if f_2rk(r_x1, r_wl.len(), r_wm) {
             fail = Some(
                 Suspect(
-                    "bcOheSB1c2VyIGfhu61pIHbGsOG7o3Qga8OtY2ggdGjGsOG7m2MgxJHDoyBraGFpIGLDoW8gKG5naGkgZOG7ryBsaeG7h3UgYuG6pXQgdGjGsOG7nW5nKQ=="
+                    "máy user gửi vượt kích thước đã khai báo (nghi dữ liệu bất thường)"
                         .into(),
                 ),
             );
@@ -1949,7 +1949,7 @@ async fn f_17f(
             let r_wz = match r_wx.open(idx, r_wt, &r_wq) {
                 Ok(r_wy) => r_wy,
                 Err(e) => {
-                    fail = Some(Suspect(format!("khung {idx}IGjhu49uZzog{e}")));
+                    fail = Some(Suspect(format!("khung {idx} hỏng: {e}")));
                     break 'stream;
                 }
             };
@@ -1980,12 +1980,12 @@ async fn f_17f(
     }
     if !done {
         return Err(Interrupted(
-            "bcOheSB1c2VyIGPhuq90IGdp4buvYSBjaOG7q25nICh0aGnhur91IGtodW5nIGN14buRaSk=".into(),
+            "máy user cắt giữa chừng (thiếu khung cuối)".into(),
         ));
     }
     if !r_wk.is_empty() {
         return Err(Suspect(
-            "bcOheSB1c2VyIGfhu61pIHRo4burYSBieXRlIHNhdSBraHVuZyBjdeG7kWk=".into(),
+            "máy user gửi thừa byte sau khung cuối".into(),
         ));
     }
     Ok(Downloaded::Complete)
@@ -2026,7 +2026,7 @@ async fn open_batch(db: &State<'_, Db>, r_x6: &State<'_, AuthState>) -> Result<S
     r_x8.get("id")
         .and_then(|v| v.as_str())
         .map(str::to_string)
-        .ok_or_else(|| AppError::internal("c2VydmVyIGtow7RuZyB0cuG6oyBpZCDEkeG7o3QgbuG7mXA="))
+        .ok_or_else(|| AppError::internal("server không trả id đợt nộp"))
 }
 async fn complete_batch(
     db: &State<'_, Db>,
@@ -2125,7 +2125,7 @@ pub async fn data_forward(
         .ok_or_else(|| {
             AppError::new(
                 "forward_busy",
-                "xJBhbmcgY8OzIG3hu5l0IHBoacOqbiBn4butaSBsw6puIG3DoXkgY2jhu6cgY2jhuqF5IGThu58g4oCUIGNo4budIG7DsyB4b25nIHLhu5NpIGLhuqVtIGzhuqFpLg==",
+                "Đang có một phiên gửi lên máy chủ chạy dở — chờ nó xong rồi bấm lại.",
             )
         })?;
     let ids = args.and_then(|a| a.ids);
@@ -2158,7 +2158,7 @@ pub async fn data_forward(
             Err(e) => {
                 tracing::warn!(
                     error = % e,
-                    "a2jDtG5nIG3hu58gxJHGsOG7o2MgxJHhu6N0IG7hu5lwIOKAlCB24bqrbiBn4butaSwgY2jhu4kgbeG6pXQgdGhlbyBkw7Vp"
+                    "không mở được đợt nộp — vẫn gửi, chỉ mất theo dõi"
                 );
                 None
             }
@@ -2236,7 +2236,7 @@ pub async fn data_forward(
                         tracing::warn!(
                             file = % doc.filename, project = % doc.project_id, error = %
                             e.message,
-                            "bcOheSBjaOG7pyB04burIGNo4buRaSB2xKluaCB2aeG7hW4g4oCUIG5n4burbmcgdGjhu60gbOG6oWk="
+                            "máy chủ từ chối vĩnh viễn — ngừng thử lại"
                         );
                         db::f_1r7(&conn, doc.id, &e.message)?;
                         r_xs.rejected += 1;
@@ -2253,7 +2253,7 @@ pub async fn data_forward(
         if let Err(e) = complete_batch(&db, &auth, id, &r_xs).await {
             tracing::warn!(
                 error = % e, batch = % id,
-                "a2jDtG5nIGNo4buRdCDEkcaw4bujYyDEkeG7o3QgbuG7mXA="
+                "không chốt được đợt nộp"
             );
         }
     }
@@ -2316,7 +2316,7 @@ async fn f_29o(db: &Db, doc: &T2w) -> Result<Resync, AppError> {
         Ok(h) => h,
         Err(e) => {
             return Ok(Resync::Missing(format!(
-                "a2jDtG5nIMSR4buNYyDEkcaw4bujYyBmaWxlIHRyb25nIEtobzog{e}"
+                "không đọc được file trong Kho: {e}"
             )));
         }
     };
@@ -2329,7 +2329,7 @@ async fn f_29o(db: &Db, doc: &T2w) -> Result<Resync, AppError> {
         .unwrap_or(doc.size_bytes);
     tracing::info!(
         file = % doc.filename, old = % doc.blake3, new = % r_xv,
-        "ZmlsZSB0cm9uZyBLaG8gxJHDoyDEkeG7lWkgc2F1IGtoaSBnb20g4oCUIGLEg20gbOG6oWkgdsOgIMSR4bqpeSBi4bqjbiBt4bubaQ=="
+        "file trong Kho đã đổi sau khi gom — băm lại và đẩy bản mới"
     );
     let r_xw = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     if !db::f_29p(&r_xw, doc.id, &r_xv, size)? {
@@ -2367,7 +2367,7 @@ fn f_y5(filename: &str, total: u64) -> Result<(), ForwardFail> {
     }
     Err(ForwardFail {
         message: format!(
-            "VOG7h3Ag4oCc{filename}4oCdIHRyb25nIEtobyBy4buXbmcgKDAgYnl0ZSkg4oCUIG3DoXkgY2jhu6cga2jDtG5nIG5o4bqtbi4gS2nhu4NtIHRyYSBs4bqhaSBi4bqjbiBxdcOpdCBy4buTaSBnb20gbOG6oWku"
+            "Tệp “{filename}” trong Kho rỗng (0 byte) — máy chủ không nhận. Kiểm tra lại bản quét rồi gom lại."
         ),
         permanent: true,
     })
@@ -2406,7 +2406,7 @@ async fn f_1dj(
 ) -> Result<Landed, ForwardFail> {
     let total = tokio::fs::metadata(&doc.storage_path)
         .await
-        .map_err(|e| ForwardFail::transient(format!("a2hvIHRoaeG6v3UgZmlsZTog{e}")))?
+        .map_err(|e| ForwardFail::transient(format!("kho thiếu file: {e}")))?
         .len();
     f_y5(&doc.filename, total)?;
     let pid = doc.project_id.clone();
@@ -2494,7 +2494,7 @@ async fn f_1dj(
                         return Err(
                             ForwardFail::transient(
                                 format!(
-                                    "VHJ1eeG7gW4gZmlsZSBraMO0bmcgdGnhur9uIHRyaeG7g24gKGvhurl0IHThuqFpIA=={offset}/{total}IGJ5dGUpIOKAlCBtw6F5IGNo4bunL3Byb3h5IGtow7RuZyB0cuG6oyBvZmZzZXQgxJHDum5nOyBk4burbmcgbOG6oWku"
+                                    "Truyền file không tiến triển (kẹt tại {offset}/{total} byte) — máy chủ/proxy không trả offset đúng; dừng lại."
                                 ),
                             ),
                         );
@@ -2660,12 +2660,12 @@ pub async fn collect_add_files(
         .ok_or_else(|| {
             AppError::new(
                 "collect_busy",
-                "xJBhbmcgY8OzIG3hu5l0IHBoacOqbiB0aHUgdGjhuq1wIGNo4bqheSBk4bufIOKAlCBjaOG7nSBuw7MgeG9uZyBy4buTaSB0aMOqbSB0w6BpIGxp4buHdS4=",
+                "Đang có một phiên thu thập chạy dở — chờ nó xong rồi thêm tài liệu.",
             )
         })?;
     let session = auth
         .snapshot()
-        .ok_or_else(|| AppError::new("unauthorized", "Q2jGsGEgxJHEg25nIG5o4bqtcC4="))?;
+        .ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?;
     let root = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
     let gate = f_1wx(&db, &auth).await;
     let r_yr = match args.project_id.as_deref().map(str::trim) {
@@ -2673,7 +2673,7 @@ pub async fn collect_add_files(
             if !gate.is_empty() && !gate.allows(p) {
                 return Err(
                     AppError::validation(
-                        "ROG7sSDDoW4gxJHDoyBjaOG7jW4ga2jDtG5nIHRodeG7mWMgcXV54buBbiBxdeG6o24gdHLhu4sgY+G7p2EgbcOheSBuw6B5Lg==",
+                        "Dự án đã chọn không thuộc quyền quản trị của máy này.",
                     ),
                 );
             }
@@ -2683,7 +2683,7 @@ pub async fn collect_add_files(
             f_1wl(session.project_id.as_deref(), &gate)
                 .ok_or_else(|| {
                     AppError::validation(
-                        "TcOheSBuw6B5IHF14bqjbiBuaGnhu4F1IGThu7Egw6FuIOKAlCBow6N5IGNo4buNbiBk4buxIMOhbiDEkcOtY2ggY2hvIHPhu5EgdMOgaSBsaeG7h3UgbsOgeS4=",
+                        "Máy này quản nhiều dự án — hãy chọn dự án đích cho số tài liệu này.",
                     )
                 })?
         }
@@ -2693,7 +2693,7 @@ pub async fn collect_add_files(
     let folder = crate::storage::f_1jt(&root, &r_yw, false);
     tokio::fs::create_dir_all(&folder).await.map_err(|e| {
         AppError::internal(format!(
-            "dOG6oW8gdGjGsCBt4bulYyDEkcOtY2ggdHJvbmcgS2hvIGzhu5dpOiA={e}"
+            "tạo thư mục đích trong Kho lỗi: {e}"
         ))
     })?;
     let mut r_yy = Tg {
@@ -2707,7 +2707,7 @@ pub async fn collect_add_files(
     let r_ym = SessionGuard::new(&rep, |s| control.end(s));
     rep.stage(
         cprog::Stage::Disk,
-        "xJBhbmcgxJHhu41jIGRhbmggc8OhY2ggdOG7h3AgxJHDoyBjaOG7jW7igKY=",
+        "Đang đọc danh sách tệp đã chọn…",
         0,
     );
     let mut r_yv = 0usize;
@@ -2722,11 +2722,11 @@ pub async fn collect_add_files(
                 session_id,
                 &mut r_yv,
                 &src,
-                "S2jDtG5nIMSR4buNYyDEkcaw4bujYyB04buHcA==",
+                "Không đọc được tệp",
             );
             f_24t(
                 &mut r_yy,
-                &format!("S2jDtG5nIMSR4buNYyDEkcaw4bujYzog{}", f_2ev(&src)),
+                &format!("Không đọc được: {}", f_2ev(&src)),
             );
             continue;
         };
@@ -2735,7 +2735,7 @@ pub async fn collect_add_files(
             if r_z0 {
                 f_24t(
                     &mut r_yy,
-                    "VGjGsCBt4bulYyBjw7MgcXXDoSBuaGnhu4F1IHThu4dwIOKAlCBsxrDhu6N0IG7DoHkgbeG7m2kgbOG6pXkgbeG7mXQgcGjhuqduLCBow6N5IHRow6ptIGzhuqFpIGzhuqduIG7hu69hLg==",
+                    "Thư mục có quá nhiều tệp — lượt này mới lấy một phần, hãy thêm lại lần nữa.",
                 );
             }
             for f in files {
@@ -2769,11 +2769,11 @@ pub async fn collect_add_files(
                     session_id,
                     &mut r_yv,
                     &src,
-                    "S2jDtG5nIHBo4bqjaSB04buHcCBQREY=",
+                    "Không phải tệp PDF",
                 );
                 f_24t(
                     &mut r_yy,
-                    &format!("QuG7jyBxdWEgKGtow7RuZyBwaOG6o2kgUERGKTog{}", f_2ev(&src)),
+                    &format!("Bỏ qua (không phải PDF): {}", f_2ev(&src)),
                 );
                 continue;
             }
@@ -2783,7 +2783,7 @@ pub async fn collect_add_files(
     rep.stage(
         cprog::Stage::Disk,
         format!(
-            "xJBhbmcgdGjDqm0g{}IHThu4dwIHThu6sg4buVIGPhu6luZyB2w6BvIEtob+KApg==",
+            "Đang thêm {} tệp từ ổ cứng vào Kho…",
             r_yo.len()
         ),
         0,
@@ -2820,7 +2820,7 @@ pub async fn collect_add_files(
                 rep.file(
                     &ticket
                         .skipped(
-                            "S2hvIMSRw6MgY8OzIGLhuqNuIGdp4buRbmcgaOG7h3Qg4oCUIGtow7RuZyB0aMOqbSBs4bqnbiBoYWku",
+                            "Kho đã có bản giống hệt — không thêm lần hai.",
                         ),
                 );
             }
@@ -2869,7 +2869,7 @@ fn f_24t(r_z6: &mut Tg, r_z5: &str) {
 fn f_2ev(r_z7: &Path) -> String {
     r_z7.file_name()
         .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "KGtow7RuZyB0w6puKQ==".into())
+        .unwrap_or_else(|| "(không tên)".into())
 }
 fn f_13d(r_z8: Option<&str>) -> Option<&str> {
     r_z8.map(str::trim).filter(|s| !s.is_empty())
@@ -2895,22 +2895,22 @@ async fn f_qr(
 ) -> Result<AddOutcome, String> {
     let size = tokio::fs::metadata(src)
         .await
-        .map_err(|e| format!("a2jDtG5nIMSR4buNYyDEkcaw4bujYyB04buHcCAo{e})"))?
+        .map_err(|e| format!("không đọc được tệp ({e})"))?
         .len() as i64;
     if size <= 0 {
-        return Err("dOG7h3AgcuG7l25nICgwIGJ5dGUpIOKAlCBtw6F5IGNo4bunIGtow7RuZyBuaOG6rW4=".into());
+        return Err("tệp rỗng (0 byte) — máy chủ không nhận".into());
     }
     if r_zf.cancelled() {
         return Ok(AddOutcome::Cancelled);
     }
     let blake3 = hash_file(src)
         .await
-        .map_err(|e| format!("YsSDbSB04buHcCBs4buXaSAo{e})"))?;
+        .map_err(|e| format!("băm tệp lỗi ({e})"))?;
     if r_zf.cancelled() {
         return Ok(AddOutcome::Cancelled);
     }
     {
-        let conn = db.0.lock().map_err(|_| "REIgYuG6rW4=".to_string())?;
+        let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
         if db::f_10m(&conn, &blake3)
             .map_err(|e| e.to_string())?
             .is_some()
@@ -2924,7 +2924,7 @@ async fn f_qr(
     } else {
         tokio::fs::create_dir_all(r_z9)
             .await
-            .map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyDEkcOtY2ggbOG7l2kgKA=={e})"))?;
+            .map_err(|e| format!("tạo thư mục đích lỗi ({e})"))?;
         let r_za = f_14v(&src.file_name().unwrap_or_default().to_string_lossy());
         let mut dest = r_z9.join(&r_za);
         if matches!(
@@ -2937,7 +2937,7 @@ async fn f_qr(
             Ok(_) => {
                 return Err(
                     format!(
-                        "dHJvbmcgS2hvIMSRw6MgY8OzIHThu4dwIGtow6FjIHRyw7luZyB0w6puIOKAnA=={}4oCdIOKAlCDEkeG7lWkgdMOqbiB04buHcCBuZ3Xhu5NuIHLhu5NpIHRow6ptIGzhuqFp",
+                        "trong Kho đã có tệp khác trùng tên “{}” — đổi tên tệp nguồn rồi thêm lại",
                         dest.file_name().unwrap_or_default().to_string_lossy()
                     ),
                 );
@@ -2957,14 +2957,14 @@ async fn f_qr(
             crate::data_share::f_1g2(&db, &r_zb).and_then(|(_, r_zc, _)| r_zc)
         })
         .await
-        .map_err(|e| format!("bHXhu5NuZyDEkeG7jWMgc+G7kSB0cmFuZyBs4buXaSAo{e})"))?
+        .map_err(|e| format!("luồng đọc số trang lỗi ({e})"))?
     };
     let ho_so_ref = f_1km(root, &dest);
     let filename = dest
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| "tai-lieu.pdf".into());
-    let conn = db.0.lock().map_err(|_| "REIgYuG6rW4=".to_string())?;
+    let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
     let r_ze = db::f_1id(
         &conn,
         db::Tds {
@@ -2998,23 +2998,23 @@ async fn f_11j(src: &Path, dest: &Path, r_zg: &mut AddWatch<'_>) -> Result<bool,
 async fn f_11i(src: &Path, dest: &Path, r_zj: &mut AddWatch<'_>) -> Result<bool, String> {
     let mut r = tokio::fs::File::open(src)
         .await
-        .map_err(|e| format!("beG7nyB04buHcCBuZ3Xhu5NuIGzhu5dpICg={e})"))?;
+        .map_err(|e| format!("mở tệp nguồn lỗi ({e})"))?;
     let mut r_zi = tokio::fs::File::create(dest)
         .await
-        .map_err(|e| format!("dOG6oW8gdOG7h3AgdHJvbmcgS2hvIGzhu5dpICg={e})"))?;
+        .map_err(|e| format!("tạo tệp trong Kho lỗi ({e})"))?;
     let mut r_zh = vec![0u8; C_2C];
     let mut done: u64 = 0;
     loop {
         let n = r
             .read(&mut r_zh)
             .await
-            .map_err(|e| format!("xJHhu41jIHThu4dwIG5ndeG7k24gbOG7l2kgKA=={e})"))?;
+            .map_err(|e| format!("đọc tệp nguồn lỗi ({e})"))?;
         if n == 0 {
             break;
         }
         r_zi.write_all(&r_zh[..n])
             .await
-            .map_err(|e| format!("Y2jDqXAgdsOgbyBLaG8gbOG7l2kgKA=={e})"))?;
+            .map_err(|e| format!("chép vào Kho lỗi ({e})"))?;
         done += n as u64;
         if !r_zj.tick(done) {
             return Ok(false);
@@ -3022,10 +3022,10 @@ async fn f_11i(src: &Path, dest: &Path, r_zj: &mut AddWatch<'_>) -> Result<bool,
     }
     r_zi.flush()
         .await
-        .map_err(|e| format!("Y2jDqXAgdsOgbyBLaG8gbOG7l2kgKA=={e})"))?;
+        .map_err(|e| format!("chép vào Kho lỗi ({e})"))?;
     r_zi.sync_all()
         .await
-        .map_err(|e| format!("Z2hpIMSRxKlhIGzhu5dpICg={e})"))?;
+        .map_err(|e| format!("ghi đĩa lỗi ({e})"))?;
     Ok(true)
 }
 struct AddWatch<'a> {

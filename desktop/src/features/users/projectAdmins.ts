@@ -16,13 +16,13 @@ export function V4r5(r: V4r4): boolean {
 
 export function V4r6(r: V4r4, V2hs: string): string | null {
   if (r.isSuper) return null;
-  if (!r.isProjectAdmin) return "QuG6oW4ga2jDtG5nIHBo4bulIHRyw6FjaCBk4buxIMOhbiBuw6B5Lg==";
+  if (!r.isProjectAdmin) return "Bạn không phụ trách dự án này.";
   if (V2hs !== r.currentUserId) {
-    return "Q2jhu4kgc3VwZXJfYWRtaW4gbeG7m2kgZ+G7oSDEkcaw4bujYyBuZ8aw4budaSBraMOhYyDigJQgYuG6oW4gY2jhu4kgdOG7sSByw7p0IG3DrG5oLg==";
+    return "Chỉ super_admin mới gỡ được người khác — bạn chỉ tự rút mình.";
   }
 
   if (r.adminIds.length <= 1) {
-    return "QuG6oW4gbMOgIGFkbWluIGR1eSBuaOG6pXQg4oCUIG5o4budIHN1cGVyX2FkbWluIGfDoW4gbmfGsOG7nWkgdGhheSB0csaw4bubYyBraGkgcsO6dC4=";
+    return "Bạn là admin duy nhất — nhờ super_admin gán người thay trước khi rút.";
   }
   return null;
 }

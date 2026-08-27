@@ -15,7 +15,7 @@ pub fn f_2hn(r_at: &AppHandle, r_au: Option<&str>) -> Result<PathBuf, AppError> 
         .path()
         .document_dir()
         .map_err(|e| {
-            format!("a2jDtG5nIHjDoWMgxJHhu4tuaCDEkcaw4bujYyB0aMawIG3hu6VjIERvY3VtZW50czog{e}")
+            format!("không xác định được thư mục Documents: {e}")
         })?
         .join(config::STORAGE_DIR_NAME);
     Ok(f_22v(r_au, default_dir))
@@ -23,7 +23,7 @@ pub fn f_2hn(r_at: &AppHandle, r_au: Option<&str>) -> Result<PathBuf, AppError> 
 pub fn f_29d(r_av: &AppHandle, r_aw: Option<&str>) -> Result<PathBuf, AppError> {
     let r_ax = f_2hn(r_av, r_aw)?;
     std::fs::create_dir_all(&r_ax)
-        .map_err(|e| format!("dOG6oW8gdGjGsCBt4bulYyBsxrB1IHRy4buvIGzhu5dpOiA={e}"))?;
+        .map_err(|e| format!("tạo thư mục lưu trữ lỗi: {e}"))?;
     Ok(r_ax)
 }
 pub fn f_112(r_ay: &State<'_, Db>) -> Option<String> {
@@ -39,31 +39,31 @@ pub fn f_18r(r_b1: &AppHandle, r_b2: &State<'_, Db>) -> Result<PathBuf, AppError
 pub fn f_113(r_b3: &AppHandle, r_b6: &State<'_, Db>, r_b7: &str) -> Result<PathBuf, AppError> {
     let r_b5 = f_18r(r_b3, r_b6)?
         .canonicalize()
-        .map_err(|e| format!("4buVIGzGsHUgdHLhu68gbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("ổ lưu trữ lỗi: {e}"))?;
     let r_b4 = Path::new(r_b7)
         .canonicalize()
-        .map_err(|_| AppError::not_found("xJHGsOG7nW5nIGThuqtuIGtow7RuZyB04buTbiB04bqhaQ=="))?;
+        .map_err(|_| AppError::not_found("đường dẫn không tồn tại"))?;
     if !r_b4.starts_with(&r_b5) {
         return Err(AppError::validation(
-            "xJDGsOG7nW5nIGThuqtuIG5nb8OgaSDhu5UgbMawdSB0cuG7ryDigJQgdOG7qyBjaOG7kWku",
+            "Đường dẫn ngoài ổ lưu trữ — từ chối.",
         ));
     }
     if r_b4 == r_b5 {
         return Err(AppError::validation(
-            "S2jDtG5nIHRo4buDIHRoYW8gdMOhYyB0csOqbiB0aMawIG3hu6VjIGfhu5FjLg==",
+            "Không thể thao tác trên thư mục gốc.",
         ));
     }
     Ok(r_b4)
 }
 #[cfg(target_os = "macos")]
-pub const OPEN_DENIED_HINT: &str = "bWFjT1MgY2jGsGEgY2hvIERpZ2lUZXh0IMSR4buNYyB0aMawIG3hu6VjIGNo4bupYSBmaWxlIG7DoHkuIE3hu58gQ8OgaSDEkeG6t3QgSOG7hyB0aOG7kW5nIOKGkiBRdXnhu4FuIHJpw6puZyB0xrAgJiBC4bqjbyBt4bqtdCDihpIgVOG7h3AgdsOgIFRoxrAgbeG7pWMgdsOgIGLhuq10IHF1eeG7gW4gY2hvIERpZ2lUZXh0IChob+G6t2MgdGjDqm0gRGlnaVRleHQgdsOgbyBUb8OgbiBxdXnhu4FuIHRydXkgY+G6rXAg4buVIMSRxKlhKSwgcuG7k2kgdGhvw6F0IHbDoCBt4bufIGzhuqFpIERpZ2lUZXh0LiBMxrB1IMO9OiBzYXUgbeG7l2kgbOG6p24gY+G6rXAgbmjhuq10IERpZ2lUZXh0IHBo4bqjaSBj4bqlcCBs4bqhaSBxdXnhu4FuIG7DoHku";
+pub const OPEN_DENIED_HINT: &str = "macOS chưa cho DigiText đọc thư mục chứa file này. Mở Cài đặt Hệ thống → Quyền riêng tư & Bảo mật → Tệp và Thư mục và bật quyền cho DigiText (hoặc thêm DigiText vào Toàn quyền truy cập ổ đĩa), rồi thoát và mở lại DigiText. Lưu ý: sau mỗi lần cập nhật DigiText phải cấp lại quyền này.";
 #[cfg(not(target_os = "macos"))]
-pub const OPEN_DENIED_HINT: &str = "S2jDtG5nIMSR4bunIHF1eeG7gW4gxJHhu41jIGZpbGUgbsOgeS4=";
+pub const OPEN_DENIED_HINT: &str = "Không đủ quyền đọc file này.";
 pub fn f_1w7(e: &std::io::Error) -> AppError {
     if e.kind() == std::io::ErrorKind::PermissionDenied {
         AppError::validation(OPEN_DENIED_HINT)
     } else {
-        AppError::internal(format!("a2jDtG5nIG3hu58gxJHGsOG7o2MgZmlsZTog{e}"))
+        AppError::internal(format!("không mở được file: {e}"))
     }
 }
 pub fn f_1w9(r_b8: &Path) -> std::io::Result<()> {

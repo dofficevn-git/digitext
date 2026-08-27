@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     p_5d1.add_argument("eval_body_jsonl")
     p_5d1.add_argument("--offset", type=int, default=500)
     p_5d1.add_argument("--pages", type=int, default=100)
-    p_5d1.add_argument("--sample", type=int, default=200, help="c+G7kSBkw7JuZyBwcm9iZSAoxJHhu6cgxJHhu4Mga+G6v3QgbHXhuq1uLCBuaGFuaCk=")
+    p_5d1.add_argument("--sample", type=int, default=200, help="số dòng probe (đủ để kết luận, nhanh)")
     p_5d1.add_argument("--dpi", type=int, default=150)
     p_5d1.add_argument("--pad", type=int, default=4)
     p_5d1.add_argument("--timeout", type=int, default=60)
@@ -103,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
             p_5d8.append((norm(p_5d4), norm(truth)))
 
     if not p_5d8:
-        print("TOG7lkk6IGtow7RuZyBwcm9iZSDEkcaw4bujYyBjcm9wIG7DoG8=", file=sys.stderr)
+        print("LỖI: không probe được crop nào", file=sys.stderr)
         return 2
     p_5da = q_10a(p_5d8)
     print(json.dumps({

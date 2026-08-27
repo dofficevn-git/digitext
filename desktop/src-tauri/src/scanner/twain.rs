@@ -331,7 +331,7 @@ impl MsgWindow {
             );
             if hwnd.is_null() {
                 return Err(
-                    "a2jDtG5nIHThuqFvIMSRxrDhu6NjIGPhu61hIHPhu5UgbWVzc2FnZSBjaG8gVFdBSU4=".into(),
+                    "không tạo được cửa sổ message cho TWAIN".into(),
                 );
             }
             Ok(MsgWindow { hwnd, class, hinst })
@@ -358,12 +358,12 @@ impl Dsm {
             let r_2l7 = Library::new("twaindsm.dll")
                 .map_err(|e| {
                     format!(
-                        "a2jDtG5nIG7huqFwIMSRxrDhu6NjIHR3YWluZHNtLmRsbCAoxJHDoyBjw6BpIFRXQUlOIERTTT8pOiA={e}"
+                        "không nạp được twaindsm.dll (đã cài TWAIN DSM?): {e}"
                     )
                 })?;
             let r_2l8: Symbol<T59> = r_2l7
                 .get(b"DSM_Entry\0")
-                .map_err(|e| format!("a2jDtG5nIHTDrG0gdGjhuqV5IERTTV9FbnRyeTog{e}"))?;
+                .map_err(|e| format!("không tìm thấy DSM_Entry: {e}"))?;
             let entry = *r_2l8;
             Ok(Dsm { _lib: r_2l7, entry })
         }
@@ -448,7 +448,7 @@ impl Twain {
         loop {
             guard += 1;
             if guard > 64 {
-                f_2n2("ZW51bWVyYXRlOiBndWFyZCA2NCDihpIgZOG7q25n");
+                f_2n2("enumerate: guard 64 → dừng");
                 break;
             }
             let mut r_2li: Tng = unsafe { std::mem::zeroed() };
@@ -481,7 +481,7 @@ impl Twain {
                 .into_iter()
                 .find(|r_2ll| f_2hr(r_2ll.ProductName) == product_name)
                 .ok_or_else(|| {
-                    format!("a2jDtG5nIHTDrG0gdGjhuqV5IG3DoXkgcXXDqXQgJw=={product_name}'")
+                    format!("không tìm thấy máy quét '{product_name}'")
                 })?
         };
         let rc = self.dsm_call(C_46, C_3P, MSG_OPENDS, &mut ds as *mut _ as Tnk);
@@ -496,7 +496,7 @@ impl Twain {
         unsafe {
             let r_2ln = GlobalAlloc(C_8E, std::mem::size_of::<Tnl>());
             if r_2ln.is_null() {
-                return Err("R2xvYmFsQWxsb2MgY2FwIHRo4bqldCBi4bqhaQ==".into());
+                return Err("GlobalAlloc cap thất bại".into());
             }
             let r_2lq = GlobalLock(r_2ln) as *mut Tnl;
             std::ptr::write_unaligned(
@@ -522,7 +522,7 @@ impl Twain {
     }
     fn set_caps(&mut self, r_2lv: &Tko) -> Result<(), String> {
         self.set_cap(C_9F, C_NB, C_N7 as u32).map_err(|e| {
-            format!("bcOheSBxdcOpdCBraMO0bmcgbmjhuq1uIHRydXnhu4FuIE1FTUZJTEUgKA=={e})")
+            format!("máy quét không nhận truyền MEMFILE ({e})")
         })?;
         self.set_cap(C_9D, C_NB, C_MX as u32)?;
         let r_2lw = match r_2lv.color {
@@ -566,11 +566,11 @@ impl Twain {
     ) -> Result<bool, String> {
         loop {
             if r_2ly.is_cancelled() {
-                return Err("xJHDoyBodeG7tw==".into());
+                return Err("đã huỷ".into());
             }
             if Instant::now() > r_2lz {
                 return Err(
-                    "aOG6v3QgdGjhu51pIGdpYW4gY2jhu50gbcOheSBxdcOpdCBz4bq1biBzw6BuZyAoWEZFUlJFQURZKQ=="
+                    "hết thời gian chờ máy quét sẵn sàng (XFERREADY)"
                         .into(),
                 );
             }
@@ -612,7 +612,7 @@ impl Twain {
         unsafe {
             let r_2m5 = GlobalAlloc(C_8E, r_2m3);
             if r_2m5.is_null() {
-                return Err("R2xvYmFsQWxsb2MgYnVmZmVyIHRo4bqldCBi4bqhaQ==".into());
+                return Err("GlobalAlloc buffer thất bại".into());
             }
             let r_2m8 = GlobalLock(r_2m5);
             let mut r_2m4 = Vec::new();
@@ -693,7 +693,7 @@ impl Tkv for Tov {
         f_2n2("list_devices: open ok → enumerate");
         let r_2mj = twain.enumerate();
         f_2n2(&format!(
-            "list_devices: enumerate → {}IHRoaeG6v3QgYuG7iw==",
+            "list_devices: enumerate → {} thiết bị",
             r_2mj.len()
         ));
         let r_2mh = r_2mj
@@ -704,7 +704,7 @@ impl Tkv for Tov {
                 Tkw {
                     id: name.clone(),
                     name: if name.is_empty() {
-                        "TcOheSBxdcOpdCBUV0FJTg==".into()
+                        "Máy quét TWAIN".into()
                     } else {
                         name
                     },
@@ -796,7 +796,7 @@ impl Tkv for Tov {
                     index += 1;
                 }
                 Err(e) => {
-                    return r_2my.error(r_2mm, &format!("Z2nhuqNpIG3DoyB0cmFuZyA={index}: {e}"));
+                    return r_2my.error(r_2mm, &format!("giải mã trang {index}: {e}"));
                 }
             }
             if r_2mw == 0 || r_2mx {

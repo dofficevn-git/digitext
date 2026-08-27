@@ -26,7 +26,7 @@ use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 fn help_text(prog: &str) -> String {
     format!(
-        "{prog}IOKAlCB3b3JrZXIgT0NSIChEaWdpVGV4dCwgwqdHL8KnUCkKCkPDoWNoIGTDuW5nOgogIA=={prog}IFtydW5dICAgICAgQ2jhuqF5IHdvcmtlciAobeG6t2MgxJHhu4tuaDsgdsOybmcgbOG6t3Agam9iIMSR4bqneSDEkeG7pyDhu58gUC1NMikKICA={prog}IC0taGVhbHRoICAgSW4gYsOhbyBjw6FvIHPhu6ljIGtob+G6uyBKU09OIHLhu5NpIHRob8OhdCAoMD1PaywgMT1Eb3duKQogIA=={prog}IC0tdmVyc2lvbiAgSW4gcGhpw6puIGLhuqNuCiAg{prog}IC0taGVscCAgICAgSW4gdHLhu6MgZ2nDunAKCkPhuqV1IGjDrG5oIHF1YSBiaeG6v24gbcO0aSB0csaw4budbmcgRElHSVRFWFRfKiAoYuG6r3QgYnXhu5ljOiBESUdJVEVYVF9EQVRBQkFTRV9VUkwsCkRJR0lURVhUX1RSSVRPTl9FTkRQT0lOVCkuIFhlbSBtb2R1bGUgYGNvbmZpZ2AgxJHhu4MgYmnhur90IMSR4bqneSDEkeG7pyBraG/DoSArIG3hurdjIMSR4buLbmguCg=="
+        "{prog} — worker OCR (DigiText, §G/§P)\n\nCách dùng:\n  {prog} [run]      Chạy worker (mặc định; vòng lặp job đầy đủ ở P-M2)\n  {prog} --health   In báo cáo sức khoẻ JSON rồi thoát (0=Ok, 1=Down)\n  {prog} --version  In phiên bản\n  {prog} --help     In trợ giúp\n\nCấu hình qua biến môi trường DIGITEXT_* (bắt buộc: DIGITEXT_DATABASE_URL,\nDIGITEXT_TRITON_ENDPOINT). Xem module `config` để biết đầy đủ khoá + mặc định.\n"
     )
 }
 pub fn cli_main(prog: &str, r_33h: &[String]) -> ExitCode {
@@ -42,7 +42,7 @@ pub fn cli_main(prog: &str, r_33h: &[String]) -> ExitCode {
         cli::Command::Health => f_2ap(),
         cli::Command::Run => f_2bh(),
         cli::Command::Unknown(arg) => {
-            eprintln!("dGhhbSBz4buRIGtow7RuZyByw7U6IA=={arg}\n");
+            eprintln!("tham số không rõ: {arg}\n");
             print!("{}", help_text(prog));
             ExitCode::from(2)
         }
@@ -65,7 +65,7 @@ fn f_2bh() -> ExitCode {
     let runtime = match tokio::runtime::Runtime::new() {
         Ok(r_33n) => r_33n,
         Err(e) => {
-            eprintln!("a2jDtG5nIHThuqFvIMSRxrDhu6NjIHRva2lvIHJ1bnRpbWU6IA=={e}");
+            eprintln!("không tạo được tokio runtime: {e}");
             return ExitCode::FAILURE;
         }
     };
@@ -83,7 +83,7 @@ fn f_2bh() -> ExitCode {
                 Err(e) => {
                     tracing::error!(
                         error = % e,
-                        "Y+G6pXUgaMOsbmggc2FpIOKAlCBk4burbmcgKGZhaWwtZmFzdCDCp1AxKQ=="
+                        "cấu hình sai — dừng (fail-fast §P1)"
                     );
                     return ExitCode::FAILURE;
                 }
@@ -91,7 +91,7 @@ fn f_2bh() -> ExitCode {
             let r_33k: std::net::SocketAddr = cfg
                 .metrics_addr
                 .parse()
-                .expect("bWV0cmljc19hZGRyIMSRw6MgdmFsaWRhdGU=");
+                .expect("metrics_addr đã validate");
             let shutdown = CancellationToken::new();
             f_2gq(shutdown.clone());
             let r_33q = Arc::new(AtomicBool::new(false));
@@ -101,14 +101,14 @@ fn f_2bh() -> ExitCode {
                     Err(e) => {
                         tracing::error!(
                             error = % e,
-                            "a2jDtG5nIGto4bufaSDEkeG7mW5nIMSRxrDhu6NjIHdvcmtlciBsb29w"
+                            "không khởi động được worker loop"
                         );
                         return ExitCode::FAILURE;
                     }
                 }
             } else {
                 tracing::info!(
-                    "d29ya2VyIGxvb3AgVOG6rlQgKERJR0lURVhUX1dPUktFUl9FTkFCTEVEPWZhbHNlKSDigJQgY2jhu4kgcGjhu6VjIHbhu6UgSFRUUA=="
+                    "worker loop TẮT (DIGITEXT_WORKER_ENABLED=false) — chỉ phục vụ HTTP"
                 );
                 None
             };
@@ -117,7 +117,7 @@ fn f_2bh() -> ExitCode {
                 Err(e) => {
                     tracing::error!(
                         error = % e,
-                        "ZW5kcG9pbnQgZ1JQQyBUcml0b24ga2jDtG5nIGjhu6NwIGzhu4c="
+                        "endpoint gRPC Triton không hợp lệ"
                     );
                     return ExitCode::FAILURE;
                 }
@@ -130,7 +130,7 @@ fn f_2bh() -> ExitCode {
             };
             tracing::info!(
                 % r_33k, triton = % cfg.triton_endpoint, worker = cfg.worker_enabled,
-                "cGjhu6VjIHbhu6UgL2hlYWx0aHogL3JlYWR5eiAobWV0cmljIMSR4bqpeSBPVExQIHbhu4EgU2lnTm96KQ=="
+                "phục vụ /healthz /readyz (metric đẩy OTLP về SigNoz)"
             );
             let r_33o = tokio::select! {
                 r = serve::serve(r_33k, r_33p) => r, _ = shutdown.cancelled() => Ok(()),
@@ -143,14 +143,14 @@ fn f_2bh() -> ExitCode {
             }
             if r_33q.load(Ordering::SeqCst) {
                 tracing::error!(
-                    "d29ya2VyIGxvb3AgbOG7l2kgbmdoacOqbSB0cuG7jW5nIOKAlCB0aG/DoXQgRkFJTFVSRSDEkeG7gyBzeXN0ZW1kIHJlc3RhcnQ="
+                    "worker loop lỗi nghiêm trọng — thoát FAILURE để systemd restart"
                 );
                 return ExitCode::FAILURE;
             }
             match r_33o {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(e) => {
-                    tracing::error!(error = % e, "c2VydmVyIEhUVFAgZOG7q25nIGRvIGzhu5dp");
+                    tracing::error!(error = % e, "server HTTP dừng do lỗi");
                     ExitCode::FAILURE
                 }
             }
@@ -167,12 +167,12 @@ async fn f_2gu(
 ) -> Result<Tq6, String> {
     let r_34m = digitext_db::connect(&cfg.database_url)
         .await
-        .map_err(|e| format!("a+G6v3QgbuG7kWkgUG9zdGdyZXM6IA=={e}"))?;
+        .map_err(|e| format!("kết nối Postgres: {e}"))?;
     let engine = digitext_db::engine_versions::f_ql(&r_34m, "recognition")
         .await
-        .map_err(|e| format!("xJHhu41jIGVuZ2luZV92ZXJzaW9uczog{e}"))?
+        .map_err(|e| format!("đọc engine_versions: {e}"))?
         .ok_or_else(|| {
-            "Y2jGsGEgxJHEg25nIGvDvSBlbmdpbmUgJ3JlY29nbml0aW9uJyB0cm9uZyBi4bqjbmcgZW5naW5lX3ZlcnNpb25z"
+            "chưa đăng ký engine 'recognition' trong bảng engine_versions"
                 .to_owned()
         })?;
     let r_33z = engine.id;
@@ -183,7 +183,7 @@ async fn f_2gu(
         if ep.is_empty() || model.is_empty() {
             return Err(
                 format!(
-                    "{ENV_FIELDS_ENGINE}PXYyIMSRw7JpIA=={ENV_VLM_ENDPOINT}IHbDoCA={ENV_VLM_MODEL}IChlbmdpbmUgY2jDrW5oIGtow7RuZyDEkcaw4bujYyBuby1vcCDDom0gdGjhuqdtKQ=="
+                    "{ENV_FIELDS_ENGINE}=v2 đòi {ENV_VLM_ENDPOINT}IHbDoCA={ENV_VLM_MODEL} (engine chính không được no-op âm thầm)"
                 ),
             );
         }
@@ -199,12 +199,12 @@ async fn f_2gu(
             "none",
         )
         .await
-        .map_err(|e| format!("xJHEg25nIGvDvSBlbmdpbmUgdjI6IA=={e}"))?;
+        .map_err(|e| format!("đăng ký engine v2: {e}"))?;
         let extractor = VlmFieldExtractorV2::new(ep, model, timeout)
-            .map_err(|e| format!("ZOG7sW5nIFZMTSBleHRyYWN0b3IgdjI6IA=={e}"))?;
+            .map_err(|e| format!("dựng VLM extractor v2: {e}"))?;
         tracing::info!(
             engine = % v2_engine.id,
-            "YsOzYyAxNiB0csaw4budbmcgdjIgKFZMTS1wcmltYXJ5KSBC4bqsVA=="
+            "bóc 16 trường v2 (VLM-primary) BẬT"
         );
         Some((extractor, v2_engine.id))
     } else {
@@ -222,7 +222,7 @@ async fn f_2gu(
         if let Err(e) = package_worker::f_2bd(&r_34p, Duration::from_secs(3600), &r_34q).await {
             tracing::error!(
                 error = % e,
-                "c3dlZXBlciBuaOG6r2MgU0xBIGzhu5dpIERCIOKAlCBk4burbmcgxJHhu4MgdOG6p25nIHRyw6puIHJlc3RhcnQ="
+                "sweeper nhắc SLA lỗi DB — dừng để tầng trên restart"
             );
         }
     });
@@ -231,7 +231,7 @@ async fn f_2gu(
         cfg.pdf_store_bucket.as_deref(),
         cfg.pdf_store_dir.as_deref(),
     )
-    .map_err(|e| format!("a2hvIFBERiAyIGzhu5twOiA={e}"))?
+    .map_err(|e| format!("kho PDF 2 lớp: {e}"))?
     .map(|s| {
         std::sync::Arc::new(digitext_storage::WormGuard::new(s))
             as std::sync::Arc<dyn digitext_storage::ObjectStore>
@@ -240,18 +240,18 @@ async fn f_2gu(
         Some(_) if cfg.pdf_store_bucket.is_some() => {
             tracing::info!(
                 bucket = cfg.pdf_store_bucket.as_deref().unwrap_or(""),
-                "a2hvIFBERiAyIGzhu5twOiBNaW5JTyAoQVBJIG3DoXkga2jDoWMgxJHhu41jIMSRxrDhu6NjKQ=="
+                "kho PDF 2 lớp: MinIO (API máy khác đọc được)"
             )
         }
         Some(_) => {
             tracing::warn!(
                 dir = cfg.pdf_store_dir.as_deref().unwrap_or(""),
-                "a2hvIFBERiAyIGzhu5twOiDEkMSoQSBD4bukQyBC4buYIOKAlCBBUEkgdHLDqm4gbcOheSBraMOhYyBLSMOUTkcgxJHhu41jIMSRxrDhu6NjIChraeG7g20gUERGL0EgKyBrw70gc+G7kSBz4bq9IDUwMykuICAgICAgICAgICAgICDEkOG6t3QgRElHSVRFWFRfUERGX1NUT1JFX0JVQ0tFVCDEkeG7gyBkw7luZyBNaW5JTy4="
+                "kho PDF 2 lớp: ĐĨA CỤC BỘ — API trên máy khác KHÔNG đọc được (kiểm PDF/A + ký số sẽ 503).              Đặt DIGITEXT_PDF_STORE_BUCKET để dùng MinIO."
             )
         }
         None => {
             tracing::warn!(
-                "a2hvIFBERiAyIGzhu5twIENIxq9BIGPhuqV1IGjDrG5oIOKAlCBtYWtlX3BkZjIgc+G6vSBraMO0bmcgUFVU"
+                "kho PDF 2 lớp CHƯA cấu hình — make_pdf2 sẽ không PUT"
             )
         }
     }
@@ -265,7 +265,7 @@ async fn f_2gu(
             {
                 tracing::error!(
                     error = % e,
-                    "c3dlZXBlciBi4bqjbyBxdeG6o24gbOG7l2kgREIg4oCUIGThu6tuZyDEkeG7gyByZXN0YXJ0"
+                    "sweeper bảo quản lỗi DB — dừng để restart"
                 );
             }
         })
@@ -277,7 +277,7 @@ async fn f_2gu(
         {
             tracing::error!(
                 error = % e,
-                "c3dlZXBlciBkYW5oIG3hu6VjIGjhu6d5IGzhu5dpIERCIOKAlCBk4burbmcgxJHhu4MgcmVzdGFydA=="
+                "sweeper danh mục hủy lỗi DB — dừng để restart"
             );
         }
     });
@@ -297,7 +297,7 @@ async fn f_2gu(
                 {
                     tracing::error!(
                         error = % e,
-                        "c3dlZXBlciBo4bq/dCBo4bqhbiBraGFpIHRow6FjIGzhu5dpIERCIOKAlCBk4burbmcgxJHhu4MgcmVzdGFydA=="
+                        "sweeper hết hạn khai thác lỗi DB — dừng để restart"
                     );
                 }
             })
@@ -317,7 +317,7 @@ async fn f_2gu(
                 let w = package_worker::PackageWorker::new(&r_34j, &*store, &r_34l, r_34h);
                 let w = match &clamd {
                     Some(r_34n) => {
-                        tracing::info!("cXXDqXQgdmlydXMgZ8OzaTogY2xhbWQgYuG6rXQ=");
+                        tracing::info!("quét virus gói: clamd bật");
                         w.with_scanner(r_34n)
                     }
                     None => w,
@@ -325,14 +325,14 @@ async fn f_2gu(
                 if let Err(e) = w.run_loop(Duration::from_secs(5), r_34i, &r_34k).await {
                     tracing::error!(
                         error = % e,
-                        "dsOybmcgbOG6t3AgxJHDs25nIGfDs2kgbOG7l2kgREIg4oCUIGThu6tuZyDEkeG7gyB04bqnbmcgdHLDqm4gcmVzdGFydA=="
+                        "vòng lặp đóng gói lỗi DB — dừng để tầng trên restart"
                     );
                 }
             }))
         }
         None => {
             tracing::info!(
-                "dsOybmcgbOG6t3AgxJHDs25nIGfDs2kgVOG6rlQgKGNoxrBhIGPhuqV1IGjDrG5oIGtobyBQREYpIOKAlCB5w6p1IGPhuqd1IHBhY2thZ2VzIHPhur0gY2jhu50="
+                "vòng lặp đóng gói TẮT (chưa cấu hình kho PDF) — yêu cầu packages sẽ chờ"
             );
             None
         }
@@ -342,7 +342,7 @@ async fn f_2gu(
         let infer = match GrpcTritonInfer::connect_lazy(&cfg.triton_endpoint, "ocr_pipeline") {
             Ok(r_345) => r_345,
             Err(e) => {
-                tracing::error!(error = % e, "ZOG7sW5nIGdSUEMgaW5mZXIgY2xpZW50");
+                tracing::error!(error = % e, "dựng gRPC infer client");
                 return;
             }
         };
@@ -354,7 +354,7 @@ async fn f_2gu(
                         PageMode::Pdf => {
                             tracing::info!(
                                 bucket = % r_349.bucket, raster_dpi = cfg.pdf_raster_dpi,
-                                "bmd14buTbiDhuqNuaCB0cmFuZzogTWluSU8gKFBERuKGknTDoWNoIHRyYW5nOyB0cmFuZyBraMO0bmcgY8OzIEpQRUcgbmjDum5nIHRow6wgcmFzdGVyIGhvw6Ep"
+                                "nguồn ảnh trang: MinIO (PDF→tách trang; trang không có JPEG nhúng thì raster hoá)"
                             );
                             PageBytesSource::Pdf(PdfMinioPageBytes::new(
                                 store,
@@ -368,7 +368,7 @@ async fn f_2gu(
                         PageMode::Images => {
                             tracing::info!(
                                 bucket = % r_349.bucket,
-                                "bmd14buTbiDhuqNuaCB0cmFuZzogTWluSU8gKOG6o25oIHRyYW5nIHLhu51pKQ=="
+                                "nguồn ảnh trang: MinIO (ảnh trang rời)"
                             );
                             PageBytesSource::Minio(MinioPageBytes::new(store))
                         }
@@ -376,7 +376,7 @@ async fn f_2gu(
                 }
                 Err(e) => {
                     tracing::error!(
-                        error = % e, "ZOG7sW5nIE1pbklPIG9iamVjdCBzdG9yZQ=="
+                        error = % e, "dựng MinIO object store"
                     );
                     return;
                 }
@@ -384,7 +384,7 @@ async fn f_2gu(
             None => {
                 tracing::info!(
                     dir = % cfg.page_source_dir,
-                    "bmd14buTbiDhuqNuaCB0cmFuZzogdGjGsCBt4bulYyBj4bulYyBi4buZ"
+                    "nguồn ảnh trang: thư mục cục bộ"
                 );
                 PageBytesSource::Local(LocalDirPageBytes::new(&cfg.page_source_dir))
             }
@@ -413,7 +413,7 @@ async fn f_2gu(
                         Err(e) => {
                             tracing::error!(
                                 error = % e,
-                                "VkxNIE1vZGUgMjogZOG7sW5nIGV4dHJhY3RvciBs4buXaSDigJQgY2jhuqF5IEtIw5RORyBWTE0="
+                                "VLM Mode 2: dựng extractor lỗi — chạy KHÔNG VLM"
                             );
                             None
                         }
@@ -421,7 +421,7 @@ async fn f_2gu(
                 }
                 _ => {
                     tracing::warn!(
-                        "VkxNIE1vZGUgMiBi4bqtdCBuaMawbmcgdGhp4bq/dSA={}/{}IOKAlCBjaOG6oXkgS0jDlE5HIFZMTQ==",
+                        "VLM Mode 2 bật nhưng thiếu {}/{} — chạy KHÔNG VLM",
                         ENV_VLM_ENDPOINT, ENV_VLM_MODEL
                     );
                     None
@@ -436,7 +436,7 @@ async fn f_2gu(
         tracing::info!(
             worker_id = % cfg.worker_id, engine = % r_33z, r_34f = store.is_some(), r_34w
             = r_34w.is_some(), corrector = corrector.is_some(), fields_v2 = r_343
-            .is_some(), "dsOybmcgbOG6t3Agd29ya2VyIGLhuq90IMSR4bqndQ=="
+            .is_some(), "vòng lặp worker bắt đầu"
         );
         let r_346 = Duration::from_millis(500);
         let run = match &corrector {
@@ -480,14 +480,14 @@ async fn f_2gu(
             if f_2re(true, shutdown.is_cancelled()) {
                 tracing::error!(
                     error = % e,
-                    "dsOybmcgbOG6t3Agd29ya2VyIGzhu5dpIERCIOKAlCB0aG/DoXQgxJHhu4Mgc3lzdGVtZCByZXN0YXJ0"
+                    "vòng lặp worker lỗi DB — thoát để systemd restart"
                 );
                 r_34x.store(true, Ordering::SeqCst);
                 shutdown.cancel();
             } else {
                 tracing::info!(
                     error = % e,
-                    "dsOybmcgbOG6t3Agd29ya2VyIGThu6tuZyB0aGVvIHNodXRkb3duIGNo4bunIMSR4buZbmc="
+                    "vòng lặp worker dừng theo shutdown chủ động"
                 );
             }
         }
@@ -515,14 +515,14 @@ fn f_1os() -> Lexicon {
                     .collect();
                 tracing::info!(
                     r_34z = % r_34z, r_351 = r_351.len(),
-                    "buG6oXAgbGV4aWNvbiBjb3JyZWN0b3IgKMKnRzcp"
+                    "nạp lexicon corrector (§G7)"
                 );
                 Lexicon::from_words(r_351)
             }
             Err(e) => {
                 tracing::warn!(
                     r_34z = % r_34z, error = % e,
-                    "xJHhu41jIGxleGljb24gbOG7l2kg4oCUIGTDuW5nIGxleGljb24gcuG7l25n"
+                    "đọc lexicon lỗi — dùng lexicon rỗng"
                 );
                 Lexicon::from_words(Vec::<String>::new())
             }
@@ -546,7 +546,7 @@ fn f_v9(r_353: bool) -> Option<VllmCorrector> {
                 Err(e) => {
                     tracing::error!(
                         error = % e,
-                        "Y29ycmVjdG9yIMKnRzY6IGThu7FuZyB2TExNIGNsaWVudCBs4buXaSDigJQgY2jhuqF5IEtIw5RORyBjb3JyZWN0b3I="
+                        "corrector §G6: dựng vLLM client lỗi — chạy KHÔNG corrector"
                     );
                     None
                 }
@@ -554,7 +554,7 @@ fn f_v9(r_353: bool) -> Option<VllmCorrector> {
         }
         _ => {
             tracing::warn!(
-                "Y29ycmVjdG9yIMKnRzYgQuG6rFQgbmjGsG5nIHRoaeG6v3Ug{}/{}IOKAlCBjaOG6oXkgS0jDlE5HIGNvcnJlY3RvciAoY+G7nSBraMO0bmcgY8OybiBuby1vcCDDom0gdGjhuqdtKQ==",
+                "corrector §G6 BẬT nhưng thiếu {}/{} — chạy KHÔNG corrector (cờ không còn no-op âm thầm)",
                 C_5M, C_5P
             );
             None
@@ -564,7 +564,7 @@ fn f_v9(r_353: bool) -> Option<VllmCorrector> {
 fn f_2gq(shutdown: CancellationToken) {
     tokio::spawn(async move {
         f_2qn().await;
-        tracing::info!("bmjhuq1uIHTDrW4gaGnhu4d1IGThu6tuZyDigJQgZ3JhY2VmdWwgc2h1dGRvd24=");
+        tracing::info!("nhận tín hiệu dừng — graceful shutdown");
         shutdown.cancel();
     });
 }
@@ -572,8 +572,8 @@ async fn f_2qn() {
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
-        let mut r_359 = signal(SignalKind::terminate()).expect("xJHEg25nIGvDvSBTSUdURVJN");
-        let mut r_358 = signal(SignalKind::interrupt()).expect("xJHEg25nIGvDvSBTSUdJTlQ=");
+        let mut r_359 = signal(SignalKind::terminate()).expect("đăng ký SIGTERM");
+        let mut r_358 = signal(SignalKind::interrupt()).expect("đăng ký SIGINT");
         tokio::select! {
             _ = r_359.recv() => {} _ = r_358.recv() => {}
         }

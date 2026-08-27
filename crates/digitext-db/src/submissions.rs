@@ -249,7 +249,7 @@ async fn f_1va(r_2d5: &PgPool, id: Uuid, r_2d2: impl Fn(&Tm8) -> String) {
         if let Err(r_2d3) = crate::notifications::f_1vb(r_2d5, &r_2d6, &r_2d4).await {
             tracing::warn!(
                 submission = % id, error = % r_2d3,
-                "cGjDoXQgdGjDtG5nIGLDoW8gdHLhuqFuZyB0aMOhaSBs4buXaQ=="
+                "phát thông báo trạng thái lỗi"
             );
         }
     }
@@ -270,7 +270,7 @@ pub async fn confirm(r_2d9: &PgPool, id: Uuid, r_2d7: Option<&str>) -> sqlx::Res
                 id,
                 |r_2da| {
                     format!(
-                        "TOG6p24gbuG7mXAg{}OiDEkMODIMSQxq/hu6JDIFjDgUMgTkjhuqxOIHRodSAoxJBp4buBdSAyMS4yKSDigJQgY8OzIHRo4buDIG7hu5lwIGfDs2kgU0lQ",
+                        "Lần nộp {}: ĐÃ ĐƯỢC XÁC NHẬN thu (Điều 21.2) — có thể nộp gói SIP",
                         r_2da.ma_yeu_cau
                     )
                 },
@@ -295,9 +295,9 @@ pub async fn refuse(r_2dd: &PgPool, id: Uuid, r_2db: Option<&str>) -> sqlx::Resu
                 id,
                 |r_2de| {
                     format!(
-                        "TOG6p24gbuG7mXAg{}OiBC4buKIFThu6ogQ0jhu5BJIHRodSAoxJBp4buBdSAyMS4zKSDigJQgbMO9IGRvOiA={}",
+                        "Lần nộp {}: BỊ TỪ CHỐI thu (Điều 21.3) — lý do: {}",
                         r_2de.ma_yeu_cau, r_2de.decision_note.as_deref()
-                        .unwrap_or("KGtow7RuZyBnaGkp")
+                        .unwrap_or("(không ghi)")
                     )
                 },
             )
@@ -336,7 +336,7 @@ pub async fn reconcile(r_2dg: &PgPool, id: Uuid) -> sqlx::Result<Option<Tig>> {
         "xJHhu6c=".to_string()
     } else {
         format!(
-            "Y2jGsGEgxJHhu6csIGPDsm4gdGhp4bq/dSA={}",
+            "chưa đủ, còn thiếu {}",
             registered - submitted
         )
     };
@@ -361,7 +361,7 @@ pub async fn reconcile(r_2dg: &PgPool, id: Uuid) -> sqlx::Result<Option<Tig>> {
                 id,
                 |r_2dh| {
                     format!(
-                        "TOG6p24gbuG7mXAg{}OiDEkcOjIG7hu5lwIMSQ4bumIGfDs2kgdGhlbyBN4bulYyBs4bulYyDigJQgY2jhu50gdGnhur9wIG5o4bqtbiAoxJBp4buBdSAyMi4zLmQp",
+                        "Lần nộp {}: đã nộp ĐỦ gói theo Mục lục — chờ tiếp nhận (Điều 22.3.d)",
                         r_2dh.ma_yeu_cau
                     )
                 },
@@ -388,7 +388,7 @@ pub async fn receive(r_2dl: &PgPool, id: Uuid, r_2dj: Option<&str>) -> sqlx::Res
     if r_2dk {
         f_1va(r_2dl, id, |r_2dm| {
             format!(
-                "TOG6p24gbuG7mXAg{}OiDEkcOjIFRJ4bq+UCBOSOG6rE4gKMSQaeG7gXUgMjMp",
+                "Lần nộp {}: đã TIẾP NHẬN (Điều 23)",
                 r_2dm.ma_yeu_cau
             )
         })
@@ -438,7 +438,7 @@ pub async fn approve(
                 id,
                 |r_2dw| {
                     format!(
-                        "TOG6p24gbuG7mXAg{}OiDEkcOjIFBIw4ogRFVZ4buGVCAo{}KSDigJQgY2h1eeG7g24gZ8OzaSBTSVAgdGjDoG5oIEFJUCAoxJBp4buBdSAyNS4zLmEp",
+                        "Lần nộp {}: đã PHÊ DUYỆT ({}) — chuyển gói SIP thành AIP (Điều 25.3.a)",
                         r_2dw.ma_yeu_cau, r_2dw.approval_doc.as_deref().unwrap_or("")
                     )
                 },
@@ -459,7 +459,7 @@ pub async fn complete(r_2dy: &PgPool, id: Uuid) -> sqlx::Result<bool> {
     if r_2dx {
         f_1va(r_2dy, id, |r_2e0| {
             format!(
-                "TOG6p24gbuG7mXAg{}OiBIT8OATiBUSMOATkggdGh1IG7hu5lwICjEkGnhu4F1IDI1LjUp",
+                "Lần nộp {}: HOÀN THÀNH thu nộp (Điều 25.5)",
                 r_2e0.ma_yeu_cau
             )
         })

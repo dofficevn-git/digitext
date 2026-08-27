@@ -287,7 +287,7 @@ pub fn f_18x(r_3x4: &DocEad, r_3x2: &str) -> String {
 fn f_xz(r_3x6: &mut Vec<String>, field: &str, code: &str, max: u8) {
     if !codes::f_1jd(code, max) {
         r_3x6.push(format!(
-            "{field}OiBtw6MgJw=={code}JyBuZ2/DoGkgYuG6o25nIG3DoyAwMS4u{max:02}"
+            "{field}: mã '{code}' ngoài bảng mã 01..{max:02}"
         ));
     }
 }
@@ -302,7 +302,7 @@ fn f_y9(r_3x9: &mut Vec<String>, r_3xa: bool, r_3xc: &Option<String>) {
         None if r_3xa => {
             r_3x9
                 .push(
-                    "cmlza1JlY292ZXJ5U3RhdHVzOiBi4bqvdCBideG7mWMga2hpIGNo4bq/IMSR4buZIGThu7EgcGjDsm5nIGzDoCAnY8OzJw=="
+                    "riskRecoveryStatus: bắt buộc khi chế độ dự phòng là 'có'"
                         .into(),
                 )
         }
@@ -315,7 +315,7 @@ fn f_y3(r_3xd: &mut Vec<String>, field: &str, code: &str, r_3xe: PackageKind) {
         r_3xd
             .push(
                 format!(
-                    "{field}OiBuZ3Xhu5NuIG7hu5lwIGzGsHUgY2jhu4kgbmjhuq1uICcwMTogdsSpbmggdmnhu4VuJyAoxJFhbmcgbMOgICc={code}')"
+                    "{field}: nguồn nộp lưu chỉ nhận '01: vĩnh viễn' (đang là '{code}')"
                 ),
             );
     }
@@ -323,15 +323,15 @@ fn f_y3(r_3xd: &mut Vec<String>, field: &str, code: &str, r_3xe: PackageKind) {
 pub fn f_2p2(r_3xh: &T9a, r_3xi: PackageKind) -> Vec<String> {
     let mut r_3xg = Vec::new();
     if r_3xh.file_code.is_empty() {
-        r_3xg.push("YXJjRmlsZUNvZGUvZmlsZUNvZGU6IGtow7RuZyDEkcaw4bujYyBy4buXbmc=".into());
+        r_3xg.push("arcFileCode/fileCode: không được rỗng".into());
     }
     if r_3xh.title.is_empty() {
-        r_3xg.push("dGl0bGU6IGtow7RuZyDEkcaw4bujYyBy4buXbmc=".into());
+        r_3xg.push("title: không được rỗng".into());
     }
     f_y3(&mut r_3xg, "maintenance", &r_3xh.maintenance, r_3xi);
     f_xz(&mut r_3xg, "mode", &r_3xh.mode, codes::C_CE);
     if r_3xh.language.is_empty() {
-        r_3xg.push("bGFuZ3VhZ2U6IGPhuqduIMOtdCBuaOG6pXQgbeG7mXQgbcOjIG5nw7RuIG5n4buv".into());
+        r_3xg.push("language: cần ít nhất một mã ngôn ngữ".into());
     }
     for r_3xj in &r_3xh.language {
         f_xz(&mut r_3xg, "language", r_3xj, codes::C_AD);
@@ -348,12 +348,12 @@ pub fn f_2p2(r_3xh: &T9a, r_3xi: PackageKind) -> Vec<String> {
     if r_3xf {
         if r_3xh.number_of_paper.is_none() {
             r_3xg.push(
-                "bnVtYmVyT2ZQYXBlcjogYuG6r3QgYnXhu5ljIHbhu5tpIGjhu5Mgc8ahIHPhu5EgaMOzYQ==".into(),
+                "numberOfPaper: bắt buộc với hồ sơ số hóa".into(),
             );
         }
         if r_3xh.paper_file_code.is_none() {
             r_3xg.push(
-                "cGFwZXJGaWxlQ29kZTogYuG6r3QgYnXhu5ljIHbhu5tpIGjhu5Mgc8ahIHPhu5EgaMOzYQ==".into(),
+                "paperFileCode: bắt buộc với hồ sơ số hóa".into(),
             );
         }
     }
@@ -362,32 +362,32 @@ pub fn f_2p2(r_3xh: &T9a, r_3xi: PackageKind) -> Vec<String> {
 pub fn f_2p1(r_3xl: &T8s, r_3xm: PackageKind) -> Vec<String> {
     let mut r_3xk = Vec::new();
     if r_3xl.file_code.is_empty() {
-        r_3xk.push("YXJjRmlsZUNvZGUvZmlsZUNvZGU6IGtow7RuZyDEkcaw4bujYyBy4buXbmc=".into());
+        r_3xk.push("arcFileCode/fileCode: không được rỗng".into());
     }
     if r_3xl.title.is_empty() {
-        r_3xk.push("dGl0bGU6IGtow7RuZyDEkcaw4bujYyBy4buXbmc=".into());
+        r_3xk.push("title: không được rỗng".into());
     }
     if !codes::f_1ix(&r_3xl.source) {
         r_3xk
             .push(
                 format!(
-                    "c291cmNlOiBuaOG6rW4gJzAnICh2xINuIGLhuqNuIMSRaSkgaG/hurdjICcxJyAodsSDbiBi4bqjbiDEkeG6v24pLCDEkWFuZyBsw6AgJw=={}'",
+                    "source: nhận '0' (văn bản đi) hoặc '1' (văn bản đến), đang là '{}'",
                     r_3xl.source
                 ),
             );
     }
     if r_3xm == PackageKind::SipTailieu && r_3xl.total_doc.is_none() {
-        r_3xk.push("dG90YWxEb2M6IGLhuq90IGJ14buZYyB24bubaSBTSVBfdGFpbGlldQ==".into());
+        r_3xk.push("totalDoc: bắt buộc với SIP_tailieu".into());
     }
     r_3xk
 }
 pub fn f_2ox(r_3xn: &T4o) -> Vec<String> {
     let mut r_3xo = Vec::new();
     if r_3xn.request_id.is_empty() {
-        r_3xo.push("cmVxdWVzdElEOiBraMO0bmcgxJHGsOG7o2MgcuG7l25n".into());
+        r_3xo.push("requestID: không được rỗng".into());
     }
     if r_3xn.request_date.is_empty() {
-        r_3xo.push("cmVxdWVzdERhdGU6IGtow7RuZyDEkcaw4bujYyBy4buXbmc=".into());
+        r_3xo.push("requestDate: không được rỗng".into());
     }
     f_xz(&mut r_3xo, "purpose", &r_3xn.purpose, codes::C_G8);
     f_y8(
@@ -403,7 +403,7 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
     match r_3xu {
         DocEad::Doc(r_3xp) => {
             if r_3xp.doc_code.is_empty() {
-                r_3xq.push("YXJjRG9jQ29kZS9kb2NDb2RlOiBraMO0bmcgxJHGsOG7o2MgcuG7l25n".into());
+                r_3xq.push("arcDocCode/docCode: không được rỗng".into());
             }
             f_y3(&mut r_3xq, "maintenance", &r_3xp.maintenance, r_3xs);
             f_xz(&mut r_3xq, "typeName", &r_3xp.type_name, codes::C_NU);
@@ -428,14 +428,14 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
                     r_3xq
                         .push(
                             format!(
-                                "cHJvY2Vzczogbmjhuq1uICcwJy8nMScsIMSRYW5nIGzDoCAn{p}'"
+                                "process: nhận '0'/'1', đang là '{p}'"
                             ),
                         )
                 }
                 None if r_3xr => {
                     r_3xq
                         .push(
-                            "cHJvY2VzczogYuG6r3QgYnXhu5ljIHbhu5tpIHTDoGkgbGnhu4d1IGfhu5FjIMSRaeG7h24gdOG7rS9o4buXbiBo4bujcA=="
+                            "process: bắt buộc với tài liệu gốc điện tử/hỗn hợp"
                                 .into(),
                         )
                 }
@@ -444,7 +444,7 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
         }
         DocEad::Pic(p) => {
             if p.doc_code.is_empty() {
-                r_3xq.push("YXJjRG9jQ29kZS9kb2NDb2RlOiBraMO0bmcgxJHGsOG7o2MgcuG7l25n".into());
+                r_3xq.push("arcDocCode/docCode: không được rỗng".into());
             }
             f_y3(&mut r_3xq, "maintenance", &p.maintenance, r_3xs);
             f_xz(&mut r_3xq, "typePic", &p.type_pic, codes::C_NV);
@@ -454,7 +454,7 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
             if let Some(a) = &p.doc_attached {
                 if !codes::f_1ix(a) {
                     r_3xq.push(format!(
-                        "ZG9jQXR0YWNoZWQ6IG5o4bqtbiAnMCcvJzEnLCDEkWFuZyBsw6AgJw=={a}'"
+                        "docAttached: nhận '0'/'1', đang là '{a}'"
                     ));
                 }
             }
@@ -462,7 +462,7 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
         }
         DocEad::Media(r_3xt) => {
             if r_3xt.doc_code.is_empty() {
-                r_3xq.push("YXJjRG9jQ29kZS9kb2NDb2RlOiBraMO0bmcgxJHGsOG7o2MgcuG7l25n".into());
+                r_3xq.push("arcDocCode/docCode: không được rỗng".into());
             }
             f_y3(&mut r_3xq, "maintenance", &r_3xt.maintenance, r_3xs);
             f_xz(&mut r_3xq, "typeMedia", &r_3xt.type_media, codes::C_NT);
@@ -474,7 +474,7 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
             if let Some(a) = &r_3xt.doc_attached {
                 if !codes::f_1ix(a) {
                     r_3xq.push(format!(
-                        "ZG9jQXR0YWNoZWQ6IG5o4bqtbiAnMCcvJzEnLCDEkWFuZyBsw6AgJw=={a}'"
+                        "docAttached: nhận '0'/'1', đang là '{a}'"
                     ));
                 }
             }

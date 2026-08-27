@@ -115,7 +115,7 @@ async fn f_12c(
     r_o5.require_perm(Permission::ProjectCreate)?;
     if r_oa.code.trim().is_empty() || r_oa.name.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "Y29kZSB2w6AgbmFtZSBraMO0bmcgxJHGsOG7o2MgcuG7l25n",
+            "code và name không được rỗng",
         ));
     }
     let r_o9 = if r_o5.user.role == Role::Admin {
@@ -127,7 +127,7 @@ async fn f_12c(
         .await
         .map_err(|r_o8| {
             if digitext_db::f_1jn(&r_o8) {
-                ApiError::conflict("bcOjIGThu7Egw6FuIMSRw6MgdOG7k24gdOG6oWk=")
+                ApiError::conflict("mã dự án đã tồn tại")
             } else {
                 r_o8.into()
             }
@@ -191,7 +191,7 @@ async fn f_28e(r_oj: &AppState, admin_id: Uuid) -> Result<(), ApiError> {
         .ok_or_else(ApiError::not_found)?;
     if r_ok.role != Role::Admin {
         return Err(ApiError::bad_request(
-            "bmfGsOG7nWkgxJHGsOG7o2MgZ8OhbiBwaOG6o2kgY8OzIHZhaSB0csOyIGFkbWlu",
+            "người được gán phải có vai trò admin",
         ));
     }
     Ok(())
@@ -286,7 +286,7 @@ async fn f_276(
         if r_ov.len() <= 1 {
             return Err(
                 ApiError::bad_request(
-                    "YuG6oW4gbMOgIGFkbWluIGR1eSBuaOG6pXQgY+G7p2EgZOG7sSDDoW4g4oCUIG5o4budIHN1cGVyX2FkbWluIGfDoW4gbmfGsOG7nWkgdGhheSB0csaw4bubYyBraGkgcsO6dA==",
+                    "bạn là admin duy nhất của dự án — nhờ super_admin gán người thay trước khi rút",
                 ),
             );
         }

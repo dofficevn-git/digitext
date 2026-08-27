@@ -90,10 +90,10 @@ def q_13e(records: list[dict], model_dir: str, max_len: int) -> list[tuple[str, 
 
 def main(argv: list[str] | None = None) -> int:
     p_323 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p_323.add_argument("bio_jsonl", help="ZGF0YS9iaW8uanNvbmwgdOG7qyBidWlsZF9iaW8ucHk=")
-    p_323.add_argument("--model-dir", default="output/kie", help="dGjGsCBt4bulYyB0cmFpbl9raWUucHkgbMawdSBtb2RlbA==")
+    p_323.add_argument("bio_jsonl", help="data/bio.jsonl từ build_bio.py")
+    p_323.add_argument("--model-dir", default="output/kie", help="thư mục train_kie.py lưu model")
     p_323.add_argument("--gold", default=None,
-                    help="YmlvLmpzb25sIE5Hxq/hu5xJIFNPw4FUIOKAlCBjw7MgY+G7nSBuw6B5IHRow6wgZXZhbF9zb3VyY2U9Z29sZCAoxJFvIHRo4bqtdCk=")
+                    help="bio.jsonl NGƯỜI SOÁT — có cờ này thì eval_source=gold (đo thật)")
     p_323.add_argument("--out", default="data/kie_report.json")
     p_323.add_argument("--max-len", type=int, default=DEFAULT_MAX_LEN)
     p_323.add_argument("--val-bucket", type=int, default=0)
@@ -102,11 +102,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_329 = Path(p_324.gold or p_324.bio_jsonl)
     if not p_329.exists():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_329}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_329}", file=sys.stderr)
         return 2
     records = [p_326 for p_326 in q_121(p_329) if q_118(p_326)]
     if not records:
-        print("TOG7lkk6IGtow7RuZyBjw7MgdHJhbmcgbsOgbyBtYW5nIG5ow6NuIGtow6FjIE8=", file=sys.stderr)
+        print("LỖI: không có trang nào mang nhãn khác O", file=sys.stderr)
         return 2
 
     if p_324.gold:
@@ -114,10 +114,10 @@ def main(argv: list[str] | None = None) -> int:
     else:
         p_322, p_325, p_328 = (*q_166(records, p_324.val_bucket, p_324.mod), "silver")
         if not p_325:
-            print("TOG7lkk6IHThuq1wIHZhbCBy4buXbmcg4oCUIGNo4buJbmggLS12YWwtYnVja2V0Ly0tbW9k", file=sys.stderr)
+            print("LỖI: tập val rỗng — chỉnh --val-bucket/--mod", file=sys.stderr)
             return 2
 
-    print(f"Y2jhuqVtIA=={len(p_325)}IHRyYW5nIChuZ3Xhu5NuOiA={p_328})", file=sys.stderr)
+    print(f"chấm {len(p_325)} trang (nguồn: {p_328})", file=sys.stderr)
     pairs = q_13e(p_325, p_324.model_dir, p_324.max_len)
     p_327 = build_report(pairs, p_328, {
         "model_dir": p_324.model_dir,

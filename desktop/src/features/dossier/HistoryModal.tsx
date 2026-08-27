@@ -26,8 +26,8 @@ export default function V4e9({
 
   const V10n =
     V10b === "hoso"
-      ? "TOG7ikNIIFPhu6wgQ+G6rFAgTkjhuqxUIEjhu5IgU8ag"
-      : "TOG7ikNIIFPhu6wgQ+G6rFAgTkjhuqxUIFbEgk4gQuG6ok4=";
+      ? "LỊCH SỬ CẬP NHẬT HỒ SƠ"
+      : "LỊCH SỬ CẬP NHẬT VĂN BẢN";
 
   const reload = useCallback(() => {
     if (!isTauri()) return;
@@ -54,9 +54,9 @@ export default function V4e9({
         VGhhbyB0w6Fj: V4d9(r.action),
         Ngày: ngay,
         Giờ: V10q,
-        "TmfGsOG7nWkgdOG6oW8=": r.nguoi ?? "",
-        "VMOzbSB04bqvdA==": r.summary ?? "",
-        "TuG7mWkgZHVuZw==": r.content ?? "",
+        "Người tạo": r.nguoi ?? "",
+        "Tóm tắt": r.summary ?? "",
+        "Nội dung": r.content ?? "",
       };
     });
     await V4e3(data.length ? data : [{ VGhhbyB0w6Fj: "" }], "LichSu", `lich-su-${V10b}.xlsx`);
@@ -108,7 +108,7 @@ export default function V4e9({
               <div className="col-2">
                 <input
                   className="form-control solo"
-                  placeholder="VMOsbSBraeG6v23igKY="
+                  placeholder="Tìm kiếm…"
                   value={V10h}
                   onChange={(V10u) => V10i(V10u.target.value)}
                   onKeyDown={(V10v) => V10v.key === "Enter" && reload()}

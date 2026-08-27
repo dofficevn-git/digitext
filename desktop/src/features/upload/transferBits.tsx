@@ -37,20 +37,20 @@ export function V4wj({ pct: V35h, label: V35i }: { pct: number; label: string })
 export function V4wk({ state }: { state: V4wi }) {
   if (state === "error") {
     return (
-      <span className="uw-ico err" aria-label="VGjhuqV0IGLhuqFp" role="img">
+      <span className="uw-ico err" aria-label="Thất bại" role="img">
         !
       </span>
     );
   }
   if (state === "cancelled") {
     return (
-      <span className="uw-ico cancelled" aria-label="xJDDoyBo4buneQ==" role="img">
+      <span className="uw-ico cancelled" aria-label="Đã hủy" role="img">
         <Icon name="daHuy" size={14} />
       </span>
     );
   }
   return (
-    <span className="uw-ico done" aria-label="VGjDoG5oIGPDtG5n" role="img">
+    <span className="uw-ico done" aria-label="Thành công" role="img">
       <Icon name="duyet" size={14} />
     </span>
   );

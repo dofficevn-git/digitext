@@ -15,7 +15,7 @@ def norm(s: str) -> str:
 
 def score(records: list[dict], preds: list[str]) -> dict:
     if len(records) != len(preds):
-        raise ValueError(f"{len(records)} records != {len(preds)}IHByZWRzIOKAlCBzYWkgdGjhu6kgdOG7sS90aGnhur91IOG6o25o")
+        raise ValueError(f"{len(records)} records != {len(preds)} preds — sai thứ tự/thiếu ảnh")
     p_883 = [(norm(p_882), norm(p_884["truth"])) for p_882, p_884 in zip(preds, records)]
     by_field: dict[str, list[tuple[str, str]]] = {}
     for (p_882, p_885), p_884 in zip(p_883, records):
@@ -51,18 +51,18 @@ def q_15d(
         p_88b = p_88b if p_88b.is_absolute() else root / p_88b
         img = cv2.imread(str(p_88b))
         if img is None:
-            raise FileNotFoundError(f"a2jDtG5nIMSR4buNYyDEkcaw4bujYyBjcm9wIChjaGUgdMOqbik6IGluZGV4IA=={records.index(p_88c)}")
+            raise FileNotFoundError(f"không đọc được crop (che tên): index {records.index(p_88c)}")
         p_88a.append(img)
     p_88e, p_887 = p_88d(p_88a)
     return [p_88f for (p_88f, p_888) in p_88e]
 
 def main() -> int:
-    p_891 = argparse.ArgumentParser(description="Q0VSIGPhu6dhIFNWVFItVkkgdHLDqm4gdOG6rXAgY3JvcCAoY2jhu4kgaW4gc+G7kSB04buVbmcgaOG7o3ApLg==")
+    p_891 = argparse.ArgumentParser(description="CER của SVTR-VI trên tập crop (chỉ in số tổng hợp).")
     p_891.add_argument("crops_jsonl")
-    p_891.add_argument("--img-root", default=".", help="Z+G7kWMgbuG7kWkgaW1hZ2UgcGF0aCB0xrDGoW5nIMSR4buRaSB0cm9uZyBjcm9wcy5qc29ubA==")
+    p_891.add_argument("--img-root", default=".", help="gốc nối image path tương đối trong crops.jsonl")
     p_891.add_argument("--model-dir", default="inference/rec_svtr_vi")
     p_891.add_argument("--dict", default="../../../triton/models/ocr_pipeline/1/dict_VI.txt")
-    p_891.add_argument("--out", help="Z2hpIHJlcG9ydCBKU09OIChDSOG7iCBz4buRIHThu5VuZyBo4bujcCk=")
+    p_891.add_argument("--out", help="ghi report JSON (CHỈ số tổng hợp)")
     p_890 = p_891.parse_args()
 
     records = [json.loads(p_892) for p_892 in open(p_890.crops_jsonl, encoding="utf-8") if p_892.strip()]

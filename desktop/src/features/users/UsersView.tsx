@@ -76,7 +76,7 @@ export default function V4ra() {
     }
     if (
       !confirm(
-        `VsO0IGhp4buHdSBob8OhIHTDoGkga2hv4bqjbiAi${u.username}Ij8gTmfGsOG7nWkgbsOgeSBz4bq9IGtow7RuZyDEkcSDbmcgbmjhuq1wIMSRxrDhu6NjIG7hu69hLg==`,
+        `Vô hiệu hoá tài khoản "${u.username}"? Người này sẽ không đăng nhập được nữa.`,
       )
     )
       return;
@@ -94,12 +94,12 @@ export default function V4ra() {
         <h2>Quản lý người dùng</h2>
         <span className="sub">
           {V2hz
-            ? "VG/DoG4gaOG7hyB0aOG7kW5n"
-            : `ROG7sSDDoW4gYuG6oW4gcGjhu6UgdHLDoWNoICg=${V2i3.length})`}
+            ? "Toàn hệ thống"
+            : `Dự án bạn phụ trách (${V2i3.length})`}
           {" · "}
           {V2hy?.mode === "offline"
-            ? "Y+G6p24ga+G6v3QgbuG7kWkgbcOheSBjaOG7pw=="
-            : "dHLhu7FjIHR1eeG6v24="}
+            ? "cần kết nối máy chủ"
+            : "trực tuyến"}
         </span>
       </div>
 
@@ -110,9 +110,9 @@ export default function V4ra() {
               value={tab}
               onChange={V2i1}
               options={[
-                { value: "users", label: "TmfGsOG7nWkgZMO5bmc=" },
-                { value: "projects", label: "ROG7sSDDoW4=" },
-                { value: "stats", label: "VGjhu5FuZyBrw6o=" },
+                { value: "users", label: "Người dùng" },
+                { value: "projects", label: "Dự án" },
+                { value: "stats", label: "Thống kê" },
               ]}
             />
             <div className="spacer" />
@@ -261,7 +261,7 @@ function V4rb({
               <td>{V2ir(u.projectId)}</td>
               <td>
                 <span className={`badge ${u.isActive ? "ok" : "gray"}`}>
-                  {u.isActive ? "SG/huqF0IMSR4buZbmc=" : "xJDDoyBraG/DoQ=="}
+                  {u.isActive ? "Hoạt động" : "Đã khoá"}
                 </span>
               </td>
               <td className="whitespace-nowrap text-right">
@@ -275,7 +275,7 @@ function V4rb({
                   Phân quyền
                 </button>{" "}
                 <button className="btn sm" onClick={() => V2iv(u)}>
-                  {u.isActive ? "VsO0IGhp4buHdSBob8Oh" : "S8OtY2ggaG/huqF0"}
+                  {u.isActive ? "Vô hiệu hoá" : "Kích hoạt"}
                 </button>
               </td>
             </tr>
@@ -346,7 +346,7 @@ function V4rc({
                             className="x"
 
                             disabled={V2jc !== null}
-                            title={V2jc ?? `R+G7oSA=${V2j7(V2jb)}IGto4buPaSBk4buxIMOhbg==`}
+                            title={V2jc ?? `R+G7oSA=${V2j7(V2jb)} khỏi dự án`}
                             onClick={() => V2j2(p.id, V2jb)}
                           >
                             ×
@@ -372,7 +372,7 @@ function V4rc({
                 </td>
                 <td>
                   <span className={`badge ${p.isActive ? "ok" : "gray"}`}>
-                    {p.isActive ? "SG/huqF0IMSR4buZbmc=" : "xJDDs25n"}
+                    {p.isActive ? "Hoạt động" : "Đóng"}
                   </span>
                 </td>
               </tr>
@@ -457,14 +457,14 @@ function V4rj({
       {}
       <div className="flex gap-2.5 flex-wrap mb-4">
         <V4ri
-          label={V2jj ? "TmjDom4gdmnDqm4gKHRvw6BuIEhUKQ==" : "TmjDom4gdmnDqm4="}
+          label={V2jj ? "Nhân viên (toàn HT)" : "Nhân viên"}
           value={V4rd(V2jm.users)}
         />
-        <V4ri label="VHJhbmcgcXXDqXQ=" value={V4rd(V2jm.pages)} />
-        <V4ri label="SOG7kyBzxqE=" value={V4rd(V2jm.hoSo)} />
-        <V4ri label="UERGIMSRw7NuZyBnw7Np" value={V4rd(V2jm.pdf)} />
-        <V4ri label="RmlsZSDEkcOjIGfhu61pIHbhu4E=" value={V4rd(V2jm.files)} accent />
-        <V4ri label="RHVuZyBsxrDhu6NuZyDEkcOjIGfhu61p" value={V4re(V2jm.bytesUp)} />
+        <V4ri label="Trang quét" value={V4rd(V2jm.pages)} />
+        <V4ri label="Hồ sơ" value={V4rd(V2jm.hoSo)} />
+        <V4ri label="PDF đóng gói" value={V4rd(V2jm.pdf)} />
+        <V4ri label="File đã gửi về" value={V4rd(V2jm.files)} accent />
+        <V4ri label="Dung lượng đã gửi" value={V4re(V2jm.bytesUp)} />
       </div>
 
       {}
@@ -553,8 +553,8 @@ function V4rk({
         g = {
           name:
             V2jw === V2jp
-              ? "4oCUIGNoxrBhIGfDoW4gYWRtaW4g4oCU"
-              : (V2jr.get(V2jw) ?? "QWRtaW4gxJHDoyB4b8Oh"),
+              ? "— chưa gán admin —"
+              : (V2jr.get(V2jw) ?? "Admin đã xoá"),
           projects: new Set(),
           t: V4rg(),
         };
@@ -680,7 +680,7 @@ function V4rm({
     <div className="overlay" onClick={V2k1}>
       <div className="dialog" onClick={(V2ko) => V2ko.stopPropagation()}>
         <h3>
-          {V2jy === "create" ? "VGjDqm0gbmfGsOG7nWkgZMO5bmc=" : `U+G7rWE6IA==${user?.username}`}
+          {V2jy === "create" ? "Thêm người dùng" : `Sửa: ${user?.username}`}
         </h3>
 
         <div className="field">
@@ -768,9 +768,9 @@ function V4rm({
             }
           >
             {V2kf
-              ? "xJBhbmcgbMawdeKApg=="
+              ? "Đang lưu…"
               : V2jy === "create"
-                ? "VOG6oW8gdMOgaSBraG/huqNu"
+                ? "Tạo tài khoản"
                 : "TMawdQ=="}
           </button>
         </div>
@@ -797,7 +797,7 @@ function V4rn({
   const V2l7 = async () => {
     if (V2l1) return;
     if (V2kx !== V2kz) {
-      V2l4("SGFpIGzhuqduIG5o4bqtcCBt4bqtdCBraOG6qXUga2jDtG5nIGto4bubcC4=");
+      V2l4("Hai lần nhập mật khẩu không khớp.");
       return;
     }
     V2l2(true);
@@ -849,7 +849,7 @@ function V4rn({
             onClick={() => void V2l7()}
             disabled={V2l1 || V2kx.length < 8}
           >
-            {V2l1 ? "xJBhbmcgbMawdeKApg==" : "xJDhurd0IGzhuqFp"}
+            {V2l1 ? "Đang lưu…" : "Đặt lại"}
           </button>
         </div>
       </div>
@@ -1006,7 +1006,7 @@ function V4ro({ user, onClose: V2lc }: { user: V4a8; onClose: () => void }) {
             onClick={() => void V2lz()}
             disabled={V2li || V2lg || !V2lx}
           >
-            {V2li ? "xJBhbmcgbMawdeKApg==" : V2lm ? "xJDDoyBsxrB1" : "TMawdSBxdXnhu4Fu"}
+            {V2li ? "Đang lưu…" : V2lm ? "Đã lưu" : "Lưu quyền"}
           </button>
         </div>
       </div>
@@ -1067,7 +1067,7 @@ function V4rp({
             onClick={() => void V2mg()}
             disabled={V2mc || !V2m9.trim() || !name.trim()}
           >
-            {V2mc ? "xJBhbmcgdOG6oW/igKY=" : "VOG6oW8gZOG7sSDDoW4="}
+            {V2mc ? "Đang tạo…" : "Tạo dự án"}
           </button>
         </div>
       </div>

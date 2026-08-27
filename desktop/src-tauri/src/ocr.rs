@@ -49,7 +49,7 @@ pub async fn ocr_fields_list(
 ) -> Result<Vec<Tfc>, AppError> {
     let id = args.document_id.trim().to_string();
     if id.is_empty() {
-        return Err(AppError::validation("VGhp4bq/dSBtw6MgdMOgaSBsaeG7h3Uu"));
+        return Err(AppError::validation("Thiếu mã tài liệu."));
     }
     f_2r8(&db, &auth, Permission::DocumentList, move |r_29n, r_29o| {
         let id = id.clone();
@@ -67,10 +67,10 @@ pub async fn ocr_field_correct(
 ) -> Result<Tfc, AppError> {
     let id = args.document_id.trim().to_string();
     if id.is_empty() {
-        return Err(AppError::validation("VGhp4bq/dSBtw6MgdMOgaSBsaeG7h3Uu"));
+        return Err(AppError::validation("Thiếu mã tài liệu."));
     }
     if args.field_key.trim().is_empty() {
-        return Err(AppError::validation("VGhp4bq/dSBraG/DoSB0csaw4budbmcu"));
+        return Err(AppError::validation("Thiếu khoá trường."));
     }
     let mut body = serde_json::json!(
         { "pageNo" : args.page_no, "fieldKey" : args.field_key.trim(), "value" : args

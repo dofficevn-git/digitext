@@ -236,7 +236,7 @@ pub async fn f_1gk(r_27u: &PgPool, r_27s: Uuid, r_27w: &str, r_27t: i64) -> sqlx
 }
 pub async fn requeue_expired(r_27y: &PgPool, r_27x: i32) -> sqlx::Result<u64> {
     let r_27z = sqlx::query(
-            "VVBEQVRFIG9jcl9qb2JzIFNFVCBhdHRlbXB0cyA9IGF0dGVtcHRzICsgMSwgbGFzdF9lcnJvciA9IENPQUxFU0NFKGxhc3RfZXJyb3IsICdsZWFzZSBo4bq/dCBo4bqhbiDigJQgd29ya2VyIGtow7RuZyBwaOG6o24gaOG7k2knKSwgc3RhdHVzID0gQ0FTRSBXSEVOIGF0dGVtcHRzICsgMSA+ICQxIFRIRU4gJ2ZhaWxlZF90cmFuc2llbnQnIEVMU0UgJ3F1ZXVlZCcgRU5ELCBsb2NrZWRfYnkgPSBOVUxMLCBsZWFzZV91bnRpbCA9IE5VTEwsIHVwZGF0ZWRfYXQgPSBub3coKSBXSEVSRSBzdGF0dXMgPSAncnVubmluZycgQU5EIGxlYXNlX3VudGlsIDwgbm93KCk=",
+            "UPDATE ocr_jobs SET attempts = attempts + 1, last_error = COALESCE(last_error, 'lease hết hạn — worker không phản hồi'), status = CASE WHEN attempts + 1 > $1 THEN 'failed_transient' ELSE 'queued' END, locked_by = NULL, lease_until = NULL, updated_at = now() WHERE status = 'running' AND lease_until < now()",
         )
         .bind(r_27x)
         .execute(r_27y)

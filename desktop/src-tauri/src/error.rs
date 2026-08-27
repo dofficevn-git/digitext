@@ -4,7 +4,7 @@ use serde::{ser::SerializeStruct, Serialize, Serializer};
 pub enum AppError {
     #[error("{message}")]
     App { code: &'static str, message: String },
-    #[error("Q8ahIHPhu58gZOG7ryBsaeG7h3UgYuG7iyBraG/DoSBo4buPbmcgKG11dGV4IHBvaXNvbmVkKS4=")]
+    #[error("Cơ sở dữ liệu bị khoá hỏng (mutex poisoned).")]
     DbPoisoned,
     #[error(transparent)]
     Db(#[from] rusqlite::Error),

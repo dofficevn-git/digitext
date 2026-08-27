@@ -3,22 +3,22 @@
 import type { V4fe } from "@/api/ocr";
 
 export const V4fm: Record<string, string> = {
-  thuTu: "U+G7kSB0aOG7qSB04buxIFZC",
-  loaiVanBan: "TG/huqFpIHbEg24gYuG6o24=",
-  soKyHieu: "S0ggdsSDbiBi4bqjbg==",
-  ngayThang: "TmfDoHkgdGjDoW5n",
-  coQuanBanHanh: "Q1EgYmFuIGjDoG5o",
-  trichYeu: "VHLDrWNoIHnhur91",
-  toSo: "VOG7nSBz4buR",
-  soTrang: "U+G7kSB0cmFuZw==",
-  trangSo: "VHJhbmcgc+G7kQ==",
-  ngonNgu: "TmfDtG4gbmfhu68=",
-  cheDoSuDung: "Q8SQIHPhu60gZOG7pW5n",
-  doTinCay: "xJDhu5kgdGluIGPhuq15",
-  butTich: "QsO6dCB0w61jaA==",
-  tinhTrangVatLy: "VFQgduG6rXQgbMO9",
-  taiLieuSo: "VMOgaSBsaeG7h3Ugc+G7kQ==",
-  ghiChu: "R2hpIGNow7o=",
+  thuTu: "Số thứ tự VB",
+  loaiVanBan: "Loại văn bản",
+  soKyHieu: "KH văn bản",
+  ngayThang: "Ngày tháng",
+  coQuanBanHanh: "CQ ban hành",
+  trichYeu: "Trích yếu",
+  toSo: "Tờ số",
+  soTrang: "Số trang",
+  trangSo: "Trang số",
+  ngonNgu: "Ngôn ngữ",
+  cheDoSuDung: "CĐ sử dụng",
+  doTinCay: "Độ tin cậy",
+  butTich: "Bút tích",
+  tinhTrangVatLy: "TT vật lý",
+  taiLieuSo: "Tài liệu số",
+  ghiChu: "Ghi chú",
 };
 
 export const V4fn: string[] = Object.keys(V4fm);

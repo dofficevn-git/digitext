@@ -153,7 +153,7 @@ impl Tkv for Ted {
     fn scan_batch(&self, r_2da: &str, _opts: &Tko, sink: &dyn Tkr, _cancel: &CancelToken) {
         sink.error(
             r_2da,
-            "TuG7gW4gdOG6o25nIG7DoHkga2jDtG5nIGjhu5cgdHLhu6MgcXXDqXQgdMOgaSBsaeG7h3UgKGNo4buJIGPDsyB0csOqbiBXaW5kb3dzL21hY09TL0xpbnV4KS4=",
+            "Nền tảng này không hỗ trợ quét tài liệu (chỉ có trên Windows/macOS/Linux).",
         );
         sink.state(r_2da, BatchState::Cancelled { pages: 0 });
     }
@@ -292,14 +292,14 @@ impl EnhancePool {
                             tracing::info!(
                                 page = r_2dx.index,
                                 ms = r_2e0.elapsed().as_millis() as u64,
-                                "bMOgbSBz4bqhY2ggdHJhbmcgeG9uZw=="
+                                "làm sạch trang xong"
                             );
                             Some(r_2dy)
                         }
                         Err(e) => {
                             tracing::warn!(
                                 page = r_2dx.index, error = % e,
-                                "bMOgbSBz4bqhY2ggdHJhbmcgTOG7lkk="
+                                "làm sạch trang LỖI"
                             );
                             None
                         }
@@ -312,7 +312,7 @@ impl EnhancePool {
                 Err(e) => {
                     tracing::warn!(
                         error = % e,
-                        "a2jDtG5nIHThuqFvIMSRxrDhu6NjIGx14buTbmcgbMOgbSBz4bqhY2g="
+                        "không tạo được luồng làm sạch"
                     );
                     break;
                 }
@@ -327,7 +327,7 @@ impl EnhancePool {
     pub(crate) fn submit(&self, index: u32, source: std::path::PathBuf) {
         tracing::debug!(
             page = index, path = % source.display(),
-            "eOG6v3AgdHJhbmcgdsOgbyBow6BuZyBsw6BtIHPhuqFjaA=="
+            "xếp trang vào hàng làm sạch"
         );
         self.queued.fetch_add(1, Ordering::SeqCst);
         if let Ok(r_2e3) = self.tx.lock() {
@@ -352,16 +352,16 @@ impl EnhancePool {
 }
 fn f_19g(source: &std::path::Path, r_2e5: crate::storage::EnhanceFlags) -> Result<Thm, String> {
     if !r_2e5.any() {
-        return Err("a2jDtG5nIGPDsyBixrDhu5tjIGzDoG0gc+G6oWNoIG7DoG8gxJHGsOG7o2MgYuG6rXQ=".into());
+        return Err("không có bước làm sạch nào được bật".into());
     }
     let lock = f_1xt(source);
     let _held = lock
         .lock()
-        .map_err(|_| "a2hvw6EgdHJhbmcgaOG7j25n".to_string())?;
+        .map_err(|_| "khoá trang hỏng".to_string())?;
     let work = f_2rc(source);
     let r_2e7 = if work.exists() { &work } else { source };
     let r_2e6 = image::open(r_2e7)
-        .map_err(|e| format!("a2jDtG5nIG3hu58gxJHGsOG7o2Mg{}: {e}", r_2e7.display()))?;
+        .map_err(|e| format!("không mở được {}: {e}", r_2e7.display()))?;
     let r_2e8 = crate::storage::f_t1(&r_2e6, r_2e5);
     f_2by(&r_2e8, &work)?;
     f_24u(source, &work);
@@ -423,7 +423,7 @@ pub async fn list_scanners(auth: State<'_, crate::auth::AuthState>) -> Result<Ve
     auth.require_perm_str(digitext_core::Permission::ScanView)?;
     tauri::async_runtime::spawn_blocking(|| backend().list_devices())
         .await
-        .map_err(|e| format!("bHXhu5NuZyBsaeG7h3Qga8OqIG3DoXkgcXXDqXQgbOG7l2k6IA=={e}"))?
+        .map_err(|e| format!("luồng liệt kê máy quét lỗi: {e}"))?
 }
 struct T17 {
     batches: Arc<Mutex<HashMap<String, CancelToken>>>,
@@ -450,7 +450,7 @@ pub fn start_scan_batch(
         let mut map = state.batches.lock().map_err(|_| "scanner state poisoned")?;
         if !map.is_empty() {
             return Err(
-                "xJBhbmcgY8OzIG3hu5l0IGzDtCBxdcOpdCBjaOG6oXkg4oCUIGvhur90IHRow7pjIGzDtCBoaeG7h24gdOG6oWkgdHLGsOG7m2Mga2hpIGLhuq90IMSR4bqndSBsw7QgbeG7m2ku"
+                "Đang có một lô quét chạy — kết thúc lô hiện tại trước khi bắt đầu lô mới."
                     .into(),
             );
         }
@@ -467,11 +467,11 @@ pub fn start_scan_batch(
             };
             let sink = Tnw { app: app.clone() };
             let r_2eh = opts.enhance;
-            tracing::info!(batch = % id, ? r_2eh, "YuG6r3QgxJHhuqd1IGzDtCBxdcOpdA==");
+            tracing::info!(batch = % id, ? r_2eh, "bắt đầu lô quét");
             if !r_2eh.any() {
                 tracing::info!(
                     batch = % id,
-                    "bMOgbSBz4bqhY2ggdOG7sSDEkeG7mW5nIFThuq5UIGNobyBsw7QgbsOgeQ=="
+                    "làm sạch tự động TẮT cho lô này"
                 );
                 backend().scan_batch(&id, &opts, &sink, &cancel);
                 return;
@@ -491,13 +491,13 @@ pub fn start_scan_batch(
                             page = index,
                             done,
                             total,
-                            "xJHDoyBwaMOhdCDhuqNuaCDEkcOjIGzDoG0gc+G6oWNo"
+                            "đã phát ảnh đã làm sạch"
                         )
                     }
                     Err(e) => {
                         tracing::warn!(
                             page = index, error = % e,
-                            "UEjDgVQgZXZlbnQgbMOgbSBz4bqhY2ggTOG7lkk="
+                            "PHÁT event làm sạch LỖI"
                         )
                     }
                 }
@@ -509,7 +509,7 @@ pub fn start_scan_batch(
             tracing::info!(
                 batch = % id, pages = pool.queued.load(Ordering::SeqCst), drain_ms =
                 r_2el.elapsed().as_millis() as u64,
-                "aMOgbmcgxJHhu6NpIGzDoG0gc+G6oWNoIMSRw6MgY+G6oW4="
+                "hàng đợi làm sạch đã cạn"
             );
             if let Some(r_2ek) = r_2em.take_terminal() {
                 sink.state(&id, r_2ek);
@@ -620,7 +620,7 @@ fn f_2by(r_2ep: &image::DynamicImage, work: &std::path::Path) -> Result<(), Stri
     let mut r_2eo = Vec::new();
     r_2ep
         .write_to(&mut Cursor::new(&mut r_2eo), image::ImageFormat::Png)
-        .map_err(|e| format!("bcOjIGhvw6Eg4bqjbmggbOG7l2k6IA=={e}"))?;
+        .map_err(|e| format!("mã hoá ảnh lỗi: {e}"))?;
     crate::storage::f_2rn(work, &r_2eo)
 }
 fn f_1xt(source: &std::path::Path) -> Arc<Mutex<()>> {
@@ -687,7 +687,7 @@ fn f_1h8(source: &std::path::Path, r_2f3: bool) -> Result<(), String> {
     let work = f_2rc(source);
     if r_2f3 {
         if r_2f4 < 0 {
-            return Err("a2jDtG5nIGPDsm4gYsaw4bubYyBuw6BvIMSR4buDIGhvw6BuIHTDoWM=".into());
+            return Err("không còn bước nào để hoàn tác".into());
         }
         if r_2f4 == 0 {
             let _ = std::fs::remove_file(&work);
@@ -698,21 +698,21 @@ fn f_1h8(source: &std::path::Path, r_2f3: bool) -> Result<(), String> {
         if !r_2f7.exists() {
             return Err(
                 format!(
-                    "Y2jhu4kgZ2nhu68gxJHGsOG7o2Mg{HISTORY_MAX}IGLGsOG7m2MgZ+G6p24gbmjhuqV0IOKAlCBraMO0bmcgbMO5aSB0aMOqbSDEkcaw4bujYw=="
+                    "chỉ giữ được {HISTORY_MAX} bước gần nhất — không lùi thêm được"
                 ),
             );
         }
         std::fs::copy(&r_2f7, &work).map_err(|e| {
-            format!("a2jDtG5nIGtow7RpIHBo4bulYyDEkcaw4bujYyBixrDhu5tjIHRyxrDhu5tjOiA={e}")
+            format!("không khôi phục được bước trước: {e}")
         })?;
         f_2rq(&r_2f5, r_2f4 - 1);
     } else {
         let r_2f6 = f_1h3(&r_2f5, r_2f4 + 1);
         if !r_2f6.exists() {
-            return Err("a2jDtG5nIGPDsm4gYsaw4bubYyBuw6BvIMSR4buDIGzDoG0gbOG6oWk=".into());
+            return Err("không còn bước nào để làm lại".into());
         }
         std::fs::copy(&r_2f6, &work)
-            .map_err(|e| format!("a2jDtG5nIGtow7RpIHBo4bulYyDEkcaw4bujYyBixrDhu5tjIHNhdTog{e}"))?;
+            .map_err(|e| format!("không khôi phục được bước sau: {e}"))?;
         f_2rq(&r_2f5, r_2f4 + 1);
     }
     Ok(())
@@ -722,9 +722,9 @@ fn f_19y(source: &str) -> Result<std::path::PathBuf, String> {
     let r_2f9 = f_1xl().canonicalize().unwrap_or_else(|_| f_1xl());
     let r_2f8 = r_2fa
         .canonicalize()
-        .map_err(|_| "4bqjbmggbmd14buTbiBraMO0bmcgdOG7k24gdOG6oWk=".to_string())?;
+        .map_err(|_| "ảnh nguồn không tồn tại".to_string())?;
     if !r_2f8.starts_with(&r_2f9) {
-        return Err("xJHGsOG7nW5nIGThuqtuIOG6o25oIGtow7RuZyBo4bujcCBs4buH".into());
+        return Err("đường dẫn ảnh không hợp lệ".into());
     }
     Ok(r_2f8)
 }
@@ -755,11 +755,11 @@ pub async fn process_scan_page(
     tauri::async_runtime::spawn_blocking(move || {
         let source = f_19y(&source_path)?;
         let lock = f_1xt(&source);
-        let _held = lock.lock().map_err(|_| "a2hvw6EgdHJhbmcgaOG7j25n")?;
+        let _held = lock.lock().map_err(|_| "khoá trang hỏng")?;
         let work = f_2rc(&source);
         let r_2fh = if work.exists() { &work } else { &source };
         let mut r_2fg = image::open(r_2fh)
-            .map_err(|e| format!("a2jDtG5nIG3hu58gxJHGsOG7o2Mg4bqjbmg6IA=={e}"))?;
+            .map_err(|e| format!("không mở được ảnh: {e}"))?;
         if let Some(r_2fe) = ops.crop {
             r_2fg = crate::storage::f_12p(&r_2fg, r_2fe.x, r_2fe.y, r_2fe.w, r_2fe.h);
         }
@@ -852,7 +852,7 @@ pub async fn process_scan_page(
         Ok(f_29l(&r_2fg, &source, r_2fk))
     })
     .await
-    .map_err(|e| format!("bHXhu5NuZyB44butIGzDvSDhuqNuaCBs4buXaTog{e}"))?
+    .map_err(|e| format!("luồng xử lý ảnh lỗi: {e}"))?
 }
 #[tauri::command]
 pub async fn reset_scan_page(
@@ -863,25 +863,25 @@ pub async fn reset_scan_page(
     tauri::async_runtime::spawn_blocking(move || {
         let source = f_19y(&source_path)?;
         let lock = f_1xt(&source);
-        let _held = lock.lock().map_err(|_| "a2hvw6EgdHJhbmcgaOG7j25n")?;
+        let _held = lock.lock().map_err(|_| "khoá trang hỏng")?;
         let _ = std::fs::remove_file(f_2rc(&source));
         let _ = std::fs::remove_dir_all(f_1h2(&source));
         let r_2fm = image::open(&source)
-            .map_err(|e| format!("a2jDtG5nIG3hu58gxJHGsOG7o2Mg4bqjbmggZ+G7kWM6IA=={e}"))?;
+            .map_err(|e| format!("không mở được ảnh gốc: {e}"))?;
         Ok(f_29l(&r_2fm, &source, 0))
     })
     .await
-    .map_err(|e| format!("bHXhu5NuZyB44butIGzDvSDhuqNuaCBs4buXaTog{e}"))?
+    .map_err(|e| format!("luồng xử lý ảnh lỗi: {e}"))?
 }
 fn f_2hi(source_path: &str, r_2fn: bool) -> Result<Thm, String> {
     let source = f_19y(source_path)?;
     let lock = f_1xt(&source);
-    let _held = lock.lock().map_err(|_| "a2hvw6EgdHJhbmcgaOG7j25n")?;
+    let _held = lock.lock().map_err(|_| "khoá trang hỏng")?;
     f_1h8(&source, r_2fn)?;
     let work = f_2rc(&source);
     let r_2fp = if work.exists() { &work } else { &source };
     let r_2fo =
-        image::open(r_2fp).map_err(|e| format!("a2jDtG5nIG3hu58gxJHGsOG7o2Mg4bqjbmg6IA=={e}"))?;
+        image::open(r_2fp).map_err(|e| format!("không mở được ảnh: {e}"))?;
     Ok(f_29l(&r_2fo, &source, 0))
 }
 #[tauri::command]
@@ -892,7 +892,7 @@ pub async fn undo_scan_page(
     auth.require_perm_str(digitext_core::Permission::ScanExecute)?;
     tauri::async_runtime::spawn_blocking(move || f_2hi(&source_path, true))
         .await
-        .map_err(|e| format!("bHXhu5NuZyB44butIGzDvSDhuqNuaCBs4buXaTog{e}"))?
+        .map_err(|e| format!("luồng xử lý ảnh lỗi: {e}"))?
 }
 #[tauri::command]
 pub async fn redo_scan_page(
@@ -902,7 +902,7 @@ pub async fn redo_scan_page(
     auth.require_perm_str(digitext_core::Permission::ScanExecute)?;
     tauri::async_runtime::spawn_blocking(move || f_2hi(&source_path, false))
         .await
-        .map_err(|e| format!("bHXhu5NuZyB44butIGzDvSDhuqNuaCBs4buXaTog{e}"))?
+        .map_err(|e| format!("luồng xử lý ảnh lỗi: {e}"))?
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

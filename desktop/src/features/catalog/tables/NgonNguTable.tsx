@@ -34,7 +34,7 @@ export function V49t({ data, setData: Voj }: V49k) {
   return (
     <>
       <V49a<V3yp>
-        addLabel="VGjDqm0gbmfDtG4gbmfhu68="
+        addLabel="Thêm ngôn ngữ"
         onAdd={
           !Vom.canCreate
             ? undefined
@@ -46,8 +46,8 @@ export function V49t({ data, setData: Voj }: V49k) {
           r.tenNgonNgu.toLowerCase().includes(q) || r.maNgonNgu.toLowerCase().includes(q)
         }
         columns={[
-          { head: "TcOjIG5nw7RuIG5n4buv", cell: (r) => r.maNgonNgu, cls: "tnum" },
-          { head: "VMOqbiBuZ8O0biBuZ+G7rw==", cell: (r) => r.tenNgonNgu },
+          { head: "Mã ngôn ngữ", cell: (r) => r.maNgonNgu, cls: "tnum" },
+          { head: "Tên ngôn ngữ", cell: (r) => r.tenNgonNgu },
         ]}
         rowActions={(r) =>
           V49o(
@@ -62,12 +62,12 @@ export function V49t({ data, setData: Voj }: V49k) {
       {Vok && (
         <Modal
           title={
-            Vok.mode === "add" ? "VGjDqm0gbmfDtG4gbmfhu68=" : "Q+G6rXAgbmjhuq10IG5nw7RuIG5n4buv"
+            Vok.mode === "add" ? "Thêm ngôn ngữ" : "Cập nhật ngôn ngữ"
           }
           onClose={() => Vol(null)}
           onSave={Von}
         >
-          <V49j label="TcOjIG5nw7RuIG5n4buv">
+          <V49j label="Mã ngôn ngữ">
             <input
               className="inp"
               value={Vok.draft.maNgonNgu}
@@ -77,7 +77,7 @@ export function V49t({ data, setData: Voj }: V49k) {
               }
             />
           </V49j>
-          <V49j label="VMOqbiBuZ8O0biBuZ+G7rw==">
+          <V49j label="Tên ngôn ngữ">
             <input
               className="inp"
               value={Vok.draft.tenNgonNgu}

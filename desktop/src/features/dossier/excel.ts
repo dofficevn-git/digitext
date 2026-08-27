@@ -18,19 +18,19 @@ async function V4e1(Vzq: WorkBook, Vzr: string): Promise<void> {
 }
 
 export const V4e2 = [
-  "TeG6o25n",
-  "SUQgSOG7kyBTxqE=",
-  "TcOjIEjhu5MgU8ah",
-  "U+G7kSBU4bqhbQ==",
-  "VGnDqnUgxJDhu4E=",
+  "Mảng",
+  "ID Hồ Sơ",
+  "Mã Hồ Sơ",
+  "Số Tạm",
+  "Tiêu Đề",
   "THBQ",
-  "U+G7kSBU4bud",
-  "TmfDoHkgQsSQ",
-  "TmfDoHkgS1Q=",
-  "VC5UaOG7q2E=",
-  "VC5UaMOhaQ==",
-  "VMOgaSBMaeG7h3U=",
-  "Q2jhu6ljIE7Eg25n",
+  "Số Tờ",
+  "Ngày BĐ",
+  "Ngày KT",
+  "T.Thừa",
+  "T.Thái",
+  "Tài Liệu",
+  "Chức Năng",
 ];
 
 export async function V4e3(
@@ -71,17 +71,17 @@ export async function V4e5(V100: V4e4[], V101: string): Promise<void> {
 export async function V4e6(): Promise<void> {
   const V106: Record<string, unknown> = {
     Mảng: "",
-    "SUQgSOG7kyBTxqE=": "",
+    "ID Hồ Sơ": "",
     TcOjIEjhu5MgU8ah: "",
-    "U+G7kSBU4bqhbQ==": "",
-    "VGnDqnUgxJDhu4E=": "",
+    "Số Tạm": "",
+    "Tiêu Đề": "",
     THBQ: "",
-    "U+G7kSBU4bud": "",
+    "Số Tờ": "",
     TmfDoHkgQsSQ: "",
-    "TmfDoHkgS1Q=": "",
-    "VC5UaOG7q2E=": "",
-    "VC5UaMOhaQ==": "",
-    "VMOgaSBMaeG7h3U=": "",
+    "Ngày KT": "",
+    "T.Thừa": "",
+    "T.Thái": "",
+    "Tài Liệu": "",
     Q2jhu6ljIE7Eg25n: "",
   };
   await V4e3([V106], "MauHoSo", "mau-lap-ho-so.xlsx");

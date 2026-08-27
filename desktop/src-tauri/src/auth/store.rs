@@ -118,7 +118,7 @@ fn f_2ak(r_ln: &rusqlite::Row<'_>) -> rusqlite::Result<Tb> {
             rusqlite::Error::FromSqlConversionFailure(
                 3,
                 rusqlite::types::Type::Text,
-                format!("cm9sZSBs4bqhOiA={role_str}").into(),
+                format!("role lạ: {role_str}").into(),
             )
         })?,
         project_id: r_ln.get(4)?,

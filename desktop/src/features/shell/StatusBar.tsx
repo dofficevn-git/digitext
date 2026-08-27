@@ -70,7 +70,7 @@ export default function V47t() {
       <footer className="statusbar">
         <div
           className="stat"
-          title="VUkgxJFhbmcgY2jhuqF5IHRyb25nIHRyw6xuaCBkdXnhu4d0ICh2aXRlIGRldiksIGNoxrBhIGvhur90IG7hu5FpIGJhY2tlbmQgVGF1cmku"
+          title="UI đang chạy trong trình duyệt (vite dev), chưa kết nối backend Tauri."
         >
           <span className="dot busy" />
           Chế độ xem trước

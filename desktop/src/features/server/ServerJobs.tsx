@@ -123,7 +123,7 @@ export default function V4k5() {
   const V1ow = () => (V1ok ? V4jw(V1ov.docs) : undefined);
 
   const V1ox = () =>
-    V1ok ? `IFBo4bqhbSB2aSDEkWFuZyBs4buNYzog${fmtN(V1ov.docs.length)}IHTDoGkgbGnhu4d1Lg==` : "";
+    V1ok ? ` Phạm vi đang lọc: ${fmtN(V1ov.docs.length)} tài liệu.` : "";
 
   const reload = async () => {
     if (V1ok) await V1on();
@@ -137,8 +137,8 @@ export default function V4k5() {
       const r = await V4ev(undefined, V1ow());
       V1o3(
         (r.documents > 0
-          ? `xJDDoyDEkcawYSA=${fmtN(r.documents)}IHTDoGkgbGnhu4d1IMSRw6MgT0NSIHhvbmcgdsOgbyBow6BuZyDEkeG7o2kgZ2jDqXAgUERGIDIgbOG7m3Au`
-          : "S2jDtG5nIGPDsyB0w6BpIGxp4buHdSBuw6BvIHPhurVuIHPDoG5nIGdow6lwIFBERiAyIGzhu5twIChj4bqnbiBPQ1IgeG9uZyB0csaw4bubYyku") +
+          ? `Đã đưa ${fmtN(r.documents)} tài liệu đã OCR xong vào hàng đợi ghép PDF 2 lớp.`
+          : "Không có tài liệu nào sẵn sàng ghép PDF 2 lớp (cần OCR xong trước).") +
           V1ox(),
       );
       await reload();
@@ -239,8 +239,8 @@ export default function V4k5() {
           >
             <option value="">
               {V1od.length
-                ? "4oCUIFThuqV0IGPhuqMgVEhCUSDigJQ="
-                : "4oCUIERhbmggbeG7pWMgY2jGsGEgY8OzIFRIQlEg4oCU"}
+                ? "— Tất cả THBQ —"
+                : "— Danh mục chưa có THBQ —"}
             </option>
             {V1od.map((t) => (
               <option key={t.thbqid} value={String(t.thbqid)}>
@@ -258,17 +258,17 @@ export default function V4k5() {
           disabled={V1o0 !== "" || V1p5}
           title={
             V1ok
-              ? "R2jDqXAgUERGIDIgbOG7m3AgY2hvIHTDoGkgbGnhu4d1IMSRw6MgT0NSIHhvbmcgVFJPTkcgUEjhuqBNIFZJIMSRYW5nIGzhu41j"
-              : "R2jDqXAgUERGIDIgbOG7m3AgY2hvIHTDoGkgbGnhu4d1IMSRw6MgT0NSIHhvbmc="
+              ? "Ghép PDF 2 lớp cho tài liệu đã OCR xong TRONG PHẠM VI đang lọc"
+              : "Ghép PDF 2 lớp cho tài liệu đã OCR xong"
           }
         >
           <span className="srv-fill pdf2" style={{ width: `${V1p3}%` }} aria-hidden />
           <span className="srv-label">
             <b>① PDF 2 lớp</b>
             <span className="srv-sub">
-              {V1o0 === "pdf2" ? "xJBhbmcgZ+G7rWnigKY=" : ""}
+              {V1o0 === "pdf2" ? "Đang gửi…" : ""}
               {view
-                ? ` ${fmtN(view.docsPdf2Done)}/${fmtN(view.docsOcrDone)}IHTDoGkgbGnhu4d1ICg=${V1p3}%)`
+                ? ` ${fmtN(view.docsPdf2Done)}/${fmtN(view.docsOcrDone)} tài liệu (${V1p3}%)`
                 : " …"}
             </span>
           </span>
@@ -280,17 +280,17 @@ export default function V4k5() {
           disabled={V1o0 !== "" || V1p5}
           title={
             V1ok
-              ? "QsOzYyB0w6FjaCAxNiB0csaw4budbmcgYuG6sW5nIEFJIGNobyB0w6BpIGxp4buHdSBUUk9ORyBQSOG6oE0gVkkgxJFhbmcgbOG7jWMg4oCUIGNo4bqheSDEkeG7mWMgbOG6rXAsIGtow7RuZyBj4bqnbiBPQ1IgdHLGsOG7m2M="
-              : "QsOzYyB0w6FjaCAxNiB0csaw4budbmcgdGjDtG5nIHRpbiBi4bqxbmcgQUkgdHLDqm4gbcOheSBjaOG7pyDigJQgY2jhuqF5IMSR4buZYyBs4bqtcCwga2jDtG5nIGPhuqduIE9DUiB0csaw4bubYw=="
+              ? "Bóc tách 16 trường bằng AI cho tài liệu TRONG PHẠM VI đang lọc — chạy độc lập, không cần OCR trước"
+              : "Bóc tách 16 trường thông tin bằng AI trên máy chủ — chạy độc lập, không cần OCR trước"
           }
         >
           <span className="srv-fill fields" style={{ width: `${V1p4}%` }} aria-hidden />
           <span className="srv-label">
             <b>② Bóc tách 16 trường</b>
             <span className="srv-sub">
-              {V1o0 === "fields" ? "xJBhbmcgZ+G7rWnigKY=" : ""}
+              {V1o0 === "fields" ? "Đang gửi…" : ""}
               {view
-                ? ` ${fmtN(view.docsFieldsDone)}/${fmtN(view.docs)}IHTDoGkgbGnhu4d1ICg=${V1p4}%)`
+                ? ` ${fmtN(view.docsFieldsDone)}/${fmtN(view.docs)} tài liệu (${V1p4}%)`
                 : " …"}
             </span>
           </span>
@@ -302,7 +302,7 @@ export default function V4k5() {
             className="btn"
             onClick={() => void V1p0(true)}
             disabled={V1o0 !== ""}
-            title="QsOzYyBs4bqhaSBjw6FjIHTDoGkgbGnhu4d1IMSRw6MgaOG7j25nIHbEqW5oIHZp4buFbiDigJQgY2jhu4kgYuG6pW0gc2F1IGtoaSDEkcOjIHPhu61hIG5ndXnDqm4gbmjDom4sIG7hur91IGtow7RuZyBjaMO6bmcgc+G6vSBo4buPbmcgeSBo4buHdA=="
+            title="Bóc lại các tài liệu đã hỏng vĩnh viễn — chỉ bấm sau khi đã sửa nguyên nhân, nếu không chúng sẽ hỏng y hệt"
           >
             <Icon name="lamMoi" />
             Thử lại {fmtN(view?.docsFieldsFailed ?? 0)} tài liệu hỏng
@@ -317,12 +317,12 @@ export default function V4k5() {
 
       {view && (
         <div className="muted srv-meta">
-          {V1ok ? "UGjhuqFtIHZpIMSRYW5nIGzhu41jOiA=" : ""}
+          {V1ok ? "Phạm vi đang lọc: " : ""}
           {fmtN(view.docs)} tài liệu · chờ OCR {fmtN(view.docsOcrPending)} · OCR xong{" "}
           {fmtN(view.docsOcrDone)} · có PDF 2 lớp {fmtN(view.docsPdf2Done)} · bóc 16 trường{" "}
           {fmtN(view.docsFieldsDone)}
           {view.docsFieldsFailed > 0
-            ? ` (${fmtN(view.docsFieldsFailed)}IGzhu5dpIOKAlCBi4bqlbSDigJxUaOG7rSBs4bqhaSB0w6BpIGxp4buHdSBo4buPbmfigJ0gc2F1IGtoaSBz4butYSBuZ3V5w6puIG5ow6JuKQ==`
+            ? ` (${fmtN(view.docsFieldsFailed)} lỗi — bấm “Thử lại tài liệu hỏng” sau khi sửa nguyên nhân)`
             : ""}
           {}
           {V1ov.unknown > 0 && V4j3(flt) && (
@@ -337,8 +337,8 @@ export default function V4k5() {
       {(V1p5 || V1oi) && (
         <div className="muted srv-meta">
           {V1ok
-            ? "xJBhbmcgxJHhu41jIGtobyBtw6F5IGNo4bunIHRoZW8gcGjhuqFtIHZp4oCm"
-            : "xJBhbmcgxJHhu41jIHRp4bq/biDEkeG7meKApg=="}
+            ? "Đang đọc kho máy chủ theo phạm vi…"
+            : "Đang đọc tiến độ…"}
         </div>
       )}
       {V1o2 && <div className="muted text-sm mt-2">{V1o2}</div>}

@@ -60,10 +60,10 @@ pub fn f_23p(pdf: &[u8], r_4vw: &[u8], r_4vx: u64, r_4vz: Option<&Tpv>) -> Resul
     let r_4w0 = f_1ig(pdf, r_4vz)?;
     let (r_4vv, r_4vu) = f_2f8(&r_4w0)?;
     let (r_4vr, r_4vq) = f_1cu(&r_4w0, r_4vv, r_4vu).ok_or_else(|| {
-        SignError::Pdf("a2jDtG5nIHRo4bqleSDDtCAvQ29udGVudHMgc2F1IGtoaSBjaMOobg==".into())
+        SignError::Pdf("không thấy ô /Contents sau khi chèn".into())
     })?;
     let (r_4vm, r_4vn) = f_ws(&r_4w0, r_4vv, r_4vu).ok_or_else(|| {
-        SignError::Pdf("a2jDtG5nIHRo4bqleSAvQnl0ZVJhbmdlIHNhdSBraGkgY2jDqG4=".into())
+        SignError::Pdf("không thấy /ByteRange sau khi chèn".into())
     })?;
     let r_4vy = r_4w0.len();
     let r_4vs = r_4vr - 1;
@@ -73,7 +73,7 @@ pub fn f_23p(pdf: &[u8], r_4vw: &[u8], r_4vx: u64, r_4vz: Option<&Tpv>) -> Resul
     f_2rp(&mut r_4vp, r_4vm, r_4vn, r_4vo)?;
     let r_4vt = f_15c(&r_4vp, r_4vo).ok_or_else(|| {
         SignError::Pdf(
-            "Qnl0ZVJhbmdlIHbhu6thIGThu7FuZyBs4bqhaSBuZ2/DoGkgYmnDqm4gKGJ1ZyBu4buZaSBi4buZKQ=="
+            "ByteRange vừa dựng lại ngoài biên (bug nội bộ)"
                 .into(),
         )
     })?;
@@ -127,13 +127,13 @@ pub fn f_1cn(
 fn f_18u(r_4wm: &[u8], r_4wj: &[u8]) -> Result<Vec<u8>, SignError> {
     let (r_4wn, r_4wk) = f_1ct(r_4wm).ok_or_else(|| {
         SignError::Pdf(
-            "a2jDtG5nIHRo4bqleSDDtCAvQ29udGVudHMgdHJvbmcgUERGIMSRw6MgY2h14bqpbiBi4buL".into(),
+            "không thấy ô /Contents trong PDF đã chuẩn bị".into(),
         )
     })?;
     let hex = f_1gv(r_4wj);
     if hex.len() > r_4wk - r_4wn {
         return Err(SignError::Pdf(format!(
-            "CMS {}IGJ5dGUgdsaw4bujdCDDtCAvQ29udGVudHMg{}IGJ5dGUgKHTEg25nIENPTlRFTlRTX0xFTik=",
+            "CMS {} byte vượt ô /Contents {} byte (tăng CONTENTS_LEN)",
             r_4wj.len(),
             (r_4wk - r_4wn) / 2
         )));
@@ -163,13 +163,13 @@ pub fn f_2q1(
 ) -> Result<Tpr, SignError> {
     let (r_4x2, r_4x1) = f_2f8(r_4x7)?;
     let (r_4wx, r_4ww) = f_1cu(r_4x7, r_4x2, r_4x1).ok_or_else(|| {
-        SignError::Pdf("a2jDtG5nIHRo4bqleSDDtCAvQ29udGVudHMgY+G7p2EgY2jhu68ga8O9".into())
+        SignError::Pdf("không thấy ô /Contents của chữ ký".into())
     })?;
     let r_4wt = f_ws(r_4x7, r_4x2, r_4x1)
         .and_then(|(r_4wz, r_4x3)| f_1yg(r_4x7, r_4wz, r_4x3))
         .ok_or_else(|| {
             SignError::Pdf(
-                "a2jDtG5nIMSR4buNYyDEkcaw4bujYyAvQnl0ZVJhbmdlIGPhu6dhIGNo4buvIGvDvQ==".into(),
+                "không đọc được /ByteRange của chữ ký".into(),
             )
         })?;
     let r_4x9 = r_4x7.len();
@@ -182,7 +182,7 @@ pub fn f_2q1(
                 .map_err(|e| {
                     SignError::Pdf(
                         format!(
-                            "xJF1w7RpIHNhdSBjaOG7ryBrw70ga2jDtG5nIHBo4bqjaSBpbmNyZW1lbnQgRFNTL0RvY1RpbWVTdGFtcCBo4bujcCBs4buHOiA={e}"
+                            "đuôi sau chữ ký không phải increment DSS/DocTimeStamp hợp lệ: {e}"
                         ),
                     )
                 })?,
@@ -190,7 +190,7 @@ pub fn f_2q1(
     } else {
         return Err(
             SignError::Pdf(
-                "L0J5dGVSYW5nZSBraMO0bmcgcGjhu6cgdHLhu41uIGZpbGUgKGPDsyBu4buZaSBkdW5nIG5nb8OgaSB2w7luZyBrw70g4oCUIFBERiDEkcOjIGLhu4sgc+G7rWEgc2F1IGtoaSBrw70p"
+                "/ByteRange không phủ trọn file (có nội dung ngoài vùng ký — PDF đã bị sửa sau khi ký)"
                     .into(),
             ),
         );
@@ -207,9 +207,9 @@ pub fn f_2q1(
         .unwrap_or(false);
     let archive_time_unix = r_4wy.as_ref().and_then(|r| r.archive_time_unix);
     let r_4wu = f_1gu(&r_4x7[r_4wx..r_4ww])
-        .ok_or_else(|| SignError::Pdf("L0NvbnRlbnRzIGtow7RuZyBwaOG6o2kgaGV4".into()))?;
+        .ok_or_else(|| SignError::Pdf("/Contents không phải hex".into()))?;
     let r_4x0 = f_15c(r_4x7, r_4wt)
-        .ok_or_else(|| SignError::Pdf("L0J5dGVSYW5nZSB0cuG7jyByYSBuZ2/DoGkgZmlsZQ==".into()))?;
+        .ok_or_else(|| SignError::Pdf("/ByteRange trỏ ra ngoài file".into()))?;
     let r_4xb = cms::f_2pr(&r_4wu, &r_4x0, r_4x8, r_4xa)?;
     let (r_4x4, r_4x5) = f_29x(
         r_4xb.timestamp_trusted,
@@ -275,7 +275,7 @@ fn f_29w(
         .find(|c| crate::chain::f_1j4(&r_4xk, c))
         .ok_or_else(|| {
             SignError::Cms(
-                "a2jDtG5nIHTDrG0gxJHGsOG7o2MgaXNzdWVyIGPhu6dhIGNlcnQgbmfGsOG7nWkga8O9IGNobyBPQ1NQL0NSTA=="
+                "không tìm được issuer của cert người ký cho OCSP/CRL"
                     .into(),
             )
         })?;
@@ -336,8 +336,8 @@ pub fn f_2fg(cert: &Certificate) -> String {
 }
 pub fn f_2f7(cert: &Certificate, r_4y1: u64) -> Vec<String> {
     vec![
-        format!("S8O9IGLhu59pOiA={}", f_2fg(cert)),
-        format!("S8O9IG5nw6B5OiA={}", f_1di(r_4y1)),
+        format!("Ký bởi: {}", f_2fg(cert)),
+        format!("Ký ngày: {}", f_1di(r_4y1)),
     ]
 }
 pub fn f_2fh(cert: &Certificate) -> Option<String> {
@@ -386,7 +386,7 @@ pub fn f_2qb(r_4y8: &[u8], r_4y9: u64, stamp: bool) -> Option<Tpv> {
         .map_err(|e| {
             tracing::warn!(
                 path = ? r_4y6, error = % e,
-                "a2jDtG5nIMSR4buNYyDEkcaw4bujYyBmb250IGto4buRaSBjaOG7ryBrw70="
+                "không đọc được font khối chữ ký"
             )
         })
         .ok()?;
@@ -437,12 +437,12 @@ fn f_1s2(r_4yd: &Document, r_4yi: lopdf::ObjectId) -> Option<[f32; 4]> {
 }
 fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>) -> Result<Vec<u8>, SignError> {
     let mut r_4yq =
-        Document::load_mem(pdf).map_err(|e| SignError::Pdf(format!("buG6oXAgUERGOiA={e}")))?;
+        Document::load_mem(pdf).map_err(|e| SignError::Pdf(format!("nạp PDF: {e}")))?;
     let r_4yw = *r_4yq
         .get_pages()
         .values()
         .next()
-        .ok_or_else(|| SignError::Pdf("UERGIGtow7RuZyBjw7MgdHJhbmc=".into()))?;
+        .ok_or_else(|| SignError::Pdf("PDF không có trang".into()))?;
     let r_4ym = match r_4z2 {
         Some(r_4yn) => {
             let r_4yo = match &r_4yn.stamp {
@@ -467,7 +467,7 @@ fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>) -> Result<Vec<u8>, SignError> {
                 Err(e) => {
                     tracing::warn!(
                         error = % e,
-                        "a2jDtG5nIGThu7FuZyDEkcaw4bujYyBraOG7kWkgY2jhu68ga8O9IGhp4buDbiB0aOG7iyDigJQga8O9IHbDtCBow6xuaA=="
+                        "không dựng được khối chữ ký hiển thị — ký vô hình"
                     );
                     None
                 }
@@ -522,7 +522,7 @@ fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>) -> Result<Vec<u8>, SignError> {
         .get(b"Root")
         .ok()
         .and_then(|r_4yu| r_4yu.as_reference().ok())
-        .ok_or_else(|| SignError::Pdf("dGhp4bq/dSAvUm9vdA==".into()))?;
+        .ok_or_else(|| SignError::Pdf("thiếu /Root".into()))?;
     if let Ok(Object::Dictionary(r_4yp)) = r_4yq.get_object_mut(r_4yy) {
         r_4yp.set("AcroForm", r_4yl);
     }
@@ -534,28 +534,28 @@ fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>) -> Result<Vec<u8>, SignError> {
 }
 fn f_2f8(r_4z7: &[u8]) -> Result<(usize, usize), SignError> {
     let r_4z8 =
-        Document::load_mem(r_4z7).map_err(|e| SignError::Pdf(format!("buG6oXAgUERGOiA={e}")))?;
+        Document::load_mem(r_4z7).map_err(|e| SignError::Pdf(format!("nạp PDF: {e}")))?;
     let r_4ze = r_4z8
         .trailer
         .get(b"Root")
         .ok()
         .and_then(|o| o.as_reference().ok())
-        .ok_or_else(|| SignError::Pdf("dGhp4bq/dSAvUm9vdA==".into()))?;
+        .ok_or_else(|| SignError::Pdf("thiếu /Root".into()))?;
     let catalog = r_4z8
         .get_object(r_4ze)
         .and_then(|o| o.as_dict())
-        .map_err(|e| SignError::Pdf(format!("xJHhu41jIGNhdGFsb2c6IA=={e}")))?;
+        .map_err(|e| SignError::Pdf(format!("đọc catalog: {e}")))?;
     let r_4z6 = catalog
         .get(b"AcroForm")
         .ok()
         .and_then(|o| o.as_reference().ok())
-        .ok_or_else(|| SignError::Pdf("dGhp4bq/dSAvQWNyb0Zvcm0=".into()))?;
+        .ok_or_else(|| SignError::Pdf("thiếu /AcroForm".into()))?;
     let r_4zd = r_4z8
         .get_object(r_4z6)
         .and_then(|o| o.as_dict())
         .and_then(|d| d.get(b"Fields"))
         .and_then(|o| o.as_array())
-        .map_err(|e| SignError::Pdf(format!("xJHhu41jIEFjcm9Gb3JtL0ZpZWxkczog{e}")))?;
+        .map_err(|e| SignError::Pdf(format!("đọc AcroForm/Fields: {e}")))?;
     let mut sig_id = None;
     for r_4za in r_4zd {
         let Ok(r_4zc) = r_4za.as_reference() else {
@@ -573,14 +573,14 @@ fn f_2f8(r_4z7: &[u8]) -> Result<(usize, usize), SignError> {
         }
     }
     let sig_id = sig_id.ok_or_else(|| {
-        SignError::Pdf("a2jDtG5nIHRo4bqleSB0csaw4budbmcgY2jhu68ga8O9IChGVD1TaWcp".into())
+        SignError::Pdf("không thấy trường chữ ký (FT=Sig)".into())
     })?;
     let r_4zf = match r_4z8.reference_table.entries.get(&sig_id.0) {
         Some(lopdf::xref::XrefEntry::Normal { offset, .. }) => *offset as usize,
         _ => {
             return Err(
                 SignError::Pdf(
-                    "ZGljdCBjaOG7ryBrw70ga2jDtG5nIGPDsyBt4bulYyB4cmVmIHRoxrDhu51uZyAob2JqZWN0IHN0cmVhbT8p"
+                    "dict chữ ký không có mục xref thường (object stream?)"
                         .into(),
                 ),
             );
@@ -588,12 +588,12 @@ fn f_2f8(r_4z7: &[u8]) -> Result<(usize, usize), SignError> {
     };
     if r_4zf >= r_4z7.len() {
         return Err(SignError::Pdf(
-            "b2Zmc2V0IHhyZWYgY+G7p2EgY2jhu68ga8O9IG5nb8OgaSBmaWxl".into(),
+            "offset xref của chữ ký ngoài file".into(),
         ));
     }
     let r_4z9 = r_4zf
         + find(&r_4z7[r_4zf..], b"endobj").ok_or_else(|| {
-            SignError::Pdf("a2jDtG5nIHRo4bqleSBlbmRvYmogY+G7p2EgZGljdCBjaOG7ryBrw70=".into())
+            SignError::Pdf("không thấy endobj của dict chữ ký".into())
         })?;
     Ok((r_4zf, r_4z9))
 }
@@ -623,7 +623,7 @@ fn f_2rp(r_4zu: &mut [u8], r_4zv: usize, r_4zw: usize, r_4zt: [usize; 4]) -> Res
     let mut s = format!("[{} {} {} {}", r_4zt[0], r_4zt[1], r_4zt[2], r_4zt[3]);
     if s.len() + 1 > r_4zx {
         return Err(SignError::Pdf(
-            "Z2nDoSB0cuG7iyBCeXRlUmFuZ2UgZMOgaSBoxqFuIHBsYWNlaG9sZGVy".into(),
+            "giá trị ByteRange dài hơn placeholder".into(),
         ));
     }
     while s.len() + 1 < r_4zx {

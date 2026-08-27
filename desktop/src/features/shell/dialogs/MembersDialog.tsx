@@ -39,7 +39,7 @@ export default function V4wv() {
     <div className="overlay" onClick={V37c}>
       <div className="dialog wide" onClick={(V37t) => V37t.stopPropagation()}>
         <h3>
-          Quản lý thành viên — <span>{V37b || "ROG7sSDDoW4="}</span>
+          Quản lý thành viên — <span>{V37b || "Dự án"}</span>
         </h3>
         <p className="muted -mt-1.5 mx-0 mb-3.5 text-sm">
           Phân quyền theo dự án. Chủ sở hữu luôn có toàn quyền.
@@ -85,7 +85,7 @@ export default function V4wv() {
                     {!m.owner && (
                       <span
                         className="rm-mem"
-                        title="R+G7oSBraOG7j2kgZOG7sSDDoW4="
+                        title="Gỡ khỏi dự án"
                         onClick={() => V37o(i)}
                       >
                         <Icon name="dong" size={13} />
@@ -99,7 +99,7 @@ export default function V4wv() {
         </div>
         <div className="add-member">
           <input
-            placeholder="KyBUaMOqbSB0aGVvIHTDqm4gLyBlbWFpbOKApg=="
+            placeholder="+ Thêm theo tên / email…"
             value={V37h}
             onChange={(V37v) => V37i(V37v.target.value)}
             onKeyDown={(V37w) => V37w.key === "Enter" && V37r()}

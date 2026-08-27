@@ -69,7 +69,7 @@ export function V49r({
   return (
     <>
       <V49a<V3ym>
-        addLabel="VGjDqm0gbeG6o25n"
+        addLabel="Thêm mảng"
         onAdd={
           !Vnf.canCreate
             ? undefined
@@ -119,11 +119,11 @@ export function V49r({
           </div>
         }
         columns={[
-          { head: "SUQgTeG6o25n", cell: (m) => m.mangCvid, cls: "tnum" },
-          { head: "TcOjIG3huqNuZw==", cell: (m) => m.maMang, cls: "tnum" },
-          { head: "VMOqbiBt4bqjbmcgY8O0bmcgdmnhu4dj", cell: (m) => m.tenMang },
-          { head: "VMOqbiBwaMOybmcgYmFu", cell: (m) => Vnl(m.maDv) },
-          { head: "VGjhu6kgdOG7sQ==", cell: (m) => m.soTt ?? "—", cls: "num" },
+          { head: "ID Mảng", cell: (m) => m.mangCvid, cls: "tnum" },
+          { head: "Mã mảng", cell: (m) => m.maMang, cls: "tnum" },
+          { head: "Tên mảng công việc", cell: (m) => m.tenMang },
+          { head: "Tên phòng ban", cell: (m) => Vnl(m.maDv) },
+          { head: "Thứ tự", cell: (m) => m.soTt ?? "—", cls: "num" },
         ]}
         rowActions={(m) =>
           V49o(
@@ -139,13 +139,13 @@ export function V49r({
         <Modal
           title={
             Vni.mode === "add"
-              ? "VGjDqm0gbeG6o25nIGPDtG5nIHZp4buHYw=="
-              : "VGhheSDEkeG7lWkgZOG7ryBsaeG7h3UgbeG6o25nIGPDtG5nIHZp4buHYw=="
+              ? "Thêm mảng công việc"
+              : "Thay đổi dữ liệu mảng công việc"
           }
           onClose={() => Vnj(null)}
           onSave={Vnq}
         >
-          <V49j label="UGjDsm5nIGJhbg==">
+          <V49j label="Phòng ban">
             <select
               className="inp"
               value={Vni.draft.maDv}
@@ -158,14 +158,14 @@ export function V49r({
               ))}
             </select>
           </V49j>
-          <V49j label="TcOjIG3huqNuZw==">
+          <V49j label="Mã mảng">
             <input
               className="inp"
               value={Vni.draft.maMang}
               onChange={(Vo1) => Vnj({ ...Vni, draft: { ...Vni.draft, maMang: Vo1.target.value } })}
             />
           </V49j>
-          <V49j label="VMOqbiBt4bqjbmcgY8O0bmcgdmnhu4dj">
+          <V49j label="Tên mảng công việc">
             <input
               className="inp"
               value={Vni.draft.tenMang}
@@ -174,7 +174,7 @@ export function V49r({
               }
             />
           </V49j>
-          <V49j label="VGjhu6kgdOG7sQ==">
+          <V49j label="Thứ tự">
             <input
               className="inp"
               type="number"

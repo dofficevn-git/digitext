@@ -41,7 +41,7 @@ export default function V4bg({
       Vrp(f.name);
       Vs1(w, V4bf(w));
     } catch (Vs3) {
-      Vrx("S2jDtG5nIMSR4buNYyDEkcaw4bujYyBmaWxlOiA=" + String(Vs3));
+      Vrx("Không đọc được file: " + String(Vs3));
     } finally {
       Vrz(false);
     }
@@ -52,7 +52,7 @@ export default function V4bg({
   const Vs6 = Vs4 ? Math.max(0, ...Vs4.rows.slice(0, 30).map((r) => r.length)) : 0;
   const Vs7 = Array.from({ length: Vs6 }, (_Vs8, i) => ({
     i,
-    label: (Vs5[i] || `Q+G7mXQg${i + 1}`).slice(0, 30),
+    label: (Vs5[i] || `Cột ${i + 1}`).slice(0, 30),
   }));
 
   const Vs9 = useMemo(() => {

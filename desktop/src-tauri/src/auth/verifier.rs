@@ -15,7 +15,7 @@ fn f_s9() -> Argon2<'static> {
     Argon2::new(
         Algorithm::Argon2id,
         Version::V0x13,
-        Params::new(19456, 3, 1, Some(32)).expect("dGhhbSBz4buRIGFyZ29uMiBo4bujcCBs4buH"),
+        Params::new(19456, 3, 1, Some(32)).expect("tham số argon2 hợp lệ"),
     )
 }
 pub struct T4l {
@@ -31,7 +31,7 @@ pub fn derive(r_mq: &str, salt: &[u8]) -> Result<T4l, AppError> {
     let mut r_mp = [0u8; 32];
     f_s9()
         .hash_password_into(r_mq.as_bytes(), salt, &mut r_mp)
-        .map_err(|e| AppError::internal(format!("YXJnb24yIHRo4bqldCBi4bqhaTog{e}")))?;
+        .map_err(|e| AppError::internal(format!("argon2 thất bại: {e}")))?;
     let mut r_mn = Sha256::new();
     r_mn.update(b"digitext-verify");
     r_mn.update(r_mp);
@@ -39,7 +39,7 @@ pub fn derive(r_mq: &str, salt: &[u8]) -> Result<T4l, AppError> {
     let r_mo = hkdf::Hkdf::<Sha256>::new(None, &r_mp);
     let mut wrap_key = [0u8; 32];
     r_mo.expand(b"digitext-wrap", &mut wrap_key)
-        .map_err(|e| AppError::internal(format!("aGtkZiB0aOG6pXQgYuG6oWk6IA=={e}")))?;
+        .map_err(|e| AppError::internal(format!("hkdf thất bại: {e}")))?;
     Ok(T4l {
         verifier_hex,
         wrap_key,
@@ -54,7 +54,7 @@ pub fn f_2cn(wrap_key: &[u8; 32], r_mx: &[u8]) -> Result<Vec<u8>, AppError> {
     rand::rngs::OsRng.fill_bytes(&mut r_mv);
     let r_mu = r_mt
         .encrypt(Nonce::from_slice(&r_mv), r_mx)
-        .map_err(|_| AppError::internal("bcOjIGhvw6Egc2VjcmV0cyB0aOG6pXQgYuG6oWk="))?;
+        .map_err(|_| AppError::internal("mã hoá secrets thất bại"))?;
     let mut r_mw = Vec::with_capacity(C_DM + r_mu.len());
     r_mw.extend_from_slice(&r_mv);
     r_mw.extend_from_slice(&r_mu);
@@ -64,7 +64,7 @@ pub fn f_1we(wrap_key: &[u8; 32], r_n0: &[u8]) -> Result<Vec<u8>, AppError> {
     if r_n0.len() < C_DM {
         return Err(AppError::new(
             "auth_cache_corrupt",
-            "Y2FjaGUgdMOgaSBraG/huqNuIGjhu49uZw==",
+            "cache tài khoản hỏng",
         ));
     }
     let (r_mz, r_my) = r_n0.split_at(C_DM);
@@ -73,7 +73,7 @@ pub fn f_1we(wrap_key: &[u8; 32], r_n0: &[u8]) -> Result<Vec<u8>, AppError> {
         .map_err(|_| {
             AppError::new(
                 "auth_cache_corrupt",
-                "a2jDtG5nIGdp4bqjaSBtw6MgxJHGsOG7o2MgY2FjaGUgdMOgaSBraG/huqNu",
+                "không giải mã được cache tài khoản",
             )
         })
 }
@@ -104,21 +104,21 @@ pub fn f_2pv(r_n5: &str, r_n6: &str, r_n3: &str, r_n2: Option<&str>) -> Result<T
     let key = DecodingKey::from_ed_pem(r_n6.as_bytes()).map_err(|_| {
         AppError::new(
             "auth_cache_corrupt",
-            "cHVibGljIGtleSBzZXJ2ZXIga2jDtG5nIGjhu6NwIGzhu4c=",
+            "public key server không hợp lệ",
         )
     })?;
     let r_n1 = jsonwebtoken::decode::<Tat>(r_n5, &key, &Validation::new(JwtAlg::EdDSA))
         .map_err(|_| {
             AppError::new(
                 "offline_expired",
-                "Z2nhuqV5IHBow6lwIG9mZmxpbmUga2jDtG5nIGjhu6NwIGzhu4cgaG/hurdjIMSRw6MgaOG6v3QgaOG6oW4g4oCUIGPhuqduIMSRxINuZyBuaOG6rXAgb25saW5lIGzhuqFp",
+                "giấy phép offline không hợp lệ hoặc đã hết hạn — cần đăng nhập online lại",
             )
         })?
         .claims;
     if r_n1.purpose != "offline_lease" || r_n1.sub != r_n3 {
         return Err(AppError::new(
             "auth_cache_corrupt",
-            "Z2nhuqV5IHBow6lwIG9mZmxpbmUga2jDtG5nIGto4bubcCB0w6BpIGtob+G6o24=",
+            "giấy phép offline không khớp tài khoản",
         ));
     }
     if let Some(r_n4) = r_n1.device_id.as_deref() {
@@ -126,7 +126,7 @@ pub fn f_2pv(r_n5: &str, r_n6: &str, r_n3: &str, r_n2: Option<&str>) -> Result<T
             return Err(
                 AppError::new(
                     "auth_cache_corrupt",
-                    "Z2nhuqV5IHBow6lwIG9mZmxpbmUga2jDtG5nIGto4bubcCB0aGnhur90IGLhu4sgbsOgeSDigJQgxJHEg25nIG5o4bqtcCBvbmxpbmUgbOG6oWk=",
+                    "giấy phép offline không khớp thiết bị này — đăng nhập online lại",
                 ),
             );
         }

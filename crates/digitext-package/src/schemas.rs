@@ -35,7 +35,7 @@ fn f_2fi(r_41a: &[&str]) -> String {
 }
 fn f_26g(namespace: &str, location: &str) -> String {
     format!(
-        "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBUaMO0bmcgdMawIDA1LzIwMjUvVFQtQk5WIGtow7RuZyBjdW5nIGPhuqVwIG7hu5lpIGR1bmcgWFNEIG7DoHk7IGNodXnhu4NuIGjGsOG7m25nCiAgICAgdOG7m2kgYuG6o24gY2h14bqpbiB0xrDGoW5nIOG7qW5nLiAtLT4KPHhzOnNjaGVtYSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiPgogICAgPHhzOmltcG9ydCBuYW1lc3BhY2U9Ig=={namespace}\" schemaLocation=\"{location}\"/>\n</xs:schema>\n"
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- Thông tư 05/2025/TT-BNV không cung cấp nội dung XSD này; chuyển hướng\n     tới bản chuẩn tương ứng. -->\n<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n    <xs:import namespace=\"{namespace}\" schemaLocation=\"{location}\"/>\n</xs:schema>\n"
     )
 }
 pub fn f_1wy(r_41d: PackageKind) -> String {

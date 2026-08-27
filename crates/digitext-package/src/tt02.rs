@@ -95,18 +95,18 @@ fn f_1qv(v: &str, notes: &mut Vec<String>) -> String {
     let r_41w = f_1v2(v);
     match r_41w.as_str() {
         "01" | "02" | "03" | "04" | "05" | "06" | "07" => return r_41w,
-        "dsSpbmggdmnhu4Vu" | "vinh vien" => return "01".into(),
-        "NzAgbsSDbQ==" => return "02".into(),
-        "NTAgbsSDbQ==" => return "03".into(),
-        "MzAgbsSDbQ==" => return "04".into(),
-        "MjAgbsSDbQ==" => return "05".into(),
-        "MTAgbsSDbQ==" => return "06".into(),
+        "vĩnh viễn" | "vinh vien" => return "01".into(),
+        "70 năm" => return "02".into(),
+        "50 năm" => return "03".into(),
+        "30 năm" => return "04".into(),
+        "20 năm" => return "05".into(),
+        "10 năm" => return "06".into(),
         _ => {}
     }
     notes
         .push(
             format!(
-                "dGjhu51pIGjhuqFuIGLhuqNvIHF14bqjbiA={v:?}IGtow7RuZyBraOG7m3AgYuG6o25nIG3DoyBUVCAwNSDihpIgMDcgKEtow6FjKQ=="
+                "thời hạn bảo quản {v:?} không khớp bảng mã TT 05 → 07 (Khác)"
             ),
         );
     "07".into()
@@ -116,10 +116,10 @@ fn f_1qw(v: Option<&str>, notes: &mut Vec<String>) -> String {
     let r_41x = f_1v2(v);
     match r_41x.as_str() {
         "01" | "02" | "03" => return r_41x,
-        "Y8O0bmcga2hhaQ==" => return "01".into(),
-        "c+G7rSBk4bulbmcgY8OzIMSRaeG7gXUga2nhu4du"
-        | "Y8OzIMSRaeG7gXUga2nhu4du"
-        | "aOG6oW4gY2jhur8=" => {
+        "công khai" => return "01".into(),
+        "sử dụng có điều kiện"
+        | "có điều kiện"
+        | "hạn chế" => {
             return "02".into();
         }
         "beG6rXQ=" => return "03".into(),
@@ -128,7 +128,7 @@ fn f_1qw(v: Option<&str>, notes: &mut Vec<String>) -> String {
     notes
         .push(
             format!(
-                "Y2jhur8gxJHhu5kgc+G7rSBk4bulbmcg{v:?}IGtow7RuZyBraOG7m3AgYuG6o25nIG3DoyDihpIgMDEgKEPDtG5nIGtoYWkp"
+                "chế độ sử dụng {v:?} không khớp bảng mã → 01 (Công khai)"
             ),
         );
     "01".into()
@@ -144,23 +144,23 @@ fn f_1qu(r_41z: &[String], notes: &mut Vec<String>) -> Vec<String> {
             match r_41y.as_str() {
                 "01" | "02" | "03" | "04" | "05" | "06" | "07" | "08" | "09" | "10"
                 | "11" => r_41y,
-                "dGnhur9uZyB2aeG7h3Q=" | "dmnhu4d0" => "01".into(),
-                "dGnhur9uZyBhbmg=" | "anh" => "02".into(),
-                "dGnhur9uZyBwaMOhcA==" | "cGjDoXA=" => "03".into(),
-                "dGnhur9uZyBuZ2E=" | "nga" => "04".into(),
-                "dGnhur9uZyB0cnVuZw==" | "dGnhur9uZyB0cnVuZyBxdeG7kWM=" | "trung" => {
+                "tiếng việt" | "việt" => "01".into(),
+                "tiếng anh" | "anh" => "02".into(),
+                "tiếng pháp" | "cGjDoXA=" => "03".into(),
+                "tiếng nga" | "nga" => "04".into(),
+                "tiếng trung" | "tiếng trung quốc" | "trung" => {
                     "05".into()
                 }
-                "dmnhu4d0IGFuaA==" => "06".into(),
-                "dmnhu4d0IG5nYQ==" => "07".into(),
-                "dmnhu4d0IHBow6Fw" => "08".into(),
-                "aMOhbiBuw7Rt" => "09".into(),
-                "dmnhu4d0IHRydW5n" => "10".into(),
+                "việt anh" => "06".into(),
+                "việt nga" => "07".into(),
+                "việt pháp" => "08".into(),
+                "hán nôm" => "09".into(),
+                "việt trung" => "10".into(),
                 _ => {
                     notes
                         .push(
                             format!(
-                                "bmfDtG4gbmfhu68g{v:?}IGtow7RuZyBraOG7m3AgYuG6o25nIG3DoyDihpIgMTEgKEtow6FjKQ=="
+                                "ngôn ngữ {v:?} không khớp bảng mã → 11 (Khác)"
                             ),
                         );
                     "11".into()
@@ -171,37 +171,37 @@ fn f_1qu(r_41z: &[String], notes: &mut Vec<String>) -> Vec<String> {
 }
 fn f_1r1(v: Option<&str>, notes: &mut Vec<String>) -> String {
     const TABLE: [(&str, &str); 31] = [
-        ("bmdo4buLIHF1eeG6v3Q=", "01"),
-        ("cXV54bq/dCDEkeG7i25o", "02"),
-        ("Y2jhu4kgdGjhu4s=", "03"),
-        ("cXV5IGNo4bq/", "04"),
-        ("cXV5IMSR4buLbmg=", "05"),
-        ("dGjDtG5nIGPDoW8=", "06"),
-        ("dGjDtG5nIGLDoW8=", "07"),
-        ("aMaw4bubbmcgZOG6q24=", "08"),
-        ("Y2jGsMahbmcgdHLDrG5o", "09"),
-        ("a+G6vyBob+G6oWNo", "10"),
-        ("cGjGsMahbmcgw6Fu", "11"),
-        ("xJHhu4Egw6Fu", "12"),
-        ("ZOG7sSDDoW4=", "13"),
-        ("YsOhbyBjw6Fv", "14"),
-        ("dOG7nSB0csOsbmg=", "15"),
-        ("Z2nhuqV5IOG7p3kgcXV54buBbg==", "16"),
-        ("cGhp4bq/dSBn4butaQ==", "17"),
-        ("cGhp4bq/dSBjaHV54buDbg==", "18"),
-        ("cGhp4bq/dSBiw6Fv", "19"),
-        ("YmnDqm4gYuG6o24=", "20"),
-        ("aOG7o3AgxJHhu5NuZw==", "21"),
-        ("Y8O0bmcgdsSDbg==", "22"),
-        ("Y8O0bmcgxJFp4buHbg==", "23"),
-        ("YuG6o24gZ2hpIG5o4bub", "24"),
-        ("YuG6o24gdGjhu49hIHRodeG6rW4=", "25"),
-        ("Z2nhuqV5IG3hu51p", "26"),
-        ("Z2nhuqV5IGdp4bubaSB0aGnhu4d1", "27"),
-        ("Z2nhuqV5IG5naOG7iSBwaMOpcA==", "28"),
-        ("dGjGsCBjw7RuZw==", "29"),
-        ("YuG6o24gxJHhu5M=", "30"),
-        ("YuG6o24gduG6vSBr4bu5IHRodeG6rXQ=", "31"),
+        ("nghị quyết", "01"),
+        ("quyết định", "02"),
+        ("chỉ thị", "03"),
+        ("quy chế", "04"),
+        ("quy định", "05"),
+        ("thông cáo", "06"),
+        ("thông báo", "07"),
+        ("hướng dẫn", "08"),
+        ("chương trình", "09"),
+        ("kế hoạch", "10"),
+        ("phương án", "11"),
+        ("đề án", "12"),
+        ("dự án", "13"),
+        ("báo cáo", "14"),
+        ("tờ trình", "15"),
+        ("giấy ủy quyền", "16"),
+        ("phiếu gửi", "17"),
+        ("phiếu chuyển", "18"),
+        ("phiếu báo", "19"),
+        ("biên bản", "20"),
+        ("hợp đồng", "21"),
+        ("công văn", "22"),
+        ("công điện", "23"),
+        ("bản ghi nhớ", "24"),
+        ("bản thỏa thuận", "25"),
+        ("giấy mời", "26"),
+        ("giấy giới thiệu", "27"),
+        ("giấy nghỉ phép", "28"),
+        ("thư công", "29"),
+        ("bản đồ", "30"),
+        ("bản vẽ kỹ thuật", "31"),
     ];
     let Some(v) = v else {
         return "32".into();
@@ -222,7 +222,7 @@ fn f_1r1(v: Option<&str>, notes: &mut Vec<String>) -> String {
     notes
         .push(
             format!(
-                "dMOqbiBsb+G6oWkgdsSDbiBi4bqjbiA={v:?}IGtow7RuZyBraOG7m3AgYuG6o25nIG3DoyDihpIgMzIgKEtow6FjKQ=="
+                "tên loại văn bản {v:?} không khớp bảng mã → 32 (Khác)"
             ),
         );
     "32".into()
@@ -232,14 +232,14 @@ fn f_1qx(v: Option<&str>, notes: &mut Vec<String>) -> Option<String> {
     let r_424 = f_1v2(v);
     match r_424.as_str() {
         "01" | "02" | "03" => Some(r_424),
-        "YsOsbmggdGjGsOG7nW5n" => Some("01".into()),
-        "aMawIGjhu49uZyBuaOG6uQ==" => Some("02".into()),
-        "aMawIGjhu49uZyBu4bq3bmc=" | "aMawIGjhu49uZw==" => Some("03".into()),
+        "bình thường" => Some("01".into()),
+        "hư hỏng nhẹ" => Some("02".into()),
+        "hư hỏng nặng" | "hư hỏng" => Some("03".into()),
         _ => {
             notes
                 .push(
                     format!(
-                        "dMOsbmggdHLhuqFuZyB24bqtdCBsw70g{v:?}IGtow7RuZyBraOG7m3AgYuG6o25nIG3DoyDihpIgYuG7jyB0cuG7kW5n"
+                        "tình trạng vật lý {v:?} không khớp bảng mã → bỏ trống"
                     ),
                 );
             None
@@ -253,26 +253,26 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
     let mut report = Tt02Report::default();
     if opts.kind != "aip_hoso" && opts.kind != "sip_hoso" {
         report.errors.push(format!(
-            "kind {:?}IOKAlCBjaOG7iSBo4buXIHRy4bujIGFpcF9ob3NvIHwgc2lwX2hvc28=",
+            "kind {:?} — chỉ hỗ trợ aip_hoso | sip_hoso",
             opts.kind
         ));
     }
     if hoso.ma_ho_so.trim().is_empty() {
-        report.errors.push("dGhp4bq/dSBtw6MgaOG7kyBzxqE=".into());
+        report.errors.push("thiếu mã hồ sơ".into());
     }
     if hoso.tieu_de.trim().is_empty() {
         report
             .errors
-            .push("dGhp4bq/dSB0acOqdSDEkeG7gSBo4buTIHPGoQ==".into());
+            .push("thiếu tiêu đề hồ sơ".into());
     }
     if hoso.van_ban.is_empty() {
         report
             .errors
-            .push("aOG7kyBzxqEga2jDtG5nIGPDsyB2xINuIGLhuqNuIG7DoG8=".into());
+            .push("hồ sơ không có văn bản nào".into());
     }
     if opts.kind == "sip_hoso" && opts.submission_agreement.is_none() {
         report.errors.push(
-            "Z8OzaSBTSVAgYuG6r3QgYnXhu5ljIG3DoyB0aG/huqMgdGh14bqtbiBu4buZcCAoLS1hZ3JlZW1lbnQp"
+            "gói SIP bắt buộc mã thoả thuận nộp (--agreement)"
                 .into(),
         );
     }
@@ -286,7 +286,7 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
             .notes
             .push(
                 format!(
-                    "bcOjIGjhu5Mgc8ahIGNoxrBhIG1hbmcgbcOjIGPGoSBxdWFuIGzGsHUgdHLhu68g4oaSIHRow6ptIHRp4buBbiB04buRIA=={:?}",
+                    "mã hồ sơ chưa mang mã cơ quan lưu trữ → thêm tiền tố {:?}",
                     opts.archive_org_code
                 ),
             );
@@ -298,7 +298,7 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
             .errors
             .push(
                 format!(
-                    "buG7mXAgbMawdSAoU0lQKSBjaOG7iSBuaOG6rW4gdGjhu51pIGjhuqFuIGLhuqNvIHF14bqjbiB2xKluaCB2aeG7hW4g4oCUIGjhu5Mgc8ahIMSRYW5nIGzDoCA={:?}",
+                    "nộp lưu (SIP) chỉ nhận thời hạn bảo quản vĩnh viễn — hồ sơ đang là {:?}",
                     hoso.thoi_han_bao_quan
                 ),
             );
@@ -311,7 +311,7 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
                 .notes
                 .push(
                     format!(
-                        "dOG7lW5nIHPhu5EgdsSDbiBi4bqjbiBraGFpICg={t}KSDiiaAgc+G7kSB2xINuIGLhuqNuIGvDqG0gdGhlbyAo{}KSDigJQgbOG6pXkgdGhlbyBz4buRIHRo4buxYw==",
+                        "tổng số văn bản khai ({t}) ≠ số văn bản kèm theo ({}) — lấy theo số thực",
                         hoso.van_ban.len()
                     ),
                 );
@@ -319,7 +319,7 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
     }
     if hoso.so_luong_to.is_none() {
         report.errors.push(
-            "aOG7kyBzxqEgc+G7kSBow7NhIGLhuq90IGJ14buZYyBz4buRIGzGsOG7o25nIHThu50gKHNvTHVvbmdUbyk="
+            "hồ sơ số hóa bắt buộc số lượng tờ (soLuongTo)"
                 .into(),
         );
     }
@@ -354,7 +354,7 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
                 .errors
                 .push(
                     format!(
-                        "dsSDbiBi4bqjbiBTVFQg{}OiB0aGnhur91IGRvY3VtZW50SWQgdHLDqm4gc2VydmVyIOKAlCBu4buZcCBQREYgdHLGsOG7m2MgcuG7k2kgxJFp4buBbiBtYXA=",
+                        "văn bản STT {}: thiếu documentId trên server — nộp PDF trước rồi điền map",
                         r_42b.stt
                     ),
                 );

@@ -46,29 +46,29 @@ pub fn build_request(
 }
 pub fn f_2le(r_51k: &[u8]) -> Result<Vec<u8>, SignError> {
     let r_51j = f_2df(r_51k)
-        .ok_or_else(|| SignError::Cms("VGltZVN0YW1wUmVzcCBraMO0bmcgcGjhuqNpIFNFUVVFTkNF".into()))?;
+        .ok_or_else(|| SignError::Cms("TimeStampResp không phải SEQUENCE".into()))?;
     let r_51l = f_25x(r_51j)
-        .ok_or_else(|| SignError::Cms("VGltZVN0YW1wUmVzcCB0aGnhur91IFBLSVN0YXR1c0luZm8=".into()))?;
+        .ok_or_else(|| SignError::Cms("TimeStampResp thiếu PKIStatusInfo".into()))?;
     if r_51l.tag != 0x30 {
         return Err(SignError::Cms(
-            "UEtJU3RhdHVzSW5mbyBraMO0bmcgcGjhuqNpIFNFUVVFTkNF".into(),
+            "PKIStatusInfo không phải SEQUENCE".into(),
         ));
     }
     let r_51m = f_25x(r_51l.content)
-        .ok_or_else(|| SignError::Cms("UEtJU3RhdHVzSW5mbyB0aGnhur91IHN0YXR1cw==".into()))?;
+        .ok_or_else(|| SignError::Cms("PKIStatusInfo thiếu status".into()))?;
     let status = f_1ij(r_51m.content)
-        .ok_or_else(|| SignError::Cms("UEtJU3RhdHVzIGtow7RuZyDEkeG7jWMgxJHGsOG7o2M=".into()))?;
+        .ok_or_else(|| SignError::Cms("PKIStatus không đọc được".into()))?;
     if status != 0 && status != 1 {
         return Err(SignError::Cms(format!(
-            "VFNBIHThu6sgY2jhu5FpIGPhuqVwIHRlbSAoUEtJU3RhdHVzPQ=={status})"
+            "TSA từ chối cấp tem (PKIStatus={status})"
         )));
     }
     let token = f_25x(r_51l.rest).ok_or_else(|| {
-        SignError::Cms("VGltZVN0YW1wUmVzcCBncmFudGVkIG5oxrBuZyB0aGnhur91IHRva2Vu".into())
+        SignError::Cms("TimeStampResp granted nhưng thiếu token".into())
     })?;
     if token.tag != 0x30 {
         return Err(SignError::Cms(
-            "VGltZVN0YW1wVG9rZW4ga2jDtG5nIHBo4bqjaSBTRVFVRU5DRQ==".into(),
+            "TimeStampToken không phải SEQUENCE".into(),
         ));
     }
     Ok(token.whole.to_vec())
@@ -106,7 +106,7 @@ pub fn f_2q0(
     let r_51r = ContentInfo::decode(&mut r_51u).map_err(SignError::der)?;
     if r_51r.content_type != OID_SIGNED_DATA {
         return Err(SignError::Cms(
-            "VGltZVN0YW1wVG9rZW4ga2jDtG5nIHBo4bqjaSBpZC1zaWduZWREYXRh".into(),
+            "TimeStampToken không phải id-signedData".into(),
         ));
     }
     let r_51w: SignedData = r_51r.content.decode_as().map_err(SignError::der)?;
@@ -114,11 +114,11 @@ pub fn f_2q0(
         .encap_content_info
         .econtent
         .as_ref()
-        .ok_or_else(|| SignError::Cms("dG9rZW4gdGhp4bq/dSBlQ29udGVudCAoVFNUSW5mbyk=".into()))?;
+        .ok_or_else(|| SignError::Cms("token thiếu eContent (TSTInfo)".into()))?;
     let r_521 = r_51s.decode_as::<OctetString>().map_err(SignError::der)?;
     let r_520 = r_521.as_bytes();
     let r_51t = f_2mq(r_520)
-        .ok_or_else(|| SignError::Cms("VFNUSW5mbyB0aGnhur91IG1lc3NhZ2VJbXByaW50".into()))?;
+        .ok_or_else(|| SignError::Cms("TSTInfo thiếu messageImprint".into()))?;
     let imprint_ok = r_51t == Sha256::digest(r_51x).as_slice();
     let gen_time_unix = f_2mp(r_520);
     let token_signature_ok = f_2pz(&r_51w, r_520);

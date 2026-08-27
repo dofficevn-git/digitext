@@ -66,7 +66,7 @@ impl fmt::Display for VanBanField {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("dHLGsOG7nW5nIHbEg24gYuG6o24ga2jDtG5nIGjhu6NwIGzhu4c6IA=={0:?}")]
+#[error("trường văn bản không hợp lệ: {0:?}")]
 pub struct Tgr(pub String);
 impl FromStr for VanBanField {
     type Err = Tgr;

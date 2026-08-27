@@ -13,7 +13,7 @@ export type V4my = (V4mz?: number) => string;
 class V4n0 extends Error {
   constructor() {
     super(
-      "S2jDtG5nIGPDsyBk4buvIGxp4buHdSBwaMO5IGjhu6NwIGLhu5kgbOG7jWMgxJHhu4Mga+G6v3QgeHXhuqV0Lg==",
+      "Không có dữ liệu phù hợp bộ lọc để kết xuất.",
     );
     this.name = "NoDataError";
   }
@@ -88,27 +88,27 @@ export async function V4n6(filter: V4ld, V1x3: V4my): Promise<number> {
 export async function V4n7(filter: V4ld, V1x5: string): Promise<number> {
   const V1x6 = await V4lk(filter);
   if (V1x6.length === 0) throw new V4n0();
-  V4n2("TeG7pWMgbOG7pWMgaOG7kyBzxqE=", V4ms(V1x6, V1x5));
+  V4n2("Mục lục hồ sơ", V4ms(V1x6, V1x5));
   return V1x6.length;
 }
 
 export async function V4n8(filter: V4ld): Promise<number> {
   const [V1x7, V1x8] = await Promise.all([V4lk(filter), V4ll(filter)]);
   if (V1x8.length === 0) throw new V4n0();
-  V4n2("TeG7pWMgbOG7pWMgdsSDbiBi4bqjbg==", V4mt(V1x7, V1x8));
+  V4n2("Mục lục văn bản", V4mt(V1x7, V1x8));
   return V1x8.length;
 }
 
 export async function V4n9(filter: V4ld, V1x9: V4my): Promise<number> {
   const V1xa = await V4lk(filter);
   if (V1xa.length === 0) throw new V4n0();
-  V4n2("UGjhu6UgbOG7pWM=", V4mu(V1xa, V1x9));
+  V4n2("Phụ lục", V4mu(V1xa, V1x9));
   return V1xa.length;
 }
 
 export async function V4na(filter: V4ld, V1xb: string): Promise<number> {
   const V1xc = await V4lk(filter);
   if (V1xc.length === 0) throw new V4n0();
-  V4n2("TmjDo24gaOG7mXA=", V4mx(V1xc, V1xb));
+  V4n2("Nhãn hộp", V4mx(V1xc, V1xb));
   return V1xc.length;
 }

@@ -36,9 +36,9 @@ def build_report(rows: list[dict], pred_key: str, engine: str,
 def main(argv: list[str] | None = None) -> int:
     p_5e6 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_5e6.add_argument("rows_jsonl")
-    p_5e6.add_argument("--pred", required=True, help="a2hvw6EgcHJlZCB0cm9uZyByb3dzICh2ZCBwcmVkX29ubnhfZnQp")
+    p_5e6.add_argument("--pred", required=True, help="khoá pred trong rows (vd pred_onnx_ft)")
     p_5e6.add_argument("--out", required=True)
-    p_5e6.add_argument("--engine", required=True, help="bmjDo24gdmVyc2lvbiBlbmdpbmUgZ2hpIHbDoG8gbWV0YQ==")
+    p_5e6.add_argument("--engine", required=True, help="nhãn version engine ghi vào meta")
     p_5e5 = p_5e6.parse_args(argv)
 
     rows = [json.loads(p_5e7) for p_5e7 in open(p_5e5.rows_jsonl, encoding="utf-8") if p_5e7.strip()]

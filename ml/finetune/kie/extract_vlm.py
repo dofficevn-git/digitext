@@ -18,22 +18,22 @@ import urllib.request
 from pathlib import Path
 
 FIELD_SPECS: list[tuple[str, str]] = [
-    ("thuTu", "U+G7kSB0aOG7qSB04buxIGPhu6dhIHbEg24gYuG6o24gdHJvbmcgaOG7kyBzxqEgKGNo4buJIGNo4buvIHPhu5Ep"),
-    ("loaiVanBan", "TG/huqFpIHbEg24gYuG6o24sIHbDrSBk4bulOiBRdXnhur90IMSR4buLbmgsIEPDtG5nIHbEg24sIFThu50gdHLDrG5oLCBCw6FvIGPDoW8gdMOgaSBjaMOtbmg="),
-    ("soKyHieu", "U+G7kSB2w6Aga8O9IGhp4buHdSB2xINuIGLhuqNuLCB2w60gZOG7pTogOTk5OS9RxJAtVUJORA=="),
-    ("ngayThang", "TmfDoHkgdGjDoW5nIGJhbiBow6BuaCwgxJHhu4tuaCBk4bqhbmcgZGQvbW0veXl5eQ=="),
-    ("coQuanBanHanh", "VMOqbiBjxqEgcXVhbiBiYW4gaMOgbmggdsSDbiBi4bqjbg=="),
-    ("trichYeu", "VHLDrWNoIHnhur91IG7hu5lpIGR1bmcgdsSDbiBi4bqjbiAoY8OzIHRo4buDIG5oaeG7gXUgZMOybmcp"),
-    ("toSo", "VOG7nSBz4buRIChjaOG7iSBjaOG7ryBz4buRKQ=="),
-    ("soTrang", "U+G7kSB0cmFuZyAoY2jhu4kgY2jhu68gc+G7kSk="),
-    ("trangSo", "VHJhbmcgc+G7kSAoY2jhu4kgY2jhu68gc+G7kSk="),
-    ("ngonNgu", "TmfDtG4gbmfhu68gY+G7p2EgdsSDbiBi4bqjbiwgdsOtIGThu6U6IFRp4bq/bmcgVmnhu4d0"),
-    ("cheDoSuDung", "Q2jhur8gxJHhu5kgc+G7rSBk4bulbmcgdMOgaSBsaeG7h3U="),
-    ("doTinCay", "xJDhu5kgdGluIGPhuq15IGPhu6dhIHTDoGkgbGnhu4d1"),
-    ("butTich", "QsO6dCB0w61jaCB0csOqbiB2xINuIGLhuqNu"),
-    ("tinhTrangVatLy", "VMOsbmggdHLhuqFuZyB24bqtdCBsw70gY+G7p2EgdMOgaSBsaeG7h3U="),
-    ("taiLieuSo", "VGjDtG5nIHRpbiB0w6BpIGxp4buHdSBz4buR"),
-    ("ghiChu", "R2hpIGNow7o="),
+    ("thuTu", "Số thứ tự của văn bản trong hồ sơ (chỉ chữ số)"),
+    ("loaiVanBan", "Loại văn bản, ví dụ: Quyết định, Công văn, Tờ trình, Báo cáo tài chính"),
+    ("soKyHieu", "Số và ký hiệu văn bản, ví dụ: 9999/QĐ-UBND"),
+    ("ngayThang", "Ngày tháng ban hành, định dạng dd/mm/yyyy"),
+    ("coQuanBanHanh", "Tên cơ quan ban hành văn bản"),
+    ("trichYeu", "Trích yếu nội dung văn bản (có thể nhiều dòng)"),
+    ("toSo", "Tờ số (chỉ chữ số)"),
+    ("soTrang", "Số trang (chỉ chữ số)"),
+    ("trangSo", "Trang số (chỉ chữ số)"),
+    ("ngonNgu", "Ngôn ngữ của văn bản, ví dụ: Tiếng Việt"),
+    ("cheDoSuDung", "Chế độ sử dụng tài liệu"),
+    ("doTinCay", "Độ tin cậy của tài liệu"),
+    ("butTich", "Bút tích trên văn bản"),
+    ("tinhTrangVatLy", "Tình trạng vật lý của tài liệu"),
+    ("taiLieuSo", "Thông tin tài liệu số"),
+    ("ghiChu", "Ghi chú"),
 ]
 FIELD_KEYS: tuple[str, ...] = tuple(k for k, _ in FIELD_SPECS)
 
@@ -152,14 +152,14 @@ def q_11f(data: bytes) -> tuple[int, int]:
             continue
         (p_378,) = struct.unpack(">H", data[p_376 + 2 : p_376 + 4])
         p_376 += 2 + p_378
-    raise ValueError("a2jDtG5nIMSR4buNYyDEkcaw4bujYyBrw61jaCB0aMaw4bubYyBKUEVH")
+    raise ValueError("không đọc được kích thước JPEG")
 
 def q_119(width: int, height: int) -> int:
     return int((width / QWEN_PATCH) * (height / QWEN_PATCH))
 
 def q_116(width: int, height: int, budget: int = MAX_IMAGE_TOKENS) -> int | None:
     if width <= 0 or height <= 0:
-        raise ValueError(f"a8OtY2ggdGjGsOG7m2Mg4bqjbmggdsO0IGzDvTog{width}x{height}")
+        raise ValueError(f"kích thước ảnh vô lý: {width}x{height}")
     if q_119(width, height) <= budget:
         return None
     s = math.sqrt(0.99 * budget * (QWEN_PATCH**2) / (width * height))
@@ -169,8 +169,8 @@ def q_12f(img_tokens: int) -> int:
     budget = MODEL_MAX_LEN - img_tokens - PROMPT_TEXT_TOKENS - SAFETY_MARGIN
     if budget <= 0:
         raise ValueError(
-            f"4bqjbmgg{img_tokens} token không còn chỗ cho đầu ra "
-            f"(max_len={MODEL_MAX_LEN}KTsgcGjhuqNpIHRodSBuaOG7jyDhuqNuaCB0csaw4bubYw=="
+            f"ảnh {img_tokens} token không còn chỗ cho đầu ra "
+            f"(max_len={MODEL_MAX_LEN}); phải thu nhỏ ảnh trước"
         )
     return budget
 
@@ -248,7 +248,7 @@ def q_13a(pdf: Path) -> int:
     for p_37f in out.splitlines():
         if p_37f.startswith("Pages:"):
             return int(p_37f.split()[1])
-    raise ValueError(f"cGRmaW5mbyBraMO0bmcgY2hvIHPhu5EgdHJhbmc6IA=={pdf}")
+    raise ValueError(f"pdfinfo không cho số trang: {pdf}")
 
 def q_e9(pdf: Path, page_no: int, out_prefix: Path, *,
                   dpi: int | None = None, scale_to: int | None = None) -> bytes:
@@ -302,34 +302,34 @@ def q_102(image: bytes, endpoint: str, model: str, timeout: int,
     p_387 = p_388["choices"][0]
     if p_387.get("finish_reason") == "length":
         raise ValueError(
-            f"SlNPTiBi4buLIGPhuq90IGPhu6V0IChmaW5pc2hfcmVhc29uPWxlbmd0aCwgbWF4X3Rva2Vucz0={max_tokens}); "
+            f"JSON bị cắt cụt (finish_reason=length, max_tokens={max_tokens}); "
             f"trang quá đặc chữ — tăng ngân sách hoặc thu nhỏ ảnh"
         )
     return json.loads(p_387["message"]["content"])
 
 def main(argv: list[str] | None = None) -> int:
     p_38b = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p_38b.add_argument("data_dir", help="dGjGsCBt4bulYyBjaOG7qWEgUERGICjEkeG7hyBxdXkp")
+    p_38b.add_argument("data_dir", help="thư mục chứa PDF (đệ quy)")
     p_38b.add_argument("--out", default="data/kie_silver.jsonl")
     p_38b.add_argument("--img-dir", default="data/img")
     p_38b.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     p_38b.add_argument("--model", default=DEFAULT_MODEL)
     p_38b.add_argument("--dpi", type=int, default=100,
-                    help="MTAwIOKHkiB+MTI1MCBpbWFnZSB0b2tlbiwgduG7q2EgbWF4LW1vZGVsLWxlbiA0MDk2")
+                    help="100 ⇒ ~1250 image token, vừa max-model-len 4096")
     p_38b.add_argument("--timeout", type=int, default=300)
-    p_38b.add_argument("--limit", type=int, default=0, help="Z2nhu5tpIGjhuqFuIHPhu5EgVFJBTkcgKDAgPSB04bqldCBj4bqjKQ==")
+    p_38b.add_argument("--limit", type=int, default=0, help="giới hạn số TRANG (0 = tất cả)")
     p_38b.add_argument("--only-header-pages", action="store_true",
                     help="CHỈ bóc trang đầu văn bản (có quốc hiệu) ∪ trang 1 của mỗi PDF. "
                          "5 trường header chỉ có ở đó ⇒ tiết kiệm ~83%% thời gian GPU")
     p_38b.add_argument("--file-list", default=None,
                     help="tệp danh sách đường dẫn PDF (tương đối với data_dir), 1 dòng 1 tệp — "
                          "do sample_stratified.py sinh. CHỈ bóc các tệp này")
-    p_38b.add_argument("--dry-run", action="store_true", help="Y2jhu4kgbGnhu4d0IGvDqiB0cmFuZywga2jDtG5nIGfhu41pIFZMTQ==")
+    p_38b.add_argument("--dry-run", action="store_true", help="chỉ liệt kê trang, không gọi VLM")
     p_38c = p_38b.parse_args(argv)
 
     data_dir = Path(p_38c.data_dir).resolve()
     if not data_dir.is_dir():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkgdGjGsCBt4bulYyA={data_dir}", file=sys.stderr)
+        print(f"LỖI: không thấy thư mục {data_dir}", file=sys.stderr)
         return 2
     out_path = Path(p_38c.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -337,24 +337,24 @@ def main(argv: list[str] | None = None) -> int:
 
     pdfs = sorted(p_39a for p_39a in data_dir.rglob("*") if p_39a.suffix.lower() == ".pdf")
     if not pdfs:
-        print(f"TOG7lkk6IGtow7RuZyBjw7MgUERGIG7DoG8gdHJvbmcg{data_dir}", file=sys.stderr)
+        print(f"LỖI: không có PDF nào trong {data_dir}", file=sys.stderr)
         return 2
 
     if p_38c.file_list:
         try:
             wanted = q_146(Path(p_38c.file_list))
         except OSError as e:
-            print(f"TOG7lkk6IGtow7RuZyDEkeG7jWMgxJHGsOG7o2MgLS1maWxlLWxpc3Q6IA=={e}", file=sys.stderr)
+            print(f"LỖI: không đọc được --file-list: {e}", file=sys.stderr)
             return 2
         pdfs, p_396 = q_114(pdfs, data_dir, wanted)
         if p_396:
-            print(f"TOG7lkk6IC0tZmlsZS1saXN0IGPDsyA={len(p_396)}IG3hu6VjIGtow7RuZyB0aOG6pXkgdHJvbmcg{data_dir}",
+            print(f"LỖI: --file-list có {len(p_396)} mục không thấy trong {data_dir}",
                   file=sys.stderr)
             return 2
         if not pdfs:
-            print("TOG7lkk6IC0tZmlsZS1saXN0IGtow7RuZyBraOG7m3AgUERGIG7DoG8=", file=sys.stderr)
+            print("LỖI: --file-list không khớp PDF nào", file=sys.stderr)
             return 2
-        print(f"LS1maWxlLWxpc3Q6IGLDs2Mg{len(pdfs)} PDF", file=sys.stderr)
+        print(f"--file-list: bóc {len(pdfs)} PDF", file=sys.stderr)
 
     p_3a4: list[tuple[Path, str, int]] = []
     p_398 = 0
@@ -375,9 +375,9 @@ def main(argv: list[str] | None = None) -> int:
             continue
         p_3a4.extend((pdf, p_39e, pg) for pg in pages)
         if p_38c.only_header_pages and p_392 % 200 == 0:
-            print(f"ICBxdcOpdCB0cmFuZ+KApiA={p_392}/{len(pdfs)} PDF", file=sys.stderr)
+            print(f"  quét trang… {p_392}/{len(pdfs)} PDF", file=sys.stderr)
     if p_399:
-        print(f"Q+G6ok5IIELDgU86IGLhu48gcXVhIA=={p_399}/{len(pdfs)}IFBERiBraMO0bmcgxJHhu41jIMSRxrDhu6NjIChwZGZpbmZvL3BkZnRvdGV4dCBs4buXaSk=",
+        print(f"CẢNH BÁO: bỏ qua {p_399}/{len(pdfs)} PDF không đọc được (pdfinfo/pdftotext lỗi)",
               file=sys.stderr)
 
     p_38d = load_done_ids(out_path)
@@ -385,9 +385,9 @@ def main(argv: list[str] | None = None) -> int:
     if p_38c.limit:
         p_3a6 = p_3a6[: p_38c.limit]
 
-    p_39f = (f"Y2jhu41uIGzhu41jIA=={len(p_3a4)}/{p_398}IHRyYW5nIChi4buPIA=={p_398 - len(p_3a4)}IHRyYW5nIHRow6JuIGLDoGkp"
-             if p_38c.only_header_pages else f"dHJhbmcgdOG7lW5nOiA={p_398}")
-    print(f"PDF: {len(pdfs)} | {p_39f}IHwgxJHDoyB4b25nOiA={len(p_38d)} | "
+    p_39f = (f"chọn lọc {len(p_3a4)}/{p_398} trang (bỏ {p_398 - len(p_3a4)} trang thân bài)"
+             if p_38c.only_header_pages else f"trang tổng: {p_398}")
+    print(f"PDF: {len(pdfs)} | {p_39f} | đã xong: {len(p_38d)} | "
           f"sẽ bóc: {len(p_3a6)}", file=sys.stderr)
     if p_38c.dry_run:
         for _, p_39e, pg in p_3a6[:20]:
@@ -418,14 +418,14 @@ def main(argv: list[str] | None = None) -> int:
             except (subprocess.CalledProcessError, urllib.error.URLError,
                     urllib.error.HTTPError, ValueError, KeyError, TimeoutError) as exc:
                 p_38f += 1
-                print(f"ICBM4buWSSA={p_39b}: {type(exc).__name__}: {exc}", file=sys.stderr)
+                print(f"  LỖI {p_39b}: {type(exc).__name__}: {exc}", file=sys.stderr)
             if p_393 % 10 == 0 or p_393 == len(p_3a6):
                 p_39c = p_393 / max(time.monotonic() - p_3a1, 1e-9)
                 p_390 = (len(p_3a6) - p_393) / p_39c if p_39c else 0
-                print(f"  [{p_393}/{len(p_3a6)}] ok={ok}IGzhu5dpPQ=={p_38f} "
-                      f"{p_39c*60:.1f}IHRyYW5nL3Bow7p0IEVUQSA={p_390/60:.0f}IHBow7p0", file=sys.stderr)
+                print(f"  [{p_393}/{len(p_3a6)}] ok={ok} lỗi={p_38f} "
+                      f"{p_39c*60:.1f} trang/phút ETA {p_390/60:.0f} phút", file=sys.stderr)
 
-    print(f"XONG: ok={ok}IGzhu5dpPQ=={p_38f} → {out_path}", file=sys.stderr)
+    print(f"XONG: ok={ok} lỗi={p_38f} → {out_path}", file=sys.stderr)
     return 0 if p_38f == 0 else 1
 
 if __name__ == "__main__":

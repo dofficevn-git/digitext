@@ -22,7 +22,7 @@ fn f_13e(r_q2: &str, field: &str) -> Result<Vec<u8>, ApiError> {
         .decode(r_q2)
         .map_err(|_| {
             ApiError::bad_request(format!(
-                "{field}IGtow7RuZyBwaOG6o2kgYmFzZTY0IGjhu6NwIGzhu4c="
+                "{field} không phải base64 hợp lệ"
             ))
         })
 }
@@ -30,17 +30,17 @@ fn f_195(r_q3: &[u8]) -> String {
     base64::engine::general_purpose::STANDARD.encode(r_q3)
 }
 fn storage_err(e: digitext_storage::StorageError) -> ApiError {
-    tracing::error!(error = % e, "bOG7l2kga2hvIG9iamVjdCAoa8O9IHPhu5Ep");
-    ApiError::service_unavailable("a2hvIG9iamVjdCBraMO0bmcgc+G6tW4gc8Ogbmc=")
+    tracing::error!(error = % e, "lỗi kho object (ký số)");
+    ApiError::service_unavailable("kho object không sẵn sàng")
 }
 fn f_2f2(e: digitext_sign_verify::SignError) -> ApiError {
-    tracing::error!(error = % e, "bOG7l2kga8O9IFBBZEVTIChzZXJ2ZXItc2lkZSk=");
+    tracing::error!(error = % e, "lỗi ký PAdES (server-side)");
     ApiError::internal()
 }
 fn store(r_q4: &AppState) -> Result<&std::sync::Arc<dyn digitext_storage::ObjectStore>, ApiError> {
     r_q4.store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIGvDvSBz4buRIGNoxrBhIGPhuqV1IGjDrG5o"))
+        .ok_or_else(|| ApiError::service_unavailable("kho ký số chưa cấu hình"))
 }
 async fn authorize_project(r_q6: &AppState, r_q5: &Ts, project_id: Uuid) -> Result<(), ApiError> {
     if f_29a(&r_q6.pool, &r_q5.user)
@@ -106,7 +106,7 @@ async fn begin(
     let r_qd = f_13e(&r_qj.certificate, "certificate")?;
     digitext_sign_verify::f_xy(&r_qd).map_err(|_| {
         ApiError::bad_request(
-            "Y2VydGlmaWNhdGUga2jDtG5nIHBo4bqjaSBjZXJ0IFguNTA5IERFUiBo4bujcCBs4buH",
+            "certificate không phải cert X.509 DER hợp lệ",
         )
     })?;
     let intermediates: Vec<Vec<u8>> = r_qj
@@ -120,14 +120,14 @@ async fn begin(
         .as_ref()
         .ok_or_else(|| {
             ApiError::service_unavailable(
-                "Y2jGsGEgY+G6pXUgaMOsbmggRElHSVRFWFRfU0lHTl9UUlVTVF9ST09UUyDigJQga2jDtG5nIHRo4buDIHjDoWMgbWluaCBjaHXhu5dpIGNo4bupbmcgdGjGsCBuw6puIHThu6sgY2jhu5FpIGvDvSAoxJHhurd0IMSRxrDhu51uZyBk4bqrbiBidW5kbGUgUEVNIGNo4bupYSByb290IGPhu6dhIENBIFBIw4FUIEjDgE5IIFRPS0VOOiByZXBvIGPDsyBz4bq1biB0cnVzdC9pY2Etc2lnbi10cnVzdC1yb290cy5wZW0gY2hvIHRva2VuIEktQ0Eg4oCUIFZOUkNBICsgSS1DQSBTSEEtMjU2OyBy4buTaSBraOG7n2kgxJHhu5luZyBs4bqhaSk=",
+                "chưa cấu hình DIGITEXT_SIGN_TRUST_ROOTS — không thể xác minh chuỗi chứng thư nên từ chối ký (đặt đường dẫn bundle PEM chứa root của CA PHÁT HÀNH TOKEN: repo có sẵn trust/ica-sign-trust-roots.pem cho token I-CA — VNRCA + I-CA SHA-256; rồi khởi động lại)",
             )
         })?;
     roots
         .verify_signer_chain_der(&r_qd, &intermediates, f_st() as i64)
         .map_err(|e| {
             ApiError::bad_request(format!(
-                "Y2jhu6luZyB0aMawIGtow7RuZyDEkcaw4bujYyB0aW4gY+G6rXk6IA=={e}"
+                "chứng thư không được tin cậy: {e}"
             ))
         })?;
     let r_qe = documents::get(&r_qn.pool, id)
@@ -141,14 +141,14 @@ async fn begin(
         .map_err(storage_err)?
         .ok_or_else(|| {
             ApiError::conflict(
-                "UERGIDIgbOG7m3AgY2jGsGEgc+G6tW4gdHJvbmcga2hvIChjaMawYSBPQ1IvZ2jDqXAgeG9uZyk=",
+                "PDF 2 lớp chưa sẵn trong kho (chưa OCR/ghép xong)",
             )
         })?;
     let r_qf = (!intermediates.is_empty()).then_some(intermediates.as_slice());
     let r_ql = sign_sessions::begin(&r_qn.pool, id, Some(r_qc.user.id), Some(&r_qd), r_qf, C_AE)
         .await?
         .ok_or_else(|| {
-            ApiError::conflict("dMOgaSBsaeG7h3Uga2jDtG5nIOG7nyB0cuG6oW5nIHRow6FpIGNo4budIGvDvQ==")
+            ApiError::conflict("tài liệu không ở trạng thái chờ ký")
         })?;
     let r_qm = f_st();
     let r_qo = r_qn
@@ -157,7 +157,7 @@ async fn begin(
         .flatten();
     if r_qn.sign_visible && r_qo.is_none() {
         tracing::warn!(
-            "a2jDtG5nIHTDrG0gxJHGsOG7o2MgZm9udCBjaG8ga2jhu5FpIGNo4buvIGvDvSBoaeG7g24gdGjhu4sg4oCUIGvDvSBWw5QgSMOMTkggKGzhu4djaCDEkGnhu4F1IDguMS5jKQ=="
+            "không tìm được font cho khối chữ ký hiển thị — ký VÔ HÌNH (lệch Điều 8.1.c)"
         );
     }
     let r_qh =
@@ -206,31 +206,31 @@ async fn complete(
         .ok_or_else(ApiError::not_found)?;
     if r_qy.document_id != id {
         return Err(ApiError::bad_request(
-            "cGhpw6puIGtow7RuZyB0aHXhu5ljIHTDoGkgbGnhu4d1IG7DoHk=",
+            "phiên không thuộc tài liệu này",
         ));
     }
     if r_qy.signer_user_id != Some(r_qq.user.id) {
         return Err(ApiError::forbidden());
     }
     if r_qy.status != "open" {
-        return Err(ApiError::conflict("cGhpw6puIGvDvSBraMO0bmcgY8OybiBt4buf"));
+        return Err(ApiError::conflict("phiên ký không còn mở"));
     }
     let r_qv = r_qy.prepared_key.ok_or_else(|| {
-        ApiError::conflict("cGhpw6puIGNoxrBhIGNodeG6qW4gYuG7iyAoZ+G7jWkgYmVnaW4gdHLGsOG7m2Mp")
+        ApiError::conflict("phiên chưa chuẩn bị (gọi begin trước)")
     })?;
     let r_qz = r_qy
         .signed_attrs
-        .ok_or_else(|| ApiError::conflict("cGhpw6puIHRoaeG6v3UgU2lnbmVkQXR0cmlidXRlcw=="))?;
+        .ok_or_else(|| ApiError::conflict("phiên thiếu SignedAttributes"))?;
     let cert = r_qy
         .signer_cert
-        .ok_or_else(|| ApiError::conflict("cGhpw6puIHRoaeG6v3UgY2VydCBuZ8aw4budaSBrw70="))?;
+        .ok_or_else(|| ApiError::conflict("phiên thiếu cert người ký"))?;
     let intermediates = r_qy.signer_intermediates.unwrap_or_default();
     let r_qw = store
         .get(&r_qv)
         .await
         .map_err(storage_err)?
         .ok_or_else(|| {
-            ApiError::conflict("UERGIMSRw6MgY2h14bqpbiBi4buLIGtow7RuZyBjw7JuIHRyb25nIGtobw==")
+            ApiError::conflict("PDF đã chuẩn bị không còn trong kho")
         })?;
     let timestamp = match r_r1.tsa_url.as_deref() {
         Some(url) => Some(fetch_timestamp(url, &signature).await?),
@@ -261,15 +261,15 @@ async fn complete(
     if !ok {
         let why = match &r_r2 {
             Ok(r) => {
-                format!("dmVyaWZ5IGNo4buvIGvDvSB0aOG6pXQgYuG6oWkgKMKnUzQuMSBixrDhu5tjIDQpOiA={r:?}")
+                format!("verify chữ ký thất bại (§S4.1 bước 4): {r:?}")
             }
             Err(e) => {
-                format!("dmVyaWZ5IGNo4buvIGvDvSB0aOG6pXQgYuG6oWkgKMKnUzQuMSBixrDhu5tjIDQpOiA={e}")
+                format!("verify chữ ký thất bại (§S4.1 bước 4): {e}")
             }
         };
         tracing::warn!(
             session = % r_qy.id, document = % id, reason = % why,
-            "dOG7qyBjaOG7kWkgcGhpw6puIGvDvQ=="
+            "từ chối phiên ký"
         );
         sign_sessions::f_26q(&r_r1.pool, r_qy.id, &why).await?;
         return Ok(Json(CompleteResp {
@@ -281,10 +281,10 @@ async fn complete(
             LtOutcome::Attached(r_qt) => (r_qt, true),
             LtOutcome::NoMaterial => (signed_pdf, false),
             LtOutcome::Revoked => {
-                let why = "Y2VydCBuZ8aw4budaSBrw70gQuG7iiBUSFUgSOG7kkkgKE9DU1AvQ1JMKSDigJQgdOG7qyBjaOG7kWkgbMawdSB0cuG7ryBjaOG7ryBrw70gKFBBZEVTLUxUKQ==";
+                let why = "cert người ký BỊ THU HỒI (OCSP/CRL) — từ chối lưu trữ chữ ký (PAdES-LT)";
                 tracing::warn!(
                     session = % r_qy.id, document = % id, reason = why,
-                    "dOG7qyBjaOG7kWkgcGhpw6puIGvDvSAoTFQp"
+                    "từ chối phiên ký (LT)"
                 );
                 sign_sessions::f_26q(&r_r1.pool, r_qy.id, why).await?;
                 return Ok(Json(CompleteResp {
@@ -305,10 +305,10 @@ async fn complete(
                     (r_r1.tsa_trust_roots.is_none() || r.is_lta())
                 );
                 if !ok {
-                    let why = "YXJjaGl2ZS10aW1lc3RhbXAgKFBBZEVTLUxUQSkga2jDtG5nIHTDoWkgeMOhYyBtaW5oIMSRxrDhu6NjIOKAlCBUU0EgdHLhuqMgdG9rZW4ga2jDtG5nIGjhu6NwIGzhu4cgKGtow7RuZyBwaOG6o2kgUlNBPyk7IHThu6sgY2jhu5FpIMSR4buDIHRyw6FuaCBsxrB1IGLhuqNuICdMVEEnIGdp4bqj";
+                    let why = "archive-timestamp (PAdES-LTA) không tái xác minh được — TSA trả token không hợp lệ (không phải RSA?); từ chối để tránh lưu bản 'LTA' giả";
                     tracing::error!(
                         session = % r_qy.id, document = % id,
-                        "dOG7qyBjaOG7kWkgcGhpw6puIGvDvSAoTFRBKTog{why}"
+                        "từ chối phiên ký (LTA): {why}"
                     );
                     sign_sessions::f_26q(&r_r1.pool, r_qy.id, why).await?;
                     return Ok(Json(CompleteResp {
@@ -320,7 +320,7 @@ async fn complete(
             None => {
                 tracing::error!(
                     session = % r_qy.id, document = % id,
-                    "UEFkRVMtTFRBIGLhuq10IG5oxrBuZyB0aGnhur91IFRTQSBsw7pjIGvDvSDigJQgbMawdSBMVCAoa2jDtG5nIGFyY2hpdmUtdGltZXN0YW1wKQ=="
+                    "PAdES-LTA bật nhưng thiếu TSA lúc ký — lưu LT (không archive-timestamp)"
                 );
                 signed_pdf
             }
@@ -329,7 +329,7 @@ async fn complete(
         if r_r1.pades_lta && !r_qs {
             tracing::warn!(
                 session = % r_qy.id, document = % id,
-                "UEFkRVMtTFRBIGLhuq10IG5oxrBuZyBjaOG7ryBrw70gS0jDlE5HIGPDsyAvRFNTIChMVCBraMO0bmcgdGh1IMSRxrDhu6NjIE9DU1AvQ1JMKSDigJQgbMawdSBCL1Q="
+                "PAdES-LTA bật nhưng chữ ký KHÔNG có /DSS (LT không thu được OCSP/CRL) — lưu B/T"
             );
         }
         signed_pdf
@@ -353,13 +353,13 @@ async fn f_sm(r_re: &AppState, r_rc: &[u8], r_rd: &[u8], intermediates: &[Vec<u8
     use digitext_sign_verify::ocsp::{self, Revocation};
     let Some(roots) = r_re.trust_roots.as_deref() else {
         tracing::warn!(
-            "UEFkRVMtTFQgYuG6rXQgbmjGsG5nIHRoaeG6v3UgdHJ1c3Rfcm9vdHMg4oCUIGLhu48gcXVhIG5ow7puZyAvRFNT"
+            "PAdES-LT bật nhưng thiếu trust_roots — bỏ qua nhúng /DSS"
         );
         return LtOutcome::NoMaterial;
     };
     let Some(r_r7) = roots.resolve_issuer_der(r_rd, intermediates) else {
         tracing::warn!(
-            "UEFkRVMtTFQ6IGtow7RuZyB0w6xtIMSRxrDhu6NjIGNlcnQgaXNzdWVyIMSR4buDIGzhuqV5IE9DU1AvQ1JMIOKAlCBsxrB1IEIvVA=="
+            "PAdES-LT: không tìm được cert issuer để lấy OCSP/CRL — lưu B/T"
         );
         return LtOutcome::NoMaterial;
     };
@@ -376,25 +376,25 @@ async fn f_sm(r_re: &AppState, r_rc: &[u8], r_rd: &[u8], intermediates: &[Vec<u8
                     Ok(_) => {
                         tracing::warn!(
                             % url,
-                            "T0NTUCBraMO0bmcgdGluIMSRxrDhu6NjIChjaOG7ryBrw70gc2FpIC8gdW5rbm93bikg4oCUIGLhu48="
+                            "OCSP không tin được (chữ ký sai / unknown) — bỏ"
                         )
                     }
                     Err(e) => {
                         tracing::warn!(
                             % url, error =% e,
-                            "T0NTUCBraMO0bmcgxJHhu41jIMSRxrDhu6NjIOKAlCBi4buP"
+                            "OCSP không đọc được — bỏ"
                         )
                     }
                 },
                 Err(e) => {
                     tracing::warn!(
-                        % url, error =% e, "dOG6o2kgT0NTUCBs4buXaSDigJQgYuG7jw=="
+                        % url, error =% e, "tải OCSP lỗi — bỏ"
                     )
                 }
             },
             Err(e) => {
                 tracing::warn!(
-                    error =% e, "ZOG7sW5nIE9DU1AgcmVxdWVzdCBs4buXaSDigJQgYuG7jw=="
+                    error =% e, "dựng OCSP request lỗi — bỏ"
                 )
             }
         }
@@ -409,24 +409,24 @@ async fn f_sm(r_re: &AppState, r_rc: &[u8], r_rd: &[u8], intermediates: &[Vec<u8
                 Ok(_) => {
                     tracing::warn!(
                         % url,
-                        "Q1JMIGtow7RuZyB0aW4gxJHGsOG7o2MgKGNo4buvIGvDvSBzYWkpIOKAlCBi4buP"
+                        "CRL không tin được (chữ ký sai) — bỏ"
                     )
                 }
                 Err(e) => {
                     tracing::warn!(
                         % url, error =% e,
-                        "Q1JMIGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mg4oCUIGLhu48="
+                        "CRL không đọc được — bỏ"
                     )
                 }
             },
             Err(e) => {
-                tracing::warn!(% url, error =% e, "dOG6o2kgQ1JMIGzhu5dpIOKAlCBi4buP")
+                tracing::warn!(% url, error =% e, "tải CRL lỗi — bỏ")
             }
         }
     }
     if r_r9.is_empty() && r_r5.is_empty() {
         tracing::warn!(
-            "UEFkRVMtTFQ6IGtow7RuZyB0aHUgxJHGsOG7o2MgT0NTUC9DUkwgaOG7o3AgbOG7hyDigJQgbMawdSBCL1QgKGtow7RuZyAvRFNTKQ=="
+            "PAdES-LT: không thu được OCSP/CRL hợp lệ — lưu B/T (không /DSS)"
         );
         return LtOutcome::NoMaterial;
     }
@@ -444,7 +444,7 @@ async fn f_sm(r_re: &AppState, r_rc: &[u8], r_rd: &[u8], intermediates: &[Vec<u8
     match digitext_sign_verify::dss::embed_dss(r_rc, &r_rf) {
         Ok(r_r8) => LtOutcome::Attached(r_r8),
         Err(e) => {
-            tracing::warn!(error =% e, "bmjDum5nIC9EU1MgbOG7l2kg4oCUIGzGsHUgQi9U");
+            tracing::warn!(error =% e, "nhúng /DSS lỗi — lưu B/T");
             LtOutcome::NoMaterial
         }
     }
@@ -505,14 +505,14 @@ async fn f_25o(r_rs: reqwest::Response, cap: usize) -> Result<Vec<u8>, String> {
     if let Some(len) = r_rs.content_length() {
         if len as usize > cap {
             return Err(format!(
-                "cGjhuqNuIGjhu5NpIHF1w6EgbOG7m24gKA=={len} > {cap})"
+                "phản hồi quá lớn ({len} > {cap})"
             ));
         }
     }
     let r_rr = r_rs.bytes().await.map_err(|e| e.to_string())?;
     if r_rr.len() > cap {
         return Err(format!(
-            "cGjhuqNuIGjhu5NpIHF1w6EgbOG7m24gKA=={} > {cap})",
+            "phản hồi quá lớn ({} > {cap})",
             r_rr.len()
         ));
     }
@@ -524,7 +524,7 @@ fn f_st() -> u64 {
 fn f_2mn(ctx: &str, r_rt: impl std::fmt::Display) -> ApiError {
     tracing::error!(error = % r_rt, "TSA (PAdES-T): {ctx}");
     ApiError::service_unavailable(
-        "ZOG7i2NoIHbhu6UgxJHDs25nIGThuqV1IHRo4budaSBnaWFuIChUU0EpIGtow7RuZyBz4bq1biBzw6BuZw==",
+        "dịch vụ đóng dấu thời gian (TSA) không sẵn sàng",
     )
 }
 const C_MV: usize = 256 * 1024;
@@ -533,7 +533,7 @@ async fn fetch_timestamp(r_ry: &str, signature: &[u8]) -> Result<Vec<u8>, ApiErr
     if !r_ry.starts_with("https://") {
         return Err(
             ApiError::service_unavailable(
-                "RElHSVRFWFRfVFNBX1VSTCBwaOG6o2kgZMO5bmcgaHR0cHMgKHRlbSB0aOG7nWkgZ2lhbiB0csOqbiBodHRwIGLhu4sgTUlUTSBz4butYSDEkcaw4bujYyk=",
+                "DIGITEXT_TSA_URL phải dùng https (tem thời gian trên http bị MITM sửa được)",
             ),
         );
     }
@@ -543,37 +543,37 @@ async fn fetch_timestamp(r_ry: &str, signature: &[u8]) -> Result<Vec<u8>, ApiErr
     let client = reqwest::Client::builder()
         .timeout(C_MW)
         .build()
-        .map_err(|e| f_2mn("ZOG7sW5nIEhUVFAgY2xpZW50", e))?;
+        .map_err(|e| f_2mn("dựng HTTP client", e))?;
     let r_rw = client
         .post(r_ry)
         .header("Content-Type", "application/timestamp-query")
         .body(r_rv)
         .send()
         .await
-        .map_err(|e| f_2mn("Z+G7rWkgcmVxdWVzdCB0aOG6pXQgYuG6oWk=", e))?;
+        .map_err(|e| f_2mn("gửi request thất bại", e))?;
     if !r_rw.status().is_success() {
-        return Err(f_2mn("SFRUUCBs4buXaQ==", r_rw.status()));
+        return Err(f_2mn("HTTP lỗi", r_rw.status()));
     }
     if let Some(len) = r_rw.content_length() {
         if len as usize > C_MV {
-            return Err(f_2mn("cGjhuqNuIGjhu5NpIHF1w6EgbOG7m24=", len));
+            return Err(f_2mn("phản hồi quá lớn", len));
         }
     }
     let r_ru = r_rw
         .bytes()
         .await
-        .map_err(|e| f_2mn("xJHhu41jIHBo4bqjbiBo4buTaSB0aOG6pXQgYuG6oWk=", e))?;
+        .map_err(|e| f_2mn("đọc phản hồi thất bại", e))?;
     if r_ru.len() > C_MV {
-        return Err(f_2mn("cGjhuqNuIGjhu5NpIHF1w6EgbOG7m24=", r_ru.len()));
+        return Err(f_2mn("phản hồi quá lớn", r_ru.len()));
     }
     let token = digitext_sign_verify::tsa::f_2le(&r_ru)
-        .map_err(|e| f_2mn("cGjhuqNuIGjhu5NpIGtow7RuZyBo4bujcCBs4buH", e))?;
+        .map_err(|e| f_2mn("phản hồi không hợp lệ", e))?;
     let r_rx = digitext_sign_verify::tsa::f_2py(&token, signature)
-        .map_err(|e| f_2mn("dG9rZW4ga2jDtG5nIGjhu6NwIGzhu4c=", e))?;
+        .map_err(|e| f_2mn("token không hợp lệ", e))?;
     if !r_rx.check_nonce(nonce) {
         return Err(
             f_2mn(
-                "bm9uY2UgdHJvbmcgdG9rZW4ga2jDtG5nIGto4bubcCBub25jZSDEkcOjIGfhu61pICh0b2tlbiBwaMOhdCBs4bqhaT8p",
+                "nonce trong token không khớp nonce đã gửi (token phát lại?)",
                 nonce,
             ),
         );

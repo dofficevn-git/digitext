@@ -43,7 +43,7 @@ export default function V4ur() {
       V2yw(await V4uc());
       V2yy(await V4ug());
     } catch (V2zb) {
-      V2za(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGThu68gbGnhu4d1OiA=${String(V2zb)}`);
+      V2za(`Không tải được dữ liệu: ${String(V2zb)}`);
     }
   }, []);
 
@@ -55,7 +55,7 @@ export default function V4ur() {
     try {
       await V2zd();
     } catch (V2ze) {
-      V2za(`VGhhbyB0w6FjIHRo4bqldCBi4bqhaTog${String(V2ze)}`);
+      V2za(`Thao tác thất bại: ${String(V2ze)}`);
     } finally {
       V2z8(false);
     }
@@ -65,7 +65,7 @@ export default function V4ur() {
     V2zc(async () => {
       const r = await V4ud();
       V2za(
-        `UXXDqXQgeG9uZzog${r.trungLap}IHRyw7luZyBs4bq3cCAoNDguMiksIA==${r.hetThoiHan}IGjhur90IHRo4budaSBo4bqhbiAoNDguMyku`,
+        `Quét xong: ${r.trungLap} trùng lặp (48.2), ${r.hetThoiHan} hết thời hạn (48.3).`,
       );
       await reload();
     });
@@ -80,19 +80,19 @@ export default function V4ur() {
     V2zc(async () => {
       const V2zi = window
         .prompt(
-          `SOG6oW4gbMawdSB0cuG7ryBjaG8gIg==${doc.filename}IiAoWVlZWS1NTS1ERCwgYuG7jyB0cuG7kW5nID0geG/DoSBo4bqhbik6`,
+          `Hạn lưu trữ cho "${doc.filename}" (YYYY-MM-DD, bỏ trống = xoá hạn):`,
         )
         ?.trim();
       if (V2zi === undefined) return;
       await V4ue(doc.id, V2zi ? `${V2zi}T00:00:00+07:00` : null);
       V2za(
-        `xJDDoyA=${V2zi ? `xJHhurd0IGjhuqFuIA==${V2zi}` : "YuG7jyBo4bqhbg=="} cho ${doc.filename}.`,
+        `xJDDoyA=${V2zi ? `xJHhurd0IGjhuqFuIA==${V2zi}` : "bỏ hạn"} cho ${doc.filename}.`,
       );
     });
 
   const V2zj = (V2zk: V4u8) =>
     V2zc(async () => {
-      const V2zl = window.prompt("TMO9IGRvIEdJ4buuIEzhuqBJIChsxrB1IHbhur90KTo=")?.trim();
+      const V2zl = window.prompt("Lý do GIỮ LẠI (lưu vết):")?.trim();
       if (!V2zl) return;
       await V4uf(V2zk.id, "keep", V2zl);
       await reload();
@@ -102,7 +102,7 @@ export default function V4ur() {
     V2zc(async () => {
       const V2zo = window
         .prompt(
-          "R2hpIGNow7ogKGLhuqNuIGdp4bqleSAvIHbhuq10IG1hbmcgdGluIGtow6FjIOKAlCDEkGnhu4F1IDQ4LjUpOg==",
+          "Ghi chú (bản giấy / vật mang tin khác — Điều 48.5):",
           V2zn.ghiChu ?? "",
         )
         ?.trim();
@@ -115,7 +115,7 @@ export default function V4ur() {
     V2zc(async () => {
       const V2zq = Number(
         window.prompt(
-          "TsSDbSBj4bunYSDEkeG7o3QgeMOpdCBo4buneTo=",
+          "Năm của đợt xét hủy:",
           String(new Date().getFullYear()),
         ) ?? "",
       );
@@ -123,7 +123,7 @@ export default function V4ur() {
       const b = await V4ui(V2zq, V2z1);
       V2z2([]);
       V2za(
-        `xJDDoyBs4bqtcCDEkeG7o3QgeMOpdCBo4buneSBuxINtIA==${V2zq}IOKAlCBixrDhu5tjIEjhu5lpIMSR4buTbmcgKMSQaeG7gXUgNDkuMiku`,
+        `Đã lập đợt xét hủy năm ${V2zq} — bước Hội đồng (Điều 49.2).`,
       );
       await reload();
       V2z0(await V4uh(b.id));
@@ -139,21 +139,21 @@ export default function V4ur() {
       if (V2zu === "council" || V2zu === "appraise") {
         const V2zv =
           V2zu === "council"
-            ? "S+G6v3QgcXXhuqMgbMOgbSB2aeG7h2MgY+G7p2EgSOG7mWkgxJHhu5NuZyAoxJBp4buBdSA0OS4yLmMpOg=="
-            : "w50ga2nhur9uIHRo4bqpbSDEkeG7i25oIGPhu6dhIGPGoSBxdWFuIHF14bqjbiBsw70gKMSQaeG7gXUgNDkuNC81MC4yKTo=";
+            ? "Kết quả làm việc của Hội đồng (Điều 49.2.c):"
+            : "Ý kiến thẩm định của cơ quan quản lý (Điều 49.4/50.2):";
         const V2zw = window.prompt(V2zv)?.trim();
         if (!V2zw) return;
         await V4uk(b.id, V2zu, { note: V2zw });
       } else if (V2zu === "decide") {
         const V2zx = window
-          .prompt("U+G7kSBRdXnhur90IMSR4buLbmggaOG7p3kgKMSQaeG7gXUgNDkuNik6")
+          .prompt("Số Quyết định hủy (Điều 49.6):")
           ?.trim();
         if (!V2zx) return;
         let V2zy = false;
         if (V4uq(b)) {
           V2zy = window.confirm(
-            "Q2jGsGEgY8OzIMO9IGtp4bq/biB0aOG6qW0gxJHhu4tuaC4gWMOhYyBuaOG6rW4gVOG7sCBRVVnhur5UIHRoZW8gxJBp4buBdSA0OS44IA==" +
-              "KGtow7RuZyB0aHXhu5ljIG5ndeG7k24gbuG7mXAgbMawdSB0cuG7ryBs4buLY2ggc+G7rSk/",
+            "Chưa có ý kiến thẩm định. Xác nhận TỰ QUYẾT theo Điều 49.8 " +
+              "(không thuộc nguồn nộp lưu trữ lịch sử)?",
           );
           if (!V2zy) return;
         }
@@ -161,14 +161,14 @@ export default function V4ur() {
       } else {
         if (
           !window.confirm(
-            "VEhBTyBUw4FDIEjhu6ZZIHPhur0gWMOTQSBWxKhOSCBWSeG7hE4gb2JqZWN0IGPhu6dhIGPDoWMgdMOgaSBsaeG7h3UgdHJvbmcgxJHhu6N0IGto4buPaSBraG8g" +
-              "KMSQaeG7gXUgNDkuNykuIFRp4bq/cCB04bulYz8=",
+            "THAO TÁC HỦY sẽ XÓA VĨNH VIỄN object của các tài liệu trong đợt khỏi kho " +
+              "(Điều 49.7). Tiếp tục?",
           )
         )
           return;
         const V2zz = await V4uk(b.id, "execute", {});
         V2za(
-          `xJDDoyBo4buneSA=${V2zz?.disposed ?? 0}IHTDoGkgbGnhu4d1IOKAlCB24bq/dCDEkeG6p3kgxJHhu6cgdHJvbmcgbmjhuq10IGvDvSDEkeG7o3Qu`,
+          `Đã hủy ${V2zz?.disposed ?? 0} tài liệu — vết đầy đủ trong nhật ký đợt.`,
         );
       }
       await reload();
@@ -341,7 +341,7 @@ export default function V4ur() {
                     <td>{V4un[b.status]}</td>
                     <td>
                       {b.quyetDinhSo ?? "—"}
-                      {b.tuQuyet ? "ICh04buxIHF1eeG6v3Qg4oCUIDQ5Ljgp" : ""}
+                      {b.tuQuyet ? " (tự quyết — 49.8)" : ""}
                     </td>
                     <td>
                       <button className="btn sm" disabled={V2z7} onClick={() => V2zr(b.id)}>
@@ -363,10 +363,10 @@ export default function V4ur() {
           </h3>
           <p className="muted">
             {V2yz.hoiDongNote
-              ? `SOG7mWkgxJHhu5NuZzog${V2yz.hoiDongNote}`
-              : "SOG7mWkgxJHhu5NuZyBjaMawYSBjaOG7kXQ="}
-            {V2yz.thamDinhNote ? `IMK3IFRo4bqpbSDEkeG7i25oOiA=${V2yz.thamDinhNote}` : ""}
-            {V2yz.quyetDinhSo ? `IMK3IFF1eeG6v3QgxJHhu4tuaDog${V2yz.quyetDinhSo}` : ""}
+              ? `Hội đồng: ${V2yz.hoiDongNote}`
+              : "Hội đồng chưa chốt"}
+            {V2yz.thamDinhNote ? ` · Thẩm định: ${V2yz.thamDinhNote}` : ""}
+            {V2yz.quyetDinhSo ? ` · Quyết định: ${V2yz.quyetDinhSo}` : ""}
           </p>
           <div className="flex gap-2 flex-wrap mb-3">
             {V4up(V2yz, V2yt, V2yu).map((a) => (
