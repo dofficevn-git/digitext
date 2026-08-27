@@ -16,33 +16,33 @@ import { Icon } from "@/components/Icon";
 function V4rq(u: V42t, V2ml: string): string {
   switch (u.phase) {
     case "checking":
-      return "xJBhbmcga2nhu4NtIHRyYeKApg==";
+      return "Đang kiểm tra…";
     case "uptodate":
-      return `xJDDoyBsw6AgYuG6o24gbeG7m2kgbmjhuqV0ICh2${u.version ?? V2ml})`;
+      return `Đã là bản mới nhất (v${u.version ?? V2ml})`;
     case "available":
-      return `Q8OzIGLhuqNuIG3hu5tpIHY=${u.version}`;
+      return `Có bản mới v${u.version}`;
     case "downloading":
-      return `xJBhbmcgdOG6o2kgdg==${u.version}…`;
+      return `Đang tải v${u.version}…`;
     case "installing":
-      return "xJBhbmcgY8OgaSDEkeG6t3TigKY=";
+      return "Đang cài đặt…";
     case "relaunching":
-      return "xJBhbmcga2jhu59pIMSR4buZbmcgbOG6oWnigKY=";
+      return "Đang khởi động lại…";
     case "error":
-      return `TOG7l2k6IA==${u.error}`;
+      return `Lỗi: ${u.error}`;
     default:
       return "";
   }
 }
 
 const V4rr = [
-  "TcOheSBxdcOpdCAmIG3hurdjIMSR4buLbmg=",
-  "ROG7sSDDoW4gJiB0w6FjaCB0w6BpIGxp4buHdQ==",
-  "QsSDbmcgdGjDtG5n",
-  "TcOheSBjaOG7pyAmIHThuqNpIGzDqm4=",
-  "VVNCIFRva2VuIC8gQ2jhu6luZyB0aMaw",
-  "TMawdSB0cuG7ryAmIOG7lSBuZ2/DoGk=",
-  "TmfDtG4gbmfhu68=",
-  "Q2jhuqluIMSRb8OhbiAmIG5o4bqtdCBrw70=",
+  "Máy quét & mặc định",
+  "Dự án & tách tài liệu",
+  "Băng thông",
+  "Máy chủ & tải lên",
+  "USB Token / Chứng thư",
+  "Lưu trữ & ổ ngoài",
+  "Ngôn ngữ",
+  "Chẩn đoán & nhật ký",
 ];
 
 export default function V4rs() {
@@ -67,12 +67,12 @@ export default function V4rs() {
   const V2nb = V3z9(V2mp?.permissions, "stats.view");
 
   const V2nc = useCallback(() => {
-    if (V2mr === "TMawdSB0cuG7ryAmIOG7lSBuZ2/DoGk=") {
+    if (V2mr === "Lưu trữ & ổ ngoài") {
       V40z()
         .then(V2mw)
         .catch(() => {});
     }
-    if (V2mr === "TcOheSBjaOG7pyAmIHThuqNpIGzDqm4=") {
+    if (V2mr === "Máy chủ & tải lên") {
       V3zm()
         .then((u) => V2n0(u ?? ""))
         .catch(() => {});
@@ -92,7 +92,7 @@ export default function V4rs() {
       const s = await V4r2();
       V2n6(s);
       V2n8(
-        "xJDDoyBn4butaSBz4buRIGxp4buHdSB24buBIG3DoXkgY2jhu6cg4oCUIHF14bqjbiB0cuG7iyBz4bq9IHRo4bqleSB0cm9uZyB0aOG7kW5nIGvDqi4=",
+        "Đã gửi số liệu về máy chủ — quản trị sẽ thấy trong thống kê.",
       );
     } catch (V2ne) {
       const V2nf = V2ne instanceof V3xq ? V2ne.code : "error";
@@ -106,10 +106,10 @@ export default function V4rs() {
     try {
       await V3zn(V2mz.trim() || null);
       V2n2(
-        "xJDDoyBsxrB1ICjEkeG7lWkgbcOheSBjaOG7pyBz4bq9IHBpbiBs4bqhaSBraG/DoSBraGkgxJHEg25nIG5o4bqtcCBvbmxpbmUp",
+        "Đã lưu (đổi máy chủ sẽ pin lại khoá khi đăng nhập online)",
       );
     } catch (V2nh) {
-      V2n2("TOG7l2k6IA==" + (V2nh instanceof Error ? V2nh.message : String(V2nh)));
+      V2n2("Lỗi: " + (V2nh instanceof Error ? V2nh.message : String(V2nh)));
     }
   };
 
@@ -120,7 +120,7 @@ export default function V4rs() {
       const s = await V3zo();
       V2mq(s);
       V2n2(
-        `xJDDoyB4w6FjIHRo4buxYyBvbmxpbmUg4oCUIGjhuqFuIG9mZmxpbmUgbeG7m2k6IGPDsm4g${V3zr(s.offlineExpiry)}IG5nw6B5`,
+        `Đã xác thực online — hạn offline mới: còn ${V3zr(s.offlineExpiry)} ngày`,
       );
     } catch (V2nj) {
       const V2nk = V2nj instanceof V3xq ? V2nj.code : "error";
@@ -135,7 +135,7 @@ export default function V4rs() {
       const V2nm = await open({
         directory: true,
         multiple: false,
-        title: "Q2jhu41uIHRoxrAgbeG7pWMgbMawdSB0cuG7rw==",
+        title: "Chọn thư mục lưu trữ",
       });
       if (typeof V2nm === "string") V2mw(V2nm);
     } catch {}
@@ -144,16 +144,16 @@ export default function V4rs() {
     try {
       await V410(V2mv.trim() || null);
       V2mw(await V40z());
-      V2my("xJDDoyBsxrB1");
+      V2my("Đã lưu");
     } catch (V2no) {
-      V2my("TOG7l2k6IA==" + (V2no instanceof Error ? V2no.message : String(V2no)));
+      V2my("Lỗi: " + (V2no instanceof Error ? V2no.message : String(V2no)));
     }
   };
   const V2np = async () => {
     try {
       await V410(null);
       V2mw(await V40z());
-      V2my("xJDDoyB24buBIG3hurdjIMSR4buLbmg=");
+      V2my("Đã về mặc định");
     } catch {}
   };
 
@@ -179,7 +179,7 @@ export default function V4rs() {
         <div className="set-body">
           <h3 className="mb-3.5">{V2mr}</h3>
 
-          {V2mr === "TcOheSBxdcOpdCAmIG3hurdjIMSR4buLbmg=" ? (
+          {V2mr === "Máy quét & mặc định" ? (
             <>
               <div className="set-field">
                 <label>Máy quét mặc định</label>
@@ -211,7 +211,7 @@ export default function V4rs() {
                 <span className="muted">Tắt (ShowUI=false) — ADF tự động</span>
               </div>
             </>
-          ) : V2mr === "Q2jhuqluIMSRb8OhbiAmIG5o4bqtdCBrw70=" ? (
+          ) : V2mr === "Chẩn đoán & nhật ký" ? (
             <>
               <div className="set-field">
                 <label>Phiên bản</label>
@@ -232,7 +232,7 @@ export default function V4rs() {
                 <span className="muted">GitHub Releases · tự cập nhật khi mở app</span>
               </div>
             </>
-          ) : V2mr === "TcOheSBjaOG7pyAmIHThuqNpIGzDqm4=" ? (
+          ) : V2mr === "Máy chủ & tải lên" ? (
             <>
               <div className="set-field">
                 <label>Địa chỉ máy chủ</label>
@@ -253,7 +253,7 @@ export default function V4rs() {
                 <div className="flex gap-3 items-center flex-wrap">
                   <button className="btn primary" onClick={() => void V2ni()} disabled={V2n3}>
                     {V2n3 ? (
-                      "xJBhbmcga2nhu4NtIHRyYeKApg=="
+                      "Đang kiểm tra…"
                     ) : (
                       <>
                         <Icon name="lamMoi" />
@@ -268,8 +268,8 @@ export default function V4rs() {
                 <label>Phiên hiện tại</label>
                 <span className="muted">
                   {V2mp
-                    ? `${V2mp.username} · ${V2mp.mode === "online" ? "xJHDoyB4w6FjIHRo4buxYyBvbmxpbmU=" : "xJFhbmcgb2ZmbGluZQ=="}IMK3IGjhuqFuIG9mZmxpbmUgY8OybiA=${V3zr(V2mp.offlineExpiry)}IG5nw6B5`
-                    : "Q2jGsGEgxJHEg25nIG5o4bqtcA=="}
+                    ? `${V2mp.username} · ${V2mp.mode === "online" ? "đã xác thực online" : "đang offline"} · hạn offline còn ${V3zr(V2mp.offlineExpiry)} ngày`
+                    : "Chưa đăng nhập"}
                 </span>
               </div>
               {V2nb && (
@@ -278,7 +278,7 @@ export default function V4rs() {
                     <label>Số liệu của tôi</label>
                     <span className="muted">
                       {V2n5
-                        ? `${V2n5.pagesScanned}IHRyYW5nIHF1w6l0IMK3IA==${V2n5.hoSoCount}IGjhu5Mgc8ahIMK3IA==${V2n5.pdfCount} PDF · ${(V2n5.pdfBytes / 1_048_576).toFixed(1)} MB`
+                        ? `${V2n5.pagesScanned} trang quét · ${V2n5.hoSoCount} hồ sơ · ${V2n5.pdfCount} PDF · ${(V2n5.pdfBytes / 1_048_576).toFixed(1)} MB`
                         : "—"}
                     </span>
                   </div>
@@ -287,7 +287,7 @@ export default function V4rs() {
                     <div className="flex gap-3 items-center flex-wrap">
                       <button className="btn" onClick={() => void V2nd()} disabled={V2n9}>
                         {V2n9 ? (
-                          "xJBhbmcgZ+G7rWnigKY="
+                          "Đang gửi…"
                         ) : (
                           <>
                             <Icon name="thongke" />
@@ -309,7 +309,7 @@ export default function V4rs() {
                 </span>
               </div>
             </>
-          ) : V2mr === "TMawdSB0cuG7ryAmIOG7lSBuZ2/DoGk=" ? (
+          ) : V2mr === "Lưu trữ & ổ ngoài" ? (
             <>
               <div className="set-field">
                 <label>Ổ lưu trữ mặc định</label>

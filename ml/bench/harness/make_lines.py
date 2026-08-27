@@ -25,7 +25,7 @@ def q_df(path: str):
             try:
                 p_106 = json.loads(p_104)
             except json.JSONDecodeError as e:
-                raise SystemExit(f"4p2MIGJveGVzIGTDsm5nIA=={p_105}: {e}")
+                raise SystemExit(f"❌ boxes dòng {p_105}: {e}")
             entries.append((p_106.get("page", 1), p_106["box"]))
     return entries
 
@@ -49,11 +49,11 @@ def q_cb(pdf: str, manifest, out_img_dir: str):
     return p_10b
 
 def main(argv=None) -> int:
-    p_111 = argparse.ArgumentParser(description="ROG7sW5nIOG6o25oIGTDsm5nICsgbWFuaWZlc3QvZ29sZCBjaG8gZ29sZGVuLXNldCAowqdTMTMuQi4xKQ==")
-    p_111.add_argument("--pdf", required=True, help="UERGIG5ndeG7k24gKHRyYW5nIHRo4bqtdCk=")
+    p_111 = argparse.ArgumentParser(description="Dựng ảnh dòng + manifest/gold cho golden-set (§S13.B.1)")
+    p_111.add_argument("--pdf", required=True, help="PDF nguồn (trang thật)")
     p_111.add_argument("--boxes", required=True, help="boxes.jsonl {page, box}")
-    p_111.add_argument("--stratum", required=True, help="dOG6p25nIChyby94YXVfbW8vY2h1X3RheS/igKYp")
-    p_111.add_argument("--out", required=True, help="dGjGsCBt4bulYyBnb2xkZW4tc2V0IMSR4bqndSByYQ==")
+    p_111.add_argument("--stratum", required=True, help="tầng (ro/xau_mo/chu_tay/…)")
+    p_111.add_argument("--out", required=True, help="thư mục golden-set đầu ra")
     p_112 = p_111.parse_args(argv)
 
     entries = q_df(p_112.boxes)
@@ -62,8 +62,8 @@ def main(argv=None) -> int:
     p_113 = q_cb(p_112.pdf, manifest, p_112.out)
     _write_jsonl(os.path.join(p_112.out, "manifest.jsonl"), manifest)
     _write_jsonl(os.path.join(p_112.out, "gold.skeleton.jsonl"), gold)
-    print(f"✅ {p_113}IOG6o25oIGTDsm5nICsgbWFuaWZlc3QuanNvbmwgKyBnb2xkLnNrZWxldG9uLmpzb25sICh04bqnbmcg{p_112.stratum}) → {p_112.out}")
-    print("4oaSIDIgbmfGsOG7nWkgxJFp4buBbiAncmVmJyB2w6BvIGdvbGQuc2tlbGV0b24uanNvbmwsIHLhu5NpOiBnb2xkZW4ucHkgYnVpbGQg4oaSIGdvbGRlbi5weSB2YWxpZGF0ZQ==")
+    print(f"✅ {p_113} ảnh dòng + manifest.jsonl + gold.skeleton.jsonl (tầng {p_112.stratum}) → {p_112.out}")
+    print("→ 2 người điền 'ref' vào gold.skeleton.jsonl, rồi: golden.py build → golden.py validate")
     return 0
 
 if __name__ == "__main__":

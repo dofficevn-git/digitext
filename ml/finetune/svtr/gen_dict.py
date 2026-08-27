@@ -5,7 +5,7 @@ import argparse
 import unicodedata
 from pathlib import Path
 
-_VOWELS = "YcSDw6Jlw6ppb8O0xqF1xrB5"
+_VOWELS = "aăâeêioôơuưy"
 _TONES = ["", "̀", "́", "̉", "̃", "̣"]
 _PUNCT = " .,:;/-_()[]%°'\"+*#&@№"
 
@@ -23,19 +23,19 @@ def vietnamese_charset() -> list[str]:
     return sorted(p_894)
 
 def main(argv=None) -> None:
-    p_897 = argparse.ArgumentParser(description="U2luaCBkaWN0X1ZJLnR4dCAoYuG7mSBrw70gdOG7sSB0aeG6v25nIFZp4buHdCk=")
+    p_897 = argparse.ArgumentParser(description="Sinh dict_VI.txt (bộ ký tự tiếng Việt)")
     p_897.add_argument(
         "-o",
         "--out",
         type=Path,
         default=Path("triton/models/ocr_pipeline/1/dict_VI.txt"),
-        help="xJHGsOG7nW5nIGThuqtuIGdoaSBkaWN0ICht4bq3YyDEkeG7i25oOiBj4bqhbmggQkxTIG1vZGVsLnB5KQ==",
+        help="đường dẫn ghi dict (mặc định: cạnh BLS model.py)",
     )
     p_898 = p_897.parse_args(argv)
     p_899 = vietnamese_charset()
     p_898.out.parent.mkdir(parents=True, exist_ok=True)
     p_898.out.write_text("\n".join(p_899) + "\n", encoding="utf-8")
-    print(f"✅ {len(p_899)}IGvDvSB04buxIOKGkiA={p_898.out}")
+    print(f"✅ {len(p_899)} ký tự → {p_898.out}")
 
 if __name__ == "__main__":
     main()

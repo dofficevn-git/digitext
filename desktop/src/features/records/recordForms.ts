@@ -45,36 +45,36 @@ const n = (V2u3: string, V2u4: string): V4tb => ({ key: V2u3, label: V2u4, kind:
 export const V4tf: V4te[] = [
   {
     kind: "kiem_tra",
-    label: "QmnDqm4gYuG6o24ga2nhu4NtIHRyYSB0w6BpIGxp4buHdSBsxrB1IHRy4buvIHPhu5E=",
-    legal: "TeG7pWMgMSBQaOG7pSBs4bulYyBWSUkg4oCUIMSQaeG7gXUgMjk=",
+    label: "Biên bản kiểm tra tài liệu lưu trữ số",
+    legal: "Mục 1 Phụ lục VII — Điều 29",
     fields: [
-      t("donVi", "xJDGoW4gduG7iyBraeG7g20gdHJh"),
-      t("diaDiem", "xJDhu4thIMSRaeG7g20="),
-      t("ngay", "TmfDoHkgbOG6rXAgKEREL01NL1lZWVkp"),
-      t("phamVi", "UGjhuqFtIHZpIGtp4buDbSB0cmEgKHBow7RuZyAvIGNo4buNbiBt4bqrdSk="),
-      n("tongSoTep", "VOG7lW5nIHPhu5EgdOG7h3Aga2nhu4NtIHRyYQ=="),
-      n("soDat", "U+G7kSB04buHcCDEkeG6oXQ="),
-      n("soLoi", "U+G7kSB04buHcCBs4buXaQ=="),
-      t("phuongAnKhacPhuc", "UGjGsMahbmcgw6FuIGto4bqvYyBwaOG7pWMgKMSQaeG7gXUgMjkuNC5nKQ==", true),
-      t("ketLuan", "S+G6v3QgbHXhuq1u", true),
-      t("nguoiLap", "TmfGsOG7nWkgbOG6rXAgYmnDqm4gYuG6o24="),
-      t("thuTruong", "VGjhu6cgdHLGsOG7n25nIMSRxqFuIHbhu4s="),
+      t("donVi", "Đơn vị kiểm tra"),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày lập (DD/MM/YYYY)"),
+      t("phamVi", "Phạm vi kiểm tra (phông / chọn mẫu)"),
+      n("tongSoTep", "Tổng số tệp kiểm tra"),
+      n("soDat", "Số tệp đạt"),
+      n("soLoi", "Số tệp lỗi"),
+      t("phuongAnKhacPhuc", "Phương án khắc phục (Điều 29.4.g)", true),
+      t("ketLuan", "Kết luận", true),
+      t("nguoiLap", "Người lập biên bản"),
+      t("thuTruong", "Thủ trưởng đơn vị"),
     ],
     lists: [
       {
         key: "thanhPhan",
-        label: "VGjDoG5oIHBo4bqnbiB0aGFtIGdpYQ==",
+        label: "Thành phần tham gia",
         simple: true,
         columns: [],
         minRows: 1,
       },
       {
         key: "tepLoi",
-        label: "RGFuaCBt4bulYyB04buHcCBs4buXaSAoxJBp4buBdSAyOS40LsSRKQ==",
+        label: "Danh mục tệp lỗi (Điều 29.4.đ)",
         columns: [
-          { key: "tenTep", label: "VMOqbiB04buHcA==" },
-          { key: "diaChi", label: "xJDhu4thIGNo4buJIGzGsHUgdHLhu68=" },
-          { key: "moTaLoi", label: "TcO0IHThuqMgbOG7l2k=", optional: true },
+          { key: "tenTep", label: "Tên tệp" },
+          { key: "diaChi", label: "Địa chỉ lưu trữ" },
+          { key: "moTaLoi", label: "Mô tả lỗi", optional: true },
         ],
         minRows: 0,
       },
@@ -82,24 +82,24 @@ export const V4tf: V4te[] = [
   },
   {
     kind: "nhat_ky_sao_luu",
-    label: "Tmjhuq10IGvDvSBzYW8gbMawdQ==",
-    legal: "TeG7pWMgMiBQaOG7pSBs4bulYyBWSUkg4oCUIMSQaeG7gXUgMzA=",
+    label: "Nhật ký sao lưu",
+    legal: "Mục 2 Phụ lục VII — Điều 30",
     fields: [
-      t("donVi", "xJDGoW4gduG7iw=="),
-      t("ky", "S+G7syBnaGkgbmjhuq10IGvDvQ=="),
-      t("nguoiLap", "TmfGsOG7nWkgbOG6rXA="),
+      t("donVi", "Đơn vị"),
+      t("ky", "Kỳ ghi nhật ký"),
+      t("nguoiLap", "Người lập"),
     ],
     lists: [
       {
         key: "entries",
-        label: "Q8OhYyBs4bqnbiBzYW8gbMawdQ==",
+        label: "Các lần sao lưu",
         columns: [
-          { key: "thoiGian", label: "VGjhu51pIGdpYW4=" },
-          { key: "loai", label: "TG/huqFpIChnaWEgdMSDbmcvxJHhuqd5IMSR4bunKQ==" },
-          { key: "nguonDuLieu", label: "Tmd14buTbiBk4buvIGxp4buHdQ==" },
-          { key: "phuongTien", label: "UGjGsMahbmcgdGnhu4du" },
-          { key: "ketQua", label: "S+G6v3QgcXXhuqM=" },
-          { key: "nguoiThucHien", label: "TmfGsOG7nWkgdGjhu7FjIGhp4buHbg==" },
+          { key: "thoiGian", label: "Thời gian" },
+          { key: "loai", label: "Loại (gia tăng/đầy đủ)" },
+          { key: "nguonDuLieu", label: "Nguồn dữ liệu" },
+          { key: "phuongTien", label: "Phương tiện" },
+          { key: "ketQua", label: "Kết quả" },
+          { key: "nguoiThucHien", label: "Người thực hiện" },
         ],
         minRows: 1,
       },
@@ -107,47 +107,47 @@ export const V4tf: V4te[] = [
   },
   {
     kind: "sao_luu",
-    label: "QmnDqm4gYuG6o24gc2FvIGzGsHU=",
-    legal: "TeG7pWMgMyBQaOG7pSBs4bulYyBWSUkg4oCUIMSQaeG7gXUgMzA=",
+    label: "Biên bản sao lưu",
+    legal: "Mục 3 Phụ lục VII — Điều 30",
     fields: [
-      t("donVi", "xJDGoW4gduG7iw=="),
-      t("diaDiem", "xJDhu4thIMSRaeG7g20="),
-      t("ngay", "TmfDoHkgbOG6rXAgKEREL01NL1lZWVkp"),
-      t("loaiSaoLuu", "TG/huqFpIHNhbyBsxrB1ICjEkGnhu4F1IDMwLjEp"),
-      t("nguonDuLieu", "Tmd14buTbiBk4buvIGxp4buHdSAoQ1NETCArIG3DoyBuZ3Xhu5NuIOKAlCAzMC4zLmMp"),
-      t("phuongTien", "UGjGsMahbmcgdGnhu4duIGzGsHUgdHLhu68="),
-      t("moTaPhuongTien", "TcO0IHThuqMgcGjGsMahbmcgdGnhu4du", true),
-      t("ketQuaKiemTra", "S+G6v3QgcXXhuqMga2nhu4NtIHRyYSBzYXUgc2FvIGzGsHUgKDMwLjMuZCk="),
-      t("noiBaoQuan", "TsahaSBi4bqjbyBxdeG6o24gcGjGsMahbmcgdGnhu4duICgzMC4zLsSRKQ=="),
-      t("nguoiThucHien", "TmfGsOG7nWkgdGjhu7FjIGhp4buHbg=="),
-      t("nguoiKiemTra", "TmfGsOG7nWkga2nhu4NtIHRyYQ=="),
+      t("donVi", "Đơn vị"),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày lập (DD/MM/YYYY)"),
+      t("loaiSaoLuu", "Loại sao lưu (Điều 30.1)"),
+      t("nguonDuLieu", "Nguồn dữ liệu (CSDL + mã nguồn — 30.3.c)"),
+      t("phuongTien", "Phương tiện lưu trữ"),
+      t("moTaPhuongTien", "Mô tả phương tiện", true),
+      t("ketQuaKiemTra", "Kết quả kiểm tra sau sao lưu (30.3.d)"),
+      t("noiBaoQuan", "Nơi bảo quản phương tiện (30.3.đ)"),
+      t("nguoiThucHien", "Người thực hiện"),
+      t("nguoiKiemTra", "Người kiểm tra"),
     ],
     lists: [],
   },
   {
     kind: "su_co",
-    label: "QmnDqm4gYuG6o24geOG7rSBsw70gc+G7sSBj4buRIHbDoCBwaOG7pWMgaOG7k2k=",
-    legal: "TeG7pWMgNCBQaOG7pSBs4bulYyBWSUkg4oCUIMSQaeG7gXUgMzE=",
+    label: "Biên bản xử lý sự cố và phục hồi",
+    legal: "Mục 4 Phụ lục VII — Điều 31",
     fields: [
-      t("donVi", "xJDGoW4gduG7iw=="),
-      t("diaDiem", "xJDhu4thIMSRaeG7g20="),
-      t("ngay", "TmfDoHkgbOG6rXAgKEREL01NL1lZWVkp"),
-      t("thoiDiemSuCo", "VGjhu51pIMSRaeG7g20geOG6o3kgcmEgc+G7sSBj4buR"),
-      t("moTaSuCo", "TcO0IHThuqMgc+G7sSBj4buR"),
-      t("nguyenNhan", "Tmd1ecOqbiBuaMOibiAocGjhuqduIGPhu6luZyAvIHBo4bqnbiBt4buBbSDigJQgMzEuMSk="),
+      t("donVi", "Đơn vị"),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày lập (DD/MM/YYYY)"),
+      t("thoiDiemSuCo", "Thời điểm xảy ra sự cố"),
+      t("moTaSuCo", "Mô tả sự cố"),
+      t("nguyenNhan", "Nguyên nhân (phần cứng / phần mềm — 31.1)"),
       t(
         "nguonPhucHoi",
-        "Tmd14buTbiBwaOG7pWMgaOG7k2kgKGLhuqNuIHNhbyBsxrB1IGfhuqduIG5o4bqldCDigJQgMzEuNCk=",
+        "Nguồn phục hồi (bản sao lưu gần nhất — 31.4)",
       ),
-      t("phuongPhapPhucHoi", "UGjGsMahbmcgcGjDoXAgcGjhu6VjIGjhu5Np"),
-      t("ketQuaKiemTra", "S+G6v3QgcXXhuqMga2nhu4NtIHRyYSBzYXUgcGjhu6VjIGjhu5NpICgzMS41KQ=="),
-      t("nguoiXuLy", "TmfGsOG7nWkgeOG7rSBsw70gc+G7sSBj4buR"),
-      t("phuTrach", "UGjhu6UgdHLDoWNoIMSRxqFuIHbhu4s="),
+      t("phuongPhapPhucHoi", "Phương pháp phục hồi"),
+      t("ketQuaKiemTra", "Kết quả kiểm tra sau phục hồi (31.5)"),
+      t("nguoiXuLy", "Người xử lý sự cố"),
+      t("phuTrach", "Phụ trách đơn vị"),
     ],
     lists: [
       {
         key: "bienPhap",
-        label: "Qmnhu4duIHBow6FwIGPDoWNoIGx5IC8ga2jhuq9jIHBo4bulYyAoMzEuMiwgMzEuMyk=",
+        label: "Biện pháp cách ly / khắc phục (31.2, 31.3)",
         simple: true,
         columns: [],
         minRows: 1,
@@ -156,33 +156,33 @@ export const V4tf: V4te[] = [
   },
   {
     kind: "thu_nop_truc_tiep",
-    label: "QmnDqm4gYuG6o24gdGh1IG7hu5lwIChnaWFvIG5o4bqtbiB0cuG7sWMgdGnhur9wKQ==",
-    legal: "xJBp4buBdSAyMi4yLsSR",
+    label: "Biên bản thu nộp (giao nhận trực tiếp)",
+    legal: "Điều 22.2.đ",
     fields: [
-      t("maDangKy", "TcOjIMSRxINuZyBrw70gecOqdSBj4bqndSAobuG6v3UgY8OzKQ==", true),
-      t("maCoQuan", "TcOjIGPGoSBxdWFuLCB04buVIGNo4bupYyBu4buZcA=="),
-      t("tenCoQuan", "VMOqbiBjxqEgcXVhbiwgdOG7lSBjaOG7qWMgbuG7mXA="),
-      n("soLanNop", "U+G7kSBs4bqnbiBu4buZcA=="),
+      t("maDangKy", "Mã đăng ký yêu cầu (nếu có)", true),
+      t("maCoQuan", "Mã cơ quan, tổ chức nộp"),
+      t("tenCoQuan", "Tên cơ quan, tổ chức nộp"),
+      n("soLanNop", "Số lần nộp"),
       n(
         "tongDangKy",
-        "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IG7hu5lwIHRoZW8gxJHEg25nIGvDvQ==",
+        "Tổng số hồ sơ, tài liệu nộp theo đăng ký",
       ),
-      n("tongGiaoNhan", "VOG7lW5nIHPhu5EgaOG7kyBzxqEsIHTDoGkgbGnhu4d1IGdpYW8gbmjhuq1u"),
-      t("tongDungLuong", "VOG7lW5nIHPhu5EgZHVuZyBsxrDhu6NuZyAodmQgMSwyIEdCKQ=="),
-      t("thoiGianGiaoNhan", "VGjhu51pIGdpYW4gZ2lhbyBuaOG6rW4gKEREL01NL1lZWVkp"),
-      t("nguoiGiao", "TmfGsOG7nWkgZ2lhbw=="),
-      t("nguoiNhan", "TmfGsOG7nWkgbmjhuq1u"),
-      t("ghiChu", "R2hpIGNow7oga2jDoWM=", true),
+      n("tongGiaoNhan", "Tổng số hồ sơ, tài liệu giao nhận"),
+      t("tongDungLuong", "Tổng số dung lượng (vd 1,2 GB)"),
+      t("thoiGianGiaoNhan", "Thời gian giao nhận (DD/MM/YYYY)"),
+      t("nguoiGiao", "Người giao"),
+      t("nguoiNhan", "Người nhận"),
+      t("ghiChu", "Ghi chú khác", true),
     ],
     lists: [
       {
         key: "thietBi",
         label:
-          "VGhp4bq/dCBi4buLIGzGsHUgdHLhu68gYsOgbiBnaWFvICh0w6xuaCB0cuG6oW5nLCBtw7QgdOG6oyDigJQgMjIuMi7EkSk=",
+          "Thiết bị lưu trữ bàn giao (tình trạng, mô tả — 22.2.đ)",
         columns: [
-          { key: "ten", label: "VGhp4bq/dCBi4buL" },
-          { key: "tinhTrang", label: "VMOsbmggdHLhuqFuZw==" },
-          { key: "moTa", label: "TcO0IHThuqMgY2hpIHRp4bq/dA==", optional: true },
+          { key: "ten", label: "Thiết bị" },
+          { key: "tinhTrang", label: "Tình trạng" },
+          { key: "moTa", label: "Mô tả chi tiết", optional: true },
         ],
         minRows: 1,
       },
@@ -192,7 +192,7 @@ export const V4tf: V4te[] = [
 
 export function V4tg(V2u5: V4ta): V4te {
   const t = V4tf.find((x) => x.kind === V2u5);
-  if (!t) throw new Error(`a2jDtG5nIGPDsyBt4bqrdTog${V2u5}`);
+  if (!t) throw new Error(`không có mẫu: ${V2u5}`);
   return t;
 }
 
@@ -212,13 +212,13 @@ export function V4ti(
   for (const f of template.fields) {
     const V2ua = (V2u6[f.key] ?? "").trim();
     if (!V2ua) {
-      if (!f.optional) V2u8.push(`VGhp4bq/dSAi${f.label}".`);
+      if (!f.optional) V2u8.push(`Thiếu "${f.label}".`);
       continue;
     }
     if (f.kind === "number") {
       const V2ub = Number(V2ua);
       if (!Number.isFinite(V2ub) || V2ub < 0) {
-        V2u8.push(`"${f.label}IiBwaOG6o2kgbMOgIHPhu5Ega2jDtG5nIMOibS4=`);
+        V2u8.push(`"${f.label}" phải là số không âm.`);
         continue;
       }
       V2u9[f.key] = V2ub;
@@ -230,13 +230,13 @@ export function V4ti(
   for (const l of template.lists) {
     const V2uc = (V2u7[l.key] ?? []).filter((r) => Object.values(r).some((v) => (v ?? "").trim()));
     if (V2uc.length < l.minRows) {
-      V2u8.push(`"${l.label}IiBj4bqnbiB04buRaSB0aGnhu4N1IA==${l.minRows}IGTDsm5nLg==`);
+      V2u8.push(`"${l.label}" cần tối thiểu ${l.minRows} dòng.`);
       continue;
     }
     if (l.simple) {
       V2u9[l.key] = V2uc.map((r) => (r.value ?? "").trim()).filter(Boolean);
       if ((V2u9[l.key] as string[]).length < l.minRows) {
-        V2u8.push(`"${l.label}IiBj4bqnbiB04buRaSB0aGnhu4N1IA==${l.minRows}IGTDsm5nLg==`);
+        V2u8.push(`"${l.label}" cần tối thiểu ${l.minRows} dòng.`);
       }
       continue;
     }
@@ -246,7 +246,7 @@ export function V4ti(
       for (const c of l.columns) {
         const v = (row[c.key] ?? "").trim();
         if (!v) {
-          if (!c.optional) V2u8.push(`"${l.label}IiBkw7JuZyA=${i + 1}OiB0aGnhur91ICI=${c.label}".`);
+          if (!c.optional) V2u8.push(`"${l.label}" dòng ${i + 1}: thiếu "${c.label}".`);
           continue;
         }
         V2ue[c.key] = v;

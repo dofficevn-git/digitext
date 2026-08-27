@@ -109,7 +109,7 @@ async fn notify_requester(r_im: &AppState, r_il: &T9v, r_ik: &str) {
         if let Err(e) = notifications::f_1v8(&r_im.pool, r_in, None, "info_status", r_ik).await {
             tracing::warn!(
                 error = % e,
-                "a2jDtG5nIGdoaSDEkcaw4bujYyB0aMO0bmcgYsOhbyBjdW5nIGPhuqVwIHRow7RuZyB0aW4="
+                "không ghi được thông báo cung cấp thông tin"
             );
         }
     }
@@ -122,7 +122,7 @@ async fn create_request(
     r_io.require_perm(Permission::AccessRequest)?;
     let project_id = r_ip.project_id.or(r_io.user.project_id).ok_or_else(|| {
         ApiError::bad_request(
-            "dGhp4bq/dSBwcm9qZWN0SWQgKG5nxrDhu51pIGfhu41pIGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIG7DoG8p",
+            "thiếu projectId (người gọi không thuộc dự án nào)",
         )
     })?;
     let r_ir = f_29a(&r_is.pool, &r_io.user).await?;
@@ -135,18 +135,18 @@ async fn create_request(
     ) {
         return Err(
             ApiError::bad_request(
-                "aGluaFRodWMgbmjhuq1uICdkYW5oX211YycgfCAndHJpY2hfeHVhdCcgfCAndG9uZ19ob3AnICjEkGnhu4F1IDQ0KQ==",
+                "hinhThuc nhận 'danh_muc' | 'trich_xuat' | 'tong_hop' (Điều 44)",
             ),
         );
     }
     if r_ip.chu_de.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "dGhp4bq/dSBjaOG7pyDEkeG7gSBj4bulIHRo4buDICjEkGnhu4F1IDQ0LjEuYSk=",
+            "thiếu chủ đề cụ thể (Điều 44.1.a)",
         ));
     }
     if r_ip.muc_dich.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "cGjhuqNpIGtoYWkgbeG7pWMgxJHDrWNoIHPhu60gZOG7pW5nICjEkGnhu4F1IDQ1LjMp",
+            "phải khai mục đích sử dụng (Điều 45.3)",
         ));
     }
     let r_iq = info::create(
@@ -214,7 +214,7 @@ async fn approve_request(
     let r_j3 = load_in_scope(&r_j4, &r_j1, id).await?;
     let Some(approved) = info::approve(&r_j4.pool, r_j3.id, note_of(&r_j2.note)).await? else {
         return Err(ApiError::conflict(format!(
-            "Y2jhu4kgZHV54buHdCDEkcaw4bujYyB5w6p1IGPhuqd1IGNo4budIGR1eeG7h3QgKMSRYW5nIGzDoCAn{}')",
+            "chỉ duyệt được yêu cầu chờ duyệt (đang là '{}')",
             r_j3.status
         )));
     };
@@ -223,7 +223,7 @@ async fn approve_request(
             &r_j4,
             &approved,
             &format!(
-                "WcOqdSBj4bqndSBjdW5nIGPhuqVwIHRow7RuZyB0aW4gxJHDoyBEVVnhu4ZUIOKAlCBwaMOtIA=={phi}IMSR4buTbmcgKMSQaeG7gXUgNDYuMS5jKQ=="
+                "Yêu cầu cung cấp thông tin đã DUYỆT — phí {phi} đồng (Điều 46.1.c)"
             ),
         )
         .await;
@@ -239,14 +239,14 @@ async fn refuse_request(
     let r_j8 = load_in_scope(&r_j9, &r_j5, id).await?;
     let note = note_of(&r_j6.note).ok_or_else(|| {
         ApiError::bad_request(
-            "dOG7qyBjaOG7kWkgcGjhuqNpIG7DqnUgcsO1IGzDvSBkbyAoxJBp4buBdSA0Ni4xLmMp",
+            "từ chối phải nêu rõ lý do (Điều 46.1.c)",
         )
     })?;
     if !info::refuse(&r_j9.pool, r_j8.id, note).await? {
         return Err(
             ApiError::conflict(
                 format!(
-                    "Y2jhu4kgdOG7qyBjaOG7kWkgxJHGsOG7o2MgecOqdSBj4bqndSBjaOG7nSBkdXnhu4d0ICjEkWFuZyBsw6AgJw=={}')",
+                    "chỉ từ chối được yêu cầu chờ duyệt (đang là '{}')",
                     r_j8.status
                 ),
             ),
@@ -258,7 +258,7 @@ async fn refuse_request(
     notify_requester(
         &r_j9,
         &r_j7,
-        &format!("WcOqdSBj4bqndSBjdW5nIGPhuqVwIHRow7RuZyB0aW4gYuG7iyBU4buqIENI4buQSTog{note}"),
+        &format!("Yêu cầu cung cấp thông tin bị TỪ CHỐI: {note}"),
     )
     .await;
     Ok(Json(r_j7.into()))
@@ -273,7 +273,7 @@ async fn confirm_payment(
     if !info::confirm_payment(&r_jd.pool, r_jc.id).await? {
         return Err(
             ApiError::conflict(
-                "Y2jhu4kgeMOhYyBuaOG6rW4gdGhhbmggdG/DoW4gY2hvIHnDqnUgY+G6p3UgxJHDoyBkdXnhu4d0IHbDoCBjaMawYSB0aGFuaCB0b8Ohbg=="
+                "chỉ xác nhận thanh toán cho yêu cầu đã duyệt và chưa thanh toán"
                     .to_string(),
             ),
         );
@@ -284,7 +284,7 @@ async fn confirm_payment(
     notify_requester(
         &r_jd,
         &r_jb,
-        "xJDDoyB4w6FjIG5o4bqtbiB0aGFuaCB0b8OhbiBwaMOtICjEkGnhu4F1IDQ2LjQp",
+        "Đã xác nhận thanh toán phí (Điều 46.4)",
     )
     .await;
     Ok(Json(r_jb.into()))
@@ -324,7 +324,7 @@ async fn generate(
         return Err(
             ApiError::conflict(
                 format!(
-                    "Y2jhu4kga+G6v3QgeHXhuqV0IHNhdSBraGkgZHV54buHdCB2w6AgdHLGsOG7m2Mga2hpIHRy4bqjICjEkWFuZyBsw6AgJw=={}')",
+                    "chỉ kết xuất sau khi duyệt và trước khi trả (đang là '{}')",
                     r_ju.status
                 ),
             ),
@@ -333,19 +333,19 @@ async fn generate(
     let r_jw = r_jv
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let (quota, _) = info::f_25g(&r_jv.pool, r_ju.project_id).await?;
     let org = projects::get(&r_jv.pool, r_ju.project_id)
         .await?
         .map(|r_js| r_js.name)
-        .unwrap_or_else(|| "TMawdSB0cuG7ryBs4buLY2ggc+G7rQ==".to_string());
+        .unwrap_or_else(|| "Lưu trữ lịch sử".to_string());
     let mut r_jn: Vec<FormBlock> = vec![
         FormBlock::Field {
-            label: "Q2jhu6cgxJHhu4E=".into(),
+            label: "Chủ đề".into(),
             value: r_ju.chu_de.clone(),
         },
         FormBlock::Field {
-            label: "TeG7pWMgxJHDrWNoIHPhu60gZOG7pW5n".into(),
+            label: "Mục đích sử dụng".into(),
             value: r_ju.muc_dich.clone(),
         },
     ];
@@ -356,7 +356,7 @@ async fn generate(
             r_jy = hits.len() as i64 > quota;
             let hits = &hits[..hits.len().min(quota as usize)];
             r_jn.push(FormBlock::SectionHeading(format!(
-                "REFOSCBN4bukQyBUw4BJIExJ4buGVSAo{}IG3hu6VjKQ==",
+                "DANH MỤC TÀI LIỆU ({} mục)",
                 hits.len()
             )));
             r_jn.push(FormBlock::Bullets(
@@ -372,21 +372,21 @@ async fn generate(
                     })
                     .collect(),
             ));
-            "REFOSCBN4bukQyBUw4BJIExJ4buGVSBMxq9VIFRS4buuIFRIRU8gQ0jhu6YgxJDhu4A="
+            "DANH MỤC TÀI LIỆU LƯU TRỮ THEO CHỦ ĐỀ"
         }
         "trich_xuat" => {
             let hits = info::f_1b9(&r_jv.pool, r_ju.project_id, &r_ju.chu_de, quota + 1).await?;
             r_jy = hits.len() as i64 > quota;
             let hits = &hits[..hits.len().min(quota as usize)];
             r_jn.push(FormBlock::SectionHeading(format!(
-                "TuG7mEkgRFVORyBUUsONQ0ggWFXhuqRUIE5HVVnDik4gVsSCTiAo{}IMSRb+G6oW4p",
+                "NỘI DUNG TRÍCH XUẤT NGUYÊN VĂN ({} đoạn)",
                 hits.len()
             )));
             for h in hits {
                 r_jn.push(FormBlock::Field {
-                    label: "xJDhu4thIGNo4buJIGzGsHUgdHLhu68=".into(),
+                    label: "Địa chỉ lưu trữ".into(),
                     value: format!(
-                        "{} — {} — trang {}IChsacOqbiBr4bq/dCBn4buRYzog{})",
+                        "{} — {} — trang {} (liên kết gốc: {})",
                         h.ho_so_ref.as_deref().unwrap_or("—"),
                         h.filename,
                         h.page_no,
@@ -398,7 +398,7 @@ async fn generate(
                     f_2pl(&h.content, &r_ju.chu_de, 400)
                 )));
             }
-            "VEjDlE5HIFRJTiBUUsONQ0ggWFXhuqRUIFThu6ogVMOASSBMSeG7hlUgTMavVSBUUuG7riBT4buQ"
+            "THÔNG TIN TRÍCH XUẤT TỪ TÀI LIỆU LƯU TRỮ SỐ"
         }
         _ => {
             let rows_ = info::f_2i4(&r_jv.pool, r_ju.project_id, &r_ju.chu_de, quota + 1).await?;
@@ -407,14 +407,14 @@ async fn generate(
             let tong_tl: i64 = rows_.iter().map(|r| r.so_tai_lieu).sum();
             let tong_trang: i64 = rows_.iter().map(|r| r.tong_trang).sum();
             r_jn.push(FormBlock::SectionHeading(
-                "QsOBTyBDw4FPIFThu5RORyBI4buiUCBU4buwIMSQ4buYTkc=".into(),
+                "BÁO CÁO TỔNG HỢP TỰ ĐỘNG".into(),
             ));
             r_jn.push(FormBlock::Field {
-                label: "VOG7lW5nIHPhu5EgaOG7kyBzxqEgbGnDqm4gcXVhbg==".into(),
+                label: "Tổng số hồ sơ liên quan".into(),
                 value: rows_.len().to_string(),
             });
             r_jn.push(FormBlock::Field {
-                label: "VOG7lW5nIHPhu5EgdMOgaSBsaeG7h3UgLyB04buVbmcgc+G7kSB0cmFuZw==".into(),
+                label: "Tổng số tài liệu / tổng số trang".into(),
                 value: format!("{tong_tl} / {tong_trang}"),
             });
             r_jn.push(
@@ -423,7 +423,7 @@ async fn generate(
                         .iter()
                         .map(|r| {
                             format!(
-                                "SOG7kyBzxqEg{}: {}IHTDoGkgbGnhu4d1LCA={} trang, {}IHRyYW5nIGto4bubcCBu4buZaSBkdW5n",
+                                "Hồ sơ {}: {} tài liệu, {} trang, {} trang khớp nội dung",
                                 r.ho_so_ref.as_deref().unwrap_or("—"), r.so_tai_lieu, r
                                 .tong_trang, r.so_trang_khop,
                             )
@@ -431,29 +431,29 @@ async fn generate(
                         .collect(),
                 ),
             );
-            "VEjDlE5HIFRJTiBU4buUTkcgSOG7olAgVOG7qiBDU0RMIFTDgEkgTEnhu4ZVIEzGr1UgVFLhu64="
+            "THÔNG TIN TỔNG HỢP TỪ CSDL TÀI LIỆU LƯU TRỮ"
         }
     };
     if r_jy {
         r_jn.push(
             FormBlock::Paragraph(
                 format!(
-                    "KEvhur90IHF14bqjIHbGsOG7o3QgZ2nhu5tpIGjhuqFuIA=={quota}IG3hu6VjIGNobyBt4buZdCBs4bqnbiB5w6p1IGPhuqd1IOKAlCDEkGnhu4F1IDQ0LjQ7IHRodSBo4bq5cCBjaOG7pyDEkeG7gSBob+G6t2MgdMOhY2ggecOqdSBj4bqndS4p"
+                    "(Kết quả vượt giới hạn {quota} mục cho một lần yêu cầu — Điều 44.4; thu hẹp chủ đề hoặc tách yêu cầu.)"
                 ),
             ),
         );
     }
     if let Some(r_jp) = note_of(&r_jo.bien_tap) {
         r_jn.push(FormBlock::SectionHeading(
-            "UsOAIFNPw4FULCBCScOKTiBU4bqsUCAoxJBp4buBdSA0Ny4yKQ==".into(),
+            "RÀ SOÁT, BIÊN TẬP (Điều 47.2)".into(),
         ));
         r_jn.push(FormBlock::Paragraph(r_jp.to_string()));
     }
-    r_jn.push(FormBlock::SectionHeading("WMOBQyBUSOG7sEM=".into()));
+    r_jn.push(FormBlock::SectionHeading("XÁC THỰC".into()));
     r_jn.push(
         FormBlock::Paragraph(
             format!(
-                "S+G6v3QgcXXhuqMgxJHGsOG7o2Mga+G6v3QgeHXhuqV0IHThu6sgSOG7hyB0aOG7kW5nIHF14bqjbiBsw70gdMOgaSBsaeG7h3UgbMawdSB0cuG7ryBz4buRIHbDoCDEkcaw4bujYyB4w6FjIHRo4buxYyBi4bufaSA={org}LiBUaOG7nWkgxJFp4buDbSBr4bq/dCB4deG6pXQ6IA=={} (+07:00).",
+                "Kết quả được kết xuất từ Hệ thống quản lý tài liệu lưu trữ số và được xác thực bởi {org}. Thời điểm kết xuất: {} (+07:00).",
                 Utc::now().with_timezone(& chrono::FixedOffset::east_opt(7 * 3600)
                 .expect("+07:00")).format("%d/%m/%Y %H:%M"),
             ),
@@ -461,31 +461,31 @@ async fn generate(
     );
     let r_jq = digitext_pdf::f_1cq().ok_or_else(|| {
         ApiError::service_unavailable(
-            "a2jDtG5nIHTDrG0gdGjhuqV5IGZvbnQgVFRGIOKAlCDEkeG6t3QgRElHSVRFWFRfQ0VSVF9GT05U",
+            "không tìm thấy font TTF — đặt DIGITEXT_CERT_FONT",
         )
     })?;
     let font = std::fs::read(&r_jq).map_err(|e| {
         tracing::error!(
-            path = % r_jq.display(), error = % e, "xJHhu41jIGZvbnQgbOG7l2k="
+            path = % r_jq.display(), error = % e, "đọc font lỗi"
         );
         ApiError::internal()
     })?;
     let pdf = digitext_pdf::f_ve(
             r_jx,
             Some(
-                "KEN1bmcgY+G6pXAgdGjDtG5nIHRpbiB0aGVvIE3hu6VjIDQgQ2jGsMahbmcgVkkg4oCUIFRow7RuZyB0xrAgMDUvMjAyNS9UVC1CTlYp",
+                "(Cung cấp thông tin theo Mục 4 Chương VI — Thông tư 05/2025/TT-BNV)",
             ),
             &r_jn,
             &font,
         )
         .map_err(|e| ApiError::bad_request(
-            format!("ZOG7sW5nIFBERiBr4bq/dCBxdeG6oyBs4buXaTog{e}"),
+            format!("dựng PDF kết quả lỗi: {e}"),
         ))?;
     let r_jr = f_1kc(r_ju.project_id, r_ju.id);
     r_jw.put(&r_jr, &pdf).await.map_err(|e| {
         tracing::error!(
             error = % e,
-            "UFVUIGvhur90IHF14bqjIGN1bmcgY+G6pXAgdGjDtG5nIHRpbiBs4buXaQ=="
+            "PUT kết quả cung cấp thông tin lỗi"
         );
         ApiError::internal()
     })?;
@@ -505,7 +505,7 @@ async fn fulfill(
     if !info::fulfill(&r_k2.pool, r_k1.id).await? {
         return Err(
             ApiError::conflict(
-                "Y2jhu4kgdHLhuqMga+G6v3QgcXXhuqMga2hpIMSRw6MgZHV54buHdCB2w6AgxJDDgyBr4bq/dCB4deG6pXQgKMSQaeG7gXUgNDcuMyk="
+                "chỉ trả kết quả khi đã duyệt và ĐÃ kết xuất (Điều 47.3)"
                     .to_string(),
             ),
         );
@@ -516,7 +516,7 @@ async fn fulfill(
     notify_requester(
             &r_k2,
             &r_k0,
-            "S+G6v3QgcXXhuqMgY3VuZyBj4bqlcCB0aMO0bmcgdGluIMSRw6Mgc+G6tW4gc8Ogbmcg4oCUIHThuqNpIHThu6sgdMOgaSBraG/huqNuICjEkGnhu4F1IDQ3LjQp",
+            "Kết quả cung cấp thông tin đã sẵn sàng — tải từ tài khoản (Điều 47.4)",
         )
         .await;
     Ok(Json(r_k0.into()))
@@ -533,29 +533,29 @@ async fn download(
     if !r_k5 {
         if r_k7.status != "fulfilled" {
             return Err(ApiError::conflict(
-                "a+G6v3QgcXXhuqMgY2jGsGEgxJHGsOG7o2MgdHLhuqMgKMSQaeG7gXUgNDcuNCk=".to_string(),
+                "kết quả chưa được trả (Điều 47.4)".to_string(),
             ));
         }
         if !r_k7.fee_settled() {
             return Err(ApiError::conflict(
-                "Y2jGsGEgdGhhbmggdG/DoW4gcGjDrSAoxJBp4buBdSA0Ni4zLmIvNDYuNCk=".to_string(),
+                "chưa thanh toán phí (Điều 46.3.b/46.4)".to_string(),
             ));
         }
     }
     let r_k6 = r_k7.ket_qua_key.as_deref().ok_or_else(|| {
         ApiError::conflict(
-            "Y2jGsGEga+G6v3QgeHXhuqV0IGvhur90IHF14bqjICjEkGnhu4F1IDQ3LjEp".to_string(),
+            "chưa kết xuất kết quả (Điều 47.1)".to_string(),
         )
     })?;
     let r_k9 = r_k8
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let r_k4 = r_k9
         .get(r_k6)
         .await
         .map_err(|e| {
-            tracing::error!(error = % e, "xJHhu41jIGvhur90IHF14bqjIGzhu5dp");
+            tracing::error!(error = % e, "đọc kết quả lỗi");
             ApiError::internal()
         })?
         .ok_or_else(ApiError::not_found)?;

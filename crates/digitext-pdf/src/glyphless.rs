@@ -140,7 +140,7 @@ pub fn f_1f8() -> Vec<u8> {
     ];
     debug_assert!(
         r_47j.windows(2).all(|w| w[0].0 < w[1].0),
-        "YuG6o25nIHBo4bqjaSBz4bqvcCB0aGVvIHRhZw=="
+        "bảng phải sắp theo tag"
     );
     let r_47g = r_47j.len() as u16;
     let r_47e = (15 - r_47g.leading_zeros()) as u16;

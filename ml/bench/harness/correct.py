@@ -114,11 +114,11 @@ def load_lexicon(path: str) -> FrozenSet[str]:
     return frozenset(p_9f)
 
 def main(argv=None) -> int:
-    p_a0 = argparse.ArgumentParser(description="U+G7rWEgT0NSIHRoZW8gY29uZnVzYWJsZXMgKyBsZXhpY29uICjCp1MxMy5BLjIvQS4zKQ==")
-    p_a0.add_argument("--lexicon", required=True, help="ZmlsZSB04burIMSRaeG7g24gKG3hu5dpIGTDsm5nIG3hu5l0IHThu6ssIMSRw6Mgbm9ybWFsaXplKQ==")
-    p_a0.add_argument("--gazetteer", default=None, help="ZmlsZSDEkeG7i2EgZGFuaC90w6puIHJpw6puZyBj4bqnbiBi4bqjbyB24buHICh0deG7syBjaOG7jW4p")
-    p_a0.add_argument("--text", required=True, help="ZMOybmcgY+G6p24gdGjhu60gc+G7rWE=")
-    p_a0.add_argument("--conf", type=float, default=0.5, help="Y29uZmlkZW5jZSBj4bunYSBkw7JuZyAodGjhuqVwIOKGkiDEkcaw4bujYyBz4butYSk=")
+    p_a0 = argparse.ArgumentParser(description="Sửa OCR theo confusables + lexicon (§S13.A.2/A.3)")
+    p_a0.add_argument("--lexicon", required=True, help="file từ điển (mỗi dòng một từ, đã normalize)")
+    p_a0.add_argument("--gazetteer", default=None, help="file địa danh/tên riêng cần bảo vệ (tuỳ chọn)")
+    p_a0.add_argument("--text", required=True, help="dòng cần thử sửa")
+    p_a0.add_argument("--conf", type=float, default=0.5, help="confidence của dòng (thấp → được sửa)")
     p_a0.add_argument("--conf-gate", type=float, default=0.85)
     p_a0.add_argument("--max-cost", type=float, default=0.6)
     p_a1 = p_a0.parse_args(argv)
@@ -126,8 +126,8 @@ def main(argv=None) -> int:
     p_a4 = load_lexicon(p_a1.lexicon)
     p_a3 = load_lexicon(p_a1.gazetteer) if p_a1.gazetteer else frozenset()
     p_a2, p_a5 = correct_line(p_a1.text, p_a1.conf, p_a4, p_a3, p_a1.conf_gate, p_a1.max_cost)
-    print(f"Z+G7kWM6ICA={p_a1.text}")
-    print(f"c+G7rWE6ICA={p_a2}   ({p_a5}IHRva2VuIMSR4buVaSk=")
+    print(f"gốc:  {p_a1.text}")
+    print(f"sửa:  {p_a2}   ({p_a5} token đổi)")
     return 0
 
 if __name__ == "__main__":

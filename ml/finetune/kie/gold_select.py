@@ -15,7 +15,7 @@ def doc_bucket(document_id: str, mod: int = 10) -> int:
 def stratum_of(document_id: str, level: int = 2) -> str:
     p_41f = Path(document_id).parts[:-1]
     if not p_41f:
-        return "PGfhu5FjPg=="
+        return "<gốc>"
     return "/".join(p_41f[:level])
 
 def q_133(page_id: str) -> float:
@@ -24,7 +24,7 @@ def q_133(page_id: str) -> float:
 
 def q_f2(strata: dict[str, int], target: int) -> dict[str, int]:
     if target <= 0:
-        raise ValueError(f"dGFyZ2V0IHBo4bqjaSA+IDAsIG5o4bqtbiA={target}")
+        raise ValueError(f"target phải > 0, nhận {target}")
     if not strata:
         return {}
     p_425 = sum(strata.values())
@@ -108,10 +108,10 @@ def main(argv: list[str] | None = None) -> int:
     p_438 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_438.add_argument("bio_jsonl")
     p_438.add_argument("silver_jsonl")
-    p_438.add_argument("--target", type=int, default=220, help="c+G7kSB0cmFuZyBnb2xkIG114buRbiBzb8OhdA==")
-    p_438.add_argument("--val-bucket", type=int, default=0, help="YnVja2V0IGdp4buvLW5nb8OgaS10cmFpbiAoa2jhu5twIHRyYWluX2tpZSk=")
+    p_438.add_argument("--target", type=int, default=220, help="số trang gold muốn soát")
+    p_438.add_argument("--val-bucket", type=int, default=0, help="bucket giữ-ngoài-train (khớp train_kie)")
     p_438.add_argument("--mod", type=int, default=10)
-    p_438.add_argument("--level", type=int, default=2, help="xJHhu5kgc8OidSB0aMawIG3hu6VjIGzDoG0gdOG6p25n")
+    p_438.add_argument("--level", type=int, default=2, help="độ sâu thư mục làm tầng")
     p_438.add_argument("--out", default="data/gold_todo.jsonl")
     p_438.add_argument("--stats-only", action="store_true")
     p_439 = p_438.parse_args(argv)
@@ -119,31 +119,31 @@ def main(argv: list[str] | None = None) -> int:
     p_43a, p_444 = Path(p_439.bio_jsonl), Path(p_439.silver_jsonl)
     for p_441 in (p_43a, p_444):
         if not p_441.is_file():
-            print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_441}", file=sys.stderr)
+            print(f"LỖI: không thấy {p_441}", file=sys.stderr)
             return 2
 
     bio = load_jsonl_by_id(p_43a)
     silver = load_jsonl_by_id(p_444)
     if not bio:
-        print("TOG7lkk6IGJpby5qc29ubCBy4buXbmc=", file=sys.stderr)
+        print("LỖI: bio.jsonl rỗng", file=sys.stderr)
         return 2
 
     p_445 = [(p_442, p_443["document_id"]) for p_442, p_443 in bio.items()
                  if doc_bucket(p_443["document_id"], p_439.mod) == p_439.val_bucket and p_442 in silver]
     if not p_445:
-        print("TOG7lkk6IGtow7RuZyBjw7MgdHJhbmcgbsOgbyB24burYSBjaMawYS10cmFpbiB24burYSBjw7MgYuG6o24gc2lsdmVy", file=sys.stderr)
+        print("LỖI: không có trang nào vừa chưa-train vừa có bản silver", file=sys.stderr)
         return 2
 
     try:
         p_43b = q_161(p_445, p_439.target, p_439.level)
     except ValueError as e:
-        print(f"TOG7lkk6IA=={e}", file=sys.stderr)
+        print(f"LỖI: {e}", file=sys.stderr)
         return 2
 
     p_440 = len({stratum_of(p_43d, p_439.level) for p_442, p_43d in p_445 if p_442 in set(p_43b)})
-    print(f"dHJhbmcgY2jGsGEtdHJhaW4gKGJ1Y2tldCA={p_439.val_bucket}/{p_439.mod}LCBjw7Mgc2lsdmVyKTog{len(p_445)}",
+    print(f"trang chưa-train (bucket {p_439.val_bucket}/{p_439.mod}, có silver): {len(p_445)}",
           file=sys.stderr)
-    print(f"Y2jhu41uOiA={len(p_43b)} trang (target {p_439.target}KSB0cuG6o2kg{p_440}IHThuqduZw==", file=sys.stderr)
+    print(f"chọn: {len(p_43b)} trang (target {p_439.target}) trải {p_440} tầng", file=sys.stderr)
 
     if p_439.stats_only:
         return 0
@@ -156,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         for p_442 in p_43b:
             p_43e.write(json.dumps(q_f7(bio[p_442], silver[p_442]), ensure_ascii=False) + "\n")
             p_43f += 1
-    print(f"→ {out} ({p_43f}IGfDs2kgc2/DoXQpLiBN4buXaSBkw7JuZyA9IDEgdHJhbmc6IOG6o25oICsgMTYgdHLGsOG7nW5nICsgdG9rZW4u", file=sys.stderr)
+    print(f"→ {out} ({p_43f} gói soát). Mỗi dòng = 1 trang: ảnh + 16 trường + token.", file=sys.stderr)
     return 0
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ impl fmt::Display for JobKind {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("bG/huqFpIGpvYiBraMO0bmcgaOG7o3AgbOG7hzog{0:?}")]
+#[error("loại job không hợp lệ: {0:?}")]
 pub struct Tgm(pub String);
 impl FromStr for JobKind {
     type Err = Tgm;
@@ -117,7 +117,7 @@ impl fmt::Display for JobStatus {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("dHLhuqFuZyB0aMOhaSBqb2Iga2jDtG5nIGjhu6NwIGzhu4c6IA=={0:?}")]
+#[error("trạng thái job không hợp lệ: {0:?}")]
 pub struct Tgn(pub String);
 impl FromStr for JobStatus {
     type Err = Tgn;

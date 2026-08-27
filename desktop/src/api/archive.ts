@@ -205,7 +205,7 @@ export async function V40y(path: string): Promise<void> {
     await V40x(path);
   } catch (V2n) {
     await message(V2n instanceof Error ? V2n.message : String(V2n), {
-      title: "S2jDtG5nIG3hu58gxJHGsOG7o2MgUERG",
+      title: "Không mở được PDF",
       kind: "error",
     });
   }

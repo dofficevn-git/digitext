@@ -5,33 +5,33 @@ import type { V41v } from "@/components/Icon";
 
 export const V4v6: Record<V4us["hinhThuc"], string> = {
   danh_muc:
-    "RGFuaCBt4bulYyB0w6BpIGxp4buHdSAoxJBp4buBdSA0NC4xIOKAlCB04buRaSDEkWEgNCB0csaw4budbmcgdGluKQ==",
+    "Danh mục tài liệu (Điều 44.1 — tối đa 4 trường tin)",
   trich_xuat:
-    "VHLDrWNoIHh14bqldCBuZ3V5w6puIHbEg24gKMSQaeG7gXUgNDQuMiDigJQga8OobSDEkeG7i2EgY2jhu4kgbMawdSB0cuG7ryk=",
+    "Trích xuất nguyên văn (Điều 44.2 — kèm địa chỉ lưu trữ)",
   tong_hop:
-    "VGjDtG5nIHRpbiB04buVbmcgaOG7o3AgKMSQaeG7gXUgNDQuMyDigJQgYsOhbyBjw6FvIHThu7EgxJHhu5luZyk=",
+    "Thông tin tổng hợp (Điều 44.3 — báo cáo tự động)",
 };
 
 export const V4v7: Record<V4us["status"], string> = {
-  submitted: "Q2jhu50geMOpdCBkdXnhu4d0IChTTEEgNiBuZ8OgeSBsw6BtIHZp4buHYyDigJQgNDYuNSk=",
-  approved: "xJDDoyBkdXnhu4d0",
-  refused: "VOG7qyBjaOG7kWk=",
-  fulfilled: "xJDDoyB0cuG6oyBr4bq/dCBxdeG6ow==",
+  submitted: "Chờ xét duyệt (SLA 6 ngày làm việc — 46.5)",
+  approved: "Đã duyệt",
+  refused: "Từ chối",
+  fulfilled: "Đã trả kết quả",
 };
 
 export const V4v8: Record<string, string> = {
-  gia_tang: "R2lhIHTEg25nIGjhurFuZyBuZ8OgeSAoMzAuMS5hKQ==",
-  day_du: "xJDhuqd5IMSR4bunIGjhurFuZyB0aMOhbmcgKDMwLjEuYSk=",
-  day_du_3_nam: "xJDhuqd5IMSR4bunIDAzIG7Eg20gKDMwLjEuYik=",
+  gia_tang: "Gia tăng hằng ngày (30.1.a)",
+  day_du: "Đầy đủ hằng tháng (30.1.a)",
+  day_du_3_nam: "Đầy đủ 03 năm (30.1.b)",
 };
 
 export function V4v9(V30c: V4uu): string[] {
   const V30d: string[] = [];
   if (!V30c.chuDe.trim()) {
-    V30d.push("UGjhuqNpIG7DqnUgY2jhu6cgxJHhu4EgY+G7pSB0aOG7gyAoxJBp4buBdSA0NC4xLmEpLg==");
+    V30d.push("Phải nêu chủ đề cụ thể (Điều 44.1.a).");
   }
   if (!V30c.mucDich.trim()) {
-    V30d.push("UGjhuqNpIGtoYWkgbeG7pWMgxJHDrWNoIHPhu60gZOG7pW5nICjEkGnhu4F1IDQ1LjMpLg==");
+    V30d.push("Phải khai mục đích sử dụng (Điều 45.3).");
   }
   return V30d;
 }
@@ -48,30 +48,30 @@ export function V4vb(row: V4us): V4va[] {
     V30e.push({
       action: "approve",
       icon: "duyet",
-      label: "RHV54buHdCAocGjDrSB04buxIHTDrW5oIOKAlCA0Ni4xLmMp",
+      label: "Duyệt (phí tự tính — 46.1.c)",
     });
-    V30e.push({ action: "refuse", icon: "tuChoi", label: "VOG7qyBjaOG7kWk=" });
+    V30e.push({ action: "refuse", icon: "tuChoi", label: "Từ chối" });
   }
   if (row.status === "approved") {
     if ((row.phi ?? 0) > 0 && !row.paidAt) {
       V30e.push({
         action: "pay",
         icon: "thanhToan",
-        label: "WMOhYyBuaOG6rW4gdGhhbmggdG/DoW4gKDQ2LjQp",
+        label: "Xác nhận thanh toán (46.4)",
       });
     }
     V30e.push({
       action: "generate",
       icon: row.coKetQua ? "lamMoi" : "ketXuat",
       label: row.coKetQua
-        ? "S+G6v3QgeHXhuqV0IGzhuqFpICg0Ny4xKQ=="
-        : "S+G6v3QgeHXhuqV0IHThu6sgSOG7hyB0aOG7kW5nICg0Ny4xKQ==",
+        ? "Kết xuất lại (47.1)"
+        : "Kết xuất từ Hệ thống (47.1)",
     });
     if (row.coKetQua) {
       V30e.push({
         action: "fulfill",
         icon: "guiKetQua",
-        label: "UGjDqiBkdXnhu4d0ICsgdHLhuqMga+G6v3QgcXXhuqMgKDQ3LjMvNDcuNCk=",
+        label: "Phê duyệt + trả kết quả (47.3/47.4)",
       });
     }
   }

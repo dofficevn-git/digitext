@@ -18,20 +18,20 @@ impl HttpTritonProbe {
             .ok_or_else(|| {
                 Thj(
                     format!(
-                        "Y2jhu4kgaOG7lyB0cuG7oyBodHRwOi8vIGNobyBwcm9iZSBu4buZaSBi4buZLCBuaOG6rW4g{endpoint:?}"
+                        "chỉ hỗ trợ http:// cho probe nội bộ, nhận {endpoint:?}"
                     ),
                 )
             })?;
         let r_3fu = r_3fv.split('/').next().unwrap_or(r_3fv);
         let (host, port) = r_3fu
             .rsplit_once(':')
-            .ok_or_else(|| Thj(format!("dGhp4bq/dSBj4buVbmcgdHJvbmcg{endpoint:?}")))?;
+            .ok_or_else(|| Thj(format!("thiếu cổng trong {endpoint:?}")))?;
         if host.is_empty() {
-            return Err(Thj(format!("dGhp4bq/dSBob3N0IHRyb25nIA=={endpoint:?}")));
+            return Err(Thj(format!("thiếu host trong {endpoint:?}")));
         }
         let port: u16 = port
             .parse()
-            .map_err(|_| Thj(format!("Y+G7lW5nIGtow7RuZyBo4bujcCBs4buHOiA={port:?}")))?;
+            .map_err(|_| Thj(format!("cổng không hợp lệ: {port:?}")))?;
         Ok(HttpTritonProbe {
             host: host.to_owned(),
             port,
@@ -76,7 +76,7 @@ impl HttpTritonProbe {
         };
         match tokio::time::timeout(self.timeout, r_3g4).await {
             Ok(r_3g0) => r_3g0,
-            Err(_) => Err(Thj(format!("dGltZW91dCBkw7Ig{path}"))),
+            Err(_) => Err(Thj(format!("timeout dò {path}"))),
         }
     }
 }

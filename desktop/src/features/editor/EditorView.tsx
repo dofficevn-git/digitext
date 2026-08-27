@@ -377,7 +377,7 @@ export default function V4p4({
   const V267 = () => {
     if (Math.abs(V23v) < 0.05) {
       V24s(
-        "Q2jhu41uIMSR4buZIG5naGnDqm5nIOG7nyB0aGFuaCB0csaw4bujdCB0csaw4bubYyBraGkga2jhu60gbmdoacOqbmcu",
+        "Chọn độ nghiêng ở thanh trượt trước khi khử nghiêng.",
       );
       return;
     }
@@ -404,7 +404,7 @@ export default function V4p4({
 
   const V26d = (V26e: number) => {
     if (V23o.length <= 1) {
-      V24s("SOG7kyBzxqEgcGjhuqNpIGPDsm4gw610IG5o4bqldCAxIHRyYW5nLg==");
+      V24s("Hồ sơ phải còn ít nhất 1 trang.");
       return;
     }
     V23p((V26f) => V26f.filter((p) => p.index !== V26e));
@@ -431,10 +431,10 @@ export default function V4p4({
       const V26n = await open({
         multiple: true,
         directory: false,
-        title: "Q2jhu41uIOG6o25oIGhv4bq3YyBQREYgxJHhu4MgY2jDqG4=",
+        title: "Chọn ảnh hoặc PDF để chèn",
         filters: [
           {
-            name: "4bqibmggaG/hurdjIFBERg==",
+            name: "Ảnh hoặc PDF",
             extensions: ["pdf", "png", "jpg", "jpeg", "tif", "tiff", "bmp"],
           },
         ],
@@ -458,7 +458,7 @@ export default function V4p4({
   const V26u = async () => {
     if (!V23i || V24n) return;
     if (V23o.length === 0) {
-      V24s("S2jDtG5nIGPDsyB0cmFuZyBuw6BvIMSR4buDIMSRw7NuZyBnw7NpLg==");
+      V24s("Không có trang nào để đóng gói.");
       return;
     }
 
@@ -512,7 +512,7 @@ export default function V4p4({
       } else {
         const V26y = V23j ?? V26w.pdfPath;
         if (!V26y) {
-          V24s("S2jDtG5nIHjDoWMgxJHhu4tuaCDEkcaw4bujYyBmaWxlIFBERiDEkeG7gyBnaGkgxJHDqC4=");
+          V24s("Không xác định được file PDF để ghi đè.");
           V24o(false);
           return;
         }
@@ -579,9 +579,9 @@ export default function V4p4({
       <div className="editor-bar">
         <button className="btn sm" onClick={() => (V23m ? V23g?.() : goto("drive"))}>
           {V23m ? (
-            <Icon name="dong" label="xJDDs25n" />
+            <Icon name="dong" label="Đóng" />
           ) : (
-            <Icon name="truoc" label="UXVheSBs4bqhaQ==" />
+            <Icon name="truoc" label="Quay lại" />
           )}
         </button>
         <h2 className="text-lg">Trình xử lý ảnh</h2>
@@ -590,7 +590,7 @@ export default function V4p4({
             ? `— ${V23i.hoSo.hoSoSo}${V23i.hoSo.tieuDe ? ` · ${V23i.hoSo.tieuDe}` : ""} · ${V250} trang`
             : V250 > 0
               ? `— trang ${V251 + 1} / ${V250}`
-              : "4oCUIENoxrBhIG3hu58gdMOgaSBsaeG7h3U="}
+              : "— Chưa mở tài liệu"}
         </span>
         <div className="spacer flex-1" />
         {V24r && (
@@ -602,7 +602,7 @@ export default function V4p4({
           className="btn sm"
           disabled={V24l || !V24t}
           onClick={() => void V268(true)}
-          title="TMO5aSBt4buZdCBixrDhu5tjIHjhu60gbMO9IGPhu6dhIHRyYW5nIG7DoHkgKGdp4buvIDUgYsaw4bubYyBn4bqnbiBuaOG6pXQpLg=="
+          title="Lùi một bước xử lý của trang này (giữ 5 bước gần nhất)."
         >
           <Icon name="hoanTac" />
           Hoàn tác
@@ -611,7 +611,7 @@ export default function V4p4({
           className="btn sm"
           disabled={V24l || !V24v}
           onClick={() => void V268(false)}
-          title="VGnhur9uIGzhuqFpIGLGsOG7m2MgduG7q2EgaG/DoG4gdMOhYy4="
+          title="Tiến lại bước vừa hoàn tác."
         >
           <Icon name="lamLai" />
           Làm lại
@@ -620,7 +620,7 @@ export default function V4p4({
           className="btn sm"
           disabled={V24l || !V255}
           onClick={V25y}
-          title="QuG7jyB0b8OgbiBi4buZIGNo4buJbmggc+G7rWEgY+G7p2EgdHJhbmcgbsOgeSwgdHLhuqMgduG7gSDEkcO6bmcg4bqjbmggcXXDqXQgZ+G7kWMu"
+          title="Bỏ toàn bộ chỉnh sửa của trang này, trả về đúng ảnh quét gốc."
         >
           <Icon name="datLai" />
           Đặt lại
@@ -629,7 +629,7 @@ export default function V4p4({
           <>
             <button className="btn primary sm" disabled={V24l || !V252?.sourcePath} onClick={V25q}>
               {V24l ? (
-                "xJBhbmcgeOG7rSBsw73igKY="
+                "Đang xử lý…"
               ) : (
                 <>
                   <Icon name="tuDong" />
@@ -645,7 +645,7 @@ export default function V4p4({
             ) : (
               <button className="btn primary sm" disabled={V24n} onClick={V26u}>
                 {V24n ? (
-                  "xJBhbmcgxJHDs25nIGfDs2nigKY="
+                  "Đang đóng gói…"
                 ) : (
                   <>
                     <Icon name="luu" />
@@ -700,10 +700,10 @@ export default function V4p4({
               className="btn sm w-full mb-2"
               disabled={V24p}
               onClick={() => void V26m()}
-              title="Q2jDqG4gdHJhbmcgbeG7m2kgdOG7qyB04buHcCDhuqNuaCBob+G6t2MgUERGIChjaMOobiBzYXUgdHJhbmcgxJFhbmcgY2jhu41uKS4="
+              title="Chèn trang mới từ tệp ảnh hoặc PDF (chèn sau trang đang chọn)."
             >
               {V24p ? (
-                "xJBhbmcgY2jDqG7igKY="
+                "Đang chèn…"
               ) : (
                 <>
                   <Icon name="them" />
@@ -740,13 +740,13 @@ export default function V4p4({
                       <Icon name="len" size={14} />
                     </button>
                     <button
-                      title="WHXhu5FuZw=="
+                      title="Xuống"
                       disabled={i === V23q.length - 1}
                       onClick={() => V26g(p.index, 1)}
                     >
                       <Icon name="xuong" size={14} />
                     </button>
-                    <button title="WG/DoSB0cmFuZw==" className="del" onClick={() => V26d(p.index)}>
+                    <button title="Xoá trang" className="del" onClick={() => V26d(p.index)}>
                       <Icon name="xoa" size={14} />
                     </button>
                   </div>
@@ -835,7 +835,7 @@ export default function V4p4({
             <button onClick={() => V242((z) => Math.min(300, z + 10))}>+</button>
             <span className="opacity-50">|</span>
             <button
-              title="VuG7q2Ega2h1bmc="
+              title="Vừa khung"
               onClick={() => {
                 V242(100);
                 V244({ x: 0, y: 0 });
@@ -852,23 +852,23 @@ export default function V4p4({
             <h4>Xoay &amp; Lật</h4>
             <div className="tbtns">
               <V4p5
-                label="WG9heSB0csOhaQ=="
+                label="Xoay trái"
                 icon="xoayTrai"
                 onClick={() => V23u((r) => V4p0(r - 90))}
               />
               <V4p5
-                label="WG9heSBwaOG6o2k="
+                label="Xoay phải"
                 icon="xoayPhai"
                 onClick={() => V23u((r) => V4p0(r + 90))}
               />
               <V4p5
-                label="TOG6rXQgbmdhbmc="
+                label="Lật ngang"
                 icon="latNgang"
                 onClick={() => V23y((f) => !f)}
                 active={V23x}
               />
               <V4p5
-                label="TOG6rXQgZOG7jWM="
+                label="Lật dọc"
                 icon="latDoc"
                 onClick={() => V240((f) => !f)}
                 active={V23z}
@@ -893,41 +893,41 @@ export default function V4p4({
             <h4>Cắt &amp; Căn chỉnh</h4>
             <div className="tbtns">
               <V4p5
-                label="Q+G6r3QgdGjhu6cgY8O0bmc="
+                label="Cắt thủ công"
                 icon="catThuCong"
                 onClick={V25i}
                 active={!!V245}
               />
               <V4p5
-                label="VOG7sSBj4bqvdCB2aeG7gW4="
+                label="Tự cắt viền"
                 icon="catVien"
                 onClick={() => void V262({ autoCrop: true })}
                 disabled={V24l}
               />
               <V4p5
-                label="TMOgbSB0aOG6s25n"
+                label="Làm thẳng"
                 icon="lamThang"
                 onClick={() => void V262({ autoDeskew: true })}
                 disabled={V24l}
               />
               <V4p5
-                label="Q8SDbiBnaeG7r2E="
+                label="Căn giữa"
                 icon="canGiua"
                 onClick={() => void V262({ align: "center" })}
                 disabled={V24l}
               />
               <V4p5
-                label="Q8SDbiBs4buB"
+                label="Căn lề"
                 icon="canLe"
                 onClick={() => void V262({ align: "left" })}
                 disabled={V24l}
               />
               <V4p5
-                label="S2jhu60gbmdoacOqbmc="
+                label="Khử nghiêng"
                 icon="khuNghieng"
                 onClick={V267}
                 disabled={V24l}
-                title="w4FwIG5nYXkgZ8OzYyDhu58gdGhhbmggdHLGsOG7o3Qg4oCcxJDhu5kgbmdoacOqbmfigJ0gYsOqbiBkxrDhu5tpLg=="
+                title="Áp ngay góc ở thanh trượt “Độ nghiêng” bên dưới."
               />
             </div>
             <div className="slider-row mt-3">
@@ -948,7 +948,7 @@ export default function V4p4({
           <div className="tgroup">
             <h4>Tông màu</h4>
             <V4p6
-              label="xJDhu5kgc8Ohbmc="
+              label="Độ sáng"
               min={-100}
               max={100}
               initial={0}
@@ -956,7 +956,7 @@ export default function V4p4({
               onChange={V24e}
             />
             <V4p6
-              label="VMawxqFuZyBwaOG6o24="
+              label="Tương phản"
               min={-100}
               max={100}
               initial={0}
@@ -976,7 +976,7 @@ export default function V4p4({
               className="btn sm w-full"
               disabled={V24l || !V255}
               onClick={() => void V262({ autoTone: true })}
-              title="VOG7sSBrw6lvIGdpw6NuIGThuqNpIHPDoW5nIChhdXRvLWxldmVscykg4oCUIGLhuqNuIHF1w6l0IHjDoW0geOG7i3QgduG7gSBs4bqhaSBu4buBbiB0cuG6r25nIGNo4buvIMSRZW4u"
+              title="Tự kéo giãn dải sáng (auto-levels) — bản quét xám xịt về lại nền trắng chữ đen."
             >
               <Icon name="tuDong" />
               Tự động cân chỉnh
@@ -992,12 +992,12 @@ export default function V4p4({
               options={[
                 { value: "color", label: "TcOgdQ==" },
                 { value: "gray", label: "WMOhbQ==" },
-                { value: "bw", label: "xJBlbiB0cuG6r25n" },
+                { value: "bw", label: "Đen trắng" },
               ]}
             />
             <div className="mt-3">
               <V4p6
-                label="TmfGsOG7oW5nIChCJlcp"
+                label="Ngưỡng (B&W)"
                 min={0}
                 max={255}
                 initial={128}
@@ -1012,26 +1012,26 @@ export default function V4p4({
             <h4>Làm sạch</h4>
             <div className="tbtns">
               <V4p5
-                label="S2jhu60gbmhp4buFdQ=="
+                label="Khử nhiễu"
                 icon="khuNhieu"
                 onClick={() => void V262({ denoise: true })}
                 disabled={V24l}
               />
               <V4p5
-                label="S2jhu60gxJHhu5Ft"
+                label="Khử đốm"
                 icon="khuDom"
                 onClick={() => void V262({ despeckle: true })}
                 disabled={V24l}
               />
               <V4p5
-                label="WMOzYSBs4buXIGLhuqVt"
+                label="Xóa lỗ bấm"
                 icon="xoaLoBam"
                 onClick={() => void V262({ punchHoles: true })}
                 disabled={V24l}
-                title="VMOsbSDEkeG7kW0gdHLDsm4gY+G7oSBs4buXIGLhuqVtIHPDoXQgbcOpcCBnaeG6pXkgcuG7k2kgdMO0IGzhuqFpIGLhurFuZyBtw6B1IG7hu4FuLg=="
+                title="Tìm đốm tròn cỡ lỗ bấm sát mép giấy rồi tô lại bằng màu nền."
               />
               <V4p5
-                label="TMOgbSBuw6l0"
+                label="Làm nét"
                 icon="lamNet"
                 onClick={() => void V262({ sharpen: true })}
                 disabled={V24l}
@@ -1046,7 +1046,7 @@ export default function V4p4({
               value={V249}
               onChange={V24a}
               options={[
-                { value: "keep", label: "R2nhu68gbmd1ecOqbg==" },
+                { value: "keep", label: "Giữ nguyên" },
                 { value: "300", label: "300 DPI" },
                 { value: "600", label: "600 DPI" },
               ]}
@@ -1060,8 +1060,8 @@ export default function V4p4({
                 value={V24b}
                 onChange={V24c}
                 options={[
-                  { value: "this", label: "VHJhbmcgbsOgeQ==" },
-                  { value: "all", label: "VOG6pXQgY+G6ow==" },
+                  { value: "this", label: "Trang này" },
+                  { value: "all", label: "Tất cả" },
                 ]}
               />
             </div>

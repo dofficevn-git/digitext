@@ -182,7 +182,7 @@ pub fn f_2aq(
     let kind = f_zn(r_1uu, current).map_err(f_26t)?;
     if !r_1ut(r_1uu) {
         return Err(AppError::not_found(format!(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IGZpbGUgYuG7mSBjw6BpOiA={}",
+            "Không tìm thấy file bộ cài: {}",
             r_1uu.display()
         )));
     }
@@ -197,27 +197,27 @@ pub fn f_2aq(
 fn f_26t(r_1uw: Reject) -> AppError {
     match r_1uw {
         Reject::EmptyPath => {
-            AppError::validation("Q2jGsGEgY2jhu41uIGZpbGUgYuG7mSBjw6BpLg==")
+            AppError::validation("Chưa chọn file bộ cài.")
         }
         Reject::UnsafePath => {
-            AppError::validation("xJDGsOG7nW5nIGThuqtuIGZpbGUga2jDtG5nIGjhu6NwIGzhu4cu")
+            AppError::validation("Đường dẫn file không hợp lệ.")
         }
         Reject::UnknownExtension(ext) if ext.is_empty() => {
             AppError::validation(
-                "RmlsZSBraMO0bmcgY8OzIHBo4bqnbiBt4bufIHLhu5luZyDigJQga2jDtG5nIHLDtSBsb+G6oWkgYuG7mSBjw6BpLg==",
+                "File không có phần mở rộng — không rõ loại bộ cài.",
             )
         }
         Reject::UnknownExtension(ext) => {
             AppError::validation(
                 format!(
-                    "RGlnaVRleHQga2jDtG5nIG5o4bqtbiBkaeG7h24gxJHGsOG7o2MgbG/huqFpIGLhu5kgY8OgaSAnLg=={ext}'."
+                    "DigiText không nhận diện được loại bộ cài '.{ext}'."
                 ),
             )
         }
         Reject::WrongOs { wanted, current } => {
             AppError::validation(
                 format!(
-                    "QuG7mSBjw6BpIG7DoHkgZMOgbmggY2hvIA=={}LCBraMO0bmcgY2jhuqF5IMSRxrDhu6NjIHRyw6puIA=={}.",
+                    "Bộ cài này dành cho {}, không chạy được trên {}.",
                     wanted.label(), current.label()
                 ),
             )
@@ -228,32 +228,32 @@ fn f_1mh(kind: InstallerKind, e: &std::io::Error) -> AppError {
     if e.kind() == std::io::ErrorKind::NotFound {
         let tool = match kind.target_os() {
             TargetOs::Windows => "PowerShell",
-            TargetOs::MacOs => "bOG7h25oICdvcGVuJw==",
-            TargetOs::Linux => "cGtleGVjIChnw7NpIHBvbGljeWtpdC0xKQ==",
+            TargetOs::MacOs => "lệnh 'open'",
+            TargetOs::Linux => "pkexec (gói policykit-1)",
         };
         AppError::internal(
             format!(
-                "S2jDtG5nIHTDrG0gdGjhuqV5IA=={tool}IMSR4buDIGNo4bqheSBi4buZIGPDoGkuIFZ1aSBsw7JuZyBjaOG6oXkgYuG7mSBjw6BpIHRo4bunIGPDtG5nLg=="
+                "Không tìm thấy {tool} để chạy bộ cài. Vui lòng chạy bộ cài thủ công."
             ),
         )
     } else {
         AppError::internal(format!(
-            "S2jDtG5nIGto4bufaSBjaOG6oXkgxJHGsOG7o2MgYuG7mSBjw6BpOiA={e}"
+            "Không khởi chạy được bộ cài: {e}"
         ))
     }
 }
 fn f_10t(kind: InstallerKind, current: TargetOs) -> String {
     if kind.is_manual() {
-        return "xJDDoyBt4bufIOG6o25oIMSRxKlhLiBIw6N5IGNo4bqheSBi4buZIGPDoGkgYsOqbiB0cm9uZywgc2F1IMSRw7MgYuG6pW0gIlTDrG0gbOG6oWkiLg=="
+        return "Đã mở ảnh đĩa. Hãy chạy bộ cài bên trong, sau đó bấm \"Tìm lại\"."
             .into();
     }
     let mut r_1ux = String::from(
-        "xJDDoyBraOG7n2kgY2jhuqF5IGLhu5kgY8OgaS4gSG/DoG4gdOG6pXQgY8OhYyBixrDhu5tjIGPDoGksIHNhdSDEkcOzIGLhuqVtICJUw6xtIGzhuqFpIiDEkeG7gyBuaOG6rW4gbcOheS4=",
+        "Đã khởi chạy bộ cài. Hoàn tất các bước cài, sau đó bấm \"Tìm lại\" để nhận máy.",
     );
     if matches!(current, TargetOs::MacOs | TargetOs::Linux) {
         r_1ux
             .push_str(
-                "IEzGsHUgw706IHRyw6puIGjhu4cgbsOgeSBtw6F5IHF1w6l0IGTDuW5nIFNBTkUg4oCUIG7hur91IGRyaXZlciBj4bunYSBow6NuZyBraMO0bmcgcGjhuqNpIFNBTkUgYmFja2VuZCB0aMOsIG3DoXkgY8OzIHRo4buDIHbhuqtuIGtow7RuZyB4deG6pXQgaGnhu4duLg==",
+                " Lưu ý: trên hệ này máy quét dùng SANE — nếu driver của hãng không phải SANE backend thì máy có thể vẫn không xuất hiện.",
             );
     }
     r_1ux
@@ -282,18 +282,18 @@ pub async fn install_scanner_driver(
             Ok(r_1uy) => {
                 tracing::info!(
                     kind = % r_1uy.kind,
-                    "aW5zdGFsbF9zY2FubmVyX2RyaXZlcjogxJHDoyBraOG7n2kgY2jhuqF5"
+                    "install_scanner_driver: đã khởi chạy"
                 )
             }
             Err(e) => {
                 tracing::warn!(
                     code = e.code(),
-                    "aW5zdGFsbF9zY2FubmVyX2RyaXZlciBs4buXaTog{e}"
+                    "install_scanner_driver lỗi: {e}"
                 )
             }
         }
         r_1v0
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyBjw6BpIGRyaXZlciBs4buXaTog{e}")))?
+    .map_err(|e| AppError::internal(format!("luồng cài driver lỗi: {e}")))?
 }

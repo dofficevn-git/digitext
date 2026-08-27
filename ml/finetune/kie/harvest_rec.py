@@ -67,14 +67,14 @@ def main(argv: list[str] | None = None) -> int:
     p_465.add_argument("--dpi", type=int, default=150)
     p_465.add_argument("--pad", type=int, default=6)
     p_465.add_argument("--hard-eval-pct", type=int, default=30,
-                    help="JSUgY3JvcCBLSMOTIGThu5NuIHbDoG8gaGVsZC1vdXQgZXZhbCAoMTAwID0gVOG6pFQgQ+G6oiBoYXJkIOKGkiBldmFsLCBraMO0bmcgaGFyZCB0cm9uZyB0cmFpbik=")
+                    help="%% crop KHÓ dồn vào held-out eval (100 = TẤT CẢ hard → eval, không hard trong train)")
     p_465.add_argument("--out-dir", default="data/rec_dataset")
     p_464 = p_465.parse_args(argv)
 
     p_46a, p_46e, data_dir = Path(p_464.decisions_jsonl), Path(p_464.gold_jsonl), Path(p_464.data_dir)
     for p_475 in (p_46a, p_46e):
         if not p_475.is_file():
-            print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_475}", file=sys.stderr)
+            print(f"LỖI: không thấy {p_475}", file=sys.stderr)
             return 2
     fields = {p_46c.strip() for p_46c in p_464.fields.split(",") if p_46c.strip()}
     gold_by_id = {p_478["id"]: p_478 for p_478 in load_jsonl(p_46e)}
@@ -119,10 +119,10 @@ def main(argv: list[str] | None = None) -> int:
         for p_46b in eval_hard:
             p_46d.write(json.dumps(p_46b, ensure_ascii=False) + "\n")
 
-    print(f"gom {p_472}IGNyb3AgKGLhu48g{p_473}) → {p_474}/", file=sys.stderr)
+    print(f"gom {p_472} crop (bỏ {p_473}) → {p_474}/", file=sys.stderr)
     print(f"  train {len(train)} | val {len(val)} | HELD-OUT hard eval {len(eval_hard)}", file=sys.stderr)
     p_46f = sum(1 for p_478 in p_47a if p_478[4]) - len(eval_hard)
-    print(f"ICAoY3JvcCBLSMOTOiA={p_46f} train + {len(eval_hard)}IGV2YWw7IGThu4UrZml4X3NwYW4gdsOgbyB0cmFpbik=", file=sys.stderr)
+    print(f"  (crop KHÓ: {p_46f} train + {len(eval_hard)} eval; dễ+fix_span vào train)", file=sys.stderr)
     return 0
 
 if __name__ == "__main__":

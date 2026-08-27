@@ -24,6 +24,6 @@ pub enum PackageError {
     InvalidRequest(Vec<String>),
     #[error("zip error: {0}")]
     Zip(String),
-    #[error("c2luaCB2xINuIGLhuqNuIHjDoWMgdGjhu7FjIERJUCBs4buXaTog{0}")]
+    #[error("sinh văn bản xác thực DIP lỗi: {0}")]
     Cert(String),
 }

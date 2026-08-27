@@ -35,7 +35,7 @@ fn device_name() -> String {
         .or_else(|_| std::env::var("HOSTNAME"))
         .ok()
         .filter(|r_hn| !r_hn.trim().is_empty())
-        .unwrap_or_else(|| "bcOheSB0cuG6oW0=".to_string())
+        .unwrap_or_else(|| "máy trạm".to_string())
 }
 fn platform() -> &'static str {
     if cfg!(target_os = "windows") {
@@ -71,7 +71,7 @@ fn f_18m(r_hs: &client::UserProfile) -> Vec<Permission> {
 async fn f_14l(password: String, r_ht: Vec<u8>) -> Result<verifier::T4l, AppError> {
     tauri::async_runtime::spawn_blocking(move || verifier::derive(&password, &r_ht))
         .await
-        .map_err(|e| AppError::internal(format!("bHXhu5NuZyBkZXJpdmUgbOG7l2k6IA=={e}")))?
+        .map_err(|e| AppError::internal(format!("luồng derive lỗi: {e}")))?
 }
 #[tauri::command]
 pub fn auth_captcha_new(captcha: State<'_, CaptchaStore>) -> T2j {
@@ -83,7 +83,7 @@ fn f_28f(r_hv: &State<'_, CaptchaStore>, r_hu: &Tbc) -> Result<(), AppError> {
     }
     Err(AppError::new(
         "captcha_invalid",
-        "TcOjIHjDoWMgbmjhuq1uIGtow7RuZyDEkcO6bmcg4oCUIG5o4bqtcCBs4bqhaSBtw6MgdHJvbmcg4bqjbmgu",
+        "Mã xác nhận không đúng — nhập lại mã trong ảnh.",
     ))
 }
 #[tauri::command]
@@ -112,7 +112,7 @@ pub async fn auth_switch_user(
         return Err(
             AppError::new(
                 "busy",
-                "xJBhbmcgcXXDqXQgZOG7nyBt4buZdCBsw7Qg4oCUIGvhur90IHRow7pjIGzDtCBxdcOpdCB0csaw4bubYyBraGkgxJHhu5VpIG5nxrDhu51pIGTDuW5nLg==",
+                "Đang quét dở một lô — kết thúc lô quét trước khi đổi người dùng.",
             ),
         );
     }
@@ -124,7 +124,7 @@ pub async fn auth_switch_user(
 fn f_2ha(r_hy: &AppHandle, r_hz: &Tr) {
     if r_hz.role.allows(digitext_core::Perm::Operate) && crate::data_share::f_2h9(r_hy).is_err() {
         tracing::warn!(
-            "a2jDtG5nIGLhuq10IMSRxrDhu6NjIGNoaWEgc+G6uyBk4buvIGxp4buHdSBMQU4gc2F1IMSRxINuZyBuaOG6rXA="
+            "không bật được chia sẻ dữ liệu LAN sau đăng nhập"
         );
     }
 }
@@ -136,7 +136,7 @@ async fn f_1p8(
     let username = r_i2.username.trim().to_owned();
     if username.is_empty() || r_i2.password.is_empty() {
         return Err(AppError::validation(
-            "Tmjhuq1wIHTDqm4gxJHEg25nIG5o4bqtcCB2w6AgbeG6rXQga2jhuql1Lg==",
+            "Nhập tên đăng nhập và mật khẩu.",
         ));
     }
     let r_i7 = Utc::now();
@@ -182,7 +182,7 @@ async fn f_1p8(
             Err(ClientError::Api { status, .. }) if status >= 500 => {
                 tracing::info!(
                     status,
-                    "bcOheSBjaOG7pyBs4buXaSA1eHgg4oCUIHRo4butIMSRxINuZyBuaOG6rXAgb2ZmbGluZQ=="
+                    "máy chủ lỗi 5xx — thử đăng nhập offline"
                 );
             }
             Err(ClientError::Api {
@@ -195,14 +195,14 @@ async fn f_1p8(
                     "too_many_attempts" => AppError::new("too_many_attempts", message),
                     _ => AppError::new(
                         "error",
-                        format!("TcOheSBjaOG7pyB0cuG6oyBs4buXaSA={status}: {message}"),
+                        format!("Máy chủ trả lỗi {status}: {message}"),
                     ),
                 });
             }
             Err(ClientError::Unreachable(r_i9)) => {
                 tracing::info!(
                     % r_i9,
-                    "c2VydmVyIGtow7RuZyB04bubaSDEkcaw4bujYyDigJQgdGjhu60gxJHEg25nIG5o4bqtcCBvZmZsaW5l"
+                    "server không tới được — thử đăng nhập offline"
                 );
             }
         }
@@ -223,7 +223,7 @@ async fn f_10p(
             AppError::new(
                 "server_unreachable",
                 format!(
-                    "S2jDtG5nIGzhuqV5IMSRxrDhu6NjIGtob8OhIHNlcnZlcjog{}",
+                    "Không lấy được khoá server: {}",
                     e.code()
                 ),
             )
@@ -236,14 +236,14 @@ async fn f_10p(
             let r_ij = client::f_1c8(url).await.map_err(|_| {
                 AppError::new(
                     "server_mismatch",
-                    "S2jDtG5nIHjDoWMgbWluaCDEkcaw4bujYyBjaOG7ryBrw70gbcOheSBjaOG7py4=",
+                    "Không xác minh được chữ ký máy chủ.",
                 )
             })?;
             let c = verifier::f_2pv(&r_ip.offline_lease, &r_ij, &r_ip.user.id, r_ih)
                 .map_err(|_| {
                     AppError::new(
                         "server_mismatch",
-                        "Q2jhu68ga8O9IG3DoXkgY2jhu6cga2jDtG5nIGjhu6NwIGzhu4cg4oCUIGtp4buDbSB0cmEgbOG6oWkgxJHhu4thIGNo4buJIHNlcnZlci4=",
+                        "Chữ ký máy chủ không hợp lệ — kiểm tra lại địa chỉ server.",
                     )
                 })?;
             r_io = r_ij;
@@ -253,7 +253,7 @@ async fn f_10p(
     if !verifier::f_1mr(&r_if, r_ip.user.role) {
         return Err(AppError::new(
             "server_mismatch",
-            "TcOheSBjaOG7pyB0cuG6oyB2YWkgdHLDsiBraMO0bmcga2jhu5twIGdp4bqleSBwaMOpcCDEkcOjIGvDvS4=",
+            "Máy chủ trả vai trò không khớp giấy phép đã ký.",
         ));
     }
     let r_iq = verifier::f_1u7();
@@ -261,7 +261,7 @@ async fn f_10p(
     let r_is = serde_json::to_vec(&Tkz {
         refresh_token: r_ip.refresh_token.clone(),
     })
-    .map_err(|e| AppError::internal(format!("xJHDs25nIGfDs2kgc2VjcmV0cyBs4buXaTog{e}")))?;
+    .map_err(|e| AppError::internal(format!("đóng gói secrets lỗi: {e}")))?;
     let r_ir = verifier::f_2cn(&r_il.wrap_key, &r_is)?;
     let r_im = Utc::now();
     let r_id = Tb {
@@ -296,7 +296,7 @@ async fn f_10p(
         access_token: Some(r_ip.access_token.clone()),
     }));
     tracing::info!(
-        user = % r_it.username, "xJHEg25nIG5o4bqtcCBvbmxpbmUgdGjDoG5oIGPDtG5n"
+        user = % r_it.username, "đăng nhập online thành công"
     );
     Ok(r_it)
 }
@@ -320,12 +320,12 @@ async fn f_1vy(
         return Err(if r_j2 {
             AppError::new(
                     "server_unreachable",
-                    "S2jDtG5nIGvhur90IG7hu5FpIMSRxrDhu6NjIG3DoXkgY2jhu6cgdsOgIHTDoGkga2hv4bqjbiBuw6B5IGNoxrBhIHThu6tuZyDEkcSDbmcgbmjhuq1wIHRyw6puIG3DoXkg4oCUIGPhuqduIG3huqFuZyBjaG8gbOG6p24gxJHhuqd1Lg==",
+                    "Không kết nối được máy chủ và tài khoản này chưa từng đăng nhập trên máy — cần mạng cho lần đầu.",
                 )
         } else {
             AppError::new(
                     "server_not_configured",
-                    "Q2jGsGEgY+G6pXUgaMOsbmggxJHhu4thIGNo4buJIG3DoXkgY2jhu6cg4oCUIHbDoG8gYmnhu4N1IHTGsOG7o25nIOKamSDhu58gbcOgbiDEkcSDbmcgbmjhuq1wLg==",
+                    "Chưa cấu hình địa chỉ máy chủ — vào biểu tượng ⚙ ở màn đăng nhập.",
                 )
         });
     };
@@ -333,13 +333,13 @@ async fn f_1vy(
     if !verifier::f_2pm(&r_iz, &account.verifier) {
         return Err(AppError::new(
             "auth_failed",
-            "dMOqbiDEkcSDbmcgbmjhuq1wIGhv4bq3YyBt4bqtdCBraOG6qXUga2jDtG5nIMSRw7puZw==",
+            "tên đăng nhập hoặc mật khẩu không đúng",
         ));
     }
     let pubkey = pubkey.ok_or_else(|| {
         AppError::new(
             "auth_cache_corrupt",
-            "VGhp4bq/dSBraG/DoSBzZXJ2ZXIgxJHDoyBwaW4g4oCUIMSRxINuZyBuaOG6rXAgb25saW5lIGzhuqFpLg==",
+            "Thiếu khoá server đã pin — đăng nhập online lại.",
         )
     })?;
     let r_iv = verifier::f_2pv(
@@ -352,7 +352,7 @@ async fn f_1vy(
         return Err(
             AppError::new(
                 "auth_cache_corrupt",
-                "UGhpw6puIGtow7RuZyBraOG7m3AgZ2nhuqV5IHBow6lwIMSRw6Mga8O9IOKAlCDEkcSDbmcgbmjhuq1wIG9ubGluZSBs4bqhaS4=",
+                "Phiên không khớp giấy phép đã ký — đăng nhập online lại.",
             ),
         );
     }
@@ -361,7 +361,7 @@ async fn f_1vy(
         .map_err(|_| {
             AppError::new(
                 "auth_cache_corrupt",
-                "SOG6oW4gb2ZmbGluZSB0cm9uZyBjYWNoZSBraMO0bmcgaOG7o3AgbOG7hy4=",
+                "Hạn offline trong cache không hợp lệ.",
             )
         })?
         .with_timezone(&Utc);
@@ -369,7 +369,7 @@ async fn f_1vy(
         return Err(
             AppError::new(
                 "offline_expired",
-                "UXXDoSAzMCBuZ8OgeSBjaMawYSB4w6FjIHRo4buxYyBvbmxpbmUg4oCUIGvhur90IG7hu5FpIG3huqFuZyB2w6AgxJHEg25nIG5o4bqtcCBs4bqhaS4=",
+                "Quá 30 ngày chưa xác thực online — kết nối mạng và đăng nhập lại.",
             ),
         );
     }
@@ -390,7 +390,7 @@ async fn f_1vy(
         access_token: None,
     }));
     tracing::info!(
-        user = % r_j3.username, "xJHEg25nIG5o4bqtcCBvZmZsaW5lIHRow6BuaCBjw7RuZw=="
+        user = % r_j3.username, "đăng nhập offline thành công"
     );
     Ok(r_j3)
 }
@@ -414,7 +414,7 @@ pub async fn auth_unlock(
             let guard = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
             store::f_1ec(&guard)?
                 .map(|(r_je, _)| r_je)
-                .ok_or_else(|| AppError::new("unauthorized", "Q2jGsGEgxJHEg25nIG5o4bqtcC4="))?
+                .ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?
         }
     };
     let (r_j5, pubkey, r_j7, r_ja) = {
@@ -423,7 +423,7 @@ pub async fn auth_unlock(
             store::f_1eb(&guard, &r_jf)?.ok_or_else(|| {
                 AppError::new(
                     "unauthorized",
-                    "VMOgaSBraG/huqNuIGtow7RuZyBjw7JuIHRyw6puIG3DoXku",
+                    "Tài khoản không còn trên máy.",
                 )
             })?,
             db::f_1ew(&guard, C_JZ)?,
@@ -435,13 +435,13 @@ pub async fn auth_unlock(
     if !verifier::f_2pm(&r_j9, &r_j5.verifier) {
         return Err(AppError::new(
             "auth_failed",
-            "TeG6rXQga2jhuql1IGtow7RuZyDEkcO6bmcu",
+            "Mật khẩu không đúng.",
         ));
     }
     let pubkey = pubkey.ok_or_else(|| {
         AppError::new(
             "auth_cache_corrupt",
-            "VGhp4bq/dSBraG/DoSBzZXJ2ZXIgxJHDoyBwaW4g4oCUIMSRxINuZyBuaOG6rXAgb25saW5lIGzhuqFpLg==",
+            "Thiếu khoá server đã pin — đăng nhập online lại.",
         )
     })?;
     let r_j6 = verifier::f_2pv(&r_j5.lease_jwt, &pubkey, &r_j5.user_id, r_j7.as_deref())?;
@@ -449,7 +449,7 @@ pub async fn auth_unlock(
         return Err(
             AppError::new(
                 "auth_cache_corrupt",
-                "UGhpw6puIGtow7RuZyBraOG7m3AgZ2nhuqV5IHBow6lwIMSRw6Mga8O9IOKAlCDEkcSDbmcgbmjhuq1wIG9ubGluZSBs4bqhaS4=",
+                "Phiên không khớp giấy phép đã ký — đăng nhập online lại.",
             ),
         );
     }
@@ -458,7 +458,7 @@ pub async fn auth_unlock(
         .map_err(|_| {
             AppError::new(
                 "auth_cache_corrupt",
-                "SOG6oW4gb2ZmbGluZSB0cm9uZyBjYWNoZSBraMO0bmcgaOG7o3AgbOG7hy4=",
+                "Hạn offline trong cache không hợp lệ.",
             )
         })?
         .with_timezone(&Utc);
@@ -466,7 +466,7 @@ pub async fn auth_unlock(
         return Err(
             AppError::new(
                 "offline_expired",
-                "UXXDoSAzMCBuZ8OgeSBjaMawYSB4w6FjIHRo4buxYyBvbmxpbmUg4oCUIGvhur90IG7hu5FpIG3huqFuZyB2w6AgxJHEg25nIG5o4bqtcCBs4bqhaS4=",
+                "Quá 30 ngày chưa xác thực online — kết nối mạng và đăng nhập lại.",
             ),
         );
     }
@@ -542,7 +542,7 @@ fn f_1j5(r_jp: &str) -> bool {
 }
 pub(crate) fn f_yb(url: &str) -> Result<(), &'static str> {
     let r_js = reqwest::Url::parse(url)
-        .map_err(|_| "xJDhu4thIGNo4buJIG3DoXkgY2jhu6cga2jDtG5nIGjhu6NwIGzhu4cu")?;
+        .map_err(|_| "Địa chỉ máy chủ không hợp lệ.")?;
     match r_js.scheme() {
         "https" => Ok(()),
         "http" => {
@@ -550,13 +550,13 @@ pub(crate) fn f_yb(url: &str) -> Result<(), &'static str> {
                 Ok(())
             } else {
                 Err(
-                    "Q2jhu4kgZMO5bmcgaHR0cDovLyBjaG8gbG9jYWxob3N0OyBtw6F5IGNo4bunIHRo4bqtdCBwaOG6o2kgbMOgIGh0dHBzOi8vIChu4bq/dSBraMO0bmcsIHRva2VuIHbDoCB0w6BpIGxp4buHdSBi4buLIGzhu5kgdHLDqm4gbeG6oW5nKS4=",
+                    "Chỉ dùng http:// cho localhost; máy chủ thật phải là https:// (nếu không, token và tài liệu bị lộ trên mạng).",
                 )
             }
         }
         _ => {
             Err(
-                "xJDhu4thIGNo4buJIG3DoXkgY2jhu6cgcGjhuqNpIGLhuq90IMSR4bqndSBi4bqxbmcgaHR0cDovLyBob+G6t2MgaHR0cHM6Ly8u",
+                "Địa chỉ máy chủ phải bắt đầu bằng http:// hoặc https://.",
             )
         }
     }
@@ -589,7 +589,7 @@ pub async fn auth_validate_online(
     let r_jx = auth.wrap_key().ok_or_else(|| {
         AppError::new(
             "locked",
-            "TeG7nyBraG/DoSBi4bqxbmcgbeG6rXQga2jhuql1IHRyxrDhu5tjLg==",
+            "Mở khoá bằng mật khẩu trước.",
         )
     })?;
     let url = server_url(&db)?;
@@ -611,7 +611,7 @@ pub(super) fn server_url(r_jy: &State<'_, Db>) -> Result<String, AppError> {
         .ok_or_else(|| {
             AppError::new(
                 "server_not_configured",
-                "Q2jGsGEgY+G6pXUgaMOsbmggxJHhu4thIGNo4buJIG3DoXkgY2jhu6cu",
+                "Chưa cấu hình địa chỉ máy chủ.",
             )
         })
 }
@@ -627,13 +627,13 @@ pub(super) async fn f_26h(
         store::f_1eb(&guard, r_k8)?.ok_or_else(|| {
             AppError::new(
                 "unauthorized",
-                "VMOgaSBraG/huqNuIGtow7RuZyBjw7JuIHRyw6puIG3DoXku",
+                "Tài khoản không còn trên máy.",
             )
         })?
     };
     let r_k6 = verifier::f_1we(&r_k9, &account.secrets)?;
     let secrets: Tkz = serde_json::from_slice(&r_k6)
-        .map_err(|_| AppError::new("auth_cache_corrupt", "Q2FjaGUgc2VjcmV0cyBo4buPbmcu"))?;
+        .map_err(|_| AppError::new("auth_cache_corrupt", "Cache secrets hỏng."))?;
     match client::refresh(url, &secrets.refresh_token).await {
         Ok(r_k4) => {
             let r_k5 = verifier::f_2cn(
@@ -644,7 +644,7 @@ pub(super) async fn f_26h(
                         },
                     )
                     .map_err(|e| AppError::internal(
-                        format!("xJHDs25nIGfDs2kgc2VjcmV0cyBs4buXaTog{e}"),
+                        format!("đóng gói secrets lỗi: {e}"),
                     ))?,
             )?;
             let r_k3 = Utc::now();
@@ -682,7 +682,7 @@ pub(super) async fn f_26h(
             Err(
                 AppError::new(
                     "revoked",
-                    "VMOgaSBraG/huqNuIMSRw6MgYuG7iyB0aHUgaOG7k2kg4oCUIGxpw6puIGjhu4cgcXXhuqNuIHRy4buLIGThu7Egw6FuLg==",
+                    "Tài khoản đã bị thu hồi — liên hệ quản trị dự án.",
                 ),
             )
         }
@@ -690,7 +690,7 @@ pub(super) async fn f_26h(
             Err(
                 AppError::new(
                     "relogin_required",
-                    "UGhpw6puIG9ubGluZSDEkcOjIGjhur90IGjhuqFuIOKAlCDEkcSDbmcgbmjhuq1wIGzhuqFpIGtoaSBjw7MgbeG6oW5nIChvZmZsaW5lIHbhuqtuIGTDuW5nIMSRxrDhu6NjIHThu5tpIGjhuqFuKS4=",
+                    "Phiên online đã hết hạn — đăng nhập lại khi có mạng (offline vẫn dùng được tới hạn).",
                 ),
             )
         }
@@ -698,7 +698,7 @@ pub(super) async fn f_26h(
             Err(
                 AppError::new(
                     "server_unreachable",
-                    "S2jDtG5nIGvhur90IG7hu5FpIMSRxrDhu6NjIG3DoXkgY2jhu6cu",
+                    "Không kết nối được máy chủ.",
                 ),
             )
         }

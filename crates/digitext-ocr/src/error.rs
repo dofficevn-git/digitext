@@ -7,21 +7,21 @@ pub enum Severity {
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum WorkerError {
-    #[error("VHJpdG9uIGtow7RuZyBz4bq1biBzw6BuZzog{0}")]
+    #[error("Triton không sẵn sàng: {0}")]
     TritonUnavailable(String),
-    #[error("R1BVIGjhur90IGLhu5kgbmjhu5sgKE9PTSk6IA=={0}")]
+    #[error("GPU hết bộ nhớ (OOM): {0}")]
     GpuOom(String),
-    #[error("Y8ahIHPhu58gZOG7ryBsaeG7h3Uga2jDtG5nIHPhurVuIHPDoG5nOiA={0}")]
+    #[error("cơ sở dữ liệu không sẵn sàng: {0}")]
     DbUnavailable(String),
-    #[error("aOG6v3QgdGjhu51pIGdpYW4gY2jhu506IA=={0}")]
+    #[error("hết thời gian chờ: {0}")]
     Timeout(String),
-    #[error("a2hvIMSR4buRaSB0xrDhu6NuZyBraMO0bmcgc+G6tW4gc8Ogbmc6IA=={0}")]
+    #[error("kho đối tượng không sẵn sàng: {0}")]
     StorageUnavailable(String),
-    #[error("ZOG7ryBsaeG7h3UgxJHhuqd1IHbDoG8gaOG7j25nOiA={0}")]
+    #[error("dữ liệu đầu vào hỏng: {0}")]
     CorruptInput(String),
-    #[error("xJHhu4tuaCBk4bqhbmcga2jDtG5nIGjhu5cgdHLhu6M6IA=={0}")]
+    #[error("định dạng không hỗ trợ: {0}")]
     UnsupportedFormat(String),
-    #[error("Y+G6pXUgaMOsbmggc2FpOiA={0}")]
+    #[error("cấu hình sai: {0}")]
     ConfigInvalid(String),
 }
 impl WorkerError {

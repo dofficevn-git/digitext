@@ -3,10 +3,10 @@
 import type { V40d, V40v } from "@/api/archive";
 import type { V43g } from "@/api/lansync";
 
-export const V4i8 = "S2jDtG5nIHLDtSBuZ8aw4budaSBxdcOpdA==";
-export const V4i9 = "Q2jGsGEgZ8OhbiBwaMO0bmc=";
+export const V4i8 = "Không rõ người quét";
+export const V4i9 = "Chưa gán phông";
 export const V4ia = "\u0000unmatched";
-export const V4ib = "Q2jGsGEga2jhu5twIGPDonkgdGjGsCBt4bulYw==";
+export const V4ib = "Chưa khớp cây thư mục";
 
 export type V4ic = "forwarded" | "rejected" | "pending";
 
@@ -147,7 +147,7 @@ export function V4iv(V1lh: V4in): V4im {
   const columns: V4ii[] = [...V1ln.entries()]
     .map(([V1lo, V1lp]) => ({
       key: V1lo,
-      label: V1lo === V1lm ? V1lo || "TcOheSBxdeG6o24gdHLhu4s=" : V1lo || V4i8,
+      label: V1lo === V1lm ? V1lo || "Máy quản trị" : V1lo || V4i8,
       isAdmin: V1lo === V1lm,
       tally: V1lp,
     }))
@@ -217,7 +217,7 @@ export function V4iv(V1lh: V4in): V4im {
         V1m5,
         V1m7,
         V1m8,
-        r.phongMa ? `UGjDtG5nIA==${r.phongMa}` : "S2jDtG5nIHLDtSBwaMO0bmc=",
+        r.phongMa ? `Phông ${r.phongMa}` : "Không rõ phông",
         false,
       );
     }
@@ -277,10 +277,10 @@ export function V4iw(t: V4if): V4ic {
 }
 
 export function V4ix(t: V4if): string {
-  const V1md = [`${t.total}IHTDoGkgbGnhu4d1`];
-  if (t.forwarded > 0) V1md.push(`${t.forwarded}IMSRw6MgbMOqbiBtw6F5IGNo4bun`);
-  if (t.pending > 0) V1md.push(`${t.pending}IGNo4budIMSR4bqpeQ==`);
-  if (t.rejected > 0) V1md.push(`${t.rejected}IG3DoXkgY2jhu6cgdOG7qyBjaOG7kWk=`);
+  const V1md = [`${t.total} tài liệu`];
+  if (t.forwarded > 0) V1md.push(`${t.forwarded} đã lên máy chủ`);
+  if (t.pending > 0) V1md.push(`${t.pending} chờ đẩy`);
+  if (t.rejected > 0) V1md.push(`${t.rejected} máy chủ từ chối`);
   return V1md.join(" · ");
 }
 

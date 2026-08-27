@@ -3,7 +3,7 @@ use crate::corrector::{CorrectorError, Tb4, Tm9};
 use serde_json::{json, Value};
 use std::future::Future;
 use std::time::Duration;
-pub const SYSTEM_PROMPT: &str = "QuG6oW4gbMOgIGLhu5kgU+G7rEEgTOG7lkkgT0NSIHRp4bq/bmcgVmnhu4d0LiBDSOG7iCBz4butYSBk4bqldSB0aGFuaCwgZOG6pXUgbcWpL23Ds2MsIHbDoCBrw70gdOG7sSBuaOG6p20gKGNvbmZ1c2FibGVzKSB0cm9uZyDEkW/huqFuIHRleHQgT0NSIMSRxrDhu6NjIMSRxrBhLiBUVVnhu4ZUIMSQ4buQSSBraMO0bmcgZGnhu4VuIGdp4bqjaSwga2jDtG5nIHZp4bq/dCBs4bqhaSBjw6J1LCBraMO0bmcgdGjDqm0vYuG7m3QgY2jhu68sIEtIw5RORyDEkeG7pW5nIGNo4buvIHPhu5EvbmfDoHkvbcOjIMSR4buLbmggZGFuaC4gVHLhuqMgRFVZIE5I4bqkVCBt4buZdCBKU09OOiA={\"corrected\": \"<text đã sửa>\", \"confidence\": <số thực 0..1>}.";
+pub const SYSTEM_PROMPT: &str = "Bạn là bộ SỬA LỖI OCR tiếng Việt. CHỈ sửa dấu thanh, dấu mũ/móc, và ký tự nhầm (confusables) trong đoạn text OCR được đưa. TUYỆT ĐỐI không diễn giải, không viết lại câu, không thêm/bớt chữ, KHÔNG đụng chữ số/ngày/mã định danh. Trả DUY NHẤT một JSON: {\"corrected\": \"<text đã sửa>\", \"confidence\": <số thực 0..1>}.";
 pub struct VllmCorrector {
     client: reqwest::Client,
     endpoint: String,

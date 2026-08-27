@@ -178,7 +178,7 @@ async fn f_162(
 ) -> sqlx::Result<()> {
     debug_assert!(
         from.can_transition_to(to),
-        "{from} → {to}IGtow7RuZyBo4bujcCBs4buHICjCp1M3LjEp"
+        "{from} → {to} không hợp lệ (§S7.1)"
     );
     sqlx::query("UPDATE documents SET status = $2 WHERE id = $1 AND status = $3")
         .bind(document_id)

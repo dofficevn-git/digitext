@@ -18,7 +18,7 @@ interface V4nm {
 
 function V4nn(V1zo: unknown): void {
   const V1zp = V1zo instanceof V3xq || V1zo instanceof Error ? V1zo.message : String(V1zo);
-  window.alert(`TMawdSBraG8gbMawdSB0cuG7ryB0aOG6pXQgYuG6oWk6IA==${V1zp}`);
+  window.alert(`Lưu kho lưu trữ thất bại: ${V1zp}`);
 }
 
 export default function V4no() {
@@ -87,9 +87,9 @@ export default function V4no() {
   const V206 = async (k: V4lo) => {
     const V207 =
       k.soGia > 0
-        ? `IEtobyBuw6B5IGPDsyA=${k.soGia}IGdpw6Eg4oCUIHhvw6Egc+G6vSB4b8OhIGPhuqMgY8OhYyBnacOhIMSRw7Mu`
+        ? ` Kho này có ${k.soGia} giá — xoá sẽ xoá cả các giá đó.`
         : "";
-    if (!window.confirm(`WG/DoSBraG8gIg==${k.tenKho}"?${V207}IEtow7RuZyB0aOG7gyBob8OgbiB0w6FjLg==`))
+    if (!window.confirm(`Xoá kho "${k.tenKho}"?${V207} Không thể hoàn tác.`))
       return;
     try {
       if (isTauri()) {
@@ -115,15 +115,15 @@ export default function V4no() {
         </div>
       )}
       <V49a<V4lo>
-        addLabel="VGjDqm0ga2hv"
+        addLabel="Thêm kho"
         onAdd={V1zr ? V201 : undefined}
         rows={V1zu}
         getId={(r) => r.maKho}
         matches={V4ni}
         columns={[
-          { head: "VMOqbiBraG8=", cell: (r) => r.tenKho },
-          { head: "R2hpIGNow7o=", cell: (r) => r.ghiChu ?? "" },
-          { head: "U+G7kSBnacOh", cell: (r) => r.soGia, cls: "tnum" },
+          { head: "Tên kho", cell: (r) => r.tenKho },
+          { head: "Ghi chú", cell: (r) => r.ghiChu ?? "" },
+          { head: "Số giá", cell: (r) => r.soGia, cls: "tnum" },
         ]}
         rowActions={(r) => (
           <>
@@ -144,13 +144,13 @@ export default function V4no() {
         <Modal
           title={
             V1zw.mode === "add"
-              ? "VGjDqm0ga2hvIGzGsHUgdHLhu68="
-              : "Q+G6rXAgbmjhuq10IGtobyBsxrB1IHRy4buv"
+              ? "Thêm kho lưu trữ"
+              : "Cập nhật kho lưu trữ"
           }
           onClose={() => V1zx(null)}
           onSave={V203}
         >
-          <V49j label="VMOqbiBraG8=">
+          <V49j label="Tên kho">
             <input
               className="inp"
               value={V1zw.draft.tenKho}
@@ -159,7 +159,7 @@ export default function V4no() {
               }
             />
           </V49j>
-          <V49j label="R2hpIGNow7o=">
+          <V49j label="Ghi chú">
             <input
               className="inp"
               value={V1zw.draft.ghiChu ?? ""}
@@ -168,7 +168,7 @@ export default function V4no() {
               }
             />
           </V49j>
-          <V49j label="U+G7kSB0aOG7qSB04bux">
+          <V49j label="Số thứ tự">
             <input
               className="inp"
               type="number"

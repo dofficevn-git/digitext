@@ -25,7 +25,7 @@ fn f_2aa(r_4nw: &Document) -> Result<ObjectId, SignError> {
         .get(b"Root")
         .ok()
         .and_then(|r_4nx| r_4nx.as_reference().ok())
-        .ok_or_else(|| SignError::Pdf("dGhp4bq/dSAvUm9vdA==".into()))
+        .ok_or_else(|| SignError::Pdf("thiếu /Root".into()))
 }
 fn f_23s(r_4nz: &Document, pdf: &[u8]) -> Result<usize, SignError> {
     if r_4nz.xref_start != 0 {
@@ -35,7 +35,7 @@ fn f_23s(r_4nz: &Document, pdf: &[u8]) -> Result<usize, SignError> {
         .windows(9)
         .rposition(|r_4o1| r_4o1 == b"startxref")
         .ok_or_else(|| {
-            SignError::Pdf("a2jDtG5nIHRo4bqleSBzdGFydHhyZWYgxJHhu4MgbuG7kWkgL1ByZXY=".into())
+            SignError::Pdf("không thấy startxref để nối /Prev".into())
         })?;
     let r_4ny = &pdf[r_4o0 + 9..];
     let s: String = r_4ny
@@ -45,7 +45,7 @@ fn f_23s(r_4nz: &Document, pdf: &[u8]) -> Result<usize, SignError> {
         .map(|&b| b as char)
         .collect();
     s.parse::<usize>()
-        .map_err(|_| SignError::Pdf("c3RhcnR4cmVmIGtow7RuZyBwaOG6o2kgc+G7kQ==".into()))
+        .map_err(|_| SignError::Pdf("startxref không phải số".into()))
 }
 fn f_25l(pdf: &[u8], r_4o2: &Document, id: ObjectId) -> Result<Vec<u8>, SignError> {
     let off = match r_4o2.reference_table.entries.get(&id.0) {
@@ -53,31 +53,31 @@ fn f_25l(pdf: &[u8], r_4o2: &Document, id: ObjectId) -> Result<Vec<u8>, SignErro
         _ => {
             return Err(
                 SignError::Pdf(
-                    "b2JqZWN0IGtow7RuZyBjw7MgbeG7pWMgeHJlZiB0aMaw4budbmcgKG9iamVjdCBzdHJlYW0/KSDigJQga2jDtG5nIG5ow7puZyBEU1MgxJHGsOG7o2M="
+                    "object không có mục xref thường (object stream?) — không nhúng DSS được"
                         .into(),
                 ),
             );
         }
     };
     if off >= pdf.len() {
-        return Err(SignError::Pdf("b2Zmc2V0IHhyZWYgbmdvw6BpIGZpbGU=".into()));
+        return Err(SignError::Pdf("offset xref ngoài file".into()));
     }
     let r_4o3 = off
         + find(&pdf[off..], b"endobj")
-            .ok_or_else(|| SignError::Pdf("a2jDtG5nIHRo4bqleSBlbmRvYmo=".into()))?
+            .ok_or_else(|| SignError::Pdf("không thấy endobj".into()))?
         + b"endobj".len();
     Ok(pdf[off..r_4o3].to_vec())
 }
 fn f_x9(r_4o8: &[u8], dss_id: u32) -> Result<Vec<u8>, SignError> {
     let r_4o6 =
-        find(r_4o8, b"obj").ok_or_else(|| SignError::Pdf("Y2F0YWxvZyB0aGnhur91ICdvYmon".into()))?;
+        find(r_4o8, b"obj").ok_or_else(|| SignError::Pdf("catalog thiếu 'obj'".into()))?;
     let r_4o5 = r_4o6
         + find(&r_4o8[r_4o6..], b"<<")
-            .ok_or_else(|| SignError::Pdf("Y2F0YWxvZyB0aGnhur91ICc8PCc=".into()))?;
+            .ok_or_else(|| SignError::Pdf("catalog thiếu '<<'".into()))?;
     let r_4o4 = r_4o5 + 2;
     if find(&r_4o8[r_4o4..], b"/DSS").is_some() {
         return Err(SignError::Pdf(
-            "Y2F0YWxvZyDEkcOjIGPDsyAvRFNTIChQREYgxJHDoyDhu58gbeG7qWMgTFQ/KQ==".into(),
+            "catalog đã có /DSS (PDF đã ở mức LT?)".into(),
         ));
     }
     let mut r_4o7 = Vec::with_capacity(r_4o8.len() + 25);
@@ -103,7 +103,7 @@ fn refs(r_4ob: &[u32]) -> String {
 pub fn embed_dss(r_4ot: &[u8], r_4ov: &ValidationMaterial) -> Result<Vec<u8>, SignError> {
     if r_4ov.is_empty() {
         return Err(SignError::Pdf(
-            "a2jDtG5nIGPDsyBtYXRlcmlhbCDEkeG7gyBuaMO6bmcgL0RTUw==".into(),
+            "không có material để nhúng /DSS".into(),
         ));
     }
     let r_4ok = Document::load_mem(r_4ot).map_err(f_20t)?;
@@ -211,28 +211,28 @@ pub fn f_2p0(r_4p6: &[u8], r_4pb: usize) -> Result<ValidationMaterial, SignError
     let r_4p8 = r_4p6
         .windows(5)
         .rposition(|r_4pc| r_4pc == b"%%EOF")
-        .ok_or_else(|| SignError::Pdf("dGhp4bq/dSAlJUVPRg==".into()))?;
+        .ok_or_else(|| SignError::Pdf("thiếu %%EOF".into()))?;
     if r_4p6[r_4p8 + 5..].iter().any(|b| !b.is_ascii_whitespace()) {
         return Err(SignError::Pdf(
-            "Y8OzIGJ5dGUgc2F1ICUlRU9GIGN14buRaSAobmdvw6BpIHbDuW5nIERTUyk=".into(),
+            "có byte sau %%EOF cuối (ngoài vùng DSS)".into(),
         ));
     }
     let r_4pa = Document::load_mem(&r_4p6[..r_4pb]).map_err(f_20t)?;
     let r_4p5 = Document::load_mem(r_4p6).map_err(f_20t)?;
     let r_4p2 = f_2aa(&r_4pa)?;
     if f_2aa(&r_4p5)? != r_4p2 {
-        return Err(SignError::Pdf("aW5jcmVtZW50IMSR4buVaSAvUm9vdA==".into()));
+        return Err(SignError::Pdf("increment đổi /Root".into()));
     }
     for (id, obj) in &r_4pa.objects {
         let r_4p4 = r_4p5
             .objects
             .get(id)
-            .ok_or_else(|| SignError::Pdf("aW5jcmVtZW50IHhvw6Egb2JqZWN0IMSRw6Mga8O9".into()))?;
+            .ok_or_else(|| SignError::Pdf("increment xoá object đã ký".into()))?;
         if *id == r_4p2 {
             f_1a0(obj, r_4p4)?;
         } else if r_4p4 != obj {
             return Err(SignError::Pdf(
-                "aW5jcmVtZW50IHPhu61hIG9iamVjdCDEkcOjIGvDvSAobmdvw6BpIHZp4buHYyB0aMOqbSAvRFNTKQ=="
+                "increment sửa object đã ký (ngoài việc thêm /DSS)"
                     .into(),
             ));
         }
@@ -241,9 +241,9 @@ pub fn f_2p0(r_4p6: &[u8], r_4pb: usize) -> Result<ValidationMaterial, SignError
         .catalog()
         .map_err(f_20t)?
         .get(b"DSS")
-        .map_err(|_| SignError::Pdf("Y2F0YWxvZyBt4bubaSB0aGnhur91IC9EU1M=".into()))?
+        .map_err(|_| SignError::Pdf("catalog mới thiếu /DSS".into()))?
         .as_reference()
-        .map_err(|_| SignError::Pdf("L0RTUyBraMO0bmcgcGjhuqNpIHRoYW0gY2hp4bq/dQ==".into()))?;
+        .map_err(|_| SignError::Pdf("/DSS không phải tham chiếu".into()))?;
     let r_4p1 = f_10d(&r_4p5, r_4p3)?;
     let r_4p9: BTreeSet<ObjectId> = r_4p5
         .objects
@@ -254,7 +254,7 @@ pub fn f_2p0(r_4p6: &[u8], r_4pb: usize) -> Result<ValidationMaterial, SignError
     if r_4p9 != r_4p1 {
         return Err(
             SignError::Pdf(
-                "aW5jcmVtZW50IHRow6ptIG9iamVjdCBraMO0bmcgdGh14buZYyAvRFNTIChuZ2hpIHR14buTbiBu4buZaSBkdW5nIG5nb8OgaSB2w7luZyBrw70p"
+                "increment thêm object không thuộc /DSS (nghi tuồn nội dung ngoài vùng ký)"
                     .into(),
             ),
         );
@@ -266,12 +266,12 @@ fn f_1a0(r_4ph: &Object, r_4pf: &Object) -> Result<(), SignError> {
     let b = r_4pf.as_dict().map_err(f_20t)?;
     if r_4pd.has(b"DSS") {
         return Err(SignError::Pdf(
-            "Y2F0YWxvZyDEkcOjIGvDvSB24buRbiDEkcOjIGPDsyAvRFNT".into(),
+            "catalog đã ký vốn đã có /DSS".into(),
         ));
     }
     if !b.has(b"DSS") {
         return Err(SignError::Pdf(
-            "Y2F0YWxvZyBt4bubaSBraMO0bmcgdGjDqm0gL0RTUw==".into(),
+            "catalog mới không thêm /DSS".into(),
         ));
     }
     for (r_4pe, r_4pi) in r_4pd.iter() {
@@ -279,14 +279,14 @@ fn f_1a0(r_4ph: &Object, r_4pf: &Object) -> Result<(), SignError> {
             Ok(r_4pg) if r_4pg == r_4pi => {}
             _ => {
                 return Err(SignError::Pdf(
-                    "aW5jcmVtZW50IHPhu61hL3hvw6EgbeG7mXQga2hvw6EgY2F0YWxvZyDEkcOjIGvDvQ==".into(),
+                    "increment sửa/xoá một khoá catalog đã ký".into(),
                 ));
             }
         }
     }
     if b.len() != r_4pd.len() + 1 {
         return Err(SignError::Pdf(
-            "aW5jcmVtZW50IHRow6ptIGtob8OhIGNhdGFsb2cga2jDoWMgbmdvw6BpIC9EU1M=".into(),
+            "increment thêm khoá catalog khác ngoài /DSS".into(),
         ));
     }
     Ok(())
@@ -296,7 +296,7 @@ fn f_10d(r_4pk: &Document, r_4pm: ObjectId) -> Result<BTreeSet<ObjectId>, SignEr
     for (r_4po, _) in r_4pl.iter() {
         if !matches!(r_4po.as_slice(), b"Type" | b"Certs" | b"CRLs" | b"OCSPs") {
             return Err(SignError::Pdf(format!(
-                "L0RTUyBjaOG7qWEga2hvw6Ega2jDtG5nIGjhu5cgdHLhu6M6IC8={}",
+                "/DSS chứa khoá không hỗ trợ: /{}",
                 String::from_utf8_lossy(r_4po)
             )));
         }
@@ -307,7 +307,7 @@ fn f_10d(r_4pk: &Document, r_4pm: ObjectId) -> Result<BTreeSet<ObjectId>, SignEr
         if let Ok(r_4pj) = r_4pl.get(r_4pp).and_then(|o| o.as_array()) {
             for o in r_4pj {
                 let id = o.as_reference().map_err(|_| {
-                    SignError::Pdf("beG7pWMgL0RTUyBraMO0bmcgcGjhuqNpIHRoYW0gY2hp4bq/dQ==".into())
+                    SignError::Pdf("mục /DSS không phải tham chiếu".into())
                 })?;
                 r_4pn.insert(id);
             }
@@ -334,7 +334,7 @@ pub fn f_25q(r_4pr: &Document) -> Result<ValidationMaterial, SignError> {
                     .get_object(id)
                     .and_then(|o| o.as_stream())
                     .map_err(|_| {
-                        SignError::Pdf("beG7pWMgL0RTUyBraMO0bmcgcGjhuqNpIHN0cmVhbQ==".into())
+                        SignError::Pdf("mục /DSS không phải stream".into())
                     })?;
                 r_4pv.push(r_4px.content.clone());
             }
@@ -359,7 +359,7 @@ fn f_2ro(r_4pz: &mut [u8], r_4q0: usize, r_4q1: usize, r_4py: [usize; 4]) -> Res
     let mut s = format!("[{} {} {} {}", r_4py[0], r_4py[1], r_4py[2], r_4py[3]);
     if s.len() + 1 > r_4q2 {
         return Err(SignError::Pdf(
-            "Qnl0ZVJhbmdlIGTDoGkgaMahbiBwbGFjZWhvbGRlcg==".into(),
+            "ByteRange dài hơn placeholder".into(),
         ));
     }
     while s.len() + 1 < r_4q2 {
@@ -372,14 +372,14 @@ fn f_2ro(r_4pz: &mut [u8], r_4q0: usize, r_4q1: usize, r_4py: [usize; 4]) -> Res
 fn f_rz(r_4q9: &[u8], r_4q4: &[u8], id: u32) -> Result<Vec<u8>, SignError> {
     let r_4q5 = find(r_4q9, r_4q4).ok_or_else(|| {
         SignError::Pdf(format!(
-            "b2JqZWN0IHRoaeG6v3Ug{}",
+            "object thiếu {}",
             String::from_utf8_lossy(r_4q4)
         ))
     })?;
     let r_4q3 = r_4q5 + r_4q4.len();
     let r_4q7 = find(&r_4q9[r_4q3..], b"[").ok_or_else(|| {
         SignError::Pdf(format!(
-            "{}IGtow7RuZyBwaOG6o2kgbeG6o25nIGlubGluZQ==",
+            "{} không phải mảng inline",
             String::from_utf8_lossy(r_4q4)
         ))
     })?;
@@ -388,7 +388,7 @@ fn f_rz(r_4q9: &[u8], r_4q4: &[u8], id: u32) -> Result<Vec<u8>, SignError> {
         .any(|b| !b.is_ascii_whitespace())
     {
         return Err(SignError::Pdf(format!(
-            "{}IGtow7RuZyBwaOG6o2kgbeG6o25nIGlubGluZSAoZ2nDoSB0cuG7iyBsw6AgdGhhbSBjaGnhur91Pyk=",
+            "{} không phải mảng inline (giá trị là tham chiếu?)",
             String::from_utf8_lossy(r_4q4)
         )));
     }
@@ -396,7 +396,7 @@ fn f_rz(r_4q9: &[u8], r_4q4: &[u8], id: u32) -> Result<Vec<u8>, SignError> {
     let r_4qa = r_4q6
         + 1
         + find(&r_4q9[r_4q6 + 1..], b"]")
-            .ok_or_else(|| SignError::Pdf("beG6o25nIHRoaeG6v3UgJ10n".into()))?;
+            .ok_or_else(|| SignError::Pdf("mảng thiếu ']'".into()))?;
     let mut r_4q8 = Vec::with_capacity(r_4q9.len() + 12);
     r_4q8.extend_from_slice(&r_4q9[..r_4qa]);
     r_4q8.extend_from_slice(format!(" {id} 0 R").as_bytes());
@@ -449,14 +449,14 @@ pub fn f_23h(r_4qt: &[u8]) -> Result<Thh, SignError> {
         .catalog()
         .map_err(f_20t)?
         .get(b"AcroForm")
-        .map_err(|_| SignError::Pdf("dGhp4bq/dSAvQWNyb0Zvcm0gKFBERiBjaMawYSBrw70/KQ==".into()))?
+        .map_err(|_| SignError::Pdf("thiếu /AcroForm (PDF chưa ký?)".into()))?
         .as_reference()
-        .map_err(|_| SignError::Pdf("L0Fjcm9Gb3JtIGtow7RuZyBwaOG6o2kgdGhhbSBjaGnhur91".into()))?;
+        .map_err(|_| SignError::Pdf("/AcroForm không phải tham chiếu".into()))?;
     let r_4qv = *r_4qr
         .get_pages()
         .values()
         .next()
-        .ok_or_else(|| SignError::Pdf("UERGIGtow7RuZyBjw7MgdHJhbmc=".into()))?;
+        .ok_or_else(|| SignError::Pdf("PDF không có trang".into()))?;
     let r_4qk = f_25l(r_4qt, &r_4qr, r_4qi)?;
     let r_4qx = f_25l(r_4qt, &r_4qr, r_4qv)?;
     let r_4qy = f_23s(&r_4qr, r_4qt)?;
@@ -510,10 +510,10 @@ pub fn f_23h(r_4qt: &[u8]) -> Result<Thh, SignError> {
     let r_4qm = [0usize, contents_start, contents_end, r_4r1 - contents_end];
     f_2ro(&mut r_4qu, r_4qn, r_4qo, r_4qm)?;
     let r_4qz = r_4qu.get(r_4qm[0]..r_4qm[0] + r_4qm[1]).ok_or_else(|| {
-        SignError::Pdf("Qnl0ZVJhbmdlIERvY1RpbWVTdGFtcCBuZ2/DoGkgYmnDqm4gKGJ1Zyk=".into())
+        SignError::Pdf("ByteRange DocTimeStamp ngoài biên (bug)".into())
     })?;
     let r_4r0 = r_4qu.get(r_4qm[2]..r_4qm[2] + r_4qm[3]).ok_or_else(|| {
-        SignError::Pdf("Qnl0ZVJhbmdlIERvY1RpbWVTdGFtcCBuZ2/DoGkgYmnDqm4gKGJ1Zyk=".into())
+        SignError::Pdf("ByteRange DocTimeStamp ngoài biên (bug)".into())
     })?;
     let mut tbs = Vec::with_capacity(r_4qz.len() + r_4r0.len());
     tbs.extend_from_slice(r_4qz);
@@ -530,7 +530,7 @@ pub fn f_1cp(r_4r3: &Thh, token: &[u8]) -> Result<Vec<u8>, SignError> {
     let r_4r4 = r_4r3.contents_end - r_4r3.contents_start;
     if hex.len() > r_4r4 {
         return Err(SignError::Pdf(format!(
-            "token TSA {}IGJ5dGUgdsaw4bujdCDDtCAvQ29udGVudHMgRG9jVGltZVN0YW1wIA=={} byte",
+            "token TSA {} byte vượt ô /Contents DocTimeStamp {} byte",
             token.len(),
             r_4r4 / 2
         )));
@@ -561,7 +561,7 @@ fn f_19v(
     let b = r_4r9.get_dictionary(id).map_err(f_20t)?;
     if r_4r5.len() != b.len() {
         return Err(SignError::Pdf(
-            "aW5jcmVtZW50IMSR4buVaSBz4buRIGtob8OhIG9iamVjdCDEkcOjIGvDvQ==".into(),
+            "increment đổi số khoá object đã ký".into(),
         ));
     }
     for (r_4ra, r_4re) in r_4r5.iter() {
@@ -572,7 +572,7 @@ fn f_19v(
             Ok(r_4rc) if r_4rc == r_4re => {}
             _ => {
                 return Err(SignError::Pdf(
-                    "aW5jcmVtZW50IHPhu61hIGtob8OhIG9iamVjdCDEkcOjIGvDvQ==".into(),
+                    "increment sửa khoá object đã ký".into(),
                 ));
             }
         }
@@ -580,26 +580,26 @@ fn f_19v(
     let r_4r7 = r_4r5
         .get(r_4rb)
         .and_then(|o| o.as_array())
-        .map_err(|_| SignError::Pdf("beG6o25nIGPFqSBraMO0bmcgxJHhu41jIMSRxrDhu6Nj".into()))?;
+        .map_err(|_| SignError::Pdf("mảng cũ không đọc được".into()))?;
     let r_4r8 = b
         .get(r_4rb)
         .and_then(|o| o.as_array())
-        .map_err(|_| SignError::Pdf("beG6o25nIG3hu5tpIGtow7RuZyDEkeG7jWMgxJHGsOG7o2M=".into()))?;
+        .map_err(|_| SignError::Pdf("mảng mới không đọc được".into()))?;
     if r_4r8.len() != r_4r7.len() + 1 {
         return Err(SignError::Pdf(
-            "beG6o25nIGtow7RuZyB0xINuZyDEkcO6bmcgMSBwaOG6p24gdOG7rQ==".into(),
+            "mảng không tăng đúng 1 phần tử".into(),
         ));
     }
     for (r_4rf, r_4rg) in r_4r7.iter().zip(r_4r8.iter()) {
         if r_4rf != r_4rg {
             return Err(SignError::Pdf(
-                "aW5jcmVtZW50IHPhu61hIHBo4bqnbiB04butIG3huqNuZyBjxak=".into(),
+                "increment sửa phần tử mảng cũ".into(),
             ));
         }
     }
     if r_4r8.last().and_then(|o| o.as_reference().ok()) != Some(r_4r6) {
         return Err(SignError::Pdf(
-            "cGjhuqduIHThu60gdGjDqm0ga2jDtG5nIHBo4bqjaSBmaWVsZCBEb2NUaW1lU3RhbXA=".into(),
+            "phần tử thêm không phải field DocTimeStamp".into(),
         ));
     }
     Ok(())
@@ -615,7 +615,7 @@ fn f_1xq(r_4rk: &Document, r_4rj: ObjectId) -> Result<ObjectId, SignError> {
         }
     }
     Err(SignError::Pdf(
-        "a2jDtG5nIHRo4bqleSB0cmFuZyBjaOG7qWEgd2lkZ2V0IERvY1RpbWVTdGFtcA==".into(),
+        "không thấy trang chứa widget DocTimeStamp".into(),
     ))
 }
 fn f_2oz(
@@ -628,42 +628,42 @@ fn f_2oz(
         Some(lopdf::xref::XrefEntry::Normal { offset, .. }) => *offset as usize,
         _ => {
             return Err(SignError::Pdf(
-                "RG9jVGltZVN0YW1wIGtow7RuZyBjw7MgeHJlZiB0aMaw4budbmc=".into(),
+                "DocTimeStamp không có xref thường".into(),
             ));
         }
     };
     let r_4rr = off
         + find(&r_4rt[off..], b"endobj")
-            .ok_or_else(|| SignError::Pdf("RG9jVGltZVN0YW1wIHRoaeG6v3UgZW5kb2Jq".into()))?;
+            .ok_or_else(|| SignError::Pdf("DocTimeStamp thiếu endobj".into()))?;
     let r_4s0 = &r_4rt[off..r_4rr];
     let r_4rp = find(r_4s0, b"/Contents")
-        .ok_or_else(|| SignError::Pdf("RG9jVGltZVN0YW1wIHRoaeG6v3UgL0NvbnRlbnRz".into()))?;
+        .ok_or_else(|| SignError::Pdf("DocTimeStamp thiếu /Contents".into()))?;
     let r_4ry = r_4rp
         + find(&r_4s0[r_4rp..], b"<").ok_or_else(|| {
-            SignError::Pdf("RG9jVGltZVN0YW1wIC9Db250ZW50cyBraMO0bmcgcGjhuqNpIGhleA==".into())
+            SignError::Pdf("DocTimeStamp /Contents không phải hex".into())
         })?;
     let r_4ru = r_4ry
         + 1
         + find(&r_4s0[r_4ry + 1..], b">").ok_or_else(|| {
-            SignError::Pdf("RG9jVGltZVN0YW1wIC9Db250ZW50cyB0aGnhur91ICc+Jw==".into())
+            SignError::Pdf("DocTimeStamp /Contents thiếu '>'".into())
         })?;
     let r_4rw = off + r_4ry + 1;
     let r_4rv = off + r_4ru;
     let r_4rn = find(r_4s0, b"/ByteRange")
-        .ok_or_else(|| SignError::Pdf("RG9jVGltZVN0YW1wIHRoaeG6v3UgL0J5dGVSYW5nZQ==".into()))?;
+        .ok_or_else(|| SignError::Pdf("DocTimeStamp thiếu /ByteRange".into()))?;
     let r_4rx = r_4rn
         + find(&r_4s0[r_4rn..], b"[")
-            .ok_or_else(|| SignError::Pdf("L0J5dGVSYW5nZSB0aGnhur91ICdbJw==".into()))?;
+            .ok_or_else(|| SignError::Pdf("/ByteRange thiếu '['".into()))?;
     let r_4rz = r_4rx
         + 1
         + find(&r_4s0[r_4rx + 1..], b"]")
-            .ok_or_else(|| SignError::Pdf("L0J5dGVSYW5nZSB0aGnhur91ICddJw==".into()))?;
+            .ok_or_else(|| SignError::Pdf("/ByteRange thiếu ']'".into()))?;
     let r_4rm = crate::pdf::f_1yg(r_4rt, off + r_4rx, off + r_4rz)
         .ok_or_else(|| SignError::Pdf("DocTimeStamp /ByteRange sai".into()))?;
     if !crate::pdf::f_wo(r_4rm, r_4rw, r_4rv, r_4rt.len()) {
         return Err(
             SignError::Pdf(
-                "RG9jVGltZVN0YW1wIC9CeXRlUmFuZ2Uga2jDtG5nIHBo4bunIHRy4buNbiB0w6BpIGxp4buHdSAobmdoaSBz4butYSBzYXUga2hpIMSRw7NuZyBk4bqldSBhcmNoaXZlKQ=="
+                "DocTimeStamp /ByteRange không phủ trọn tài liệu (nghi sửa sau khi đóng dấu archive)"
                     .into(),
             ),
         );
@@ -672,32 +672,32 @@ fn f_2oz(
         r_4rm[0].checked_add(r_4rm[1]),
         r_4rm[2].checked_add(r_4rm[3]),
     ) else {
-        return Err(SignError::Pdf("Qnl0ZVJhbmdlIHRyw6Bu".into()));
+        return Err(SignError::Pdf("ByteRange tràn".into()));
     };
     let r_4s3 = r_4rt
         .get(r_4rm[0]..r_4s1)
-        .ok_or_else(|| SignError::Pdf("Qnl0ZVJhbmdlIG5nb8OgaSBiacOqbg==".into()))?;
+        .ok_or_else(|| SignError::Pdf("ByteRange ngoài biên".into()))?;
     let r_4s4 = r_4rt
         .get(r_4rm[2]..r_4s2)
-        .ok_or_else(|| SignError::Pdf("Qnl0ZVJhbmdlIG5nb8OgaSBiacOqbg==".into()))?;
+        .ok_or_else(|| SignError::Pdf("ByteRange ngoài biên".into()))?;
     let mut r_4ro = Vec::with_capacity(r_4s3.len() + r_4s4.len());
     r_4ro.extend_from_slice(r_4s3);
     r_4ro.extend_from_slice(r_4s4);
     let token = crate::pdf::f_1gu(&r_4rt[r_4rw..r_4rv]).ok_or_else(|| {
-        SignError::Pdf("RG9jVGltZVN0YW1wIC9Db250ZW50cyBraMO0bmcgcGjhuqNpIGhleA==".into())
+        SignError::Pdf("DocTimeStamp /Contents không phải hex".into())
     })?;
     let r_4s8 = crate::tsa::f_2q0(&token, &r_4ro, r_4s7)?;
     if !r_4s8.imprint_ok {
         return Err(
             SignError::Pdf(
-                "RG9jVGltZVN0YW1wIGltcHJpbnQga2jDtG5nIGto4bubcCAobuG7mWkgZHVuZyBi4buLIHPhu61hIHNhdSBraGkgxJHDs25nIGThuqV1IGFyY2hpdmUp"
+                "DocTimeStamp imprint không khớp (nội dung bị sửa sau khi đóng dấu archive)"
                     .into(),
             ),
         );
     }
     if r_4s8.token_signature_ok == Some(false) {
         return Err(SignError::Pdf(
-            "Y2jhu68ga8O9IFRTQSBj4bunYSBEb2NUaW1lU3RhbXAga2jDtG5nIGjhu6NwIGzhu4c=".into(),
+            "chữ ký TSA của DocTimeStamp không hợp lệ".into(),
         ));
     }
     let r_4s5 = r_4s8.token_signature_ok == Some(true);
@@ -712,17 +712,17 @@ pub fn f_2p3(
     let r_4sm = r_4sk
         .windows(5)
         .rposition(|r_4sv| r_4sv == b"%%EOF")
-        .ok_or_else(|| SignError::Pdf("dGhp4bq/dSAlJUVPRg==".into()))?;
+        .ok_or_else(|| SignError::Pdf("thiếu %%EOF".into()))?;
     if r_4sk[r_4sm + 5..].iter().any(|b| !b.is_ascii_whitespace()) {
         return Err(SignError::Pdf(
-            "Y8OzIGJ5dGUgc2F1ICUlRU9GIGN14buRaQ==".into(),
+            "có byte sau %%EOF cuối".into(),
         ));
     }
     let r_4sp = Document::load_mem(&r_4sk[..r_4sq]).map_err(f_20t)?;
     let r_4si = Document::load_mem(r_4sk).map_err(f_20t)?;
     let r_4sb = f_2aa(&r_4sp)?;
     if f_2aa(&r_4si)? != r_4sb {
-        return Err(SignError::Pdf("aW5jcmVtZW50IMSR4buVaSAvUm9vdA==".into()));
+        return Err(SignError::Pdf("increment đổi /Root".into()));
     }
     let r_4sn: BTreeSet<ObjectId> = r_4si
         .objects
@@ -732,7 +732,7 @@ pub fn f_2p3(
         .collect();
     if r_4sp.catalog().map_err(f_20t)?.has(b"DSS") {
         return Err(SignError::Pdf(
-            "Y2F0YWxvZyDEkcOjIGvDvSB24buRbiDEkcOjIGPDsyAvRFNT".into(),
+            "catalog đã ký vốn đã có /DSS".into(),
         ));
     }
     let r_4sj = r_4si.catalog().map_err(f_20t)?.has(b"DSS");
@@ -743,7 +743,7 @@ pub fn f_2p3(
             .map_err(f_20t)?
             .get(b"DSS")
             .and_then(|o| o.as_reference())
-            .map_err(|_| SignError::Pdf("L0RTUyBraMO0bmcgcGjhuqNpIHRoYW0gY2hp4bq/dQ==".into()))?;
+            .map_err(|_| SignError::Pdf("/DSS không phải tham chiếu".into()))?;
         r_4sa.extend(f_10d(&r_4si, r_4sd)?);
     }
     let mut r_4sf = None;
@@ -752,7 +752,7 @@ pub fn f_2p3(
             if d.get(b"Type").and_then(|o| o.as_name()).ok() == Some(b"DocTimeStamp".as_ref()) {
                 if r_4sf.is_some() {
                     return Err(SignError::Pdf(
-                        "bmhp4buBdSBoxqFuIG3hu5l0IERvY1RpbWVTdGFtcCAoY2jGsGEgaOG7lyB0cuG7oyk="
+                        "nhiều hơn một DocTimeStamp (chưa hỗ trợ)"
                             .into(),
                     ));
                 }
@@ -779,7 +779,7 @@ pub fn f_2p3(
                     == Some(r_4se)
             })
             .ok_or_else(|| {
-                SignError::Pdf("RG9jVGltZVN0YW1wIHRoaeG6v3UgZmllbGQgdGhhbSBjaGnhur91".into())
+                SignError::Pdf("DocTimeStamp thiếu field tham chiếu".into())
             })?;
         r_4sa.insert(r_4sh);
         let r_4s9 = r_4sp
@@ -787,7 +787,7 @@ pub fn f_2p3(
             .map_err(f_20t)?
             .get(b"AcroForm")
             .and_then(|o| o.as_reference())
-            .map_err(|_| SignError::Pdf("dGhp4bq/dSAvQWNyb0Zvcm0=".into()))?;
+            .map_err(|_| SignError::Pdf("thiếu /AcroForm".into()))?;
         f_19v(&r_4sp, &r_4si, r_4s9, b"Fields", r_4sh)?;
         r_4sc.insert(r_4s9);
         let r_4so = f_1xq(&r_4si, r_4sh)?;
@@ -800,7 +800,7 @@ pub fn f_2p3(
     }
     if r_4sn != r_4sa {
         return Err(SignError::Pdf(
-            "aW5jcmVtZW50IHRow6ptIG9iamVjdCBraMO0bmcgdGh14buZYyAvRFNTIGhheSBEb2NUaW1lU3RhbXA="
+            "increment thêm object không thuộc /DSS hay DocTimeStamp"
                 .into(),
         ));
     }
@@ -808,17 +808,17 @@ pub fn f_2p3(
         let r_4sg = r_4si
             .objects
             .get(id)
-            .ok_or_else(|| SignError::Pdf("aW5jcmVtZW50IHhvw6Egb2JqZWN0IMSRw6Mga8O9".into()))?;
+            .ok_or_else(|| SignError::Pdf("increment xoá object đã ký".into()))?;
         if *id == r_4sb {
             if r_4sj {
                 f_1a0(obj, r_4sg)?;
             } else if r_4sg != obj {
-                return Err(SignError::Pdf("aW5jcmVtZW50IHPhu61hIGNhdGFsb2c=".into()));
+                return Err(SignError::Pdf("increment sửa catalog".into()));
             }
         } else if r_4sc.contains(id) {
         } else if r_4sg != obj {
             return Err(SignError::Pdf(
-                "aW5jcmVtZW50IHPhu61hIG9iamVjdCDEkcOjIGvDvSAobmdvw6BpIC9EU1MgKyBEb2NUaW1lU3RhbXAp"
+                "increment sửa object đã ký (ngoài /DSS + DocTimeStamp)"
                     .into(),
             ));
         }

@@ -81,7 +81,7 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
   const V3e = useCallback(() => {
     if (!V3a.current) return true;
     const V3f = window.confirm(
-      "Q8OzIHRoYXkgxJHhu5VpIGNoxrBhIGzGsHUgdHJvbmcgVHLDrG5oIHjhu60gbMO9IOG6o25oLiBS4budaSDEkWkgdsOgIGLhu48gY8OhYyB0aGF5IMSR4buVaT8=",
+      "Có thay đổi chưa lưu trong Trình xử lý ảnh. Rời đi và bỏ các thay đổi?",
     );
     if (V3f) V3a.current = false;
     return V3f;

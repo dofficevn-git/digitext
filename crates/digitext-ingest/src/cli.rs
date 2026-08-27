@@ -17,7 +17,7 @@ fn f_wj(prog: &str, r_2xt: &[String]) -> Result<String, String> {
     r_2xt
         .first()
         .cloned()
-        .ok_or_else(|| format!("ZMO5bmc6IA=={prog}IDx0aMawLW3hu6VjLWLDsz4="))
+        .ok_or_else(|| format!("dùng: {prog} <thư-mục-bó>"))
 }
 pub fn cli_main(prog: &str, r_2xu: &[String]) -> ExitCode {
     let rt = match tokio::runtime::Builder::new_multi_thread()
@@ -26,7 +26,7 @@ pub fn cli_main(prog: &str, r_2xu: &[String]) -> ExitCode {
     {
         Ok(rt) => rt,
         Err(e) => {
-            eprintln!("a2jDtG5nIHThuqFvIMSRxrDhu6NjIHRva2lvIHJ1bnRpbWU6IA=={e}");
+            eprintln!("không tạo được tokio runtime: {e}");
             return ExitCode::FAILURE;
         }
     };
@@ -41,7 +41,7 @@ pub fn cli_main(prog: &str, r_2xu: &[String]) -> ExitCode {
 async fn run(prog: &str, r_2xv: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let r_2xw = f_wj(prog, r_2xv)?;
     let r_2xy = std::env::var("DIGITEXT_DATABASE_URL")
-        .map_err(|_| "Y+G6p24gRElHSVRFWFRfREFUQUJBU0VfVVJM")?;
+        .map_err(|_| "cần DIGITEXT_DATABASE_URL")?;
     let storage_dir = std::env::var("DIGITEXT_STORAGE_DIR")
         .unwrap_or_else(|_| "/var/lib/digitext/objects".into());
     let key_prefix = std::env::var("DIGITEXT_STORAGE_PREFIX").unwrap_or_else(|_| "ingest".into());
@@ -58,7 +58,7 @@ async fn run(prog: &str, r_2xv: &[String]) -> Result<(), Box<dyn std::error::Err
         .await?
         .ok_or_else(|| {
             format!(
-                "a2jDtG5nIHRo4bqleSBk4buxIMOhbiBtw6MgJw=={}'",
+                "không thấy dự án mã '{}'",
                 r_2y1.project_id
             )
         })?;
@@ -76,7 +76,7 @@ async fn run(prog: &str, r_2xv: &[String]) -> Result<(), Box<dyn std::error::Err
         }
     };
     println!(
-        "✅ ingest {}IHTDoGkgbGnhu4d1IChk4buxIMOhbiA={}) → {dest}",
+        "✅ ingest {} tài liệu (dự án {}) → {dest}",
         ids.len(),
         r_2y1.project_id
     );

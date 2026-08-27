@@ -60,12 +60,12 @@ export default function V4x7({ status, onDismiss: V3a7 }: { status: V42t; onDism
   const width = V3a8 && status.total > 0 ? `${V3a9}%` : "100%";
   const text =
     status.phase === "available"
-      ? "xJBhbmcgY2h14bqpbiBi4buLIGPhuq1wIG5o4bqtdOKApg=="
+      ? "Đang chuẩn bị cập nhật…"
       : V3a8
-        ? `xJBhbmcgdOG6o2kgYuG6o24g${status.version}…${status.total > 0 ? ` ${V3a9}%` : ""}`
+        ? `Đang tải bản ${status.version}…${status.total > 0 ? ` ${V3a9}%` : ""}`
         : status.phase === "installing"
-          ? "xJBhbmcgY8OgaSDEkeG6t3QgYuG6o24gbeG7m2nigKY="
-          : "xJBhbmcga2jhu59pIMSR4buZbmcgbOG6oWnigKY=";
+          ? "Đang cài đặt bản mới…"
+          : "Đang khởi động lại…";
 
   return (
     <div className="overlay">

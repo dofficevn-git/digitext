@@ -18,5 +18,5 @@ export function V4a7(Vpm: string): string | null {
   if (t === "") return null;
   return V4a6(t)
     ? null
-    : `xJDhu4thIGNo4buJICI=${t}IiBwaOG6o2kgY8OzIGThuqFuZyBJUCBob+G6t2MgSVA6Y+G7lW5nICh2ZCAxOTIuMTY4LjEuMTAgaG/hurdjIDE5Mi4xNjguMS4xMDo=${V4a0}).`;
+    : `Địa chỉ "${t}" phải có dạng IP hoặc IP:cổng (vd 192.168.1.10 hoặc 192.168.1.10:${V4a0}).`;
 }

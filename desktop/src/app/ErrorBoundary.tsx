@@ -20,7 +20,7 @@ export default class ErrorBoundary extends Component<V4x9, State> {
 
   componentDidCatch(V3ad: Error, info: ErrorInfo) {
     console.error(
-      `[${V3wu.appName}XSBs4buXaSByZW5kZXIga2jDtG5nIGLhuq90IMSRxrDhu6NjOg==`,
+      `[${V3wu.appName}] lỗi render không bắt được:`,
       V3ad,
       info.componentStack,
     );

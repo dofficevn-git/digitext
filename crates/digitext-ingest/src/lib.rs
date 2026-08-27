@@ -30,10 +30,10 @@ pub struct T82 {
 }
 #[derive(Debug, thiserror::Error)]
 pub enum IngestError {
-    #[error("bWFuaWZlc3QgSlNPTiBo4buPbmc6IA=={0}")]
+    #[error("manifest JSON hỏng: {0}")]
     BadManifest(String),
     #[error(
-        "file '{path}JzogQkxBS0UzIGzhu4djaCAobWFuaWZlc3Qg{expected}LCB0aOG7sWMgdOG6vyA={actual})"
+        "file '{path}': BLAKE3 lệch (manifest {expected}, thực tế {actual})"
     )]
     ChecksumMismatch {
         path: String,
@@ -41,16 +41,16 @@ pub enum IngestError {
         actual: String,
     },
     #[error(
-        "file '{path}Jzoga8OtY2ggdGjGsOG7m2MgbOG7h2NoIChtYW5pZmVzdCA={expected}LCB0aOG7sWMgdOG6vyA={actual})"
+        "file '{path}': kích thước lệch (manifest {expected}, thực tế {actual})"
     )]
     SizeMismatch {
         path: String,
         expected: u64,
         actual: u64,
     },
-    #[error("dGhp4bq/dSBieXRlcyBjaG8gZmlsZSAn{path}' khai trong manifest")]
+    #[error("thiếu bytes cho file '{path}' khai trong manifest")]
     MissingFile { path: String },
-    #[error("bOG7l2kgbMawdSB0cuG7rzog{0}")]
+    #[error("lỗi lưu trữ: {0}")]
     Storage(String),
     #[error(transparent)]
     Db(#[from] sqlx::Error),
@@ -105,7 +105,7 @@ impl ObjectStore for FsObjectStore {
             .any(|r_2yc| r_2yc == ".." || r_2yc.is_empty())
         {
             return Err(IngestError::Storage(format!(
-                "a2V5IGtow7RuZyBo4bujcCBs4buHOiA={key}"
+                "key không hợp lệ: {key}"
             )));
         }
         let path = self.root.join(key);
@@ -177,7 +177,7 @@ pub async fn f_1i5<S: ObjectStore>(
         let Some(doc) = doc else {
             tracing::info!(
                 file = % entry.path, blake3 = % entry.blake3,
-                "YuG7jyBxdWE6IMSRw6MgY8OzIHTDoGkgbGnhu4d1IGPDuW5nIG7hu5lpIGR1bmc="
+                "bỏ qua: đã có tài liệu cùng nội dung"
             );
             continue;
         };

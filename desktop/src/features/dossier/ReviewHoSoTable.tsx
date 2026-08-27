@@ -43,21 +43,21 @@ const V4kz = (b: number) => (b / 1_048_576).toFixed(1);
 const V4l0: Record<V4eh, { icon: V41v; nut: string; hoi: string; xong: string }> = {
   approved: {
     icon: "duyet",
-    nut: "RHV54buHdCDEkcOjIGNo4buNbg==",
-    hoi: "RHV54buHdA==",
-    xong: "xJDDoyBkdXnhu4d0",
+    nut: "Duyệt đã chọn",
+    hoi: "Duyệt",
+    xong: "Đã duyệt",
   },
   rejected: {
     icon: "tuChoi",
-    nut: "VOG7qyBjaOG7kWkgxJHDoyBjaOG7jW4=",
-    hoi: "VOG7qyBjaOG7kWk=",
-    xong: "xJDDoyB04burIGNo4buRaQ==",
+    nut: "Từ chối đã chọn",
+    hoi: "Từ chối",
+    xong: "Đã từ chối",
   },
   pending: {
     icon: "moLai",
-    nut: "TeG7nyBs4bqhaSDEkcOjIGNo4buNbg==",
-    hoi: "TeG7nyBs4bqhaQ==",
-    xong: "xJDDoyBt4bufIGzhuqFp",
+    nut: "Mở lại đã chọn",
+    hoi: "Mở lại",
+    xong: "Đã mở lại",
   },
 };
 
@@ -98,7 +98,7 @@ function V4l2({ t }: { t: V4k7 }) {
       {t.unknownPages > 0 && (
         <div
           className="muted oh-sub"
-          title="TcOheSBjaOG7pyBjaMawYSBnaGkgc+G7kSB0cmFuZyBjaG8gY8OhYyB0w6BpIGxp4buHdSBuw6B5"
+          title="Máy chủ chưa ghi số trang cho các tài liệu này"
         >
           {fmtN(t.unknownPages)} tài liệu chưa rõ số trang
         </div>
@@ -118,7 +118,7 @@ function OcrCell({ t }: { t: V4k7 }) {
         </span>
         <div
           className="progress"
-          title={`${t.ocrPages}/${t.ocrDenom}IHRyYW5nIMSRw6MgY8OzIGvhur90IHF14bqjIE9DUiAobsO6dCDikaAgUERGIDIgbOG7m3Ap${
+          title={`${t.ocrPages}/${t.ocrDenom} trang đã có kết quả OCR (nút ① PDF 2 lớp)${
             t.unknownPages > 0
               ? ` · ${t.unknownPages}IHTDoGkgbGnhu4d1IGNoxrBhIHLDtSBz4buRIHRyYW5n`
               : ""
@@ -131,7 +131,7 @@ function OcrCell({ t }: { t: V4k7 }) {
       {t.fieldDocs > 0 && (
         <div
           className="muted oh-sub"
-          title="VMOgaSBsaeG7h3UgxJHDoyBiw7NjIMSRxrDhu6NjIDE2IHRyxrDhu51uZyBt4bulYyBs4bulYyAobsO6dCDikaEgQsOzYyB0w6FjaCAxNiB0csaw4budbmcpIOKAlCB2aeG7h2MgbsOgeSBraMO0bmcgZ2hpIGvhur90IHF14bqjIE9DUiB04burbmcgdHJhbmc="
+          title="Tài liệu đã bóc được 16 trường mục lục (nút ② Bóc tách 16 trường) — việc này không ghi kết quả OCR từng trang"
         >
           {fmtN(t.fieldDocs)}/{fmtN(t.files)} tài liệu đã bóc 16 trường
         </div>
@@ -143,7 +143,7 @@ function OcrCell({ t }: { t: V4k7 }) {
         </span>
         <div
           className="progress"
-          title={`xJDDoyBjaHV54buDbiDEkeG7lWkg${t.pdfaDocs}/${t.files}IHbEg24gYuG6o24gc2FuZyBQREYvQSBsxrB1IHRy4buvICg=${t.pdfaPages}IHRyYW5nKS4gQuG6o24gZ2jDqXAgc2luaCByYSDhu58gbsO6dCAiUERGIDIgbOG7m3AiIG3DoG4gTcOheSBjaOG7pzsgT0NSIHhvbmcgY2jGsGEgY8OzIG5naMSpYSBsw6AgxJHDoyBjw7MgdOG7h3AgUERGL0Eu`}
+          title={`Đã chuyển đổi ${t.pdfaDocs}/${t.files} văn bản sang PDF/A lưu trữ (${t.pdfaPages} trang). Bản ghép sinh ra ở nút "PDF 2 lớp" màn Máy chủ; OCR xong chưa có nghĩa là đã có tệp PDF/A.`}
         >
           <span style={{ width: `${V1ql}%` }} />
         </div>
@@ -152,7 +152,7 @@ function OcrCell({ t }: { t: V4k7 }) {
       {t.pdfaCu > 0 && (
         <div
           className="oh-sub text-warning-700"
-          title="QuG6o24gZ2jDqXAgY8OzIHThu6sgYuG6o24gY8WpLCB0aGnhur91IGThuqV1IGhp4buHdSBQREYvQS0yYiAoWE1QIHBkZmFpZCArIE91dHB1dEludGVudCArIC9JRCArIGZvbnQgbmjDum5nKSDigJQgYuG6pW0g4oCcR2jDqXAgbOG6oWkgUERGL0HigJ0gxJHhu4MgxJHhuqF0IMSQaeG7gXUgOC4yLmE="
+          title="Bản ghép có từ bản cũ, thiếu dấu hiệu PDF/A-2b (XMP pdfaid + OutputIntent + /ID + font nhúng) — bấm “Ghép lại PDF/A” để đạt Điều 8.2.a"
         >
           {fmtN(t.pdfaCu)} tệp chưa đạt PDF/A-2b
         </div>
@@ -160,7 +160,7 @@ function OcrCell({ t }: { t: V4k7 }) {
       {t.unknownOcr > 0 && (
         <div
           className="muted oh-sub"
-          title="TcOheSBjaOG7pyDEkWFuZyBjaOG6oXkgYuG6o24gY8WpLCBjaMawYSB0cuG6oyBz4buRIHRyYW5nIMSRw6MgYsOzYyB0w6FjaCDigJQgaGFpIGNvbiBz4buRIHRyw6puIGNo4buJIHTDrW5oIHBo4bqnbiBtw6F5IGNo4bunIGPDsyBiw6Fv"
+          title="Máy chủ đang chạy bản cũ, chưa trả số trang đã bóc tách — hai con số trên chỉ tính phần máy chủ có báo"
         >
           {fmtN(t.unknownOcr)} tài liệu máy chủ chưa báo
         </div>
@@ -193,11 +193,11 @@ function V4l3({
         </h3>
         <p className="muted text-sm mt-0">
           {V1qm === "approved" &&
-            "VG/DoG4gYuG7mSB0w6BpIGxp4buHdSDEkcOjIGNo4buNbiBz4bq9IMSRxrDhu6NjIMSRw6FuaCBk4bqldSDEkcOjIGR1eeG7h3QgKGdoaSB24bq/dCBhaSBkdXnhu4d0LCBsw7pjIG7DoG8pLg=="}
+            "Toàn bộ tài liệu đã chọn sẽ được đánh dấu đã duyệt (ghi vết ai duyệt, lúc nào)."}
           {V1qm === "rejected" &&
-            "VG/DoG4gYuG7mSB0w6BpIGxp4buHdSDEkcOjIGNo4buNbiBi4buLIHRy4bqjIGzhuqFpIMSR4buDIHF1w6l0L2LDs2MgbOG6oWkg4oCUIG7DqnUgcsO1IGzDvSBkbyDEkeG7gyBuZ8aw4budaSBxdcOpdCBiaeG6v3QgcGjhuqNpIHPhu61hIGfDrC4="}
+            "Toàn bộ tài liệu đã chọn bị trả lại để quét/bóc lại — nêu rõ lý do để người quét biết phải sửa gì."}
           {V1qm === "pending" &&
-            "WG/DoSBxdXnhur90IMSR4buLbmggZHV54buHdCDEkcOjIGdoaSBj4bunYSB0b8OgbiBi4buZIHTDoGkgbGnhu4d1IMSRw6MgY2jhu41uIMSR4buDIHNvw6F0IGzhuqFpIHThu6sgxJHhuqd1Lg=="}
+            "Xoá quyết định duyệt đã ghi của toàn bộ tài liệu đã chọn để soát lại từ đầu."}
         </p>
         {V1qm !== "pending" && (
           <textarea
@@ -206,8 +206,8 @@ function V4l3({
             autoFocus
             placeholder={
               V1qm === "rejected"
-                ? "VsOtIGThu6U6IOG6o25oIG3hu50sIGLDs2Mgc2FpIHPhu5EgcXV54bq/dCDEkeG7i25o4oCm"
-                : "R2hpIGNow7ogKGtow7RuZyBi4bqvdCBideG7mWMp"
+                ? "Ví dụ: ảnh mờ, bóc sai số quyết định…"
+                : "Ghi chú (không bắt buộc)"
             }
             value={V1qs}
             onChange={(V1qx) => V1qt(V1qx.target.value)}
@@ -221,9 +221,9 @@ function V4l3({
             className="btn primary"
             onClick={() => V1qq(V1qs)}
             disabled={V1qo || V1qv}
-            title={V1qv ? "UGjhuqNpIG7DqnUgbMO9IGRvIHThu6sgY2jhu5Fp" : undefined}
+            title={V1qv ? "Phải nêu lý do từ chối" : undefined}
           >
-            {V1qo ? "xJBhbmcgZ2hp4oCm" : V1qu}
+            {V1qo ? "Đang ghi…" : V1qu}
           </button>
         </div>
       </div>
@@ -234,9 +234,9 @@ function V4l3({
 function V4l4(f: V4k8): ReactNode {
   switch (bocTachState(f)) {
     case "unknown":
-      return "bcOheSBjaOG7pyBjaMawYSBiw6Fv";
+      return "máy chủ chưa báo";
     case "none":
-      return "Y2jGsGEgYsOzYyB0w6FjaA==";
+      return "chưa bóc tách";
     case "fields":
       return (
         <>
@@ -253,7 +253,7 @@ function V4l4(f: V4k8): ReactNode {
       return (
         <>
           <Icon name="duyet" size={13} /> {fmtN(f.ocrPages)} trang
-          {f.fieldPages > 0 ? "IMK3IDE2IHRyxrDhu51uZw==" : ""}
+          {f.fieldPages > 0 ? " · 16 trường" : ""}
         </>
       );
   }
@@ -311,7 +311,7 @@ function V4l6({
                   state={V1qy.has(f.id) ? "all" : "none"}
                   disabled={V1qz}
                   title={
-                    V1qy.has(f.id) ? `QuG7jyBjaOG7jW4g${f.filename}` : `Q2jhu41uIA==${f.filename}`
+                    V1qy.has(f.id) ? `Bỏ chọn ${f.filename}` : `Chọn ${f.filename}`
                   }
                   onChange={(V1r6) => V1r1([f.id], V1r6)}
                 />
@@ -323,15 +323,15 @@ function V4l6({
               {f.filename} <span className={`badge ${V1r5.tone}`}>{V1r5.label}</span>
             </td>
             <td>
-              {f.pages == null ? "Y2jGsGEgcsO1IHPhu5EgdHJhbmc=" : `${fmtN(f.pages)} trang`} ·{" "}
+              {f.pages == null ? "chưa rõ số trang" : `${fmtN(f.pages)} trang`} ·{" "}
               {V4kz(f.sizeBytes)} MB
             </td>
             <td>
               <div className="oh-bar">
                 <span
                   className="oh-sub muted"
-                  title={`${f.ocrPages}IHRyYW5nIGPDsyBr4bq/dCBxdeG6oyBPQ1IgKOKRoCkgwrcg${f.fieldPages}IHRyYW5nIMSRw6MgYsOzYyB0csaw4budbmcgKOKRoSkgwrcgcGhhIHbDsm5nIMSR4budaTog${f.status}${
-                    f.pages == null ? "IMK3IG3DoXkgY2jhu6cgY2jGsGEgZ2hpIHPhu5EgdHJhbmc=" : ""
+                  title={`${f.ocrPages} trang có kết quả OCR (①) · ${f.fieldPages} trang đã bóc trường (②) · pha vòng đời: ${f.status}${
+                    f.pages == null ? " · máy chủ chưa ghi số trang" : ""
                   }`}
                 >
                   {V4l4(f)}
@@ -340,7 +340,7 @@ function V4l6({
                 <button
                   className="btn sm primary"
                   onClick={() => V1r2(f)}
-                  title="QsOzYyB0w6FjaCB0csaw4budbmcgJiBnw6FuIG5ow6NuIE9DUiBjaG8gdMOgaSBsaeG7h3UgbsOgeQ=="
+                  title="Bóc tách trường & gán nhãn OCR cho tài liệu này"
                 >
                   <Icon name="tim" />
                   Bóc tách trường
@@ -453,12 +453,12 @@ export default function ReviewHoSoTable({
       V1rk(new Set<string>());
       const V1sf =
         V1se > 0
-          ? ` ${fmtN(V1se)}IHTDoGkgbGnhu4d1IGtow7RuZyDEkeG7lWkgxJHGsOG7o2MgKMSRw6MgYuG7iyB4b8OhIGhv4bq3YyBuZ2/DoGkgcGjhuqFtIHZpIGThu7Egw6FuIGPhu6dhIGLhuqFuKS4=`
+          ? ` ${fmtN(V1se)} tài liệu không đổi được (đã bị xoá hoặc ngoài phạm vi dự án của bạn).`
           : "";
-      V1ri(`${V4l0[V1s8].xong} ${fmtN(V1sd)}IHTDoGkgbGnhu4d1Lg==${V1sf}`);
+      V1ri(`${V4l0[V1s8].xong} ${fmtN(V1sd)} tài liệu.${V1sf}`);
     } catch (V1sg) {
       V1rg(
-        `${V4ky(V1sg)}IOKAlCDEkcOjIGdoaSDEkcaw4bujYyA=${fmtN(V1sd)}/${fmtN(V1sa.length)}IHTDoGkgbGnhu4d1LCBwaOG6p24gY8OybiBs4bqhaSBnaeG7ryBuZ3V5w6puLg==`,
+        `${V4ky(V1sg)} — đã ghi được ${fmtN(V1sd)}/${fmtN(V1sa.length)} tài liệu, phần còn lại giữ nguyên.`,
       );
       V1rr(null);
     } finally {
@@ -474,7 +474,7 @@ export default function ReviewHoSoTable({
         <h3 className="m-0">Tài liệu trên máy chủ</h3>
         <input
           className="inp sm max-w-60"
-          placeholder="VMOsbSB0aGVvIHTDqm4gZmlsZSAvIGjhu5lwIC8gaOG7kyBzxqHigKY="
+          placeholder="Tìm theo tên file / hộp / hồ sơ…"
           value={q}
           onChange={(V1sh) => V1rp(V1sh.target.value)}
         />
@@ -490,8 +490,8 @@ export default function ReviewHoSoTable({
         <div className="flex-1" />
         <span className="muted text-sm">
           {V1rd && docs.length === 0
-            ? "xJBhbmcgdOG6o2nigKY="
-            : `${fmtN(V1rw.reduce((n, g) => n + g.rows.length, 0))}IGjhu5Mgc8ahIMK3IA==${fmtN(V1s0.length)}IHTDoGkgbGnhu4d1`}
+            ? "Đang tải…"
+            : `${fmtN(V1rw.reduce((n, g) => n + g.rows.length, 0))} hồ sơ · ${fmtN(V1s0.length)} tài liệu`}
         </span>
         {V1r8}
         <button className="btn sm" onClick={() => void V1ru()} disabled={V1rd || V1ry}>
@@ -508,12 +508,12 @@ export default function ReviewHoSoTable({
       ) : V1rw.length === 0 ? (
         <p className="muted pt-0 px-4 pb-4">
           {docs.length === 0
-            ? "Q2jGsGEgY8OzIHTDoGkgbGnhu4d1IG7DoG8gdHLDqm4gbcOheSBjaOG7py4gxJDGsGEgZOG7ryBsaeG7h3UgbMOqbiBxdWEg4oCcxJDhu5NuZyBi4buZIGThu68gbGnhu4d14oCdIHRyxrDhu5tjLg=="
+            ? "Chưa có tài liệu nào trên máy chủ. Đưa dữ liệu lên qua “Đồng bộ dữ liệu” trước."
             : V1r9
-              ? "ROG7sSDDoW4gxJFhbmcgY2jhu41uIGNoxrBhIGPDsyBo4buTIHPGoSBuw6BvIGto4bubcCDigJQgYuG6pW0g4oCcQuG7jyBs4buNYyBk4buxIMOhbuKAnSDhu58gYuG6o25nIHRyw6puIMSR4buDIHhlbSB04bqldCBj4bqjLg=="
+              ? "Dự án đang chọn chưa có hồ sơ nào khớp — bấm “Bỏ lọc dự án” ở bảng trên để xem tất cả."
               : V1rn
-                ? "S2jDtG5nIGPDsm4gdMOgaSBsaeG7h3UgbsOgbyBjaOG7nSB4w6FjIG5o4bqtbiDigJQgYuG7jyB0aWNrIOKAnENo4buJIGhp4buHbiBwaOG6p24gY2jhu50geMOhYyBuaOG6rW7igJ0gxJHhu4MgeGVtIGzhuqFpIHRvw6BuIGLhu5ku"
-                : "S2jDtG5nIGPDsyBo4buTIHPGoSBuw6BvIGto4bubcCB04burIGtob8OhIHTDrG0u"}
+                ? "Không còn tài liệu nào chờ xác nhận — bỏ tick “Chỉ hiện phần chờ xác nhận” để xem lại toàn bộ."
+                : "Không có hồ sơ nào khớp từ khoá tìm."}
         </p>
       ) : (
         <div className="tbl-scroll oh-wrap">
@@ -525,7 +525,7 @@ export default function ReviewHoSoTable({
                     <V4l1
                       state={V4kr(V1s0, V1rj)}
                       disabled={V1ry || V1s0.length === 0}
-                      title="Q2jhu41uL2Lhu48gY2jhu41uIHRvw6BuIGLhu5kgdMOgaSBsaeG7h3UgxJFhbmcgaGnhu4du"
+                      title="Chọn/bỏ chọn toàn bộ tài liệu đang hiện"
                       onChange={(V1sj) => V1s4(V1s0, V1sj)}
                     />
                   )}
@@ -535,7 +535,7 @@ export default function ReviewHoSoTable({
                 <th>Hồ sơ số</th>
                 <th className="oh-files">Tổng số file</th>
                 <th>Tài liệu</th>
-                <th title="VHJhbmcgxJHDoyBjw7Mga+G6v3QgcXXhuqMgT0NSIHRyw6puIHThu5VuZyBz4buRIHRyYW5nLCB2w6Agc+G7kSB2xINuIGLhuqNuIMSRw6MgY2h1eeG7g24gxJHhu5VpIHNhbmcgUERGL0EgbMawdSB0cuG7ryB0csOqbiB04buVbmcgc+G7kSBmaWxl">
+                <th title="Trang đã có kết quả OCR trên tổng số trang, và số văn bản đã chuyển đổi sang PDF/A lưu trữ trên tổng số file">
                   Bóc tách OCR/PDF A
                 </th>
               </tr>
@@ -549,7 +549,7 @@ export default function ReviewHoSoTable({
                         <V4l1
                           state={V4kr(g.ids, V1rj)}
                           disabled={V1ry || g.ids.length === 0}
-                          title={`Q2jhu41uIGPhuqMgZOG7sSDDoW4g${g.label} (${fmtN(g.ids.length)}IHTDoGkgbGnhu4d1KQ==`}
+                          title={`Chọn cả dự án ${g.label} (${fmtN(g.ids.length)} tài liệu)`}
                           onChange={(V1sk) => V1s4(g.ids, V1sk)}
                         />
                       )}
@@ -575,7 +575,7 @@ export default function ReviewHoSoTable({
                               <V4l1
                                 state={V4kr(r.ids, V1rj)}
                                 disabled={V1ry || r.ids.length === 0}
-                                title={`Q2jhu41uIGPhuqMgaOG7kyBzxqEg${r.hoSoSo || "—"} (${fmtN(r.ids.length)}IHTDoGkgbGnhu4d1KQ==`}
+                                title={`Chọn cả hồ sơ ${r.hoSoSo || "—"} (${fmtN(r.ids.length)} tài liệu)`}
                                 onChange={(V1sm) => V1s4(r.ids, V1sm)}
                               />
                             )}
@@ -597,8 +597,8 @@ export default function ReviewHoSoTable({
                               onClick={() => V1s1(r.key)}
                               title={
                                 V1sl
-                                  ? "VGh1IGfhu41uIGRhbmggc8OhY2ggZmlsZQ=="
-                                  : "WGVtIHThu6tuZyBmaWxlIHRyb25nIGjhu5Mgc8ahIG7DoHk="
+                                  ? "Thu gọn danh sách file"
+                                  : "Xem từng file trong hồ sơ này"
                               }
                             >
                               <span className="oh-caret">
@@ -638,8 +638,8 @@ export default function ReviewHoSoTable({
         <div className="flex flex-wrap items-center gap-2.5 border-t border-border-subtle px-4 py-2.5">
           <span className="text-sm">
             {V1rs
-              ? `xJBhbmcgZ2hpIA==${fmtN(V1rs.done)}/${fmtN(V1rs.total)}IHTDoGkgbGnhu4d14oCm`
-              : `xJDDoyBjaOG7jW4g${fmtN(V1rz.length)}IHTDoGkgbGnhu4d1`}
+              ? `Đang ghi ${fmtN(V1rs.done)}/${fmtN(V1rs.total)} tài liệu…`
+              : `Đã chọn ${fmtN(V1rz.length)} tài liệu`}
           </span>
           {V1rz.length > 0 && !V1ry && (
             <button className="btn sm" onClick={() => V1rk(new Set<string>())}>
@@ -655,8 +655,8 @@ export default function ReviewHoSoTable({
               onClick={() => V1rr(d)}
               title={
                 V1rz.length === 0
-                  ? "VMOtY2ggY2jhu41uIGThu7Egw6FuIC8gaOG7kyBzxqEgLyB0w6BpIGxp4buHdSB0csaw4bubYw=="
-                  : `${V4l0[d].hoi} ${fmtN(V1rz.length)}IHTDoGkgbGnhu4d1IMSRw6MgY2jhu41u`
+                  ? "Tích chọn dự án / hồ sơ / tài liệu trước"
+                  : `${V4l0[d].hoi} ${fmtN(V1rz.length)} tài liệu đã chọn`
               }
             >
               <Icon name={V4l0[d].icon} />

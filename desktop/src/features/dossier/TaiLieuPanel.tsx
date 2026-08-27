@@ -109,7 +109,7 @@ export default function V4h8({ dossier, onBack: V1dw }: { dossier: V4bm; onBack:
                       <a
                         className="ic-word"
                         onClick={() => open(r)}
-                        title="TeG7ny9YZW0gZmlsZSBQREY="
+                        title="Mở/Xem file PDF"
                       >
                         {r.fileName}
                       </a>
@@ -127,7 +127,7 @@ export default function V4h8({ dossier, onBack: V1dw }: { dossier: V4bm; onBack:
                       <a
                         className="ic-word"
                         onClick={() => V1e4(r)}
-                        title="WGVtIHbEg24gYuG6o24gJiBPQ1IgKDIgcGjhuqduKQ=="
+                        title="Xem văn bản & OCR (2 phần)"
                       >
                         <span className="ic-ocr">OCR</span>
                       </a>
@@ -135,7 +135,7 @@ export default function V4h8({ dossier, onBack: V1dw }: { dossier: V4bm; onBack:
                       <a
                         className="ic-word"
                         onClick={() => open(r)}
-                        title="TeG7ny9YZW0gZmlsZSBQREY="
+                        title="Mở/Xem file PDF"
                       >
                         <Icon name="tepPdf" />
                       </a>

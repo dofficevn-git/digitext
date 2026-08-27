@@ -29,7 +29,7 @@ impl ExtractV2Error {
 impl std::fmt::Display for ExtractV2Error {
     fn fmt(&self, r_37a: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExtractV2Error::Source(e) => write!(r_37a, "dOG6o2kg4bqjbmggdHJhbmc6IA=={e}"),
+            ExtractV2Error::Source(e) => write!(r_37a, "tải ảnh trang: {e}"),
             ExtractV2Error::Vlm(e) => write!(r_37a, "{e}"),
         }
     }
@@ -60,7 +60,7 @@ pub fn f_14m(
         }
     }
     if !r_37k(VanBanField::NgonNgu) {
-        r_37m.push((VanBanField::NgonNgu, "VGnhur9uZyBWaeG7h3Q=".to_owned(), 0.5));
+        r_37m.push((VanBanField::NgonNgu, "Tiếng Việt".to_owned(), 0.5));
     }
     r_37m
 }

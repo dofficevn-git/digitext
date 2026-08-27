@@ -122,7 +122,7 @@ async fn parse<T: serde::de::DeserializeOwned>(
     if status.is_success() {
         return resp.json::<T>().await.map_err(|e| {
             ClientError::Unreachable(format!(
-                "cGjhuqNuIGjhu5NpIHNlcnZlciBraMO0bmcgaOG7o3AgbOG7hzog{e}"
+                "phản hồi server không hợp lệ: {e}"
             ))
         });
     }
@@ -135,7 +135,7 @@ async fn parse<T: serde::de::DeserializeOwned>(
         code: r_es.code.unwrap_or_else(|| "error".into()),
         message: r_es
             .message
-            .unwrap_or_else(|| format!("bcOheSBjaOG7pyB0cuG6oyBs4buXaSBIVFRQIA=={status}")),
+            .unwrap_or_else(|| format!("máy chủ trả lỗi HTTP {status}")),
     })
 }
 pub async fn login(r_et: &str, r_eu: &LoginRequest<'_>) -> Result<SessionResponse, ClientError> {
@@ -225,7 +225,7 @@ async fn f_1yv(resp: Result<reqwest::Response, reqwest::Error>) -> Result<(), Cl
         code: r_ey.code.unwrap_or_else(|| "error".into()),
         message: r_ey
             .message
-            .unwrap_or_else(|| format!("bcOheSBjaOG7pyB0cuG6oyBs4buXaSBIVFRQIA=={status}")),
+            .unwrap_or_else(|| format!("máy chủ trả lỗi HTTP {status}")),
     })
 }
 pub async fn f_1eo<T: serde::de::DeserializeOwned>(
@@ -281,7 +281,7 @@ async fn f_rt(r_f9: reqwest::Response) -> ClientError {
         code: r_f8.code.unwrap_or_else(|| "error".into()),
         message: r_f8
             .message
-            .unwrap_or_else(|| format!("bcOheSBjaOG7pyB0cuG6oyBs4buXaSBIVFRQIA=={status}")),
+            .unwrap_or_else(|| format!("máy chủ trả lỗi HTTP {status}")),
     }
 }
 #[derive(Debug)]
@@ -402,13 +402,13 @@ pub async fn f_1ei(r_fq: &str, r_ft: &str, path: &str) -> Result<Vec<u8>, Client
             code: r_fr.code.unwrap_or_else(|| "error".into()),
             message: r_fr
                 .message
-                .unwrap_or_else(|| format!("bcOheSBjaOG7pyB0cuG6oyBs4buXaSBIVFRQIA=={status}")),
+                .unwrap_or_else(|| format!("máy chủ trả lỗi HTTP {status}")),
         });
     }
     r_fs.bytes()
         .await
         .map(|b| b.to_vec())
-        .map_err(|e| ClientError::Unreachable(format!("dOG6o2kgZmlsZSBs4buXaTog{e}")))
+        .map_err(|e| ClientError::Unreachable(format!("tải file lỗi: {e}")))
 }
 const C_4D: Duration = Duration::from_secs(30 * 60);
 pub async fn f_1ez(
@@ -432,7 +432,7 @@ pub async fn f_1ez(
     let r_g0 = r_fy.content_length();
     let mut file = tokio::fs::File::create(r_fx).await.map_err(|e| {
         ClientError::Unreachable(format!(
-            "a2jDtG5nIHThuqFvIMSRxrDhu6NjIGZpbGUgdOG6oW06IA=={e}"
+            "không tạo được file tạm: {e}"
         ))
     })?;
     let mut received: u64 = 0;
@@ -440,24 +440,24 @@ pub async fn f_1ez(
     while let Some(r_fv) = r_fy
         .chunk()
         .await
-        .map_err(|e| ClientError::Unreachable(format!("dOG6o2kgZmlsZSBs4buXaTog{e}")))?
+        .map_err(|e| ClientError::Unreachable(format!("tải file lỗi: {e}")))?
     {
         file.write_all(&r_fv)
             .await
-            .map_err(|e| ClientError::Unreachable(format!("Z2hpIGZpbGUgbOG7l2k6IA=={e}")))?;
+            .map_err(|e| ClientError::Unreachable(format!("ghi file lỗi: {e}")))?;
         received += r_fv.len() as u64;
         r_fw(received, r_g0);
     }
     file.flush()
         .await
-        .map_err(|e| ClientError::Unreachable(format!("Z2hpIGZpbGUgbOG7l2k6IA=={e}")))?;
+        .map_err(|e| ClientError::Unreachable(format!("ghi file lỗi: {e}")))?;
     drop(file);
     match r_g0 {
         Some(t) if received != t => {
             Err(
                 ClientError::Unreachable(
                     format!(
-                        "dOG6o2kgdGhp4bq/dTogbmjhuq1uIA=={received}/{t}IGJ5dGUgKMSR4bupdCBnaeG7r2EgY2jhu6tuZyk="
+                        "tải thiếu: nhận {received}/{t} byte (đứt giữa chừng)"
                     ),
                 ),
             )

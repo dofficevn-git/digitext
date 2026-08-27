@@ -30,9 +30,9 @@ import { Icon } from "@/components/Icon";
 const V4h9 = [10, 25, 50, 100];
 
 const V4ha = [
-  { value: "nop", label: "R8OzaSBu4buZcCAoU0lQKQ==" },
-  { value: "luutru", label: "R8OzaSBsxrB1IHRy4buvIChBSVAp" },
-  { value: "khaithac", label: "R8OzaSBraGFpIHRow6FjIChESVAp" },
+  { value: "nop", label: "Gói nộp (SIP)" },
+  { value: "luutru", label: "Gói lưu trữ (AIP)" },
+  { value: "khaithac", label: "Gói khai thác (DIP)" },
 ];
 
 type V4hb = "import" | "tinhchinh" | "dpi" | "pdfa" | "inpack" | null;
@@ -170,7 +170,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
     const target = V4d0(r);
     if (!target) {
       window.alert(
-        "SOG7kyBzxqEgY2jGsGEgZ+G6r24gcGjDtG5nIG7Dqm4ga2jDtG5nIHThuqFvIMSRxrDhu6NjIGPDonkgdGjGsCBt4bulYyDEkeG7gyBxdcOpdC4gSMOjeSBjaOG7jW4gcGjDtG5nIGNobyBo4buTIHPGoSB0csaw4bubYy4=",
+        "Hồ sơ chưa gắn phông nên không tạo được cây thư mục để quét. Hãy chọn phông cho hồ sơ trước.",
       );
       return;
     }
@@ -187,14 +187,14 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
         const V1gd = V4di(V1gc);
         window.alert(
           V1gd
-            ? `S2jDtG5nIMSR4buNYyDEkcaw4bujYyB2xINuIGLhuqNuIGjhu6NwIGzhu4cgbsOgby4KCg==${V1gd}`
-            : "S2jDtG5nIMSR4buNYyDEkcaw4bujYyB2xINuIGLhuqNuIGjhu6NwIGzhu4cgbsOgbyAoY+G6p24geMOhYyDEkeG7i25oIMSRxrDhu6NjIGjhu5Mgc8ahIHThu6sgJ0jhu5Mgc8ahIGlkJyBob+G6t2MgJ03Doy9I4buTIHPGoSBz4buRJywgdsOgIGPDsyB0csOtY2ggeeG6v3Uvc+G7kSBrw70gaGnhu4d1IGhv4bq3YyB0acOqdSDEkeG7gSBo4buTIHPGoSku",
+            ? `Không đọc được văn bản hợp lệ nào.\n\n${V1gd}`
+            : "Không đọc được văn bản hợp lệ nào (cần xác định được hồ sơ từ 'Hồ sơ id' hoặc 'Mã/Hồ sơ số', và có trích yếu/số ký hiệu hoặc tiêu đề hồ sơ).",
         );
         return;
       }
       const n = await V4cg(V1ga);
       window.alert(
-        `xJDDoyBuaOG6rXAg${n}IHbEg24gYuG6o24=${V1gb ? `IChi4buPIHF1YSA=${V1gb}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
+        `Đã nhập ${n} văn bản${V1gb ? `IChi4buPIHF1YSA=${V1gb}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
       );
       V1fa(null);
       V1fr();
@@ -207,21 +207,21 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
 
   const V1gf = async () => {
     if (V1fs.length === 0) {
-      window.alert("S2jDtG5nIGPDsyBo4buTIHPGoSBuw6BvIMSR4buDIHh14bqldC4=");
+      window.alert("Không có hồ sơ nào để xuất.");
       return;
     }
     const data = V1fs.map((r) => ({
       TcOjIGjhu5Mgc8ah: r.maHoSo ?? "",
-      "SOG7mXAgc+G7kQ==": r.hopSo ?? "",
-      "SFMgc+G7kQ==": r.soTam,
-      "VGnDqnUgxJHhu4E=": r.tieuDe,
+      "Hộp số": r.hopSo ?? "",
+      "HS số": r.soTam,
+      "Tiêu đề": r.tieuDe,
       THBQ: V4co(V1ed, r.thbq),
-      "U+G7kSB04bud": V4dt(r.soTo),
+      "Số tờ": V4dt(r.soTo),
       TmfDoHkgYuG6r3QgxJHhuqd1: V4dr(r.ngayBatDau),
-      "TmfDoHkga+G6v3QgdGjDumM=": V4dr(r.ngayKetThuc),
-      "VHLhuqFuZyB0aMOhaQ==": V4du(r, V1ed).label,
-      "U+G7kSB2xINuIGLhuqNu": r.soVanBan,
-      "RmlsZSDEkcOtbmgga8OobQ==": r.soFileScan,
+      "Ngày kết thúc": V4dr(r.ngayKetThuc),
+      "Trạng thái": V4du(r, V1ed).label,
+      "Số văn bản": r.soVanBan,
+      "File đính kèm": r.soFileScan,
     }));
     try {
       await V4e3(data, "SoHoa", "xuat-csdl-so-hoa.xlsx");
@@ -248,12 +248,12 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
   };
   const V1gl = async () => {
     if (V1fd.size === 0) {
-      window.alert("Q2jGsGEgY2jhu41uIHbEg24gYuG6o24gbsOgby4=");
+      window.alert("Chưa chọn văn bản nào.");
       return;
     }
     if (
       !window.confirm(
-        "ROG7ryBsaeG7h3UgYuG7iyB4w7NhIGzDoCBjw6FjIHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbiwgY2jGsGEgY8OzIGZpbGUgxJHDrW5oIGvDqG0sIHNhdSBraGkgeMOzYSBz4bq9IGLhu4sgbeG6pXQsIGLhuqFuIGPDsyBjaOG6r2MgY2jhuq9uIGtow7RuZz8=",
+        "Dữ liệu bị xóa là các văn bản chưa hoàn thiện, chưa có file đính kèm, sau khi xóa sẽ bị mất, bạn có chắc chắn không?",
       )
     )
       return;
@@ -272,14 +272,14 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
   const V1go = async () => {
     if (
       !window.confirm(
-        "WG/DoSBUT8OATiBC4buYIHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbiB0aGVvIGLhu5kgbOG7jWMgaGnhu4duIHThuqFpPyBE4buvIGxp4buHdSBz4bq9IGLhu4sgbeG6pXQu",
+        "Xoá TOÀN BỘ văn bản chưa hoàn thiện theo bộ lọc hiện tại? Dữ liệu sẽ bị mất.",
       )
     )
       return;
     V1fm(true);
     try {
       const n = await V4c8(V1fq());
-      window.alert(`xJDDoyB4b8OhIA==${n}IHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbi4=`);
+      window.alert(`Đã xoá ${n} văn bản chưa hoàn thiện.`);
       V1fe(new Set());
       await V1gj();
       V1fr();
@@ -294,7 +294,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
     const V1gr = V1eu.size ? [...V1eu] : V1fs.map((r) => r.id);
     if (V1gr.length === 0) {
       window.alert(
-        "S2jDtG5nIGPDsyBo4buTIHPGoSBuw6BvIMSR4buDIGtp4buDbSB0cmEuIEjDo3kgY2jhu41uIHBow7RuZyBob+G6t2MgdMOtY2ggY2jhu41uIGjhu5Mgc8ahLg==",
+        "Không có hồ sơ nào để kiểm tra. Hãy chọn phông hoặc tích chọn hồ sơ.",
       );
       return;
     }
@@ -315,7 +315,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
   const V1gu = () => {
     if (V1eu.size === 0) {
       window.alert(
-        "VnVpIGzDsm5nIGNo4buNbiDDrXQgbmjhuqV0IG3hu5l0IGjhu5Mgc8ahIMSR4buDIMSRw7NuZyBnw7NpIQ==",
+        "Vui lòng chọn ít nhất một hồ sơ để đóng gói!",
       );
       return;
     }
@@ -466,7 +466,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
             <input
               className="form-control solo searchInput"
               value={V1em}
-              placeholder="Tmjhuq1wIGvDvSB04buxIHTDrG0ga2nhur9t"
+              placeholder="Nhập ký tự tìm kiếm"
               onChange={(V1hb) => V1en(V1hb.target.value)}
               onKeyDown={(V1hc) => V1hc.key === "Enter" && V1fr()}
             />
@@ -550,21 +550,21 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                 <th className="w-2.5">
                   <input type="checkbox" checked={V1g4} onChange={V1g5} />
                 </th>
-                <V1h2 label="TcOjIGjhu5Mgc8ah" sortKey="maHoSo" className="w-32.5" />
-                <V1h2 label="SOG7mXAgc+G7kQ==" sortKey="hopSo" className="w-15" />
-                <V1h2 label="SFMgc+G7kQ==" sortKey="soTam" className="w-15" />
-                <V1h2 label="VGnDqnUgxJHhu4E=" sortKey="tieuDe" />
+                <V1h2 label="Mã hồ sơ" sortKey="maHoSo" className="w-32.5" />
+                <V1h2 label="Hộp số" sortKey="hopSo" className="w-15" />
+                <V1h2 label="HS số" sortKey="soTam" className="w-15" />
+                <V1h2 label="Tiêu đề" sortKey="tieuDe" />
                 {cols.thbq && <V1h2 label="THBQ" sortKey="thbq" className="w-25" />}
-                {cols.soTo && <V1h2 label="U+G7kSB04bud" sortKey="soTo" className="w-12.5" />}
+                {cols.soTo && <V1h2 label="Số tờ" sortKey="soTo" className="w-12.5" />}
                 {cols.nbd && (
-                  <V1h2 label="Ti4gQuG6r3QgxJHhuqd1" sortKey="ngayBatDau" className="w-20" />
+                  <V1h2 label="N. Bắt đầu" sortKey="ngayBatDau" className="w-20" />
                 )}
                 {cols.nkt && (
-                  <V1h2 label="Ti4gS+G6v3QgdGjDumM=" sortKey="ngayKetThuc" className="w-20" />
+                  <V1h2 label="N. Kết thúc" sortKey="ngayKetThuc" className="w-20" />
                 )}
-                <V1h2 label="VHLhuqFuZyB0aMOhaQ==" sortKey="trangThai" className="w-30" />
-                <V1h2 label="VMOgaSBsaeG7h3U=" sortKey="soTaiLieuScan" className="w-22.5" />
-                <V1h2 label="RmlsZSDEkMOtbmgga8OobQ==" sortKey="soFileScan" className="w-22.5" />
+                <V1h2 label="Trạng thái" sortKey="trangThai" className="w-30" />
+                <V1h2 label="Tài liệu" sortKey="soTaiLieuScan" className="w-22.5" />
+                <V1h2 label="File Đính kèm" sortKey="soFileScan" className="w-22.5" />
               </tr>
             </thead>
             <tbody>
@@ -601,13 +601,13 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                         <a
                           className="ic-word"
                           onClick={() => V1ez(r)}
-                          title="WGVtIGRhbmggc8OhY2ggZmlsZSBQREYgdHJvbmcgaOG7kyBzxqE="
+                          title="Xem danh sách file PDF trong hồ sơ"
                         >
                           <Icon name="tepPdf" />
                         </a>
                         <b
                           className="cnt-red"
-                          title="U+G7kSBmaWxlIFBERiDEkcOjIHF1w6l0IHRyb25nIGjhu5Mgc8ah"
+                          title="Số file PDF đã quét trong hồ sơ"
                         >
                           {" "}
                           ({r.soTaiLieuScan})
@@ -618,7 +618,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                         <a
                           className="ic-word"
                           onClick={() => V1g8(r)}
-                          title="UXXDqXQgdsOgbyBo4buTIHPGoQ=="
+                          title="Quét vào hồ sơ"
                         >
                           <Icon name="quet" />
                         </a>
@@ -633,7 +633,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                 <td className="footer-restore" colSpan={V1h5}>
                   <a
                     className="toggle-vis"
-                    title="SGnhu4NuIHRo4buLIHRvw6BuIGLhu5kgY+G7mXQ="
+                    title="Hiển thị toàn bộ cột"
                     onClick={() => V1f0({ thbq: true, soTo: true, nbd: true, nkt: true })}
                   >
                     <Icon name="luoi" />
@@ -721,7 +721,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
 
       {}
       {V1f9 === "import" && (
-        <Modal title="Tmjhuq1wIFTDoGkgTGnhu4d1IHbDoG8gVsSDbiBC4bqjbg==" onClose={() => V1fa(null)}>
+        <Modal title="Nhập Tài Liệu vào Văn Bản" onClose={() => V1fa(null)}>
           <p className="muted">
             Chọn tệp Excel văn bản (có cột "Hồ sơ id") để nhập hàng loạt vào các hồ sơ.
           </p>
@@ -744,7 +744,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
       {}
       {V1f9 === "tinhchinh" && (
         <Modal
-          title="VEjDlE5HIFRJTiBWxIJOIELhuqJOIENIxq9BIEhPw4BOIFRISeG7hk4="
+          title="THÔNG TIN VĂN BẢN CHƯA HOÀN THIỆN"
           onClose={() => V1fa(null)}
         >
           <div className="text-right mb-2">
@@ -816,7 +816,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
 
       {}
       {V1f9 === "dpi" && (
-        <Modal title="RGFuaCBzw6FjaCBmaWxlIGtp4buDbSB0cmEgRFBJ" onClose={() => V1fa(null)}>
+        <Modal title="Danh sách file kiểm tra DPI" onClose={() => V1fa(null)}>
           <label className="labelEx">
             <input
               type="checkbox"
@@ -842,8 +842,8 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                   <tr>
                     <td className="dt-empty" colSpan={4}>
                       {V1ff.length === 0
-                        ? "Q2jGsGEgc+G7kSBob8OhIOKAlCBraMO0bmcgY8OzIGZpbGUgc2NhbiDEkeG7gyBraeG7g20gdHJhLg=="
-                        : "VOG6pXQgY+G6oyBmaWxlIMSR4buBdSDEkeG6oXQu"}
+                        ? "Chưa số hoá — không có file scan để kiểm tra."
+                        : "Tất cả file đều đạt."}
                     </td>
                   </tr>
                 ) : (
@@ -855,7 +855,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                       <td
                         className={`text-center ${f.isPass ? "text-success-700" : "text-danger-700"}`}
                       >
-                        {f.isPass ? "xJDhuqF0" : "S2jDtG5nIMSR4bqhdA=="}
+                        {f.isPass ? "Đạt" : "Không đạt"}
                       </td>
                     </tr>
                   ))
@@ -868,7 +868,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
 
       {}
       {V1f9 === "pdfa" && (
-        <Modal title="S2nhu4NtIHRyYSBQREYgMiBs4bubcCAoUERGL0Ep" onClose={() => V1fa(null)}>
+        <Modal title="Kiểm tra PDF 2 lớp (PDF/A)" onClose={() => V1fa(null)}>
           <p className="muted">
             Chức năng kiểm tra PDF 2 lớp (ảnh + lớp văn bản OCR) đang được phát triển cho bản
             desktop. Ở đợt tới sẽ đọc lớp text của PDF bằng lopdf để đối chiếu.
@@ -884,7 +884,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
       {}
       {V1f9 === "inpack" && (
         <Modal
-          title="Q2jhu41uIGxv4bqhaSBnw7NpIHRpbiDEkeG7gyDEkcOzbmcgZ8OzaQ=="
+          title="Chọn loại gói tin để đóng gói"
           onClose={() => V1fa(null)}
         >
           <div className="input-group">

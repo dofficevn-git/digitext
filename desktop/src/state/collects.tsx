@@ -109,6 +109,6 @@ export function V45j({ children: Vb9 }: { children: ReactNode }) {
 
 export function V45k(): V45g {
   const v = useContext(V45i);
-  if (!v) throw new Error("dXNlQ29sbGVjdHMgcGjhuqNpIG7hurFtIHRyb25nIDxDb2xsZWN0c1Byb3ZpZGVyPg==");
+  if (!v) throw new Error("useCollects phải nằm trong <CollectsProvider>");
   return v;
 }

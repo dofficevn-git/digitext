@@ -107,7 +107,7 @@ async fn complete_batch(
     f_28g(&r_vi)?;
     if r_vj.forwarded < 0 || r_vj.skipped < 0 || r_vj.failed < 0 || r_vj.rejected < 0 {
         return Err(ApiError::bad_request(
-            "c+G7kSBsaeG7h3UgdMOzbSB04bqvdCBraMO0bmcgxJHGsOG7o2Mgw6Jt",
+            "số liệu tóm tắt không được âm",
         ));
     }
     upload_batches::complete(

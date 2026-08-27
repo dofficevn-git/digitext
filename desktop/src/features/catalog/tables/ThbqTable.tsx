@@ -41,7 +41,7 @@ export function V49s({ data, setData: Vo4 }: V49k) {
   return (
     <>
       <V49a<V3yo>
-        addLabel="VGjDqm0gdGjhu51pIGjhuqFu"
+        addLabel="Thêm thời hạn"
         onAdd={
           !Vo7.canCreate
             ? undefined
@@ -61,14 +61,14 @@ export function V49s({ data, setData: Vo4 }: V49k) {
         getId={(r) => r.thbqid}
         matches={(r, q) => r.tenThbq.toLowerCase().includes(q)}
         columns={[
-          { head: "TcOjIFRIQlEgKG5o4bqtcCBIUyB04bqhbSk=", cell: (r) => r.thbqid, cls: "tnum" },
-          { head: "VMOqbiB0aOG7nWkgaOG6oW4gYuG6o28gcXXhuqNu", cell: (r) => r.tenThbq },
-          { head: "R2nDoSB0cuG7iyAobsSDbSk=", cell: (r) => r.giaTri, cls: "num" },
+          { head: "Mã THBQ (nhập HS tạm)", cell: (r) => r.thbqid, cls: "tnum" },
+          { head: "Tên thời hạn bảo quản", cell: (r) => r.tenThbq },
+          { head: "Giá trị (năm)", cell: (r) => r.giaTri, cls: "num" },
           {
-            head: "VHLhuqFuZyB0aMOhaQ==",
+            head: "Trạng thái",
             cell: (r) => <span className="badge gray">{V48f[r.trangThai]}</span>,
           },
-          { head: "VGjhu6kgdOG7sQ==", cell: (r) => r.sort, cls: "num" },
+          { head: "Thứ tự", cell: (r) => r.sort, cls: "num" },
         ]}
         rowActions={(r) =>
           V49o(
@@ -84,13 +84,13 @@ export function V49s({ data, setData: Vo4 }: V49k) {
         <Modal
           title={
             Vo5.mode === "add"
-              ? "VGjDqm0gdGjhu51pIGjhuqFuIGLhuqNvIHF14bqjbg=="
-              : "Q+G6rXAgbmjhuq10IHRo4budaSBo4bqhbiBi4bqjbyBxdeG6o24="
+              ? "Thêm thời hạn bảo quản"
+              : "Cập nhật thời hạn bảo quản"
           }
           onClose={() => Vo6(null)}
           onSave={Vo9}
         >
-          <V49j label="VMOqbiB0aOG7nWkgaOG6oW4gYuG6o28gcXXhuqNu">
+          <V49j label="Tên thời hạn bảo quản">
             <input
               className="inp"
               value={Vo5.draft.tenThbq}
@@ -99,7 +99,7 @@ export function V49s({ data, setData: Vo4 }: V49k) {
               }
             />
           </V49j>
-          <V49j label="R2nDoSB0cuG7iyAoc+G7kSBuxINtKQ==">
+          <V49j label="Giá trị (số năm)">
             <input
               className="inp"
               type="number"
@@ -109,7 +109,7 @@ export function V49s({ data, setData: Vo4 }: V49k) {
               }
             />
           </V49j>
-          <V49j label="VHLhuqFuZyB0aMOhaQ==">
+          <V49j label="Trạng thái">
             <select
               className="inp"
               value={Vo5.draft.trangThai}
@@ -125,7 +125,7 @@ export function V49s({ data, setData: Vo4 }: V49k) {
               <option value={3}>{V48f[3]}</option>
             </select>
           </V49j>
-          <V49j label="VGjhu6kgdOG7sQ==">
+          <V49j label="Thứ tự">
             <input
               className="inp"
               type="number"

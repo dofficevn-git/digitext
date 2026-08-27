@@ -170,7 +170,7 @@ async fn f_28v(
         if let Err(e) = r_0.delete(r_ec).await {
             tracing::warn!(
                 key = % r_ec, error = % e,
-                "a2jDtG5nIHhvw6EgxJHGsOG7o2Mgb2JqZWN0IG3hu5MgY8O0aSBzYXUga2hpIMSRdWEgaW5zZXJ0"
+                "không xoá được object mồ côi sau khi đua insert"
             );
         }
     }
@@ -178,7 +178,7 @@ async fn f_28v(
         .await?
         .ok_or_else(|| {
             ApiError::conflict(
-                "dMOgaSBsaeG7h3UgdHLDuW5nIHbhu6thIGLhu4sgeG/DoSwgaMOjeSBn4butaSBs4bqhaQ==",
+                "tài liệu trùng vừa bị xoá, hãy gửi lại",
             )
         })
 }
@@ -188,18 +188,18 @@ async fn f_24y(state: &AppState, r_1: &str, r_ed: &std::path::Path) -> Result<()
     };
     let bytes = tokio::fs::read(r_ed).await.map_err(|e| {
         ApiError::from(anyhow::anyhow!(
-            "xJHhu41jIGZpbGUgxJHhu4MgxJHhuql5IGtobyBs4buXaTog{e}"
+            "đọc file để đẩy kho lỗi: {e}"
         ))
     })?;
     r_2.put(r_1, &bytes).await.map_err(|e| {
         tracing::error!(
-            error = % e, key = % r_1, "UFVUIFBERiBuZ3Xhu5NuIGzDqm4ga2hvIGzhu5dp"
+            error = % e, key = % r_1, "PUT PDF nguồn lên kho lỗi"
         );
-        ApiError::from(anyhow::anyhow!("xJHhuql5IFBERiBsw6puIGtobyBs4buXaTog{e}"))
+        ApiError::from(anyhow::anyhow!("đẩy PDF lên kho lỗi: {e}"))
     })?;
     tracing::info!(
         key = % r_1, bytes = bytes.len(),
-        "UFVUIFBERiBuZ3Xhu5NuIGzDqm4ga2hvICh3b3JrZXIgT0NSIGZldGNoIMSRxrDhu6NjKQ=="
+        "PUT PDF nguồn lên kho (worker OCR fetch được)"
     );
     Ok(())
 }
@@ -212,7 +212,7 @@ async fn f_2nl(
     r_ef.require_perm(Permission::UploadExecute)?;
     authorize_project(&state, &r_ef, r_eo.project_id).await?;
     if !valid_blake3(&r_eo.blake3) {
-        return Err(ApiError::bad_request("Ymxha2UzIGtow7RuZyBo4bujcCBs4buH"));
+        return Err(ApiError::bad_request("blake3 không hợp lệ"));
     }
     let r_4 = f_29f(&state, &r_ef, r_eo.project_id, r_eo.on_behalf_of).await?;
     let batch_id = f_28s(&state, &r_ef, r_eo.batch_id).await?;
@@ -233,7 +233,7 @@ async fn f_2nl(
     if let Some(r_em) = part.parent() {
         tokio::fs::create_dir_all(r_em).await.map_err(|e| {
             ApiError::from(anyhow::anyhow!(
-                "dOG6oW8gdGjGsCBt4bulYyB04bqhbSBs4buXaTog{e}"
+                "tạo thư mục tạm lỗi: {e}"
             ))
         })?;
     }
@@ -242,13 +242,13 @@ async fn f_2nl(
         use tokio::io::AsyncWriteExt;
         let mut r_ei = tokio::fs::File::create(&part)
             .await
-            .map_err(|e| ApiError::from(anyhow::anyhow!("beG7nyBmaWxlIHThuqFtIGzhu5dpOiA={e}")))?;
+            .map_err(|e| ApiError::from(anyhow::anyhow!("mở file tạm lỗi: {e}")))?;
         let mut r_ej = blake3::Hasher::new();
         let mut size: u64 = 0;
         let mut body = body;
         while let Some(frame) = body.frame().await {
             let frame = frame.map_err(|e| {
-                ApiError::bad_request_retryable(format!("bmjhuq1uIGJvZHkgbOG7l2k6IA=={e}"))
+                ApiError::bad_request_retryable(format!("nhận body lỗi: {e}"))
             })?;
             let Ok(chunk) = frame.into_data() else {
                 continue;
@@ -257,25 +257,25 @@ async fn f_2nl(
             if size as usize > C_C7 {
                 let _ = tokio::fs::remove_file(&part).await;
                 return Err(ApiError::bad_request(
-                    "ZmlsZSB2xrDhu6N0IHF1w6EgZ2nhu5tpIGjhuqFu",
+                    "file vượt quá giới hạn",
                 ));
             }
             r_ej.update(&chunk);
             r_ei.write_all(&chunk)
                 .await
-                .map_err(|e| ApiError::from(anyhow::anyhow!("Z2hpIGZpbGUgbOG7l2k6IA=={e}")))?;
+                .map_err(|e| ApiError::from(anyhow::anyhow!("ghi file lỗi: {e}")))?;
         }
         r_ei.sync_all().await.ok();
         (size, r_ej.finalize().to_hex().to_string())
     };
     if size == 0 {
         let _ = tokio::fs::remove_file(&part).await;
-        return Err(ApiError::bad_request("ZmlsZSBy4buXbmc="));
+        return Err(ApiError::bad_request("file rỗng"));
     }
     if r_ee != r_eo.blake3 {
         let _ = tokio::fs::remove_file(&part).await;
         return Err(ApiError::bad_request_retryable(
-            "aGFzaCBraMO0bmcga2jhu5twIChmaWxlIGjhu49uZyBraGkgdHJ1eeG7gW4pIOKAlCBn4butaSBs4bqhaQ==",
+            "hash không khớp (file hỏng khi truyền) — gửi lại",
         ));
     }
     if let Some(existing) =
@@ -294,13 +294,13 @@ async fn f_2nl(
     let r_eg = state.data_dir.join(r_eo.project_id.to_string());
     tokio::fs::create_dir_all(&r_eg).await.map_err(|e| {
         ApiError::from(anyhow::anyhow!(
-            "dOG6oW8gdGjGsCBt4bulYyBsxrB1IGzhu5dpOiA={e}"
+            "tạo thư mục lưu lỗi: {e}"
         ))
     })?;
     let r_en = r_eg.join(format!("{doc_id}.pdf"));
     tokio::fs::rename(&part, &r_en)
         .await
-        .map_err(|e| ApiError::from(anyhow::anyhow!("Y2jhu5F0IGZpbGUgbOG7l2k6IA=={e}")))?;
+        .map_err(|e| ApiError::from(anyhow::anyhow!("chốt file lỗi: {e}")))?;
     let r_3 = format!("{}/{doc_id}.pdf", r_eo.project_id);
     if let Err(e) = f_24y(&state, &r_3, &r_en).await {
         let _ = tokio::fs::remove_file(&r_en).await;
@@ -489,7 +489,7 @@ fn f_1w0(status: StatusCode, offset: u64) -> Response {
         .status(status)
         .header("Upload-Offset", offset.to_string())
         .body(Body::empty())
-        .expect("cmVzcG9uc2UgaOG7o3AgbOG7hw==")
+        .expect("response hợp lệ")
 }
 const C_8Z: &str = "upload-duplicate";
 fn f_10s(id: Uuid, duplicate: bool) -> Response {
@@ -500,7 +500,7 @@ fn f_10s(id: Uuid, duplicate: bool) -> Response {
     if duplicate {
         b = b.header(C_8Z, "1");
     }
-    b.body(Body::empty()).expect("cmVzcG9uc2UgaOG7o3AgbOG7hw==")
+    b.body(Body::empty()).expect("response hợp lệ")
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -516,7 +516,7 @@ async fn f_1g9(
     r_f4.require_perm(Permission::UploadExecute)?;
     authorize_project(&state, &r_f4, r_f6.project_id).await?;
     if !valid_blake3(&r_f6.blake3) {
-        return Err(ApiError::bad_request("Ymxha2UzIGtow7RuZyBo4bujcCBs4buH"));
+        return Err(ApiError::bad_request("blake3 không hợp lệ"));
     }
     if let Some(r_f5) = documents::find_by_hash(&state.pool, r_f6.project_id, &r_f6.blake3).await? {
         return Ok(f_10s(r_f5.id, true));
@@ -537,16 +537,16 @@ async fn f_20h(
     r_f8.require_perm(Permission::UploadExecute)?;
     authorize_project(&state, &r_f8, r_fi.project_id).await?;
     if !valid_blake3(&r_fi.blake3) {
-        return Err(ApiError::bad_request("Ymxha2UzIGtow7RuZyBo4bujcCBs4buH"));
+        return Err(ApiError::bad_request("blake3 không hợp lệ"));
     }
     let r_6 = f_29f(&state, &r_f8, r_fi.project_id, r_fi.on_behalf_of).await?;
     let offset = f_1ge(&r_fe, "upload-offset")
-        .ok_or_else(|| ApiError::bad_request("dGhp4bq/dSBVcGxvYWQtT2Zmc2V0"))?;
+        .ok_or_else(|| ApiError::bad_request("thiếu Upload-Offset"))?;
     let r_fk = f_1ge(&r_fe, "upload-length")
-        .ok_or_else(|| ApiError::bad_request("dGhp4bq/dSBVcGxvYWQtTGVuZ3Ro"))?;
+        .ok_or_else(|| ApiError::bad_request("thiếu Upload-Length"))?;
     if r_fk == 0 || r_fk as usize > C_C7 {
         return Err(ApiError::bad_request(
-            "a8OtY2ggdGjGsOG7m2MgZmlsZSBraMO0bmcgaOG7o3AgbOG7hw==",
+            "kích thước file không hợp lệ",
         ));
     }
     if offset == 0 {
@@ -561,7 +561,7 @@ async fn f_20h(
         if tokio::fs::remove_file(&part).await.is_ok() {
             tracing::debug!(
                 key = % format!("{}/{}", r_fi.project_id, r_fi.blake3),
-                "dGh1IC5wYXJ0IHPDs3QgbOG6oWkgdsOsIHTDoGkgbGnhu4d1IMSRw6MgY8OzIHRyb25nIGtobw=="
+                "thu .part sót lại vì tài liệu đã có trong kho"
             );
         }
         return Ok(f_10s(existing.id, true));
@@ -572,7 +572,7 @@ async fn f_20h(
     if let Some(r_fh) = part.parent() {
         tokio::fs::create_dir_all(r_fh).await.map_err(|e| {
             ApiError::from(anyhow::anyhow!(
-                "dOG6oW8gdGjGsCBt4bulYyB04bqhbSBs4buXaTog{e}"
+                "tạo thư mục tạm lỗi: {e}"
             ))
         })?;
     }
@@ -585,7 +585,7 @@ async fn f_20h(
     }
     if r_f9 + bytes.len() as u64 > r_fk {
         return Err(ApiError::bad_request(
-            "Y2h1bmsgdsaw4bujdCBxdcOhIHThu5VuZyBrw61jaCB0aMaw4bubYw==",
+            "chunk vượt quá tổng kích thước",
         ));
     }
     {
@@ -595,10 +595,10 @@ async fn f_20h(
             .append(true)
             .open(&part)
             .await
-            .map_err(|e| ApiError::from(anyhow::anyhow!("beG7nyBmaWxlIHThuqFtIGzhu5dpOiA={e}")))?;
+            .map_err(|e| ApiError::from(anyhow::anyhow!("mở file tạm lỗi: {e}")))?;
         r_fc.write_all(&bytes)
             .await
-            .map_err(|e| ApiError::from(anyhow::anyhow!("Z2hpIGNodW5rIGzhu5dpOiA={e}")))?;
+            .map_err(|e| ApiError::from(anyhow::anyhow!("ghi chunk lỗi: {e}")))?;
         r_fc.sync_all().await.ok();
     }
     let r_fg = r_f9 + bytes.len() as u64;
@@ -610,7 +610,7 @@ async fn f_20h(
         let _ = tokio::fs::remove_file(&part).await;
         return Err(
             ApiError::bad_request_retryable(
-                "aGFzaCBraMO0bmcga2jhu5twIHNhdSBraGkgbmjhuq1uIMSR4bunIChk4buvIGxp4buHdSBo4buPbmcpIOKAlCBn4butaSBs4bqhaQ==",
+                "hash không khớp sau khi nhận đủ (dữ liệu hỏng) — gửi lại",
             ),
         );
     }
@@ -624,13 +624,13 @@ async fn f_20h(
     let r_fa = state.data_dir.join(r_fi.project_id.to_string());
     tokio::fs::create_dir_all(&r_fa).await.map_err(|e| {
         ApiError::from(anyhow::anyhow!(
-            "dOG6oW8gdGjGsCBt4bulYyBsxrB1IGzhu5dpOiA={e}"
+            "tạo thư mục lưu lỗi: {e}"
         ))
     })?;
     let r_fd = r_fa.join(format!("{doc_id}.pdf"));
     tokio::fs::rename(&part, &r_fd)
         .await
-        .map_err(|e| ApiError::from(anyhow::anyhow!("Y2jhu5F0IGZpbGUgbOG7l2k6IA=={e}")))?;
+        .map_err(|e| ApiError::from(anyhow::anyhow!("chốt file lỗi: {e}")))?;
     let r_5 = format!("{}/{doc_id}.pdf", r_fi.project_id);
     if let Err(e) = f_24y(&state, &r_5, &r_fd).await {
         let _ = tokio::fs::remove_file(&r_fd).await;
@@ -726,7 +726,7 @@ async fn f_2ic(r_fm: &std::path::Path, r_fp: std::time::Duration) {
         tracing::info!(
             r_ft,
             ?r_fp,
-            "ZOG7jW4gLnBhcnQgdXBsb2FkIGThu58gcXXDoSBo4bqhbg=="
+            "dọn .part upload dở quá hạn"
         );
     }
 }
@@ -734,12 +734,12 @@ async fn f_us(r_g3: &std::path::Path) -> Result<String, ApiError> {
     use tokio::io::AsyncReadExt;
     let mut r_g1 = tokio::fs::File::open(r_g3)
         .await
-        .map_err(|e| ApiError::from(anyhow::anyhow!("beG7nyBmaWxlIHZlcmlmeSBs4buXaTog{e}")))?;
+        .map_err(|e| ApiError::from(anyhow::anyhow!("mở file verify lỗi: {e}")))?;
     let mut r_g2 = blake3::Hasher::new();
     let mut r_g0 = vec![0u8; 1 << 20];
     loop {
         let n = r_g1.read(&mut r_g0).await.map_err(|e| {
-            ApiError::from(anyhow::anyhow!("xJHhu41jIGZpbGUgdmVyaWZ5IGzhu5dpOiA={e}"))
+            ApiError::from(anyhow::anyhow!("đọc file verify lỗi: {e}"))
         })?;
         if n == 0 {
             break;
@@ -834,7 +834,7 @@ fn scope_ids(ids: Option<&Vec<Uuid>>) -> Result<Option<&[Uuid]>, ApiError> {
             Err(
                 ApiError::bad_request(
                     format!(
-                        "cGjhuqFtIHZpIHF1w6EgbOG7m24gKA=={}IHTDoGkgbGnhu4d1LCB0cuG6p24g{MAX_SCOPE_IDS}KSDigJQgdGh1IGjhurlwIGLhu5kgbOG7jWMgcuG7k2kgYuG6pW0gbOG6oWk=",
+                        "phạm vi quá lớn ({} tài liệu, trần {MAX_SCOPE_IDS}) — thu hẹp bộ lọc rồi bấm lại",
                         v.len()
                     ),
                 ),
@@ -986,7 +986,7 @@ async fn rebuild_non_pdfa(
     let r_8 = state
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let projects: Option<Vec<Uuid>> = match r_gm.project_id {
         Some(r_gl) => {
             authorize_project(&state, &r_gk, r_gl).await?;
@@ -1124,13 +1124,13 @@ fn f_1fz(status: &str) -> bool {
     )
 }
 fn storage_err(e: digitext_storage::StorageError) -> ApiError {
-    tracing::error!(error = % e, "bOG7l2kga2hvIG9iamVjdCAocGRmYS1yZXBvcnQp");
-    ApiError::service_unavailable("a2hvIGzGsHUgdHLhu68ga2jDtG5nIHPhurVuIHPDoG5n")
+    tracing::error!(error = % e, "lỗi kho object (pdfa-report)");
+    ApiError::service_unavailable("kho lưu trữ không sẵn sàng")
 }
 async fn f_21r(State(state): State<AppState>, r_gs: Ts) -> Result<Json<Vec<PdfaRow>>, ApiError> {
     r_gs.require_perm(Permission::DocumentList)?;
     let r_a = state.store.as_ref().ok_or_else(|| {
-        ApiError::service_unavailable("a2hvIGzGsHUgdHLhu68gY2jGsGEgY+G6pXUgaMOsbmg=")
+        ApiError::service_unavailable("kho lưu trữ chưa cấu hình")
     })?;
     let r_gv = match f_29a(&state.pool, &r_gs.user).await? {
         Scope::All => documents::list_all(&state.pool, C_FV, 0).await?,
@@ -1172,7 +1172,7 @@ async fn f_21r(State(state): State<AppState>, r_gs: Ts) -> Result<Json<Vec<PdfaR
                 pages_without_text: 0,
                 pdfa2b: false,
                 reason: Some(
-                    "Y2jGsGEgdMOsbSB0aOG6pXkgUERGIDIgbOG7m3AgdHJvbmcga2hvIGzGsHUgdHLhu68=".into(),
+                    "chưa tìm thấy PDF 2 lớp trong kho lưu trữ".into(),
                 ),
             },
             Some(bytes) => {
@@ -1315,7 +1315,7 @@ async fn report(
         None => None,
         Some(s) => Some(f_1yf(s, false).ok_or_else(|| {
             ApiError::bad_request(
-                "beG7kWMgJ2Zyb20nIGtow7RuZyDEkeG7jWMgxJHGsOG7o2MgKFlZWVktTU0tREQp",
+                "mốc 'from' không đọc được (YYYY-MM-DD)",
             )
         })?),
     };
@@ -1323,7 +1323,7 @@ async fn report(
         None => None,
         Some(s) => Some(f_1yf(s, true).ok_or_else(|| {
             ApiError::bad_request(
-                "beG7kWMgJ3RvJyBraMO0bmcgxJHhu41jIMSRxrDhu6NjIChZWVlZLU1NLUREKQ==",
+                "mốc 'to' không đọc được (YYYY-MM-DD)",
             )
         })?),
     };
@@ -1331,7 +1331,7 @@ async fn report(
         if a >= b {
             return Err(
                 ApiError::bad_request(
-                    "a2hv4bqjbmcgbmfDoHkgcuG7l25nOiBuZ8OgeSBi4bqvdCDEkeG6p3UgcGjhuqNpIHRyxrDhu5tjIG5nw6B5IGvhur90IHRow7pj",
+                    "khoảng ngày rỗng: ngày bắt đầu phải trước ngày kết thúc",
                 ),
             );
         }
@@ -1393,7 +1393,7 @@ async fn f_29u(
         .map(|s| s.chars().take(C_BY).collect());
     if r_ha.decision == digitext_core::ReviewStatus::Rejected && note.is_none() {
         return Err(ApiError::bad_request(
-            "cGjhuqNpIG7DqnUgbMO9IGRvIGtoaSB04burIGNo4buRaSBr4bq/dCBxdeG6oyBiw7NjIHTDoWNo",
+            "phải nêu lý do khi từ chối kết quả bóc tách",
         ));
     }
     let r_hb = documents::f_2ef(
@@ -1451,12 +1451,12 @@ async fn review_bulk(
     r_hc.require_perm(Permission::DocumentReview)?;
     if r_he.ids.is_empty() {
         return Err(ApiError::bad_request(
-            "Y2jGsGEgY2jhu41uIHTDoGkgbGnhu4d1IG7DoG8gxJHhu4MgZHV54buHdA==",
+            "chưa chọn tài liệu nào để duyệt",
         ));
     }
     if r_he.ids.len() > MAX_REVIEW_BULK {
         return Err(ApiError::bad_request(format!(
-            "beG7mXQgbMaw4bujdCBkdXnhu4d0IHThu5FpIMSRYSA={MAX_REVIEW_BULK}IHTDoGkgbGnhu4d1"
+            "một lượt duyệt tối đa {MAX_REVIEW_BULK} tài liệu"
         )));
     }
     let ids: Vec<Uuid> = {
@@ -1475,7 +1475,7 @@ async fn review_bulk(
         .map(|s| s.chars().take(C_BY).collect());
     if r_he.decision == digitext_core::ReviewStatus::Rejected && note.is_none() {
         return Err(ApiError::bad_request(
-            "cGjhuqNpIG7DqnUgbMO9IGRvIGtoaSB04burIGNo4buRaSBr4bq/dCBxdeG6oyBiw7NjIHTDoWNo",
+            "phải nêu lý do khi từ chối kết quả bóc tách",
         ));
     }
     let projects = match f_29a(&state.pool, &r_hc.user).await? {

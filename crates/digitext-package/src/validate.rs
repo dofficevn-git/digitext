@@ -114,7 +114,7 @@ fn f_1zh(r_42t: &[u8], r_42x: &mut Vec<Violation>, path: &str) -> Option<MetsFac
             Err(err) => {
                 r_42x.push(Violation::error(
                     "M-XML-MALFORMED",
-                    format!("{path}OiBYTUwga2jDtG5nIGjhu6NwIGzhu4c6IA=={err}"),
+                    format!("{path}: XML không hợp lệ: {err}"),
                 ));
                 return None;
             }
@@ -156,7 +156,7 @@ fn f_y4(
                         Violation::error(
                             "M-HREF-MISSING",
                             format!(
-                                "{path}OiB0aGFtIGNoaeG6v3UgJw=={href}JyBraMO0bmcgdOG7k24gdOG6oWkgdHJvbmcgZ8OzaQ=="
+                                "{path}: tham chiếu '{href}' không tồn tại trong gói"
                             ),
                         ),
                     )
@@ -169,7 +169,7 @@ fn f_y4(
                             .push(
                                 Violation::error(
                                     "M-CHECKSUM-MISMATCH",
-                                    format!("{path}OiBDSEVDS1NVTSBs4buHY2ggY2hvICc={resolved}'"),
+                                    format!("{path}: CHECKSUM lệch cho '{resolved}'"),
                                 ),
                             );
                     }
@@ -180,7 +180,7 @@ fn f_y4(
                             .push(
                                 Violation::error(
                                     "M-SIZE-MISMATCH",
-                                    format!("{path}OiBTSVpFIGzhu4djaCBjaG8gJw=={resolved}'"),
+                                    format!("{path}: SIZE lệch cho '{resolved}'"),
                                 ),
                             );
                     }
@@ -193,7 +193,7 @@ fn f_y4(
         if !r_437.contains_key(&resolved) {
             r_438.push(Violation::error(
                 "M-MPTR-MISSING",
-                format!("{path}: mptr '{href}JyBraMO0bmcgdOG7k24gdOG6oWkgdHJvbmcgZ8OzaQ=="),
+                format!("{path}: mptr '{href}' không tồn tại trong gói"),
             ));
         }
     }
@@ -211,7 +211,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         if !r_43f(required) {
             r_43h.push(Violation::error(
                 "S-MISSING",
-                format!("dGhp4bq/dSB04buHcCBi4bqvdCBideG7mWM6IA=={required}"),
+                format!("thiếu tệp bắt buộc: {required}"),
             ));
         }
     }
@@ -221,7 +221,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
     {
         r_43h.push(Violation::error(
             "S-MISSING",
-            "c2NoZW1hcy86IGPhuqduIHThu5FpIHRoaeG7g3UgMDEgdOG7h3AgRUFEKi54c2Q=".into(),
+            "schemas/: cần tối thiểu 01 tệp EAD*.xsd".into(),
         ));
     }
     let r_43k = r_43e
@@ -233,7 +233,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
             .push(
                 Violation::error(
                     "S-MISSING",
-                    "cmVwcmVzZW50YXRpb25zL3JlcDEvbWV0YWRhdGEvZGVzY3JpcHRpdmUvOiBj4bqnbiB04buRaSB0aGnhu4N1IDAxIHThu4dwIEVBRF8qXyoueG1s"
+                    "representations/rep1/metadata/descriptive/: cần tối thiểu 01 tệp EAD_*_*.xml"
                         .into(),
                 ),
             );
@@ -245,14 +245,14 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
     if r_43b.is_empty() {
         r_43h.push(Violation::error(
             "S-MISSING",
-            "cmVwcmVzZW50YXRpb25zL3JlcDEvZGF0YS86IGPhuqduIHThu5FpIHRoaeG7g3UgMDEgdMOgaSBsaeG7h3U="
+            "representations/rep1/data/: cần tối thiểu 01 tài liệu"
                 .into(),
         ));
     }
     if r_43g == PackageKind::Dip && !r_43f("documentation/VanBanXacThuc.pdf") {
         r_43h.push(Violation::error(
             "S-DIP-CERT",
-            "Z8OzaSBESVAgdGhp4bq/dSBkb2N1bWVudGF0aW9uL1ZhbkJhblhhY1RodWMucGRmICjEkGnhu4F1IDQyLjIp"
+            "gói DIP thiếu documentation/VanBanXacThuc.pdf (Điều 42.2)"
                 .into(),
         ));
     }
@@ -266,7 +266,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                 r_43h.push(Violation::error(
                     "S-PREMIS-MISSING",
                     format!(
-                        "Z8OzaSA={}IGLhuq90IGJ14buZYyBQUkVNSVM6IHRoaeG6v3Ug{p}",
+                        "Z8OzaSA={} bắt buộc PREMIS: thiếu {p}",
                         r_43g.as_str()
                     ),
                 ));
@@ -275,7 +275,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         if !r_43f("schemas/PREMIS.xsd") {
             r_43h.push(Violation::error(
                 "S-PREMIS-MISSING",
-                "dGhp4bq/dSBzY2hlbWFzL1BSRU1JUy54c2Q=".into(),
+                "thiếu schemas/PREMIS.xsd".into(),
             ));
         }
     }
@@ -283,7 +283,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         for p in r_43e.keys().filter(|k| k.contains("/preservation/")) {
             r_43h.push(Violation::error(
                 "S-PREMIS-FORBIDDEN",
-                format!("Z8OzaSBTSVAga2jDtG5nIGPDsyBtZXRhZGF0YSBi4bqjbyBxdeG6o246IA=={p}"),
+                format!("gói SIP không có metadata bảo quản: {p}"),
             ));
         }
     }
@@ -292,7 +292,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         r_43h.push(Violation::error(
             "S-FETCH-FORBIDDEN",
             format!(
-                "Z8OzaSA={}IGtow7RuZyBkw7luZyB0w6BpIGxp4buHdSBsacOqbiBr4bq/dCAuZmV0Y2gudHh0",
+                "Z8OzaSA={} không dùng tài liệu liên kết .fetch.txt",
                 r_43g.as_str()
             ),
         ));
@@ -309,13 +309,13 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                 Some(objid) => r_43h.push(Violation::error(
                     "M-OBJID-INVALID",
                     format!(
-                        "METS.xml: OBJID '{objid}JyBzYWkgcXV5IHThuq9jIGNobyA={}",
+                        "METS.xml: OBJID '{objid}' sai quy tắc cho {}",
                         r_43g.as_str()
                     ),
                 )),
                 None => r_43h.push(Violation::error(
                     "M-OBJID-MISSING",
-                    "TUVUUy54bWw6IHRoaeG6v3UgT0JKSUQ=".into(),
+                    "METS.xml: thiếu OBJID".into(),
                 )),
             }
             if facts.oais_type.as_deref() != Some(r_43g.oais_type()) {
@@ -324,7 +324,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                         Violation::error(
                             "M-OAIS-TYPE",
                             format!(
-                                "TUVUUy54bWw6IGNzaXA6T0FJU1BBQ0tBR0VUWVBFIHBo4bqjaSBsw6Ag{}ICjEkWFuZyBsw6Ag{:?})",
+                                "METS.xml: csip:OAISPACKAGETYPE phải là {} (đang là {:?})",
                                 r_43g.oais_type(), facts.oais_type
                             ),
                         ),
@@ -333,7 +333,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
             if !facts.has_csip_structmap {
                 r_43h.push(Violation::error(
                     "M-STRUCTMAP",
-                    "TUVUUy54bWw6IHRoaeG6v3Ugc3RydWN0TWFwIExBQkVMPSJDU0lQIg==".into(),
+                    "METS.xml: thiếu structMap LABEL=\"CSIP\"".into(),
                 ));
             }
             f_y4("METS.xml", "", &facts, r_43e, &mut r_43h);
@@ -350,7 +350,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                             Violation::error(
                                 "M-OBJID-INVALID",
                                 format!(
-                                    "{path}: OBJID '{objid}JyBwaOG6o2kgdGhlbyB1dWlkLXt7VVVJRCB2aeG6v3QgaG9hfX0="
+                                    "{path}: OBJID '{objid}' phải theo uuid-{{UUID viết hoa}}"
                                 ),
                             ),
                         )
@@ -360,7 +360,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                         .push(
                             Violation::error(
                                 "M-OBJID-MISSING",
-                                format!("{path}OiB0aGnhur91IE9CSklE"),
+                                format!("{path}: thiếu OBJID"),
                             ),
                         )
                 }
@@ -369,7 +369,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                 r_43h.push(Violation::error(
                     "M-OAIS-TYPE",
                     format!(
-                        "{path}OiBjc2lwOk9BSVNQQUNLQUdFVFlQRSBwaOG6o2kgbMOgIA=={}",
+                        "{path}: csip:OAISPACKAGETYPE phải là {}",
                         r_43g.oais_type()
                     ),
                 ));
@@ -377,7 +377,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
             if !facts.has_csip_structmap {
                 r_43h.push(Violation::error(
                     "M-STRUCTMAP",
-                    format!("{path}OiB0aGnhur91IHN0cnVjdE1hcCBMQUJFTD0iQ1NJUCI="),
+                    format!("{path}: thiếu structMap LABEL=\"CSIP\""),
                 ));
             }
             f_y4(path, "representations/rep1", &facts, r_43e, &mut r_43h);
@@ -391,7 +391,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         if !r_43l {
             r_43h.push(Violation::error(
                 "F-FETCH-FORMAT",
-                format!("{path}OiBu4buZaSBkdW5nIC5mZXRjaC50eHQgc2FpIGtodcO0biBk4bqhbmc="),
+                format!("{path}: nội dung .fetch.txt sai khuôn dạng"),
             ));
             continue;
         }
@@ -402,7 +402,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                         Violation::error(
                             "F-FETCH-FOND",
                             format!(
-                                "{path}OiBtw6MgcGjDtG5nIHRyb25nIC5mZXRjaC50eHQga2jDoWMgbcOjIHBow7RuZyBj4bunYSBnw7NpICg={fond})"
+                                "{path}: mã phông trong .fetch.txt khác mã phông của gói ({fond})"
                             ),
                         ),
                     );

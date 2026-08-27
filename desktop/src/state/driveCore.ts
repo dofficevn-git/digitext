@@ -4,7 +4,7 @@ import type { V416 } from "@/api/archive";
 import type { V3y1 } from "@/domain/types";
 
 export function setDriveRoot(V4w: Record<string, V3y1>, V4x: string): Record<string, V3y1> {
-  return { ...V4w, root: { ...V4w.root, path: V4x, name: "S2hvIHTDoGkgbGnhu4d1" } };
+  return { ...V4w, root: { ...V4w.root, path: V4x, name: "Kho tài liệu" } };
 }
 
 export function V421(V4y: Record<string, V3y1>, V4z: string, V50: V416[]): Record<string, V3y1> {

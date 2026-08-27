@@ -151,48 +151,48 @@ impl Metrics {
             pages_processed: LabeledCounter::new(
                 r_3bm,
                 names::C_FN,
-                "U+G7kSB0cmFuZyBPQ1IgxJHDoyB44butIGzDvSB0aGVvIHRy4bqhbmcgdGjDoWkga+G6v3QgdGjDumMu",
+                "Số trang OCR đã xử lý theo trạng thái kết thúc.",
                 names::C_AC,
             ),
             page_latency_seconds: HistMetric::latency_seconds(
                 r_3bm,
                 names::C_FP,
-                "xJDhu5kgdHLhu4UgeOG7rSBsw70gbeG7mXQgdHJhbmcgKGdpw6J5KS4=",
+                "Độ trễ xử lý một trang (giây).",
             ),
             infer_batch_size: HistMetric::batch_size(
                 r_3bm,
                 names::C_9J,
-                "S8OtY2ggdGjGsOG7m2MgYmF0Y2ggaW5mZXJlbmNlIHRo4buxYyB04bq/Lg==",
+                "Kích thước batch inference thực tế.",
             ),
             page_confidence: HistMetric::confidence(
                 r_3bm,
                 names::C_FO,
-                "xJBp4buDbSBjb25maWRlbmNlIHJlY29nbml0aW9uIG3hu5dpIHRyYW5nLg==",
+                "Điểm confidence recognition mỗi trang.",
             ),
             oom_downshift_total: CounterMetric::new(
                 r_3bm,
                 names::C_F4,
-                "U+G7kSBs4bqnbiBo4bqhIGJhdGNoL3RpbGUgZG8gR1BVIE9PTS4=",
+                "Số lần hạ batch/tile do GPU OOM.",
             ),
             fallback_vietocr_total: CounterMetric::new(
                 r_3bm,
                 names::C_77,
-                "U+G7kSBs4bqnbiBn4buNaSBmYWxsYmFjayBWaWV0T0NSLg==",
+                "Số lần gọi fallback VietOCR.",
             ),
             queue_depth: GaugeMetric::new(
                 r_3bm,
                 names::C_HZ,
-                "xJDhu5kgc8OidSBow6BuZyDEkeG7o2kgam9iIGPhu6VjIGLhu5ku",
+                "Độ sâu hàng đợi job cục bộ.",
             ),
             llm_edits_applied_total: CounterMetric::new(
                 r_3bm,
                 names::C_AI,
-                "U+G7kSBz4butYSBMTE0gY29ycmVjdG9yIMSRxrDhu6NjIMOhcCBk4bulbmcu",
+                "Số sửa LLM corrector được áp dụng.",
             ),
             llm_edits_rejected_total: CounterMetric::new(
                 r_3bm,
                 names::C_AJ,
-                "U+G7kSBz4butYSBMTE0gY29ycmVjdG9yIGLhu4sgZ2F0ZSB04burIGNo4buRaS4=",
+                "Số sửa LLM corrector bị gate từ chối.",
             ),
         }
     }

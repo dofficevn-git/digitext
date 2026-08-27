@@ -67,8 +67,8 @@ export function V41p(
       V48.current = true;
 
       console.error(
-        "W2xpdmVdIEjDoG0gbuG6oXAgxJHhu5VpIMSR4buLbmggZGFuaCBt4buXaSBs4bqnbiByZW5kZXIgbsOqbiB1c2VMaXZlRWZmZWN0IG7huqFwIGzhurdwIHbDtCBo4bqhbi4g" +
-          "QuG7jWMgbsOzIHRyb25nIHVzZUNhbGxiYWNrIHbhu5tpIMSRw7puZyBjw6FjIHBo4bulIHRodeG7mWMu",
+        "[live] Hàm nạp đổi định danh mỗi lần render nên useLiveEffect nạp lặp vô hạn. " +
+          "Bọc nó trong useCallback với đúng các phụ thuộc.",
       );
     }
     V49.trigger();

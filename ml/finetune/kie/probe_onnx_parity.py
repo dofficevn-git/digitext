@@ -30,15 +30,15 @@ def q_16d(diffs: list[float], tol: float = 1e-3) -> dict:
 def main(argv: list[str] | None = None) -> int:
     p_51e = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_51e.add_argument("--model-dir", default="/work/triton/models/rec_vietocr/1")
-    p_51e.add_argument("--n", type=int, default=8, help="c+G7kSB0ZW5zb3Igbmfhuqt1LW5oacOqbi1j4buRLcSR4buLbmggxJHhu4Mgc28=")
+    p_51e.add_argument("--n", type=int, default=8, help="số tensor ngẫu-nhiên-cố-định để so")
     p_51e.add_argument("--tol", type=float, default=1e-3)
     p_51e.add_argument("--weights", default=None,
-                    help="Y2hlY2twb2ludCBQSOG6okkga2jhu5twIGVuZ2luZSDhu58gLS1tb2RlbC1kaXIgKGLhu48gPSBwcmV0cmFpbmVkKQ==")
+                    help="checkpoint PHẢI khớp engine ở --model-dir (bỏ = pretrained)")
     p_51d = p_51e.parse_args(argv)
 
     p_521 = Path(p_51d.model_dir)
     if not (p_521 / "encoder.onnx").is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkgZW5jb2Rlci5vbm54IHRyb25nIA=={p_521}", file=sys.stderr)
+        print(f"LỖI: không thấy encoder.onnx trong {p_521}", file=sys.stderr)
         return 2
 
     import numpy as np

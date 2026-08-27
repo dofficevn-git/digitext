@@ -127,7 +127,7 @@ export default function V4wh() {
     const V34e = V4w1(tree, V33l);
     if (V34e === null) {
       V344(
-        `Q2jGsGEgdGjhuqV5IOKAnA==${V33l.filename}4oCdIHRyb25nIGtobyBtw6F5IGNo4bunIChjw7MgdGjhu4MgY2jGsGEgxJHhu5NuZyBi4buZIHhvbmcpLg==`,
+        `Chưa thấy “${V33l.filename}” trong kho máy chủ (có thể chưa đồng bộ xong).`,
       );
     } else {
       V33r((V34f) => new Set([...V34f, ...V4vz(V34e)]));
@@ -184,11 +184,11 @@ export default function V4wh() {
     }
     V341(null);
     const fail = V34s.length - V34u;
-    const dung = V342.current ? "ICjEkcOjIGThu6tuZyBnaeG7r2EgY2jhu6tuZyk=" : "";
+    const dung = V342.current ? " (đã dừng giữa chừng)" : "";
     V344(
-      `xJDDoyB04bqjaSA=${V4wc(V34u)}/${V4wc(V34s.length)}IHThu4dwIA==${V34t}${dung}.` +
-        (V34u > 0 ? `IEzGsHUgdOG6oWk6IA==${last}` : "") +
-        (fail > 0 ? ` — ${V4wc(fail)}IHThu4dwIGzhu5dpOiA=${V34v}` : ""),
+      `Đã tải ${V4wc(V34u)}/${V4wc(V34s.length)} tệp ${V34t}${dung}.` +
+        (V34u > 0 ? ` Lưu tại: ${last}` : "") +
+        (fail > 0 ? ` — ${V4wc(fail)} tệp lỗi: ${V34v}` : ""),
     );
   };
 
@@ -201,7 +201,7 @@ export default function V4wh() {
       const n = V4w9(V34z, V34b).length;
       if (n === 0)
         V344(
-          `xJDDoyBzb8OhdCA=${V4wc(V34z.length)}IHTDoGkgbGnhu4d1IOKAlCBraMO0bmcgdOG7h3AgbsOgbyBs4buXaSBQREYvQS4=`,
+          `Đã soát ${V4wc(V34z.length)} tài liệu — không tệp nào lỗi PDF/A.`,
         );
     } catch (V350) {
       V344(V4wa(V350));
@@ -227,7 +227,7 @@ export default function V4wh() {
             <V4wg
               state={V33s.has(d.id) ? "all" : "none"}
               onToggle={() => V34j([d.id])}
-              title={`Q2jhu41uIA==${d.filename}`}
+              title={`Chọn ${d.filename}`}
             />
           </td>
           <td>
@@ -237,7 +237,7 @@ export default function V4wh() {
               {V35a && (
                 <span
                   className="badge err"
-                  title="WGVtIGLhuqNuZyDigJxU4buHcCBQREYvQSBs4buXaeKAnSBwaMOtYSB0csOqbg=="
+                  title="Xem bảng “Tệp PDF/A lỗi” phía trên"
                 >
                   PDF/A lỗi
                 </span>
@@ -272,7 +272,7 @@ export default function V4wh() {
               <V4wg
                 state={V4vy(V35f, V33s)}
                 onToggle={() => V34j(V35f)}
-                title={`Q2jhu41uIGPhuqMg${V35d.name} (${V4wc(V35f.length)}IHThu4dwKQ==`}
+                title={`Chọn cả ${V35d.name} (${V4wc(V35f.length)} tệp)`}
               />
             </td>
             <td onClick={() => V34g(V35d.path)}>
@@ -291,7 +291,7 @@ export default function V4wh() {
               <button
                 className="btn"
                 disabled={V340 !== null || V35d.docCount === 0}
-                title={`VOG6o2kgY+G6oyA=${V4wc(V35d.docCount)}IHThu4dwIHRyb25nIOKAnA==${V35d.name}4oCdLCBnaeG7ryBuZ3V5w6puIGPDonkgdGjGsCBt4bulYw==`}
+                title={`Tải cả ${V4wc(V35d.docCount)} tệp trong “${V35d.name}”, giữ nguyên cây thư mục`}
                 onClick={() => void V34r(V4vv(V35d), `trong “${V35d.name}”`)}
               >
                 <Icon name="taiVe" />
@@ -323,7 +323,7 @@ export default function V4wh() {
         <div className="card srv-msg mb-3">
           <span>{V343}</span>
           <button className="btn sm" onClick={() => V344("")}>
-            <Icon name="dong" size={14} label="xJDDs25nIHRow7RuZyBiw6Fv" />
+            <Icon name="dong" size={14} label="Đóng thông báo" />
           </button>
         </div>
       )}
@@ -369,7 +369,7 @@ export default function V4wh() {
                         className="btn sm"
                         disabled={p.folderPath === ""}
                         onClick={() => V351(p.folderPath, p.filename)}
-                        title="TeG7nyDEkcO6bmcgbmjDoW5oIGNo4bupYSB04buHcCB0cm9uZyBjw6J5IGLDqm4gZMaw4bubaQ=="
+                        title="Mở đúng nhánh chứa tệp trong cây bên dưới"
                       >
                         Đi tới
                       </button>
@@ -390,7 +390,7 @@ export default function V4wh() {
             {V4wb(tree?.sizeBytes ?? 0)} MB
             {}
             {V34p.length > 0
-              ? `IOKAlCDEkcOjIGNo4buNbiA=${V4wc(V34p.length)}IHThu4dwICg=${V4wc(V34q)} trang)`
+              ? ` — đã chọn ${V4wc(V34p.length)} tệp (${V4wc(V34q)} trang)`
               : ""}
           </span>
           <div className="flex-1" />
@@ -409,8 +409,8 @@ export default function V4wh() {
               <button
                 className="btn primary"
                 disabled={V34p.length === 0}
-                onClick={() => void V34r(V34p, "xJHDoyBjaOG7jW4=")}
-                title="VOG6o2kgbeG7jWkgdOG7h3AgxJHDoyB0w61jaCB24buBIGtobyBtw6F5IG7DoHksIGdp4buvIG5ndXnDqm4gY8OieSB0aMawIG3hu6Vj"
+                onClick={() => void V34r(V34p, "đã chọn")}
+                title="Tải mọi tệp đã tích về kho máy này, giữ nguyên cây thư mục"
               >
                 <Icon name="taiVe" />
                 Tải xuống ({V4wc(V34p.length)})
@@ -419,10 +419,10 @@ export default function V4wh() {
                 className="btn"
                 onClick={() => void V34y()}
                 disabled={V33y}
-                title="U2/DoXQgUERGIDIgbOG7m3AgdHLDqm4gbcOheSBjaOG7pywgbGnhu4d0IGvDqiB04buHcCBs4buXaSBrw6htIMSRxrDhu51uZyBk4bqrbg=="
+                title="Soát PDF 2 lớp trên máy chủ, liệt kê tệp lỗi kèm đường dẫn"
               >
                 {V33y ? (
-                  "xJBhbmcgc2/DoXTigKY="
+                  "Đang soát…"
                 ) : (
                   <>
                     <Icon name="kiemTraPdfa" />
@@ -440,8 +440,8 @@ export default function V4wh() {
         {!tree || tree.docCount === 0 ? (
           <p className="muted p-4">
             {V33u
-              ? "xJBhbmcgdOG6o2kga2hvIG3DoXkgY2jhu6figKY="
-              : "Q2jGsGEgY8OzIHTDoGkgbGnhu4d1IG7DoG8gdHLDqm4gbcOheSBjaOG7py4gROG7ryBsaeG7h3UgbMOqbiBtw6F5IGNo4bunIHF1YSBtw6BuIOKAnMSQ4buTbmcgYuG7mSBk4buvIGxp4buHdeKAnSAobcOheSBxdeG6o24gdHLhu4sgdGh1IHRo4bqtcCBy4buTaSDEkeG6qXkgbMOqbiku"}
+              ? "Đang tải kho máy chủ…"
+              : "Chưa có tài liệu nào trên máy chủ. Dữ liệu lên máy chủ qua màn “Đồng bộ dữ liệu” (máy quản trị thu thập rồi đẩy lên)."}
           </p>
         ) : (
           <div className="tbl-scroll">
@@ -452,16 +452,16 @@ export default function V4wh() {
                     <V4wg
                       state={V4vy(V35g, V33s)}
                       onToggle={() => V34j(V35g)}
-                      title="Q2jhu41uIHThuqV0IGPhuqM="
+                      title="Chọn tất cả"
                     />
                   </th>
                   <th>Dự án</th>
-                  <th className="num" title={`U+G7kSBo4buZcCAoY+G6pXAg${V4vi + 1}IGPhu6dhIGPDonkp`}>
+                  <th className="num" title={`Số hộp (cấp ${V4vi + 1} của cây)`}>
                     Số hộp
                   </th>
                   <th
                     className="num"
-                    title={`U+G7kSBo4buTIHPGoSAoY+G6pXAg${V4vj + 1}IGPhu6dhIGPDonkp`}
+                    title={`Số hồ sơ (cấp ${V4vj + 1} của cây)`}
                   >
                     Số hồ sơ
                   </th>

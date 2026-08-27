@@ -25,29 +25,29 @@ def norm(s: str) -> str:
 def q_17d(rec: dict) -> list[str]:
     p_451: list[str] = []
     if not rec.get("id"):
-        p_451.append("dGhp4bq/dSBpZA==")
+        p_451.append("thiếu id")
     if rec.get("reviewed_by") not in ("claude", "human"):
-        p_451.append("cmV2aWV3ZWRfYnkgcGjhuqNpIGzDoCAnY2xhdWRlJyBob+G6t2MgJ2h1bWFuJw==")
+        p_451.append("reviewed_by phải là 'claude' hoặc 'human'")
     p_454 = rec.get("values")
     if not isinstance(p_454, dict):
-        p_451.append("dmFsdWVzIHBo4bqjaSBsw6Agb2JqZWN0IA=={tr\u01b0\u1eddng: chu\u1ed7i}")
+        p_451.append("values phải là object {tr\u01b0\u1eddng: chu\u1ed7i}")
         return p_451
     for p_452, p_453 in p_454.items():
         if p_452 not in REAL_FIELDS:
-            p_451.append(f"dHLGsOG7nW5nIGzhuqE6IA=={p_452!r}IChjaOG7iSBuaOG6rW4g{REAL_FIELDS})")
+            p_451.append(f"trường lạ: {p_452!r} (chỉ nhận {REAL_FIELDS})")
         if not isinstance(p_453, str):
-            p_451.append(f"Z2nDoSB0cuG7iyA={p_452}IHBo4bqjaSBsw6AgY2h14buXaQ==")
+            p_451.append(f"giá trị {p_452} phải là chuỗi")
     if "doc_type" in rec and rec["doc_type"] not in DOC_TYPES:
-        p_451.append(f"doc_type={rec['doc_type']!r}IGtow7RuZyB0aHXhu5ljIA=={DOC_TYPES}")
+        p_451.append(f"doc_type={rec['doc_type']!r} không thuộc {DOC_TYPES}")
     conf = rec.get("conf", {})
     if not isinstance(conf, dict):
-        p_451.append("Y29uZiBwaOG6o2kgbMOgIG9iamVjdA==")
+        p_451.append("conf phải là object")
     else:
         for p_452, p_450 in conf.items():
             if p_452 not in p_454:
-                p_451.append(f"conf['{p_452}J10ga2jDtG5nIGPDsyB0cm9uZyB2YWx1ZXM=")
+                p_451.append(f"conf['{p_452}'] không có trong values")
             if p_450 not in CONF_LEVELS:
-                p_451.append(f"conf['{p_452}']={p_450!r}IGtow7RuZyB0aHXhu5ljIA=={CONF_LEVELS}")
+                p_451.append(f"conf['{p_452}']={p_450!r} không thuộc {CONF_LEVELS}")
     return p_451
 
 def q_ef(claude_vals: dict, other_vals: dict, fields=REAL_FIELDS) -> dict[str, str]:

@@ -54,7 +54,7 @@ export default function V4ef() {
 
   const V173 = async () => {
     if (records.length === 0) {
-      window.alert("Q2jGsGEgY2jhu41uIHThu4dwIEV4Y2VsIMSR4buDIGPhuq1wIG5o4bqtdC4=");
+      window.alert("Chưa chọn tệp Excel để cập nhật.");
       return;
     }
     V16q(true);
@@ -63,7 +63,7 @@ export default function V4ef() {
       const V175 = V4d5(V16k);
       const V176 = records.map((h) => V4d3(h, V174, V175)).filter((d) => d.soTam);
       const n = await V4c4(undefined, V176);
-      window.alert(`xJDDoyBj4bqtcCBuaOG6rXQg${n}IGjhu5Mgc8ahIHbDoG8gY8ahIHPhu58gZOG7ryBsaeG7h3Uu`);
+      window.alert(`Đã cập nhật ${n} hồ sơ vào cơ sở dữ liệu.`);
     } catch (V177) {
       window.alert(V177 instanceof Error ? V177.message : String(V177));
     } finally {
@@ -80,7 +80,7 @@ export default function V4ef() {
   const V17d = useMemo(() => V16n.slice((V17c - 1) * V16v, V17c * V16v), [V16n, V17c, V16v]);
 
   const V17e = ({ k }: { k: V4ee }) => (
-    <button className="hide-col-btn" title="4bqobiBj4buZdA==" onClick={() => V178(k)}>
+    <button className="hide-col-btn" title="Ẩn cột" onClick={() => V178(k)}>
       <Icon name="bo" size={13} />
     </button>
   );

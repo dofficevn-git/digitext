@@ -27,7 +27,7 @@ def main(argv=None):
     p_fc.add_argument("--img-root", default="ml/bench/golden-set")
     p_fc.add_argument("--out-dir", default="ml/bench/golden-set")
     p_fc.add_argument("--stratum", default="synthetic")
-    p_fc.add_argument("--limit", type=int, default=0, help="MCA9IHThuqV0IGPhuqM=")
+    p_fc.add_argument("--limit", type=int, default=0, help="0 = tất cả")
     p_fd = p_fc.parse_args(argv)
 
     with open(p_fd.label_list, encoding="utf-8") as p_fe:
@@ -42,7 +42,7 @@ def main(argv=None):
     with open(os.path.join(p_fd.out_dir, "gold.jsonl"), "w", encoding="utf-8") as p_fe:
         for p_ff in gold:
             p_fe.write(json.dumps(p_ff, ensure_ascii=False) + "\n")
-    print(f"✅ golden-set: {len(manifest)}IGTDsm5nIOKGkiBtYW5pZmVzdC5qc29ubCArIGdvbGQuanNvbmwgKA=={p_fd.out_dir})")
+    print(f"✅ golden-set: {len(manifest)} dòng → manifest.jsonl + gold.jsonl ({p_fd.out_dir})")
 
 if __name__ == "__main__":
     main()

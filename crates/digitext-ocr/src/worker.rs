@@ -285,7 +285,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(HeartbeatEnd::LeaseLost) => {
                 tracing::warn!(
                     job = % job.id,
-                    "beG6pXQgbGVhc2Uga2hpIHjhu60gbMO9IOKAlCBi4buPIChjaOG7pyBt4bubaSBz4bq9IGzDoG0gbOG6oWkp"
+                    "mất lease khi xử lý — bỏ (chủ mới sẽ làm lại)"
                 );
                 return Ok(RunOutcome::LeaseLost(job.id));
             }
@@ -294,7 +294,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         if r_3m4 > 0 {
             tracing::info!(
                 job = % job.id, r_3m4,
-                "xJHDoyBjaGlhIG5o4buPIHRpbGUgZG8gR1BVIE9PTSAowqdQNCk="
+                "đã chia nhỏ tile do GPU OOM (§P4)"
             );
             if let Some(m) = self.metrics {
                 m.oom_downshift_total.add(r_3m4 as u64);
@@ -345,7 +345,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     if reason == ReviewReason::EmptyPage {
                         tracing::warn!(
                             document = % job.document_id, r_3ma = job.page_no,
-                            "dHJhbmcgT0NSIHJhIEtIw5RORyBjw7Mgc3BhbiBuw6BvIOKGkiDEkcawYSBuZ8aw4budaSBzb8OhdA=="
+                            "trang OCR ra KHÔNG có span nào → đưa người soát"
                         );
                     }
                     review_queue::enqueue(self.pool, job.document_id, job.page_no, reason.as_str())
@@ -383,14 +383,14 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                                 if c.accepted > 0 || c.needs_review {
                                     tracing::info!(
                                         job = % job.id, accepted = c.accepted, review = c
-                                        .needs_review, "Y29ycmVjdG9yIExMTSDEkcOjIMOhcCAowqdHNik="
+                                        .needs_review, "corrector LLM đã áp (§G6)"
                                     );
                                 }
                             }
                             Err(crate::corrector::ApplyError::Corrector(e)) => {
                                 tracing::warn!(
                                     job = % job.id,
-                                    "Y29ycmVjdG9yIExMTSBs4buXaSwgZ2nhu68gcmF3OiA={e}"
+                                    "corrector LLM lỗi, giữ raw: {e}"
                                 )
                             }
                             Err(crate::corrector::ApplyError::Db(e)) => return Err(e),
@@ -438,14 +438,14 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                                             if r_3m9 > 0 {
                                                 tracing::info!(
                                                     job = % job.id, fields = r_3m9,
-                                                    "VkxNIE1vZGUgMiBiw7NjIHRyxrDhu51uZyBjYSBraMOzICjCp0c2KSDihpIgcmV2aWV3"
+                                                    "VLM Mode 2 bóc trường ca khó (§G6) → review"
                                                 );
                                             }
                                         }
                                         Err(e) => {
                                             tracing::warn!(
                                                 job = % job.id,
-                                                "VkxNIE1vZGUgMiBs4buXaSwgZ2nhu68gaGV1cmlzdGljOiA={e}"
+                                                "VLM Mode 2 lỗi, giữ heuristic: {e}"
                                             )
                                         }
                                     }
@@ -453,7 +453,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                                 Err(e) => {
                                     tracing::warn!(
                                         job = % job.id,
-                                        "VkxNIE1vZGUgMjogdOG6o2kg4bqjbmggdHJhbmcgbOG7l2ksIGLhu486IA=={e}"
+                                        "VLM Mode 2: tải ảnh trang lỗi, bỏ: {e}"
                                     )
                                 }
                             }
@@ -471,7 +471,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(e) if e.is_permanent() => {
                 tracing::warn!(
                     job = % job.id, doc = % job.document_id, r_3ma = job.page_no,
-                    "dHJhbmcgbOG7l2kgVsSoTkggVknhu4ROIOKAlCBjw7QgbOG6rXAsIGtow7RuZyB0aOG7rSBs4bqhaTog{e}"
+                    "trang lỗi VĨNH VIỄN — cô lập, không thử lại: {e}"
                 );
                 if ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &e.to_string()).await? {
                     self.maybe_enqueue_make_pdf2(job.document_id).await?;
@@ -527,7 +527,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(HeartbeatEnd::LeaseLost) => {
                 tracing::warn!(
                     job = % job.id,
-                    "beG6pXQgbGVhc2Uga2hpIGdow6lwIFBERiDigJQgYuG7jyAoY2jhu6cgbeG7m2kgc+G6vSBsw6BtIGzhuqFpKQ=="
+                    "mất lease khi ghép PDF — bỏ (chủ mới sẽ làm lại)"
                 );
                 return Ok(RunOutcome::LeaseLost(job.id));
             }
@@ -538,7 +538,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Ok(None) => {
                 tracing::info!(
                     job = % job.id, doc = % job.document_id,
-                    "bWFrZV9wZGYyOiBraMO0bmcgY8OzIHRyYW5nIE9DUiBuw6BvIOKAlCBi4buPIHF1YSBnaMOpcCBQREY="
+                    "make_pdf2: không có trang OCR nào — bỏ qua ghép PDF"
                 );
                 ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
                 Ok(RunOutcome::Done(job.id))
@@ -548,7 +548,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(AssembleError::Data(msg)) => {
                 tracing::warn!(
                     job = % job.id, doc = % job.document_id,
-                    "Z2jDqXAgUERGIDIgbOG7m3AgaOG7j25nIFbEqE5IIFZJ4buETiDigJQga2jDtG5nIHRo4butIGzhuqFpOiA={msg}"
+                    "ghép PDF 2 lớp hỏng VĨNH VIỄN — không thử lại: {msg}"
                 );
                 ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &msg).await?;
                 Ok(RunOutcome::PageFailed(job.id))
@@ -556,7 +556,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(AssembleError::Source(e)) if e.is_permanent() => {
                 tracing::warn!(
                     job = % job.id, doc = % job.document_id,
-                    "Z2jDqXAgUERGIDIgbOG7m3A6IG5ndeG7k24g4bqjbmggaOG7j25nIFbEqE5IIFZJ4buETiDigJQga2jDtG5nIHRo4butIGzhuqFpOiA={e}"
+                    "ghép PDF 2 lớp: nguồn ảnh hỏng VĨNH VIỄN — không thử lại: {e}"
                 );
                 ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &e.to_string()).await?;
                 Ok(RunOutcome::PageFailed(job.id))
@@ -589,7 +589,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 self.pool,
                 job.id,
                 self.worker_id,
-                "d29ya2VyIGtow7RuZyBjw7MgVkxNIGV4dHJhY3RvciB2MiAoRElHSVRFWFRfRklFTERTX0VOR0lORSk=",
+                "worker không có VLM extractor v2 (DIGITEXT_FIELDS_ENGINE)",
                 self.cfg.max_retries as i32,
             )
             .await?;
@@ -602,7 +602,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         let Some(r_3mq) = documents::get(self.pool, job.document_id).await? else {
             tracing::warn!(
                 job = % job.id, r_3mq = % job.document_id,
-                "dMOgaSBsaeG7h3Uga2jDtG5nIGPDsm4g4oCUIGLhu48gYsOzYyB0csaw4budbmc="
+                "tài liệu không còn — bỏ bóc trường"
             );
             ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
             return Ok(RunOutcome::Done(job.id));
@@ -611,13 +611,13 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         if page_count < 1 {
             tracing::warn!(
                 job = % job.id, r_3mq = % job.document_id,
-                "YsOzYyB0csaw4budbmcgdjI6IGNoxrBhIGJp4bq/dCBz4buRIHRyYW5nIChwYWdlX2NvdW50KSDigJQgYuG7jyBWxKhOSCBWSeG7hE4="
+                "bóc trường v2: chưa biết số trang (page_count) — bỏ VĨNH VIỄN"
             );
             ocr_jobs::f_1re(
                     self.pool,
                     job.id,
                     self.worker_id,
-                    "Y2jGsGEgYmnhur90IHPhu5EgdHJhbmcgKHBhZ2VfY291bnQpIOKAlCBwcm9iZSBz4buRIHRyYW5nIHLhu5NpIGNo4bqheSBs4bqhaQ==",
+                    "chưa biết số trang (page_count) — probe số trang rồi chạy lại",
                 )
                 .await?;
             return Ok(RunOutcome::PageFailed(job.id));
@@ -632,7 +632,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     Err(e) if e.is_permanent() && r_3mx > 1 => {
                         tracing::warn!(
                             job = % job.id, page = r_3mx,
-                            "YsOzYyB0csaw4budbmcgdjI6IOG6o25oIHRyYW5nIGjhu49uZywgYuG7jyB0cmFuZzog{e}"
+                            "bóc trường v2: ảnh trang hỏng, bỏ trang: {e}"
                         );
                         continue;
                     }
@@ -655,7 +655,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(HeartbeatEnd::LeaseLost) => {
                 tracing::warn!(
                     job = % job.id,
-                    "beG6pXQgbGVhc2Uga2hpIGLDs2MgdHLGsOG7nW5nIHYyIOKAlCBi4buPIChjaOG7pyBt4bubaSBsw6BtIGzhuqFpKQ=="
+                    "mất lease khi bóc trường v2 — bỏ (chủ mới làm lại)"
                 );
                 return Ok(RunOutcome::LeaseLost(job.id));
             }
@@ -671,7 +671,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 tracing::info!(
                     job = % job.id, r_3mq = % job.document_id, pages = r_3mu, r_3ms =
                     r_3mw,
-                    "YsOzYyAxNiB0csaw4budbmcgdjIgKFZMTS1wcmltYXJ5KSDihpIgbOG7m3AgZ+G7o2kgw70gKyByZXZpZXcgKMKnRzcp"
+                    "bóc 16 trường v2 (VLM-primary) → lớp gợi ý + review (§G7)"
                 );
                 ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
                 Ok(RunOutcome::Done(job.id))
@@ -679,7 +679,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             Err(e) if e.is_permanent() => {
                 tracing::warn!(
                     job = % job.id, r_3mq = % job.document_id,
-                    "YsOzYyB0csaw4budbmcgdjIgaOG7j25nIFbEqE5IIFZJ4buETiDigJQga2jDtG5nIHRo4butIGzhuqFpOiA={e}"
+                    "bóc trường v2 hỏng VĨNH VIỄN — không thử lại: {e}"
                 );
                 ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &e.to_string()).await?;
                 Ok(RunOutcome::PageFailed(job.id))
@@ -705,7 +705,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         let Some(store) = self.store else {
             tracing::info!(
                 job = % job.id, r_3n2 = % job.document_id, bytes = r_3n4.len(),
-                "UERGIDIgbOG7m3AgxJHDoyBk4buxbmcgKGNoxrBhIFBVVCDigJQgY2jGsGEgY+G6pXUgaMOsbmgga2hvIERJR0lURVhUX1BERl9TVE9SRV9ESVIp"
+                "PDF 2 lớp đã dựng (chưa PUT — chưa cấu hình kho DIGITEXT_PDF_STORE_DIR)"
             );
             ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
             return Ok(RunOutcome::Done(job.id));
@@ -713,7 +713,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         let Some(r_3n2) = documents::get(self.pool, job.document_id).await? else {
             tracing::warn!(
                 job = % job.id, r_3n2 = % job.document_id,
-                "dMOgaSBsaeG7h3Uga2jDtG5nIGPDsm4g4oCUIGLhu48gUFVUIFBERg=="
+                "tài liệu không còn — bỏ PUT PDF"
             );
             ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
             return Ok(RunOutcome::Done(job.id));
@@ -722,18 +722,18 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         if !r_3n1.ok {
             let reason = r_3n1
                 .reason
-                .unwrap_or_else(|| "a2jDtG5nIMSR4bqhdA==".into());
+                .unwrap_or_else(|| "không đạt".into());
             tracing::error!(
                 job = % job.id, r_3n2 = % job.document_id, pages = r_3n1.pages,
                 page_count = ? r_3n2.page_count, reason = % reason,
-                "UERGIDIgbOG7m3AgS0jDlE5HIMSR4bqhdCDigJQga2jDtG5nIFBVVCwga2jDtG5nIGNodXnhu4NuIHBoYSBrw70="
+                "PDF 2 lớp KHÔNG đạt — không PUT, không chuyển pha ký"
             );
             self.notify_pdf2_rejected(&r_3n2, &reason).await?;
             ocr_jobs::f_1re(
                 self.pool,
                 job.id,
                 self.worker_id,
-                &format!("UERGIDIgbOG7m3Aga2jDtG5nIMSR4bqhdDog{reason}"),
+                &format!("PDF 2 lớp không đạt: {reason}"),
             )
             .await?;
             return Ok(RunOutcome::PageFailed(job.id));
@@ -756,7 +756,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 tracing::info!(
                     job = % job.id, r_3n2 = % job.document_id, bytes = r_3n4.len(), r_3n3
                     = % r_3n3,
-                    "UERGIDIgbOG7m3AgxJHDoyBQVVQga2hvIHdhcm0g4oaSIHRvX3NpZ24sIGNo4budIGvDvSAowqdTNS40IEcp"
+                    "PDF 2 lớp đã PUT kho warm → to_sign, chờ ký (§S5.4 G)"
                 );
                 ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
                 Ok(RunOutcome::Done(job.id))
@@ -784,7 +784,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         reason: &str,
     ) -> sqlx::Result<()> {
         let msg = format!(
-            "VMOgaSBsaeG7h3UgIg=={}IjogUERGIDIgbOG7m3AgS0jDlE5HIMSR4bqhdCAo{reason}KSDigJQgY2jGsGEgY2h1eeG7g24ga8O9LiBD4bqnbiBPQ1IgbOG6oWkgdHJhbmcgbOG7l2kgcuG7k2kgZ2jDqXAgbOG6oWku",
+            "Tài liệu \"{}\": PDF 2 lớp KHÔNG đạt ({reason}) — chưa chuyển ký. Cần OCR lại trang lỗi rồi ghép lại.",
             r_3n7.filename
         );
         for r_3n6 in digitext_db::projects::f_re(self.pool, r_3n7.project_id).await? {
@@ -825,7 +825,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             worker_id = self.worker_id,
             r_3nd,
             r_3nb,
-            "dsOybmcgbOG6t3Agd29ya2VyIGThu6tuZw=="
+            "vòng lặp worker dừng"
         );
         if let Some(e) = r_3n8 {
             return Err(e);
@@ -865,7 +865,7 @@ pub async fn f_2b8(
         tokio::select! {
             _ = r_3nq.cancelled() => break, _ = tokio::time::sleep(r_3no) => { let n =
             ocr_jobs::requeue_expired(pool, r_3np). await ?; if n > 0 {
-            tracing::warn!(requeued = n, "cmVxdWV1ZSBqb2IgaOG6v3QgaOG6oW4gbGVhc2U="); } }
+            tracing::warn!(requeued = n, "requeue job hết hạn lease"); } }
         }
     }
     Ok(())

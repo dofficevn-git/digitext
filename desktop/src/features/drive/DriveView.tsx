@@ -66,9 +66,9 @@ export default function DriveView() {
       return;
     }
     await message(
-      "VGjGsCBt4bulYyBuw6B5IGNoxrBhIGfhuq9uIGjhu5Mgc8ahIG7Dqm4ga2jDtG5nIGzGsHUgUERGIHbDoG8gxJHDonkgxJHGsOG7o2MuIEjDo3kgbeG7nyDEkcO6bmcgdGjGsCBt4bulYyBI4buSIFPGoCA=" +
-        "KG3hu6ljIHRo4bqlcCBuaOG6pXQ6IEPGoSBxdWFuIOKGkiBI4buZcCDihpIgSOG7kyBzxqEpIHLhu5NpIGLhuqVtIFF1w6l0Lg==",
-      { title: "Q2jGsGEgY2jhu41uIHRoxrAgbeG7pWMgaOG7kyBzxqE=", kind: "warning" },
+      "Thư mục này chưa gắn hồ sơ nên không lưu PDF vào đây được. Hãy mở đúng thư mục HỒ SƠ " +
+        "(mức thấp nhất: Cơ quan → Hộp → Hồ sơ) rồi bấm Quét.",
+      { title: "Chưa chọn thư mục hồ sơ", kind: "warning" },
     );
   };
 
@@ -97,9 +97,9 @@ export default function DriveView() {
   const Vjo = async () => {
     try {
       const Vjp = await confirm(
-        `WMOzYSA=${Vj1.size}IG3hu6VjIMSRw6MgY2jhu41uPyBLaMO0bmcgdGjhu4MgaG/DoG4gdMOhYy4=`,
+        `WMOzYSA=${Vj1.size} mục đã chọn? Không thể hoàn tác.`,
         {
-          title: "WMOhYyBuaOG6rW4geMOzYQ==",
+          title: "Xác nhận xóa",
           kind: "warning",
         },
       );
@@ -131,7 +131,7 @@ export default function DriveView() {
         <div className="search">
           <Icon name="tim" className="flex-none text-fg-subtle" />
           <input
-            placeholder="VMOsbSB0aMawIG3hu6VjLCB0w6BpIGxp4buHdeKApg=="
+            placeholder="Tìm thư mục, tài liệu…"
             value={query}
             onChange={(Vjt) => Viu(Vjt.target.value)}
           />
@@ -145,7 +145,7 @@ export default function DriveView() {
             Viy(b as "name" | "size");
             Vj0(d as "asc" | "desc");
           }}
-          title="U+G6r3AgeOG6v3A="
+          title="Sắp xếp"
         >
           <option value="name-asc">Tên A→Z</option>
           <option value="name-desc">Tên Z→A</option>
@@ -154,10 +154,10 @@ export default function DriveView() {
         </select>
         <div className="view-toggle">
           <button className={Vio === "grid" ? "on" : ""} onClick={() => Vip("grid")}>
-            <Icon name="luoi" size={15} label="WGVtIGThuqFuZyB0aOG6uw==" />
+            <Icon name="luoi" size={15} label="Xem dạng thẻ" />
           </button>
           <button className={Vio === "list" ? "on" : ""} onClick={() => Vip("list")}>
-            <Icon name="danhSach" size={15} label="WGVtIGThuqFuZyBkYW5oIHPDoWNo" />
+            <Icon name="danhSach" size={15} label="Xem dạng danh sách" />
           </button>
         </div>
         <div className="menu" ref={Vj3}>
@@ -177,7 +177,7 @@ export default function DriveView() {
               <div
                 className="mi"
                 onClick={() => {
-                  Vir("create", "VOG6oW8gdGjGsCBt4bulYyBjb24=");
+                  Vir("create", "Tạo thư mục con");
                   Viw(false);
                 }}
               >
@@ -242,8 +242,8 @@ export default function DriveView() {
                 <button className={Vjb ? "btn sm primary" : "btn sm"} onClick={() => void Vje()}>
                   <Icon name="quet" />
                   {Vjb
-                    ? "UXXDqXQgdGnhur9wIHbDoG8gaOG7kyBzxqEgbsOgeQ=="
-                    : "UXXDqXQgdsOgbyB0aMawIG3hu6VjIG7DoHk="}
+                    ? "Quét tiếp vào hồ sơ này"
+                    : "Quét vào thư mục này"}
                 </button>
               )}
               <div className="spacer flex-1" />

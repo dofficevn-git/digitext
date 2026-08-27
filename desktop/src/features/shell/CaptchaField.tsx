@@ -31,13 +31,13 @@ export default function V4x3({
           <img
             className="captcha-img"
             src={V38i.image}
-            alt={`TcOjIHjDoWMgbmjhuq1uIGfhu5NtIA==${V4wy}IGvDvSB04bux`}
+            alt={`Mã xác nhận gồm ${V4wy} ký tự`}
             onClick={V38l}
-            title="QuG6pW0gxJHhu4MgbOG6pXkgbcOjIGtow6Fj"
+            title="Bấm để lấy mã khác"
           />
         ) : (
           <div className="captcha-img captcha-img-empty">
-            {V38m ? "xJBhbmcgdOG6o2nigKY=" : V38n ? "S2jDtG5nIHThuqNpIMSRxrDhu6NjIG3Dow==" : ""}
+            {V38m ? "Đang tải…" : V38n ? "Không tải được mã" : ""}
           </div>
         )}
         <button
@@ -45,8 +45,8 @@ export default function V4x3({
           className="btn captcha-reload"
           onClick={V38l}
           disabled={V38m}
-          title="TOG6pXkgbcOjIGtow6Fj"
-          aria-label="TOG6pXkgbcOjIGtow6Fj"
+          title="Lấy mã khác"
+          aria-label="Lấy mã khác"
         >
           <Icon name="lamMoi" size={15} />
         </button>
@@ -59,7 +59,7 @@ export default function V4x3({
         maxLength={V4wy}
         autoComplete="off"
         spellCheck={false}
-        placeholder={`Tmjhuq1wIA==${V4wy}IGvDvSB04buxIHRyb25nIOG6o25o`}
+        placeholder={`Nhập ${V4wy} ký tự trong ảnh`}
         disabled={disabled}
         onChange={(V38o) => V38k(V38o.target.value)}
         onKeyDown={(V38p) => V38p.key === "Enter" && V38h()}

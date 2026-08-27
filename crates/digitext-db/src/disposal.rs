@@ -125,7 +125,7 @@ pub async fn f_18b(r_226: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
                 "phat_hien_trung_lap",
                 None,
                 Some(
-                    "SOG7hyB0aOG7kW5nIHThu7EgxJHhu5luZyDEkcawYSB2w6BvIERhbmggbeG7pWMg4oCUIMSQaeG7gXUgNDguMg==",
+                    "Hệ thống tự động đưa vào Danh mục — Điều 48.2",
                 ),
             )
             .await?;
@@ -156,7 +156,7 @@ pub async fn f_1ah(r_22a: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
                 "het_thoi_han_luu_tru",
                 None,
                 Some(
-                    "SOG7hyB0aOG7kW5nIHThu7EgxJHhu5luZyDEkcawYSB2w6BvIERhbmggbeG7pWMg4oCUIMSQaeG7gXUgNDguMw==",
+                    "Hệ thống tự động đưa vào Danh mục — Điều 48.3",
                 ),
             )
             .await?;
@@ -286,7 +286,7 @@ pub async fn create_batch(
         "lap_dot_xet_huy",
         created_by,
         Some(&format!(
-            "{}IHTDoGkgbGnhu4d1IOKAlCDEkGnhu4F1IDQ5LjE=",
+            "{} tài liệu — Điều 49.1",
             r_22s.len()
         )),
     )
@@ -421,11 +421,11 @@ pub async fn decide(
             "quyet_dinh_huy",
             actor,
             Some(&format!(
-                "UXV54bq/dCDEkeG7i25oIA=={quyet_dinh_so}{}",
+                "Quyết định {quyet_dinh_so}{}",
                 if tu_quyet {
-                    "ICh04buxIHF1eeG6v3Qg4oCUIMSQaeG7gXUgNDkuOCk="
+                    " (tự quyết — Điều 49.8)"
                 } else {
-                    "IChzYXUgdGjhuqltIMSR4buLbmgg4oCUIMSQaeG7gXUgNDkuNik="
+                    " (sau thẩm định — Điều 49.6)"
                 }
             )),
         )
@@ -459,7 +459,7 @@ pub async fn f_1ad(
                 },
                 "bat_dau_huy",
                 actor,
-                Some("VGhhbyB0w6FjIGjhu6d5IHRyb25nIEjhu4cgdGjhu5FuZyDigJQgxJBp4buBdSA0OS43LmE="),
+                Some("Thao tác hủy trong Hệ thống — Điều 49.7.a"),
             )
             .await?;
         }

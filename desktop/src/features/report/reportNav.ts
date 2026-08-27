@@ -8,10 +8,10 @@ export interface V46o {
 }
 
 export const REPORT_NAV: V46o[] = [
-  { key: "sohoa", label: "VOG7lW5nIGvhur90IHPhu5EgaG/DoQ==" },
-  { key: "chinhly", label: "VOG7lW5nIGvhur90IGNo4buJbmggbMO9" },
-  { key: "nhanvien", label: "VOG7lW5nIGvhur90IG5ow6JuIHZpw6pu" },
-  { key: "phanmem", label: "VOG7lW5nIGvhur90IHBo4bqnbiBt4buBbQ==" },
+  { key: "sohoa", label: "Tổng kết số hoá" },
+  { key: "chinhly", label: "Tổng kết chỉnh lý" },
+  { key: "nhanvien", label: "Tổng kết nhân viên" },
+  { key: "phanmem", label: "Tổng kết phần mềm" },
 ];
 
 export const V46p: V3xx[] = REPORT_NAV.map((i) => i.key);

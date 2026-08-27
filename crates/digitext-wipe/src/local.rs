@@ -166,7 +166,7 @@ pub fn resolve(r_5pd: &Tb8, r_5pg: Option<PathBuf>) -> Result<Tba, String> {
     let app_data_dir = r_5pd
         .app_data_dir()
         .ok_or(
-            "a2jDtG5nIHjDoWMgxJHhu4tuaCDEkcaw4bujYyB0aMawIG3hu6VjIGThu68gbGnhu4d1IGFwcCAodGhp4bq/dSBIT01FL0FQUERBVEEp",
+            "không xác định được thư mục dữ liệu app (thiếu HOME/APPDATA)",
         )?;
     let db = app_data_dir.join(DB_FILE);
     let (storage_root, root_source) = match r_5pg {
@@ -177,7 +177,7 @@ pub fn resolve(r_5pd: &Tb8, r_5pg: Option<PathBuf>) -> Result<Tba, String> {
                 let r_5pe = r_5pd
                         .default_storage_root()
                         .ok_or(
-                            "a2jDtG5nIHjDoWMgxJHhu4tuaCDEkcaw4bujYyBraG8gdMOgaSBsaeG7h3UgKHRoaeG6v3UgSE9NRSkg4oCUIGTDuW5nIC0tc3RvcmFnZS1yb290",
+                            "không xác định được kho tài liệu (thiếu HOME) — dùng --storage-root",
                         )?;
                 let r_5pf = if db.exists() {
                     RootSource::DefaultDbUnreadable
@@ -191,7 +191,7 @@ pub fn resolve(r_5pd: &Tb8, r_5pg: Option<PathBuf>) -> Result<Tba, String> {
     if f_1iy(&storage_root, r_5pd.home.as_deref()) {
         return Err(
             format!(
-                "a2hvIHTDoGkgbGnhu4d1IA=={}IG7hurFtIOG7nyB24buLIHRyw60gcXXDoSBuZ3V5IGhp4buDbSDEkeG7gyB4b8OhIChn4buRYyDhu5UgxJHEqWEgLyB0aMawIG3hu6VjIG5ow6ApIOKAlCBraeG7g20gdHJhIGzhuqFpIHNldHRpbmdzLnN0b3JhZ2Vfcm9vdCBob+G6t2MgY2jhu4kgxJHhu4tuaCAtLXN0b3JhZ2Utcm9vdA==",
+                "kho tài liệu {} nằm ở vị trí quá nguy hiểm để xoá (gốc ổ đĩa / thư mục nhà) — kiểm tra lại settings.storage_root hoặc chỉ định --storage-root",
                 storage_root.display()
             ),
         );
@@ -243,7 +243,7 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
     let (r_5q0, r_5ps) = measure(&r_5q6.app_data_dir);
     r_5px.push(
         PlanItem::new(
-            "Q1NETCArIGThu68gbGnhu4d1IGFwcA==",
+            "CSDL + dữ liệu app",
             r_5q6.app_data_dir.display().to_string(),
             r_5q0,
         )
@@ -252,7 +252,7 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
     let (r_5q2, r_5pu) = measure(&r_5q6.storage_root);
     r_5px.push(
         PlanItem::new(
-            "S2hvIHTDoGkgbGnhu4d1IChQREYv4bqjbmgvZ8OzaSk=",
+            "Kho tài liệu (PDF/ảnh/gói)",
             r_5q6.storage_root.display().to_string(),
             r_5q2,
         )
@@ -261,7 +261,7 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
     let (r_5q1, r_5pt) = measure(&r_5q6.page_cache);
     r_5px.push(
         PlanItem::new(
-            "Q2FjaGUg4bqjbmggcXXDqXQ=",
+            "Cache ảnh quét",
             r_5q6.page_cache.display().to_string(),
             r_5q1,
         )
@@ -281,7 +281,7 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
     }
     r_5px.push(
         PlanItem::new(
-            "VOG6oW0gbcOheSBxdcOpdCAvIHh14bqldCBmaWxl",
+            "Tạm máy quét / xuất file",
             format!("{}/digitext-*", r_5q6.temp_dir.display()),
             r_5q4,
         )
@@ -291,7 +291,7 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
         let (r_5q3, r_5pv) = measure(r_5py);
         r_5px.push(
             PlanItem::new(
-                "Tmjhuq10IGvDvSDhu6luZyBk4bulbmc=",
+                "Nhật ký ứng dụng",
                 r_5py.display().to_string(),
                 r_5q3,
             )
@@ -303,18 +303,18 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
         r_5q7
             .push(
                 format!(
-                    "Q8OTIA=={DB_FILE}IG5oxrBuZyBLSMOUTkcgxJHhu41jIMSRxrDhu6NjIGBzZXR0aW5ncy5zdG9yYWdlX3Jvb3RgIHThu6sgxJHDsyDigJQgxJFhbmcgxJBPw4FOIGtobyBsw6Ag{}LiBO4bq/dSBuZ8aw4budaSBkw7luZyB04burbmcgY2jhu41uIGtobyDhu58g4buVIG5nb8OgaS/hu5UgbeG6oW5nIHRow6wgbOG7h25oIG7DoHkgbmjhuq9tIFNBSSBjaOG7lyB2w6AgaOG7kyBzxqEgdGjhuq10IHbhuqtuIGPDsm4gbmd1ecOqbjsga2nhu4NtIHRyYSBy4buTaSBjaOG7iSDEkeG7i25oIC0tc3RvcmFnZS1yb290Lg==",
+                    "Q8OTIA=={DB_FILE} nhưng KHÔNG đọc được `settings.storage_root` từ đó — đang ĐOÁN kho là {}. Nếu người dùng từng chọn kho ở ổ ngoài/ổ mạng thì lệnh này nhắm SAI chỗ và hồ sơ thật vẫn còn nguyên; kiểm tra rồi chỉ định --storage-root.",
                     r_5q6.storage_root.display()
                 ),
             );
     }
     r_5q7
         .extend([
-            "S2jDtG5nIGhvw6BuIHTDoWMgxJHGsOG7o2MuIEjhu5Mgc8ahIMSRw6MgcXXDqXQgbcOgIENIxq9BIG7hu5lwIGzDqm4gbcOheSBjaOG7pyBz4bq9IG3huqV0IHbEqW5oIHZp4buFbi4="
+            "Không hoàn tác được. Hồ sơ đã quét mà CHƯA nộp lên máy chủ sẽ mất vĩnh viễn."
                 .to_owned(),
-            "R+G7k20gY+G6oyDEkcSDbmcgbmjhuq1wIG9mZmxpbmUsIGtob8OhIHRoaeG6v3QgYuG7iyBMQU4gdsOgIG3DoyBzaXRlIOKAlCBzYXUga2hpIHhvw6EgcGjhuqNpIMSRxINuZyBuaOG6rXAgbOG6oWkga2hpIGPDsyBt4bqhbmcgxJHhu4MgbOG6pXkgZ2nhuqV5IHBow6lwIG9mZmxpbmUgbeG7m2ku"
+            "Gồm cả đăng nhập offline, khoá thiết bị LAN và mã site — sau khi xoá phải đăng nhập lại khi có mạng để lấy giấy phép offline mới."
                 .to_owned(),
-            "RmlsZSDEkcOjICdMxrB1IHJh4oCmJyBi4bqxbmcgaOG7mXAgdGhv4bqhaSBo4buHIMSRaeG7gXUgaMOgbmggbuG6sW0gbmdvw6BpIGtobyBuw6puIEtIw5RORyBi4buLIHhvw6Eg4oCUIHThu7Ega2nhu4NtIHRyYSBu4bq/dSBj4bqnbi4="
+            "File đã 'Lưu ra…' bằng hộp thoại hệ điều hành nằm ngoài kho nên KHÔNG bị xoá — tự kiểm tra nếu cần."
                 .to_owned(),
         ]);
     Thd {

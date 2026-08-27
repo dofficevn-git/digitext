@@ -29,7 +29,7 @@ export default function V4vc() {
     try {
       V30j(await V4ut());
     } catch (V30y) {
-      V30p(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGRhbmggc8OhY2g6IA==${String(V30y)}`);
+      V30p(`Không tải được danh sách: ${String(V30y)}`);
     }
   }, []);
 
@@ -51,14 +51,14 @@ export default function V4vc() {
     try {
       await V4uv(V310);
       V30p(
-        "xJDDoyBn4butaSB5w6p1IGPhuqd1IOKAlCBTTEEgdGnhur9wIG5o4bqtbiArIHjDqXQgZHV54buHdCA2IG5nw6B5IGzDoG0gdmnhu4djICjEkGnhu4F1IDQ2LjUpLg==",
+        "Đã gửi yêu cầu — SLA tiếp nhận + xét duyệt 6 ngày làm việc (Điều 46.5).",
       );
       V30l(false);
       V30v("");
       V30x("");
       await reload();
     } catch (V312) {
-      V30p(`R+G7rWkgecOqdSBj4bqndSB0aOG6pXQgYuG6oWk6IA==${String(V312)}`);
+      V30p(`Gửi yêu cầu thất bại: ${String(V312)}`);
     } finally {
       V30n(false);
     }
@@ -68,14 +68,14 @@ export default function V4vc() {
     let V315: string | undefined;
     let V316: string | undefined;
     if (V314 === "refuse") {
-      V315 = window.prompt("TMO9IGRvIHThu6sgY2jhu5FpICjEkGnhu4F1IDQ2LjEuYyk6")?.trim() || undefined;
+      V315 = window.prompt("Lý do từ chối (Điều 46.1.c):")?.trim() || undefined;
       if (!V315) return;
     }
     if (V314 === "generate") {
       V316 =
         window
           .prompt(
-            "TuG7mWkgZHVuZyByw6Agc2/DoXQsIGJpw6puIHThuq1wICjEkGnhu4F1IDQ3LjIg4oCUIHR14buzIGNo4buNbik6",
+            "Nội dung rà soát, biên tập (Điều 47.2 — tuỳ chọn):",
           )
           ?.trim() || undefined;
     }
@@ -84,7 +84,7 @@ export default function V4vc() {
       await V4ux(row.id, V314, { note: V315, bienTap: V316 });
       await reload();
     } catch (V317) {
-      V30p(`VGhhbyB0w6FjIHRo4bqldCBi4bqhaTog${String(V317)}`);
+      V30p(`Thao tác thất bại: ${String(V317)}`);
     } finally {
       V30n(false);
     }
@@ -94,9 +94,9 @@ export default function V4vc() {
     V30n(true);
     try {
       const path = await V4uy(row.id, `cung-cap-thong-tin-${row.chuDe.slice(0, 30)}.pdf`);
-      V30p(`xJDDoyBsxrB1IGvhur90IHF14bqjOiA=${path}`);
+      V30p(`Đã lưu kết quả: ${path}`);
     } catch (V319) {
-      V30p(`VOG6o2kga+G6v3QgcXXhuqMgdGjhuqV0IGLhuqFpOiA=${String(V319)}`);
+      V30p(`Tải kết quả thất bại: ${String(V319)}`);
     } finally {
       V30n(false);
     }
@@ -186,11 +186,11 @@ export default function V4vc() {
                     <td title={r.mucDich}>{r.chuDe}</td>
                     <td title={r.reviewNote ?? r.bienTap ?? undefined}>
                       {V4v7[r.status]}
-                      {r.coKetQua ? "IMK3IGPDsyBr4bq/dCBxdeG6ow==" : ""}
+                      {r.coKetQua ? " · có kết quả" : ""}
                     </td>
                     <td>
-                      {r.phi == null ? "—" : r.phi === 0 ? "TWnhu4VuIHBow60=" : `${r.phi}IMSR`}
-                      {(r.phi ?? 0) > 0 && (r.paidAt ? "ICjEkcOjIFRUKQ==" : "IChjaMawYSBUVCk=")}
+                      {r.phi == null ? "—" : r.phi === 0 ? "Miễn phí" : `${r.phi}IMSR`}
+                      {(r.phi ?? 0) > 0 && (r.paidAt ? " (đã TT)" : " (chưa TT)")}
                     </td>
                     <td className="whitespace-nowrap">
                       {V30h &&

@@ -54,11 +54,11 @@ export default function V4x5() {
     <div className="login-screen">
       <div className="login-card">
         <div className="lock-avatar">{V39i.displayName[0]?.toUpperCase() ?? "?"}</div>
-        <h1>{V39m === "unlock" ? V39i.displayName : "xJDhu5VpIG5nxrDhu51pIGTDuW5n"}</h1>
+        <h1>{V39m === "unlock" ? V39i.displayName : "Đổi người dùng"}</h1>
         <div className="sub">
           {V39m === "unlock"
-            ? `${V3za(V39i.role)}${V39i.projectName ? ` · ${V39i.projectName}` : ""}IMK3IMSRYW5nIGtob8Oh`
-            : "xJDEg25nIG5o4bqtcCBi4bqxbmcgdMOgaSBraG/huqNuIGtow6FjIHRyw6puIG3DoXkgbsOgeQ=="}
+            ? `${V3za(V39i.role)}${V39i.projectName ? ` · ${V39i.projectName}` : ""} · đang khoá`
+            : "Đăng nhập bằng tài khoản khác trên máy này"}
         </div>
 
         <form
@@ -108,10 +108,10 @@ export default function V4x5() {
             disabled={V39s || !V39q || (V39x && (!V39o.trim() || !V39w.ready))}
           >
             {V39s
-              ? "xJBhbmcgeOG7rSBsw73igKY="
+              ? "Đang xử lý…"
               : V39m === "unlock"
-                ? "TeG7nyBraG/DoQ=="
-                : "xJDEg25nIG5o4bqtcA=="}
+                ? "Mở khoá"
+                : "Đăng nhập"}
           </button>
         </form>
 

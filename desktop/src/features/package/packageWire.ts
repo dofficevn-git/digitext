@@ -3,11 +3,11 @@
 export type V4sj = "aip_hoso" | "aip_tailieu" | "sip_hoso" | "sip_tailieu" | "dip";
 
 export const V4sk: Record<V4sj, string> = {
-  aip_hoso: "QUlQIGjhu5Mgc8ahIChi4bqjbyBxdeG6o24p",
-  aip_tailieu: "QUlQIHTDoGkgbGnhu4d1IChi4bqjbyBxdeG6o24p",
-  sip_hoso: "U0lQIGjhu5Mgc8ahIChu4buZcCBsxrB1KQ==",
-  sip_tailieu: "U0lQIHTDoGkgbGnhu4d1IChu4buZcCBsxrB1KQ==",
-  dip: "RElQIChraGFpIHRow6FjIGPDsyB4w6FjIHRo4buxYyk=",
+  aip_hoso: "AIP hồ sơ (bảo quản)",
+  aip_tailieu: "AIP tài liệu (bảo quản)",
+  sip_hoso: "SIP hồ sơ (nộp lưu)",
+  sip_tailieu: "SIP tài liệu (nộp lưu)",
+  dip: "DIP (khai thác có xác thực)",
 };
 
 export interface V4sl {
@@ -123,12 +123,12 @@ export function V4ss(V2og: string, V2oh: string): V4sr {
     return {
       range: null,
       error:
-        "U1RUIE3hu6VjIGzhu6VjIChQSy01KToga2hhaSDEkeG7pyBj4bq3cCB04burL8SR4bq/biwgc+G7kSBuZ3V5w6puLg==",
+        "STT Mục lục (PK-5): khai đủ cặp từ/đến, số nguyên.",
     };
   if (from < 1 || from > to)
     return {
       range: null,
-      error: "U1RUIE3hu6VjIGzhu6VjIChQSy01KTogY+G6p24gMSDiiaQgdOG7qyDiiaQgxJHhur9uLg==",
+      error: "STT Mục lục (PK-5): cần 1 ≤ từ ≤ đến.",
     };
   return { range: [from, to], error: null };
 }
@@ -145,57 +145,57 @@ export function V4su(V2oi: V4sm, docs: V4sl[]): V4st {
   const V2om = V2ok === "aip_tailieu" || V2ok === "sip_tailieu";
   const V2on = V2ok === "sip_hoso" || V2ok === "sip_tailieu";
 
-  if (!V2oi.fondCode.trim()) V2oj.push("VGhp4bq/dSBtw6MgcGjDtG5nIChGb25kY29kZSku");
-  if (!V2oi.archiveOrgCode.trim()) V2oj.push("VGhp4bq/dSBtw6MgY8ahIHF1YW4gbMawdSB0cuG7ry4=");
-  if (docs.length === 0) V2oj.push("Q2jGsGEgY2jhu41uIHTDoGkgbGnhu4d1IG7DoG8u");
+  if (!V2oi.fondCode.trim()) V2oj.push("Thiếu mã phông (Fondcode).");
+  if (!V2oi.archiveOrgCode.trim()) V2oj.push("Thiếu mã cơ quan lưu trữ.");
+  if (docs.length === 0) V2oj.push("Chưa chọn tài liệu nào.");
   if (V2om && docs.length > 1)
     V2oj.push(
-      "R8OzaSBt4bupYyB0w6BpIGxp4buHdSBjaOG7iSBjaOG7qWEgxJHDum5nIDAxIHTDoGkgbGnhu4d1IGNow61uaC4=",
+      "Gói mức tài liệu chỉ chứa đúng 01 tài liệu chính.",
     );
   if (V2on && !V2oi.submissionAgreement.trim())
     V2oj.push(
-      "R8OzaSBTSVAgYuG6r3QgYnXhu5ljIG3DoyB5w6p1IGPhuqd1IG7hu5lwICh0aG/huqMgdGh14bqtbiBu4buZcCku",
+      "Gói SIP bắt buộc mã yêu cầu nộp (thoả thuận nộp).",
     );
   if (V2on && V2oi.maintenance !== "01")
     V2oj.push(
-      "Tmd14buTbiBu4buZcCBsxrB1IGNo4buJIG5o4bqtbiB0aOG7nWkgaOG6oW4gJzAxOiB2xKluaCB2aeG7hW4nLg==",
+      "Nguồn nộp lưu chỉ nhận thời hạn '01: vĩnh viễn'.",
     );
 
   const V2oo = V2oi.confidenceLevel === "02" || V2oi.confidenceLevel === "03";
   if (V2ok === "dip") {
     if (!V2oi.requestId.trim())
-      V2oj.push("VGhp4bq/dSBtw6MgecOqdSBj4bqndSBraGFpIHRow6FjIChESVApLg==");
+      V2oj.push("Thiếu mã yêu cầu khai thác (DIP).");
     if (!V2oi.requestDate.trim())
-      V2oj.push("VGhp4bq/dSBuZ8OgeSB5w6p1IGPhuqd1IGtoYWkgdGjDoWMgKERJUCku");
+      V2oj.push("Thiếu ngày yêu cầu khai thác (DIP).");
 
     if (!V2oi.certMaXacThuc.trim())
-      V2oj.push("VGhp4bq/dSBtw6MgeMOhYyB0aOG7sWMgbMawdSB0cuG7ryAoxJBp4buBdSA0Mi4yLmEpLg==");
+      V2oj.push("Thiếu mã xác thực lưu trữ (Điều 42.2.a).");
     if (!V2oi.certTenLuuTru.trim())
-      V2oj.push("VGhp4bq/dSB0w6puIGzGsHUgdHLhu68gbOG7i2NoIHPhu60gKMSQaeG7gXUgNDIuMi5iKS4=");
+      V2oj.push("Thiếu tên lưu trữ lịch sử (Điều 42.2.b).");
     if (!V2oi.certNguoiNhanHoTen.trim() || !V2oi.certNguoiNhanDinhDanh.trim())
       V2oj.push(
-        "VGhp4bq/dSBo4buNIHTDqm4gLyBtw6MgxJHhu4tuaCBkYW5oIG5nxrDhu51pIG5o4bqtbiAoxJBp4buBdSA0Mi4yLmMpLg==",
+        "Thiếu họ tên / mã định danh người nhận (Điều 42.2.c).",
       );
     if (!V2oi.certMaLuuTruGoc.trim())
-      V2oj.push("VGhp4bq/dSBtw6MgbMawdSB0cuG7ryB0w6BpIGxp4buHdSBn4buRYyAoxJBp4buBdSA0Mi4yLmQpLg==");
+      V2oj.push("Thiếu mã lưu trữ tài liệu gốc (Điều 42.2.d).");
     if (!V2oi.certTenLoai.trim())
-      V2oj.push("VGhp4bq/dSB0w6puIGxv4bqhaSB0w6BpIGxp4buHdSAoxJBp4buBdSA0Mi4yLmUpLg==");
+      V2oj.push("Thiếu tên loại tài liệu (Điều 42.2.e).");
     if (!V2oi.certTrichYeu.trim())
-      V2oj.push("VGhp4bq/dSB0csOtY2ggeeG6v3UgLyB0acOqdSDEkeG7gSAoxJBp4buBdSA0Mi4yLmcpLg==");
+      V2oj.push("Thiếu trích yếu / tiêu đề (Điều 42.2.g).");
     if (!V2oi.certMucDich.trim())
-      V2oj.push("VGhp4bq/dSBt4bulYyDEkcOtY2ggc+G7rSBk4bulbmcgKMSQaeG7gXUgNDIuMi5oKS4=");
+      V2oj.push("Thiếu mục đích sử dụng (Điều 42.2.h).");
     const V2op = V4sq(V2oi.certSoLuongBan);
     if (V2op === null || V2op < 1)
-      V2oj.push("U+G7kSBsxrDhu6NuZyBi4bqjbiB04buRaSB0aGnhu4N1IDEgKMSQaeG7gXUgNDIuMi5sKS4=");
+      V2oj.push("Số lượng bản tối thiểu 1 (Điều 42.2.l).");
   } else if (!V2oi.fileCode.trim()) {
-    V2oj.push("VGhp4bq/dSBtw6MgaOG7kyBzxqEgLyBtw6MgZ8OzaSB0aW4u");
+    V2oj.push("Thiếu mã hồ sơ / mã gói tin.");
   }
-  if (V2ok !== "dip" && !V2oi.title.trim()) V2oj.push("VGhp4bq/dSB0acOqdSDEkeG7gS4=");
+  if (V2ok !== "dip" && !V2oi.title.trim()) V2oj.push("Thiếu tiêu đề.");
   if (V2ol && V2oo) {
     if (V4sq(V2oi.numberOfPaper) === null)
-      V2oj.push("SOG7kyBzxqEgc+G7kSBow7NhIGLhuq90IGJ14buZYyBz4buRIGzGsOG7o25nIHThu50u");
+      V2oj.push("Hồ sơ số hóa bắt buộc số lượng tờ.");
     if (!V2oi.paperFileCode.trim())
-      V2oj.push("SOG7kyBzxqEgc+G7kSBow7NhIGLhuq90IGJ14buZYyBtw6MgaOG7kyBzxqEgZ+G7kWMgZ2nhuqV5Lg==");
+      V2oj.push("Hồ sơ số hóa bắt buộc mã hồ sơ gốc giấy.");
   }
   if (V2oj.length > 0) return { request: null, errors: V2oj };
 

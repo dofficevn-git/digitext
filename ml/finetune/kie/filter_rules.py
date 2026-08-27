@@ -21,19 +21,19 @@ from extract_vlm import (
 )
 
 DOC_TYPES: tuple[str, ...] = (
-    "R2nhuqV5IGNo4bupbmcgbmjhuq1uIMSRxINuZyBrw70gZG9hbmggbmdoaeG7h3A=", "R2nhuqV5IGNo4bupbmcgbmjhuq1uIMSRxINuZyBrw70ga2luaCBkb2FuaA==",
-    "R2nhuqV5IGNo4bupbmcgbmjhuq1u", "R2nhuqV5IHBow6lwIGtoYWkgdGjDoWMga2hvw6FuZyBz4bqjbg==", "R2nhuqV5IHBow6lw",
-    "VGh1eeG6v3QgbWluaCBk4buxIMOhbg==", "VGh1eeG6v3QgbWluaA==", "VGhp4bq/dCBr4bq/IGPGoSBz4buf", "QuG6o24gxJHhu5M=",
-    "QsOhbyBjw6FvIHTDoGkgY2jDrW5o", "QsOhbyBjw6Fv", "UXV54bq/dCDEkeG7i25o", "Q8O0bmcgdsSDbg==", "VGjDtG5nIGLDoW8=",
-    "VOG7nSB0csOsbmg=", "Tmdo4buLIHF1eeG6v3Q=", "Q2jhu4kgdGjhu4s=", "S+G6vyBob+G6oWNo", "QmnDqm4gYuG6o24=", "SMaw4bubbmcgZOG6q24=",
-    "VGjDtG5nIHTGsA==",
+    "Giấy chứng nhận đăng ký doanh nghiệp", "Giấy chứng nhận đăng ký kinh doanh",
+    "Giấy chứng nhận", "Giấy phép khai thác khoáng sản", "Giấy phép",
+    "Thuyết minh dự án", "Thuyết minh", "Thiết kế cơ sở", "Bản đồ",
+    "Báo cáo tài chính", "Báo cáo", "Quyết định", "Công văn", "Thông báo",
+    "Tờ trình", "Nghị quyết", "Chỉ thị", "Kế hoạch", "Biên bản", "Hướng dẫn",
+    "Thông tư",
 )
 
 KY_HIEU_TO_LOAI: dict[str, str] = {
-    "UcSQ": "UXV54bq/dCDEkeG7i25o", "GP": "R2nhuqV5IHBow6lw", "CV": "Q8O0bmcgdsSDbg==", "TTr": "VOG7nSB0csOsbmg=",
-    "BC": "QsOhbyBjw6Fv", "KH": "S+G6vyBob+G6oWNo", "NQ": "Tmdo4buLIHF1eeG6v3Q=", "TB": "VGjDtG5nIGLDoW8=",
-    "CT": "Q2jhu4kgdGjhu4s=", "BB": "QmnDqm4gYuG6o24=", "HD": "SMaw4bubbmcgZOG6q24=", "TT": "VGjDtG5nIHTGsA==",
-    "GCN": "R2nhuqV5IGNo4bupbmcgbmjhuq1u",
+    "UcSQ": "Quyết định", "GP": "Giấy phép", "CV": "Công văn", "TTr": "Tờ trình",
+    "BC": "Báo cáo", "KH": "Kế hoạch", "NQ": "Nghị quyết", "TB": "Thông báo",
+    "CT": "Chỉ thị", "BB": "Biên bản", "HD": "Hướng dẫn", "TT": "Thông tư",
+    "GCN": "Giấy chứng nhận",
 }
 
 HEADER_FIELDS: frozenset[str] = frozenset(
@@ -44,15 +44,15 @@ NUMERIC_FIELDS: frozenset[str] = frozenset({"thuTu", "toSo", "soTrang", "trangSo
 
 CONSTANT_FIELDS: frozenset[str] = frozenset({"ngonNgu"})
 
-REFERENCE_PREFIXES: tuple[str, ...] = ("Y8SDbiBj4bup", "eMOpdCA=", "eMOpdCDEkeG7gSBuZ2jhu4s=", "theo ", "xJFp4buBdSA=")
+REFERENCE_PREFIXES: tuple[str, ...] = ("căn cứ", "eMOpdCA=", "xét đề nghị", "theo ", "điều ")
 
 TRICHYEU_MIN_SUSPECT = 200
 TRICHYEU_HARD_MAX = 800
 TRICHYEU_MAX_SENTENCES = 3
-DIEU_KHOAN_RE = re.compile("XGLEkGnhu4F1XHMrXGQ=")
+DIEU_KHOAN_RE = re.compile("\\bĐiều\\s+\\d")
 
 NGAY_RE = re.compile(r"^(\d{1,2})\s*/\s*(\d{1,2})\s*/\s*(\d{4})$")
-KY_HIEU_RE = re.compile("XlxzKlxkK1xzKi9ccyooW0EtWsSQYS16xJFdKylccyooPzotfCQp")
+KY_HIEU_RE = re.compile("^\\s*\\d+\\s*/\\s*([A-ZĐa-zđ]+)\\s*(?:-|$)")
 
 def q_156(field_key: str, is_header_page: bool) -> str | None:
     if field_key in HEADER_FIELDS and not is_header_page:
@@ -164,18 +164,18 @@ def q_10d(data_dir: Path) -> set[str]:
 def main(argv: list[str] | None = None) -> int:
     p_3c2 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_3c2.add_argument("silver_jsonl")
-    p_3c2.add_argument("data_dir", help="dGjGsCBt4bulYyBQREYgZ+G7kWMgKMSR4buDIGTDsiBxdeG7kWMgaGnhu4d1KQ==")
+    p_3c2.add_argument("data_dir", help="thư mục PDF gốc (để dò quốc hiệu)")
     p_3c2.add_argument("--out", default="data/kie_filtered.jsonl")
     p_3c2.add_argument("--report", default="data/filter_report.json")
     p_3c3 = p_3c2.parse_args(argv)
 
     p_3d1 = Path(p_3c3.silver_jsonl)
     if not p_3d1.exists():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_3d1}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_3d1}", file=sys.stderr)
         return 2
 
     p_3c7 = q_10d(Path(p_3c3.data_dir))
-    print(f"VHJhbmcgxJHhuqd1IHbEg24gYuG6o24gKGPDsyBxdeG7kWMgaGnhu4d1KTog{len(p_3c7)}", file=sys.stderr)
+    print(f"Trang đầu văn bản (có quốc hiệu): {len(p_3c7)}", file=sys.stderr)
 
     p_3c4: Counter = Counter()
     kept_by_field: Counter = Counter()

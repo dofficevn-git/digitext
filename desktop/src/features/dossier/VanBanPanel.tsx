@@ -82,7 +82,7 @@ export default function V4dy({ dossier, onBack: Vz1 }: { dossier: V4bm; onBack: 
       {Vz5 && <Banner tone="err" text={Vz5} onClose={() => Vz6(null)} />}
 
       <V49a<V4bq>
-        addLabel="VGjDqm0gdsSDbiBi4bqjbg=="
+        addLabel="Thêm văn bản"
         onAdd={!Vz2.canCreate ? undefined : () => Vz8({ mode: "add", draft: V4cw() })}
         rows={Vz3}
         getId={(v) => v.id}
@@ -95,13 +95,13 @@ export default function V4dy({ dossier, onBack: Vz1 }: { dossier: V4bm; onBack: 
         }
         columns={[
           { head: "STT", cell: (v) => v.thuTu, cls: "num" },
-          { head: "TG/huqFpIFZC", cell: (v) => v.loaiVanBan },
-          { head: "U+G7kS9rw70gaGnhu4d1", cell: (v) => v.soKyHieu, cls: "tnum" },
-          { head: "TmfDoHkgdGjDoW5n", cell: (v) => v.ngayThang },
-          { head: "Q8ahIHF1YW4gYmFuIGjDoG5o", cell: (v) => v.coQuanBanHanh },
-          { head: "VHLDrWNoIHnhur91", cell: (v) => v.trichYeu },
-          { head: "U+G7kSB04bud", cell: (v) => v.toSo, cls: "num" },
-          { head: "U+G7kSB0cmFuZw==", cell: (v) => v.soTrang, cls: "num" },
+          { head: "Loại VB", cell: (v) => v.loaiVanBan },
+          { head: "Số/ký hiệu", cell: (v) => v.soKyHieu, cls: "tnum" },
+          { head: "Ngày tháng", cell: (v) => v.ngayThang },
+          { head: "Cơ quan ban hành", cell: (v) => v.coQuanBanHanh },
+          { head: "Trích yếu", cell: (v) => v.trichYeu },
+          { head: "Số tờ", cell: (v) => v.toSo, cls: "num" },
+          { head: "Số trang", cell: (v) => v.soTrang, cls: "num" },
         ]}
         rowActions={(v) =>
           V49o(

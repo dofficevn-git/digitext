@@ -53,11 +53,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_536 = Path(p_52f.eval_jsonl)
     if not p_536.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_536}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_536}", file=sys.stderr)
         return 2
     p_53a = [json.loads(p_534) for p_534 in p_536.open(encoding="utf-8") if p_534.strip()]
     if not p_53a:
-        print("TOG7lkk6IGV2YWwgcuG7l25n", file=sys.stderr)
+        print("LỖI: eval rỗng", file=sys.stderr)
         return 2
 
     from vietocr.tool.config import Cfg

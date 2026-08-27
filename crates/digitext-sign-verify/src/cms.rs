@@ -188,7 +188,7 @@ pub(crate) fn f_1zy(r_4m9: &[u8]) -> Result<SignedData, SignError> {
     let r_4m8 = ContentInfo::decode(&mut r_4ma).map_err(SignError::der)?;
     if r_4m8.content_type != OID_SIGNED_DATA {
         return Err(SignError::Cms(
-            "a2jDtG5nIHBo4bqjaSBpZC1zaWduZWREYXRh".into(),
+            "không phải id-signedData".into(),
         ));
     }
     r_4m8.content.decode_as().map_err(SignError::der)
@@ -213,7 +213,7 @@ pub fn f_2pr(
     let r_4mj = ContentInfo::decode(&mut r_4mp).map_err(SignError::der)?;
     if r_4mj.content_type != OID_SIGNED_DATA {
         return Err(SignError::Cms(
-            "a2jDtG5nIHBo4bqjaSBpZC1zaWduZWREYXRh".into(),
+            "không phải id-signedData".into(),
         ));
     }
     let r_4mr: SignedData = r_4mj.content.decode_as().map_err(SignError::der)?;
@@ -222,11 +222,11 @@ pub fn f_2pr(
         .0
         .as_slice()
         .first()
-        .ok_or_else(|| SignError::Cms("dGhp4bq/dSBTaWduZXJJbmZv".into()))?;
+        .ok_or_else(|| SignError::Cms("thiếu SignerInfo".into()))?;
     let r_4mh = r_4ms
         .signed_attrs
         .as_ref()
-        .ok_or_else(|| SignError::Cms("dGhp4bq/dSBzaWduZWRBdHRycw==".into()))?;
+        .ok_or_else(|| SignError::Cms("thiếu signedAttrs".into()))?;
     let r_4mo = f_1b2(r_4mh)?;
     let digest_ok = r_4mo == r_4ml;
     let cert = signer_cert(&r_4mr)?;
@@ -300,7 +300,7 @@ fn f_1bc(r_4n4: &SetOfVec<Attribute>) -> Result<Option<Vec<u8>>, SignError> {
                 .values
                 .as_slice()
                 .first()
-                .ok_or_else(|| SignError::Cms("dGltZVN0YW1wVG9rZW4gcuG7l25n".into()))?;
+                .ok_or_else(|| SignError::Cms("timeStampToken rỗng".into()))?;
             return Ok(Some(r_4n5.to_der().map_err(SignError::der)?));
         }
     }
@@ -313,7 +313,7 @@ fn f_1ba(r_4n7: &SetOfVec<Attribute>) -> Result<Option<Vec<u8>>, SignError> {
                 .values
                 .as_slice()
                 .first()
-                .ok_or_else(|| SignError::Cms("c2lnbmluZ0NlcnRpZmljYXRlVjIgcuG7l25n".into()))?;
+                .ok_or_else(|| SignError::Cms("signingCertificateV2 rỗng".into()))?;
             let r_4n8 = r_4n9.decode_as::<Tlr>().map_err(SignError::der)?;
             return Ok(Some(r_4n8.certs.cert.cert_hash.as_bytes().to_vec()));
         }
@@ -327,12 +327,12 @@ pub(crate) fn f_1b2(r_4nb: &SetOfVec<Attribute>) -> Result<Vec<u8>, SignError> {
                 .values
                 .as_slice()
                 .first()
-                .ok_or_else(|| SignError::Cms("bWVzc2FnZURpZ2VzdCBy4buXbmc=".into()))?;
+                .ok_or_else(|| SignError::Cms("messageDigest rỗng".into()))?;
             let r_4nc = r_4nd.decode_as::<OctetString>().map_err(SignError::der)?;
             return Ok(r_4nc.as_bytes().to_vec());
         }
     }
-    Err(SignError::Cms("dGhp4bq/dSBtZXNzYWdlRGlnZXN0".into()))
+    Err(SignError::Cms("thiếu messageDigest".into()))
 }
 pub(crate) fn f_rl(r_4nf: &SignedData) -> Vec<Certificate> {
     r_4nf
@@ -363,11 +363,11 @@ pub(crate) fn signer_cert(r_4nl: &SignedData) -> Result<Certificate, SignError> 
         .0
         .as_slice()
         .first()
-        .ok_or_else(|| SignError::Cms("dGhp4bq/dSBTaWduZXJJbmZv".into()))?;
+        .ok_or_else(|| SignError::Cms("thiếu SignerInfo".into()))?;
     let certs = f_rl(r_4nl);
     if certs.is_empty() {
         return Err(SignError::Cms(
-            "a2jDtG5nIGPDsyBDZXJ0aWZpY2F0ZSB0cm9uZyBDZXJ0aWZpY2F0ZVNldA==".into(),
+            "không có Certificate trong CertificateSet".into(),
         ));
     }
     let r_4nj = match &r_4nm.sid {
@@ -384,7 +384,7 @@ pub(crate) fn signer_cert(r_4nl: &SignedData) -> Result<Certificate, SignError> 
     };
     r_4nj.ok_or_else(|| {
         SignError::Cms(
-            "a2jDtG5nIHRo4bqleSBjZXJ0IGto4bubcCBTaWduZXJJZGVudGlmaWVyIHRyb25nIENNUw==".into(),
+            "không thấy cert khớp SignerIdentifier trong CMS".into(),
         )
     })
 }

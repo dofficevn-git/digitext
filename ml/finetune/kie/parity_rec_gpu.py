@@ -109,10 +109,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_4d9, md = Path(a.eval_jsonl), Path(a.model_dir)
     if not p_4d9.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_4d9}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_4d9}", file=sys.stderr)
         return 2
     if not (md / "w256" / "encoder.onnx").is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkgdzI1Ni9lbmNvZGVyLm9ubnggdHJvbmcg{md}", file=sys.stderr)
+        print(f"LỖI: không thấy w256/encoder.onnx trong {md}", file=sys.stderr)
         return 2
 
     import cv2
@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     p_4dc = [json.loads(p_4d8) for p_4d8 in p_4d9.open(encoding="utf-8") if p_4d8.strip()][: a.limit]
     xs = [_preprocess(bgr) for p_4da in p_4dc if (bgr := cv2.imread(p_4da["image"], cv2.IMREAD_COLOR)) is not None]
     if not xs:
-        print("TOG7lkk6IGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mg4bqjbmggY3JvcCBuw6Bv", file=sys.stderr)
+        print("LỖI: không đọc được ảnh crop nào", file=sys.stderr)
         return 2
 
     cpu_texts, p_4d6 = q_cc(md, ["CPUExecutionProvider"], xs, vocab)
@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
     p_4dd["gpu_provider"] = p_4db
     print(json.dumps(p_4dd, ensure_ascii=True, indent=2))
     if p_4db != "CUDAExecutionProvider":
-        print(f"4pqgIEdQVSBy4bubdCB24buBIA=={p_4db}IOKAlCBLSMOUTkcga2nhu4NtIMSRxrDhu6NjIHBhcml0eSAoY+G6p24gb25ueHJ1bnRpbWUtZ3B1ICsgQ1VEQSBsaWJzKQ==",
+        print(f"⚠ GPU rớt về {p_4db} — KHÔNG kiểm được parity (cần onnxruntime-gpu + CUDA libs)",
               file=sys.stderr)
         return 3
     return 0

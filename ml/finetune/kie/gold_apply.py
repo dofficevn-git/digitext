@@ -26,7 +26,7 @@ def q_151(verdict: str, given: list[int], silver_span: list[int]) -> list[int]:
         return list(silver_span)
     if verdict in ("fix_span", "missing", "ocr_wrong"):
         return list(given) if given else list(silver_span)
-    raise ValueError(f"dmVyZGljdCBs4bqhOiA={verdict}")
+    raise ValueError(f"verdict lạ: {verdict}")
 
 def q_f3(bio: dict, decision: dict) -> tuple[dict, dict[str, str]]:
     p_3f0 = len(bio.get("words", []))
@@ -40,7 +40,7 @@ def q_f3(bio: dict, decision: dict) -> tuple[dict, dict[str, str]]:
         p_3ea = p_3eb.get(p_3ee, {"verdict": "ok"})
         verdict = p_3ea.get("verdict", "ok")
         if verdict not in VERDICTS:
-            raise ValueError(f"{bio['id']}/{p_3ee}: {verdict!r}IGtow7RuZyBo4bujcCBs4buH")
+            raise ValueError(f"{bio['id']}/{p_3ee}: {verdict!r} không hợp lệ")
         span = q_151(verdict, p_3ea.get("tokens", []), p_3f1.get(p_3ee, []))
         span = sorted(p_3ec for p_3ec in span if 0 <= p_3ec < p_3f0)
         p_3f2[p_3ee] = verdict
@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     p_400, p_402 = Path(p_3ff.bio_jsonl), Path(p_3ff.decisions_jsonl)
     for p_408 in (p_400, p_402):
         if not p_408.is_file():
-            print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_408}", file=sys.stderr)
+            print(f"LỖI: không thấy {p_408}", file=sys.stderr)
             return 2
 
     bio = load_jsonl_by_id(p_400)
@@ -127,18 +127,18 @@ def main(argv: list[str] | None = None) -> int:
             continue
         p_409 = p_401.get("id")
         if p_409 not in bio:
-            print(f"Q+G6ok5IIELDgU86IHF1eeG6v3QgxJHhu4tuaCBjaG8gaWQga2jDtG5nIGPDsyB0cm9uZyBiaW86IA=={p_409}", file=sys.stderr)
+            print(f"CẢNH BÁO: quyết định cho id không có trong bio: {p_409}", file=sys.stderr)
             continue
         try:
             gold, p_40b = q_f3(bio[p_409], p_401)
         except ValueError as e:
-            print(f"TOG7lkk6IA=={e}", file=sys.stderr)
+            print(f"LỖI: {e}", file=sys.stderr)
             return 2
         p_405.append(gold)
         all_used.append(p_40b)
 
     if not p_405:
-        print("Q2jGsGEgdHJhbmcgbsOgbyBzb8OhdCAocmV2aWV3ZWQ6dHJ1ZSkg4oCUIGtow7RuZyBnaGkgZ29sZC4=", file=sys.stderr)
+        print("Chưa trang nào soát (reviewed:true) — không ghi gold.", file=sys.stderr)
         return 1
 
     out = Path(p_3ff.out)
@@ -151,8 +151,8 @@ def main(argv: list[str] | None = None) -> int:
     Path(p_3ff.report).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     p_40a = report["totals"]
-    print(f"→ {out} ({len(p_405)}IHRyYW5nIGdvbGQ7IGLhu48g{p_407}IGNoxrBhIHNvw6F0KQ==", file=sys.stderr)
-    print(f"→ {p_3ff.report}OiBs4buXaSBwaMOtYSBWTE0g{p_40a['vlm_error']}IMK3IHBow61hIE9DUiA={p_40a['ocr_error']}", file=sys.stderr)
+    print(f"→ {out} ({len(p_405)} trang gold; bỏ {p_407} chưa soát)", file=sys.stderr)
+    print(f"→ {p_3ff.report}: lỗi phía VLM {p_40a['vlm_error']} · phía OCR {p_40a['ocr_error']}", file=sys.stderr)
     return 0
 
 if __name__ == "__main__":

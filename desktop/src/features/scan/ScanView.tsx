@@ -20,28 +20,28 @@ const V4p7 = (V27q: number) => V27q === 300 || V27q === 600;
 const V4p8: Array<{ key: keyof V3y8; label: string; hint: string }> = [
   {
     key: "deskew",
-    label: "S2jhu60gbmdoacOqbmc=",
-    hint: "VOG7sSBwaMOhdCBoaeG7h24gZ8OzYyBs4buHY2ggcuG7k2kgeG9heSB0cmFuZyBjaG8gdGjhurNuZy4=",
+    label: "Khử nghiêng",
+    hint: "Tự phát hiện góc lệch rồi xoay trang cho thẳng.",
   },
   {
     key: "punchHoles",
-    label: "WG/DoSBs4buXIGLhuqVt",
-    hint: "VMOsbSDEkeG7kW0gdHLDsm4gY+G7oSBs4buXIGLhuqVtIHPDoXQgbcOpcCBnaeG6pXkgcuG7k2kgdMO0IGzhuqFpIGLhurFuZyBtw6B1IG7hu4FuLg==",
+    label: "Xoá lỗ bấm",
+    hint: "Tìm đốm tròn cỡ lỗ bấm sát mép giấy rồi tô lại bằng màu nền.",
   },
   {
     key: "despeckle",
-    label: "WG/DoSDEkeG7kW0=",
-    hint: "TOG7jWMgdHJ1bmcgduG7iyAzw5czIOKAlCB4b8OhIGjhuqF0IGLhuqluIGzhursgbcOgIHbhuqtuIGdp4buvIG7DqXQgY2jhu68u",
+    label: "Xoá đốm",
+    hint: "Lọc trung vị 3×3 — xoá hạt bẩn lẻ mà vẫn giữ nét chữ.",
   },
   {
     key: "denoise",
-    label: "S2jhu60gbmhp4buFdQ==",
-    hint: "TMOgbSBt4buLbiBuaOG6uSwgZ2nhuqNtIGjhuqF0IG5oaeG7hXUgbuG7gW4u",
+    label: "Khử nhiễu",
+    hint: "Làm mịn nhẹ, giảm hạt nhiễu nền.",
   },
   {
     key: "sharpen",
-    label: "TMOgbSBuw6l0",
-    hint: "QsO5IGzhuqFpIMSR4buZIHPhuq9jIGPhu6dhIG7DqXQgY2jhu68gc2F1IGtoaSBsw6BtIG3hu4tuLg==",
+    label: "Làm nét",
+    hint: "Bù lại độ sắc của nét chữ sau khi làm mịn.",
   },
 ];
 
@@ -133,8 +133,8 @@ export default function V4p9() {
       const V29t = await open({
         multiple: false,
         directory: false,
-        title: "Q2jhu41uIGLhu5kgY8OgaSBkcml2ZXIgbcOheSBxdcOpdA==",
-        filters: V29s.length ? [{ name: "QuG7mSBjw6BpIGRyaXZlcg==", extensions: V29s }] : undefined,
+        title: "Chọn bộ cài driver máy quét",
+        filters: V29s.length ? [{ name: "Bộ cài driver", extensions: V29s }] : undefined,
       });
       if (typeof V29t !== "string") return;
       const V29u = await V47d(V29t);
@@ -214,7 +214,7 @@ export default function V4p9() {
   const V2a6 = async (V2a7: Partial<V3yb> = {}) => {
     if (!V284) {
       V294(
-        "Q2jGsGEgcGjDoXQgaGnhu4duIG3DoXkgcXXDqXQuIEPhuq9tIG3DoXkgcXXDqXQgcuG7k2kgYuG6pW0g4oCcVMOsbSBs4bqhaeKAnS4=",
+        "Chưa phát hiện máy quét. Cắm máy quét rồi bấm “Tìm lại”.",
       );
       return;
     }
@@ -305,7 +305,7 @@ export default function V4p9() {
     V29j(null);
     if (!V27s) {
       V29n({
-        text: "Q+G6p24gcXXDqXQgdsOgbyBt4buZdCBo4buTIHPGoSDEkeG7gyBn4buZcCBQREYgKGNoxrBhIGPDsyBo4buTIHPGoSDEkcOtY2gpLg==",
+        text: "Cần quét vào một hồ sơ để gộp PDF (chưa có hồ sơ đích).",
         tone: "err",
       });
       return;
@@ -317,7 +317,7 @@ export default function V4p9() {
     try {
       const V2al = await V40k(V27s.phong, V27s.hoSo, V2ak);
       V29n({
-        text: `xJDDoyBn4buZcCA=${V2al.pageCount}IOG6o25oIHRow6BuaCAxIFBERi4=`,
+        text: `Đã gộp ${V2al.pageCount} ảnh thành 1 PDF.`,
         tone: "ok",
         pdfPath: V2al.pdfPath,
       });
@@ -494,7 +494,7 @@ export default function V4p9() {
                 <label>Quét vào</label>
                 <span className="badge gray">
                   <Icon name="thuMuc" />
-                  {target || "Q2jGsGEgY2jhu41uIHRoxrAgbeG7pWM="}
+                  {target || "Chưa chọn thư mục"}
                 </span>
               </div>
               <div className="setup-row">
@@ -522,13 +522,13 @@ export default function V4p9() {
                     {V282.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
-                        {s.connected ? "" : "ICht4bqldCBr4bq/dCBu4buRaSk="}
+                        {s.connected ? "" : " (mất kết nối)"}
                       </option>
                     ))}
                   </select>
                   <button className="btn sm" onClick={V29o} disabled={V286}>
                     {V286 ? (
-                      "xJBhbmcgdMOsbeKApg=="
+                      "Đang tìm…"
                     ) : (
                       <>
                         <Icon name="lamMoi" />
@@ -541,10 +541,10 @@ export default function V4p9() {
                       className="btn sm"
                       onClick={() => void V29r()}
                       disabled={V28a}
-                      title="Q8OzIG3DoXkgcXXDqXQgbeG7m2k/IENo4buNbiBi4buZIGPDoGkgZHJpdmVyIHThuqNpIHThu6sgd2ViIGjDo25nIOKAlCBhcHAgc+G6vSBjaOG6oXkgYuG7mSBjw6BpIGvDqG0gcXV54buBbiBxdeG6o24gdHLhu4ssIHLhu5NpIHThu7EgdMOsbSBs4bqhaS4="
+                      title="Có máy quét mới? Chọn bộ cài driver tải từ web hãng — app sẽ chạy bộ cài kèm quyền quản trị, rồi tự tìm lại."
                     >
                       {V28a ? (
-                        "xJBhbmcgbeG7nyBi4buZIGPDoGnigKY="
+                        "Đang mở bộ cài…"
                       ) : (
                         <>
                           <Icon name="taiVe" />
@@ -586,7 +586,7 @@ export default function V4p9() {
                   value={V28h}
                   onChange={V28i}
                   options={[
-                    { value: "adf", label: "QURGICh04buxIMSR4buZbmcp" },
+                    { value: "adf", label: "ADF (tự động)" },
                     { value: "glass", label: "S8Otbmg=" },
                   ]}
                 />
@@ -598,8 +598,8 @@ export default function V4p9() {
                     value={V28j ? "on" : "off"}
                     onChange={(v) => V28k(v === "on")}
                     options={[
-                      { value: "off", label: "MSBt4bq3dA==" },
-                      { value: "on", label: "MiBt4bq3dCAoZHVwbGV4KQ==" },
+                      { value: "off", label: "1 mặt" },
+                      { value: "on", label: "2 mặt (duplex)" },
                     ]}
                   />
                 </div>
@@ -668,7 +668,7 @@ export default function V4p9() {
                       <Icon name="canhBao" /> Lỗi tìm máy quét: {V288}
                     </>
                   ) : (
-                    "Q2jGsGEgcGjDoXQgaGnhu4duIG3DoXkgcXXDqXQg4oCUIGPhuq9tIHRoaeG6v3QgYuG7iyBy4buTaSBi4bqlbSDigJxUw6xtIGzhuqFp4oCdLg=="
+                    "Chưa phát hiện máy quét — cắm thiết bị rồi bấm “Tìm lại”."
                   )}
                 </span>
               )}
@@ -700,7 +700,7 @@ export default function V4p9() {
                 {V28p && (
                   <span
                     className="badge info tnum"
-                    title="4bqibmggxJFhbmcgxJHGsOG7o2MgbMOgbSBz4bqhY2ggdOG7sSDEkeG7mW5nIOG7nyBu4buBbiDigJQgbMO0IHPhur0gYsOhbyBr4bq/dCB0aMO6YyBraGkgeG9uZy4="
+                    title="Ảnh đang được làm sạch tự động ở nền — lô sẽ báo kết thúc khi xong."
                   >
                     <Icon name="tuDong" />
                     Đang làm sạch {V28p.done}/{V28p.total}
@@ -744,7 +744,7 @@ export default function V4p9() {
                         V29h((s) => (s.has(p.index) ? s : new Set([p.index])));
                         V29j({ x: V2b8.clientX, y: V2b8.clientY });
                       }}
-                      title={`Trang ${p.index}IOKAlCBi4bqlbSDEkeG7gyB4ZW0gZnVsbCDCtyBjaHXhu5l0IHBo4bqjaSDEkeG7gyBn4buZcCBQREY=`}
+                      title={`Trang ${p.index} — bấm để xem full · chuột phải để gộp PDF`}
                       style={{
                         cursor: "pointer",
                         outline: V29g.has(p.index) ? "2px solid var(--color-brand-500)" : undefined,
@@ -764,8 +764,8 @@ export default function V4p9() {
                           checked={V29g.has(p.index)}
                           onClick={(V2b9) => V2b9.stopPropagation()}
                           onChange={() => V29h((s) => V4oh(s, p.index))}
-                          title="Q2jhu41uIOG6o25oIMSR4buDIGfhu5lwIFBERg=="
-                          aria-label={`Q2jhu41uIHRyYW5nIA==${p.index}`}
+                          title="Chọn ảnh để gộp PDF"
+                          aria-label={`Chọn trang ${p.index}`}
 
                           className="absolute top-1.5 right-1.5 z-2 w-4.5 h-4.5 cursor-pointer"
                         />
@@ -775,7 +775,7 @@ export default function V4p9() {
                         </div>
                         {V28r.has(p.index) && (
                           <div
-                            title="xJDDoyBsw6BtIHPhuqFjaCB04buxIMSR4buZbmcgKGto4butIG5naGnDqm5nIMK3IGzhu5cgYuG6pW0gwrcgxJHhu5FtIMK3IG5oaeG7hXUgwrcgduG6v3QgYuG6qW4gwrcgbMOgbSBuw6l0KQ=="
+                            title="Đã làm sạch tự động (khử nghiêng · lỗ bấm · đốm · nhiễu · vết bẩn · làm nét)"
                             className="flag"
                           >
                             <Icon name="tuDong" size={12} />
@@ -802,7 +802,7 @@ export default function V4p9() {
                     onClick={() => void V2aj()}
                   >
                     {V29k ? (
-                      "xJBhbmcgZ+G7mXDigKY="
+                      "Đang gộp…"
                     ) : (
                       <>
                         <Icon name="gop" />
@@ -906,7 +906,7 @@ export default function V4p9() {
               <div
                 className="preview-big"
                 onClick={() => V2b3 && V298(V2b3.index)}
-                title={V2b3 ? "QuG6pW0gxJHhu4MgeGVtIGZ1bGw=" : undefined}
+                title={V2b3 ? "Bấm để xem full" : undefined}
                 style={
                   V2b3?.preview || V2b3?.thumbnail
                     ? {
@@ -921,7 +921,7 @@ export default function V4p9() {
               />
               <div className="pager">
                 <span className="pg" onClick={() => V296((c) => Math.max(1, c - 1))}>
-                  <Icon name="truoc" size={14} label="VHJhbmcgdHLGsOG7m2M=" />
+                  <Icon name="truoc" size={14} label="Trang trước" />
                 </span>
                 <span className="pg cur">{V295}</span>
                 <span className="pg" onClick={() => V296((c) => Math.min(V28t.length, c + 1))}>
@@ -952,9 +952,9 @@ export default function V4p9() {
                     {V2b3 && V2az.has(V2b3.index) && (
                       <p className="muted mt-2 mx-0 mb-3">
                         Trang {V2b3.index}: khổ {V2b3.paper}
-                        {V2b3.paper !== V2av ? `IChs4buHY2gga2jhu49pIA==${V2av})` : ""} · DPI{" "}
+                        {V2b3.paper !== V2av ? ` (lệch khỏi ${V2av})` : ""} · DPI{" "}
                         {V2b3.dpi}
-                        {V2b3.dpiOk ? "" : `IOKAlCBuZ2/DoGkgezMwMCwgNjAwfQ==`}.
+                        {V2b3.dpiOk ? "" : ` — ngoài {300, 600}`}.
                       </p>
                     )}
                     <div className="grid grid-cols-2 gap-2">
@@ -1041,7 +1041,7 @@ export default function V4p9() {
                       onClick={() => void V2ae()}
                     >
                       {V29a ? (
-                        "xJBhbmcgxJHDs25nIGfDs2nigKY="
+                        "Đang đóng gói…"
                       ) : V28p ? (
                         <>
                           <Icon name="tuDong" />

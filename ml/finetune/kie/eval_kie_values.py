@@ -120,10 +120,10 @@ def main(argv: list[str] | None = None) -> int:
     from eval_kie import q_121
 
     p_353 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p_353.add_argument("bio_jsonl", help="QklPIGPhu6dhIE3hu5hUIGzhuqduIE9DUiAobmjDoW5oIGPhuqduIGNo4bqlbSk=")
-    p_353.add_argument("--gold", required=True, help="a2llX2dvbGQuanNvbmwg4oCUIG5ndeG7k24gR0nDgSBUUuG7iiB0aOG6rXQ=")
+    p_353.add_argument("bio_jsonl", help="BIO của MỘT lần OCR (nhánh cần chấm)")
+    p_353.add_argument("--gold", required=True, help="kie_gold.jsonl — nguồn GIÁ TRỊ thật")
     p_353.add_argument("--model-dir", required=True)
-    p_353.add_argument("--tag", required=True, help="bmjDo24gbmjDoW5oLCB2ZCBvY3JfY3UgLyBvY3JfbW9p")
+    p_353.add_argument("--tag", required=True, help="nhãn nhánh, vd ocr_cu / ocr_moi")
     p_353.add_argument("--out", required=True)
     p_353.add_argument("--max-len", type=int, default=512)
     p_352 = p_353.parse_args(argv)

@@ -13,18 +13,18 @@ export interface V4zb {
 
 export const V4zc: V4zb[] = [
   {
-    group: "Q2jhu4luaCBsw70=",
+    group: "Chỉnh lý",
     items: [
-      { key: "laphoso", label: "TOG6rXAgaOG7kyBzxqEgxJFp4buHbiB04but" },
-      { key: "hethonghoa", label: "SOG7hyB0aOG7kW5nIGhvw6EgaOG7kyBzxqE=" },
-      { key: "capnhat", label: "Q+G6rXAgbmjhuq10IGPGoSBz4bufIGThu68gbGnhu4d1" },
+      { key: "laphoso", label: "Lập hồ sơ điện tử" },
+      { key: "hethonghoa", label: "Hệ thống hoá hồ sơ" },
+      { key: "capnhat", label: "Cập nhật cơ sở dữ liệu" },
     ],
   },
   {
-    group: "U+G7kSBob8Oh",
+    group: "Số hoá",
     items: [
-      { key: "sohoa", label: "VOG6oW8gbOG6rXAgQ1NETA==" },
-      { key: "kyso", label: "S8O9IHPhu5E=" },
+      { key: "sohoa", label: "Tạo lập CSDL" },
+      { key: "kyso", label: "Ký số" },
       { key: "ocr", label: "OCR" },
     ],
   },

@@ -114,9 +114,9 @@ fn measure(r_5rz: &Path) -> (u64, u64) {
 pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
     let mut r_5s7 = Vec::new();
     let mut r_5sd = vec![
-        "S2jDtG5nIGhvw6BuIHTDoWMgxJHGsOG7o2Mg4oCUIGNo4buJIGNo4bqheSBraGkgQ0jhuq5DIENI4bquTiDEkcOjIHNhbyBsxrB1LCBob+G6t2MgxJHDonkgbMOgIG3DoXkgdGjhu60u"
+        "Không hoàn tác được — chỉ chạy khi CHẮC CHẮN đã sao lưu, hoặc đây là máy thử."
         .into(),
-        "TsOqbiBk4burbmcgZGlnaXRleHQtYXBpIC8gZGlnaXRleHQtb2NyIHRyxrDhu5tjIGtoaSB4b8OhOiB0aeG6v24gdHLDrG5oIMSRYW5nIGNo4bqheSBjw7MgdGjhu4MgZ2hpIGzhuqFpIGThu68gbGnhu4d1IG3hu5tpIG5nYXkgc2F1IGtoaSB0cnVuY2F0ZS4="
+        "Nên dừng digitext-api / digitext-ocr trước khi xoá: tiến trình đang chạy có thể ghi lại dữ liệu mới ngay sau khi truncate."
         .into(),
     ];
     let mut r_5sb = 0u64;
@@ -125,7 +125,7 @@ pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
     }
     r_5s7.push(PlanItem::new(
         format!(
-            "RMOybmcgdHJvbmcg{}IGLhuqNuZyAoUG9zdGdyZXMp",
+            "Dòng trong {} bảng (Postgres)",
             f_2iv(r_5s5).len()
         ),
         f_26f(&t.dsn),
@@ -134,7 +134,7 @@ pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
     if t.stores.is_empty() {
         r_5sd
             .push(
-                "Q2jGsGEgY+G6pXUgaMOsbmgga2hvIG9iamVjdCBuw6BvIChESUdJVEVYVF9NSU5JT18qIC8gRElHSVRFWFRfUERGX1NUT1JFX0RJUikg4oCUIFBERiB2w6Ag4bqjbmggdHJhbmcgdHLDqm4ga2hvIHPhur0gS0jDlE5HIGLhu4sgeG/DoQ=="
+                "Chưa cấu hình kho object nào (DIGITEXT_MINIO_* / DIGITEXT_PDF_STORE_DIR) — PDF và ảnh trang trên kho sẽ KHÔNG bị xoá"
                     .into(),
             );
     }
@@ -144,7 +144,7 @@ pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
                 r_5s7
                     .push(
                         PlanItem::new(
-                            "T2JqZWN0IHRyb25nIGtobyAoUERGL+G6o25oL2fDs2kp",
+                            "Object trong kho (PDF/ảnh/gói)",
                             r_5sa.label.clone(),
                             r_5s8.len() as u64,
                         ),
@@ -154,7 +154,7 @@ pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
                 r_5sd
                     .push(
                         format!(
-                            "S0jDlE5HIGxp4buHdCBrw6ogxJHGsOG7o2Mga2hvIG9iamVjdCAn{}' ({e}KSDigJQgcGjhuqduIG7DoHkgc+G6vSBLSMOUTkcgYuG7iyB4b8OhLCBwaOG6o2kgZOG7jW4gdGF5",
+                            "KHÔNG liệt kê được kho object '{}' ({e}) — phần này sẽ KHÔNG bị xoá, phải dọn tay",
                             r_5sa.label
                         ),
                     )
@@ -165,7 +165,7 @@ pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
         let (r_5s9, r_5s4) = measure(r_5s6);
         r_5s7.push(
             PlanItem::new(
-                "RmlsZSB0csOqbiDEkcSpYSBBUEkgKFBERiBuZ3Xhu5NuLCAucGFydCk=",
+                "File trên đĩa API (PDF nguồn, .part)",
                 r_5s6.display().to_string(),
                 r_5s9,
             )
@@ -175,14 +175,14 @@ pub async fn build_plan(t: &Tl5<'_>, r_5s5: Depth) -> Thd {
     if r_5s5 == Depth::All {
         r_5sd
             .push(
-                "TeG7qWMgVE/DgE4gQuG7mCB4b8OhIGPhuqMgdMOgaSBraG/huqNuICsgZOG7sSDDoW46IHNhdSDEkcOzIHBo4bqjaSBjaOG6oXkgYGRpZ2l0ZXh0IGFwaSBib290c3RyYXAtc3VwZXJhZG1pbiAtLXVzZXJuYW1lIDx0w6puPmAgbeG7m2kgxJHEg25nIG5o4bqtcCBs4bqhaSDEkcaw4bujYy4="
+                "Mức TOÀN BỘ xoá cả tài khoản + dự án: sau đó phải chạy `digitext api bootstrap-superadmin --username <tên>` mới đăng nhập lại được."
                     .into(),
             );
     }
     r_5sd
         .push(
             format!(
-                "R0nhu64gTOG6oEk6IGLhuqNuZyA={NEVER_TRUNCATE}IChs4buLY2ggc+G7rSBtaWdyYXRpb24pLCBraG/DoSBKV1QgdsOgIGPDoWMgYnVuZGxlIFBFTSB0cnVzdCBzdG9yZSDigJQgxJHDsyBsw6AgY+G6pXUgaMOsbmgsIGtow7RuZyBwaOG6o2kgZOG7ryBsaeG7h3Uu"
+                "GIỮ LẠI: bảng {NEVER_TRUNCATE} (lịch sử migration), khoá JWT và các bundle PEM trust store — đó là cấu hình, không phải dữ liệu."
             ),
         );
     Thd {
@@ -200,7 +200,7 @@ pub async fn execute(t: &Tl5<'_>, r_5se: Depth) -> Report {
         Ok(_) => r_5si.removed += f_2iv(r_5se).len() as u64,
         Err(e) => r_5si
             .errors
-            .push(format!("VFJVTkNBVEUgdGjhuqV0IGLhuqFpOiA={e}")),
+            .push(format!("TRUNCATE thất bại: {e}")),
     }
     for r_5sh in &t.stores {
         match r_5sh.store.list_prefix("").await {
@@ -210,12 +210,12 @@ pub async fn execute(t: &Tl5<'_>, r_5se: Depth) -> Report {
                         Ok(()) => r_5si.removed += 1,
                         Err(e) => r_5si
                             .errors
-                            .push(format!("eG/DoSBvYmplY3Qg{}/{k}: {e}", r_5sh.label)),
+                            .push(format!("xoá object {}/{k}: {e}", r_5sh.label)),
                     }
                 }
             }
             Err(e) => r_5si.errors.push(format!(
-                "bGnhu4d0IGvDqiBraG8gb2JqZWN0ICc={}': {e}",
+                "liệt kê kho object '{}': {e}",
                 r_5sh.label
             )),
         }

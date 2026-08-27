@@ -190,13 +190,13 @@ fn f_1z3(r_sh: &str) -> Result<DateTime<Utc>, ApiError> {
             .expect("00:00:00")
             .and_local_timezone(r_sj)
             .single()
-            .expect("KzA3OjAwIGtow7RuZyBjw7MgRFNU")
+            .expect("+07:00 không có DST")
             .with_timezone(&Utc));
     }
     DateTime::parse_from_rfc3339(r_sh)
         .map(|r_si| r_si.with_timezone(&Utc))
         .map_err(|_| {
-            ApiError::bad_request("aGFuTm9wIG5o4bqtbiAnWVlZWS1NTS1ERCcgaG/hurdjIFJGQyAzMzM5")
+            ApiError::bad_request("hanNop nhận 'YYYY-MM-DD' hoặc RFC 3339")
         })
 }
 fn f_1d7(n: i64) -> String {
@@ -221,7 +221,7 @@ async fn f_26p(
     r_sl.require_perm(Permission::SubmissionCreate)?;
     let project_id = r_sq.project_id.or(r_sl.user.project_id).ok_or_else(|| {
         ApiError::bad_request(
-            "dGhp4bq/dSBwcm9qZWN0SWQgKG5nxrDhu51pIGfhu41pIGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIG7DoG8p",
+            "thiếu projectId (người gọi không thuộc dự án nào)",
         )
     })?;
     let r_ss = f_29a(&r_st.pool, &r_sl.user).await?;
@@ -230,23 +230,23 @@ async fn f_26p(
     }
     if r_sq.org_name.trim().is_empty() || r_sq.org_code.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "dGhp4bq/dSB0w6puL23DoyBjxqEgcXVhbiBu4buZcA==",
+            "thiếu tên/mã cơ quan nộp",
         ));
     }
     if r_sq.fond_code.trim().is_empty() {
-        return Err(ApiError::bad_request("dGhp4bq/dSBtw6MgcGjDtG5n"));
+        return Err(ApiError::bad_request("thiếu mã phông"));
     }
     if r_sq.items.is_empty() {
         return Err(
             ApiError::bad_request(
-                "TeG7pWMgbOG7pWMgaOG7kyBzxqEgbuG7mXAgY+G6p24gdOG7kWkgdGhp4buDdSAwMSBkw7JuZyAoxJBp4buBdSAyMC4zLmsp",
+                "Mục lục hồ sơ nộp cần tối thiểu 01 dòng (Điều 20.3.k)",
             ),
         );
     }
     let cach_thuc = r_sq.cach_thuc.as_deref().unwrap_or("truc_tuyen");
     if cach_thuc != "truc_tiep" && cach_thuc != "truc_tuyen" {
         return Err(ApiError::bad_request(
-            "Y2FjaFRodWMgbmjhuq1uICd0cnVjX3RpZXAnIGhv4bq3YyAndHJ1Y190dXllbicgKMSQaeG7gXUgMTgp",
+            "cachThuc nhận 'truc_tiep' hoặc 'truc_tuyen' (Điều 18)",
         ));
     }
     let han_nop = match note_of(&r_sq.han_nop) {
@@ -293,7 +293,7 @@ async fn f_26p(
         Err(e) if digitext_db::f_1jn(&e) => {
             return Err(
                 ApiError::conflict(
-                    "TeG7pWMgbOG7pWMgY8OzIG3DoyBo4buTIHPGoSB0csO5bmcgbOG6t3AgdHJvbmcgY8O5bmcgbOG6p24gbuG7mXAgKMSQaeG7gXUgMjQuMS5hKQ=="
+                    "Mục lục có mã hồ sơ trùng lặp trong cùng lần nộp (Điều 24.1.a)"
                         .to_string(),
                 ),
             );
@@ -308,7 +308,7 @@ async fn f_26p(
                     Some(r_sr.id),
                     "sla_register_late",
                     &format!(
-                        "TOG6p24gbuG7mXAg{}OiDEkcSDbmcga8O9IE1V4buYTiBoxqFuIDEyIHRow6FuZyB0csaw4bubYyBo4bqhbiBu4buZcCA={}ICjEkGnhu4F1IDIwLjIp",
+                        "Lần nộp {}: đăng ký MUỘN hơn 12 tháng trước hạn nộp {} (Điều 20.2)",
                         r_sr.ma_yeu_cau, r_sm.format("%d/%m/%Y")
                     ),
                 )
@@ -316,7 +316,7 @@ async fn f_26p(
             {
                 tracing::warn!(
                     error = % e,
-                    "a2jDtG5nIGdoaSDEkcaw4bujYyBj4bqjbmggYsOhbyDEkGnhu4F1IDIwLjI="
+                    "không ghi được cảnh báo Điều 20.2"
                 );
             }
         }
@@ -389,7 +389,7 @@ async fn f_116(
     let r_t7 = load_in_scope(&r_t8, &r_t5, id).await?;
     if !submissions::confirm(&r_t8.pool, r_t7.id, note_of(&r_t6.note)).await? {
         return Err(ApiError::conflict(format!(
-            "a2jDtG5nIHjDoWMgbmjhuq1uIMSRxrDhu6NjIHThu6sgdHLhuqFuZyB0aMOhaSAn{}'",
+            "không xác nhận được từ trạng thái '{}'",
             r_t7.status
         )));
     }
@@ -405,12 +405,12 @@ async fn f_26m(
     let r_tb = load_in_scope(&r_tc, &r_t9, id).await?;
     let note = note_of(&r_ta.note).ok_or_else(|| {
         ApiError::bad_request(
-            "dOG7qyBjaOG7kWkgdGh1IHBo4bqjaSBnaGkgcsO1IGzDvSBkbyAoxJBp4buBdSAyMS4zLmQp",
+            "từ chối thu phải ghi rõ lý do (Điều 21.3.d)",
         )
     })?;
     if !submissions::refuse(&r_tc.pool, r_tb.id, Some(note)).await? {
         return Err(ApiError::conflict(format!(
-            "a2jDtG5nIHThu6sgY2jhu5FpIMSRxrDhu6NjIHThu6sgdHLhuqFuZyB0aMOhaSAn{}'",
+            "không từ chối được từ trạng thái '{}'",
             r_tb.status
         )));
     }
@@ -438,7 +438,7 @@ async fn f_266(
         return Err(
             ApiError::conflict(
                 format!(
-                    "Y2jhu4kgdGnhur9wIG5o4bqtbiDEkcaw4bujYyBraGkgJ0No4budIHRp4bq/cCBuaOG6rW4nICjEkWFuZyBsw6AgJw=={}')",
+                    "chỉ tiếp nhận được khi 'Chờ tiếp nhận' (đang là '{}')",
                     r_th.status
                 ),
             ),
@@ -462,7 +462,7 @@ async fn review_item(
     load_in_scope(&r_tn, &r_tj, id).await?;
     if r_tk.result == "khong_dat" && note_of(&r_tk.note).is_none() {
         return Err(ApiError::bad_request(
-            "a2jDtG5nIMSR4bqhdCBwaOG6o2kgbsOqdSByw7UgbMO9IGRvICjEkGnhu4F1IDI0LjIp",
+            "không đạt phải nêu rõ lý do (Điều 24.2)",
         ));
     }
     let r_tm = submissions::items(&r_tn.pool, id)
@@ -474,7 +474,7 @@ async fn review_item(
     }
     if !submissions::review_item(&r_tn.pool, item_id, &r_tk.result, note_of(&r_tk.note)).await? {
         return Err(ApiError::bad_request(
-            "cmVzdWx0IG5o4bqtbiAnZGF0JyBob+G6t2MgJ2tob25nX2RhdCc=".to_string(),
+            "result nhận 'dat' hoặc 'khong_dat'".to_string(),
         ));
     }
     Ok(StatusCode::NO_CONTENT)
@@ -501,7 +501,7 @@ async fn f_s6(
     let r_tt = load_in_scope(&r_tv, &r_tp, id).await?;
     if r_tq.quyet_dinh_so.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "dGhp4bq/dSBz4buRIFF1eeG6v3QgxJHhu4tuaCBwaMOqIGR1eeG7h3Q=",
+            "thiếu số Quyết định phê duyệt",
         ));
     }
     if !submissions::approve(
@@ -515,7 +515,7 @@ async fn f_s6(
         return Err(
             ApiError::conflict(
                 format!(
-                    "Y2jhu4kgcGjDqiBkdXnhu4d0IMSRxrDhu6NjIHNhdSBraGkgdGnhur9wIG5o4bqtbiAoxJFhbmcgbMOgICc={}')",
+                    "chỉ phê duyệt được sau khi tiếp nhận (đang là '{}')",
                     r_tt.status
                 ),
             ),
@@ -528,7 +528,7 @@ async fn f_s6(
             Err(e) => {
                 tracing::error!(
                     package = % r_tu.id, error = % e,
-                    "cmVxdWVzdF9qc29uIGfDs2kgU0lQIGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mg4oCUIGLhu48gcXVhIGNodXnhu4NuIGjDs2E="
+                    "request_json gói SIP không đọc được — bỏ qua chuyển hóa"
                 );
                 continue;
             }
@@ -538,7 +538,7 @@ async fn f_s6(
             Err(e) => {
                 tracing::error!(
                     package = % r_tu.id, error = % e,
-                    "Y2h1eeG7g24gU0lQ4oaSQUlQIHRo4bqldCBi4bqhaQ=="
+                    "chuyển SIP→AIP thất bại"
                 );
                 continue;
             }
@@ -578,7 +578,7 @@ async fn f_10r(
     let r_tz = load_in_scope(&r_u0, &r_ty, id).await?;
     if !submissions::complete(&r_u0.pool, r_tz.id).await? {
         return Err(ApiError::conflict(format!(
-            "Y2jhu4kgaG/DoG4gdGjDoG5oIMSRxrDhu6NjIHNhdSBwaMOqIGR1eeG7h3QgKMSRYW5nIGzDoCAn{}')",
+            "chỉ hoàn thành được sau phê duyệt (đang là '{}')",
             r_tz.status
         )));
     }
@@ -619,7 +619,7 @@ async fn f_29t(
         return Err(
             ApiError::conflict(
                 format!(
-                    "ZGFuaCBzw6FjaCB0cuG6oyBs4bqhaSBjaOG7iSBjw7Mgc2F1IHBow6ogZHV54buHdCAoxJFhbmcgbMOgICc={}')",
+                    "danh sách trả lại chỉ có sau phê duyệt (đang là '{}')",
                     r_u4.status
                 ),
             ),
@@ -671,7 +671,7 @@ async fn f_12f(
     let r_ue = load_in_scope(&r_uf, &r_u8, id).await?;
     if r_ue.status != "approved" && r_ue.status != "completed" {
         return Err(ApiError::conflict(format!(
-            "YmnDqm4gYuG6o24gdGh1IG7hu5lwIGzhuq1wIHNhdSBwaMOqIGR1eeG7h3QgKMSRYW5nIGzDoCAn{}')",
+            "biên bản thu nộp lập sau phê duyệt (đang là '{}')",
             r_ue.status
         )));
     }
@@ -725,9 +725,9 @@ async fn f_12f(
         }
         "tra_lai" => {
             let r_ud = if r_ue.cach_thuc == "truc_tiep" {
-                "Q2h1eeG7g24gdsOgbyB0aGnhur90IGLhu4sgbMawdSB0cuG7ryDEkeG7gyBiw6BuIGdpYW8gKMSQaeG7gXUgMjUuNC5hKQ=="
+                "Chuyển vào thiết bị lưu trữ để bàn giao (Điều 25.4.a)"
             } else {
-                "VOG6o2kgdOG7qyB0w6BpIGtob+G6o24gY8ahIHF1YW4gbuG7mXAgdHLDqm4gSOG7hyB0aOG7kW5nICjEkGnhu4F1IDI1LjQuYik="
+                "Tải từ tài khoản cơ quan nộp trên Hệ thống (Điều 25.4.b)"
             };
             serde_json::to_value(crate::bienban::Tob {
                 ma_dang_ky: r_ue.ma_yeu_cau.clone(),
@@ -755,7 +755,7 @@ async fn f_12f(
             return Err(
                 ApiError::bad_request(
                     format!(
-                        "bG9haSBuaOG6rW4gJ3RodV9ub3AnIHwgJ2dpYW9fbmhhbicgfCAndHJhX2xhaScgKGtow7RuZyBuaOG6rW4gJw=={other}')"
+                        "loai nhận 'thu_nop' | 'giao_nhan' | 'tra_lai' (không nhận '{other}')"
                     ),
                 ),
             );
@@ -792,68 +792,68 @@ fn f_16w(
     };
     let mut b = vec![
         r_ul(
-            "TcOjIMSRxINuZyBrw70gecOqdSBj4bqndSB0aHUgbuG7mXA=",
+            "Mã đăng ký yêu cầu thu nộp",
             r_uu.ma_yeu_cau.clone(),
         ),
         r_ul(
-            "Q8ahIHF1YW4sIHThu5UgY2jhu6ljIG7hu5lw",
+            "Cơ quan, tổ chức nộp",
             format!("{} ({})", r_uu.org_name, r_uu.org_code),
         ),
-        r_ul("TcOjIHBow7RuZw==", r_uu.fond_code.clone()),
+        r_ul("Mã phông", r_uu.fond_code.clone()),
         r_ul(
-            "Q8OhY2ggdGjhu6ljIG7hu5lwICjEkGnhu4F1IDE4KQ==",
+            "Cách thức nộp (Điều 18)",
             r_uu.cach_thuc.clone(),
         ),
-        r_ul("U+G7kSBs4bqnbiBu4buZcA==", r_uu.so_lan_nop.to_string()),
-        r_ul("VHLhuqFuZyB0aMOhaQ==", r_uu.status.clone()),
+        r_ul("Số lần nộp", r_uu.so_lan_nop.to_string()),
+        r_ul("Trạng thái", r_uu.status.clone()),
     ];
     if let Some(r_um) = r_uu.han_nop {
         b.push(r_ul(
-            "SOG6oW4gbuG7mXAgdMOgaSBsaeG7h3UgKMSQaeG7gXUgMjAuMik=",
+            "Hạn nộp tài liệu (Điều 20.2)",
             f_2qf(r_um),
         ));
     }
     b.push(FormBlock::SectionHeading(
-        "SS4gQ8OBQyBN4buQQyBRVcOBIFRSw4xOSA==".into(),
+        "I. CÁC MỐC QUÁ TRÌNH".into(),
     ));
     let mut r_up = vec![format!(
-        "xJDEg25nIGvDvSBu4buZcCAoxJBp4buBdSAyMCk6IA=={}",
+        "Đăng ký nộp (Điều 20): {}",
         f_2qf(r_uu.created_at)
     )];
     if let Some(t) = r_uu.confirmed_at {
         let note = r_uu.decision_note.as_deref().unwrap_or("");
         r_up.push(format!(
-            "WMOhYyBuaOG6rW4gxJHhu5NuZyDDvSB0aHUgKMSQaeG7gXUgMjEuMik6IA=={} {note}",
+            "Xác nhận đồng ý thu (Điều 21.2): {} {note}",
             f_2qf(t)
         ));
     }
     if let Some(n) = &r_uu.reconcile_note {
         r_up.push(format!(
-            "xJDhu5FpIGNoaeG6v3UgTeG7pWMgbOG7pWMgKMSQaeG7gXUgMjIuMy5kKTog{n}"
+            "Đối chiếu Mục lục (Điều 22.3.d): {n}"
         ));
     }
     if let Some(t) = r_uu.received_at {
         r_up.push(format!(
-            "VGnhur9wIG5o4bqtbiAoxJBp4buBdSAyMyk6IA=={}",
+            "Tiếp nhận (Điều 23): {}",
             f_2qf(t)
         ));
     }
     if let Some(t) = r_uu.approved_at {
         r_up.push(format!(
-            "UGjDqiBkdXnhu4d0ICjEkGnhu4F1IDI1LjEpOiA={}IOKAlCBRdXnhur90IMSR4buLbmgg{}",
+            "Phê duyệt (Điều 25.1): {} — Quyết định {}",
             f_2qf(t),
             r_uu.approval_doc.as_deref().unwrap_or("")
         ));
     }
     if let Some(t) = r_uu.completed_at {
         r_up.push(format!(
-            "SG/DoG4gdGjDoG5oIHRodSBu4buZcCAoxJBp4buBdSAyNS41KTog{}",
+            "Hoàn thành thu nộp (Điều 25.5): {}",
             f_2qf(t)
         ));
     }
     b.push(FormBlock::Bullets(r_up));
     b.push(FormBlock::SectionHeading(
-        "SUkuIEvhur5UIFFV4bqiIFjhu6wgTMOdIE5HSEnhu4ZQIFbhu6Q=".into(),
+        "II. KẾT QUẢ XỬ LÝ NGHIỆP VỤ".into(),
     ));
     let dat = items.iter().filter(|i| i.review_result == "dat").count();
     let r_un = items
@@ -861,17 +861,17 @@ fn f_16w(
         .filter(|i| i.review_result == "khong_dat")
         .count();
     b.push(r_ul(
-        "VOG7lW5nIHPhu5EgaOG7kyBzxqEgdGhlbyDEkcSDbmcga8O9IChN4bulYyBs4bulYyk=",
+        "Tổng số hồ sơ theo đăng ký (Mục lục)",
         items.len().to_string(),
     ));
     b.push(r_ul(
-        "VOG7lW5nIHPhu5EgxJHGsOG7o2MgZHV54buHdA==",
+        "Tổng số được duyệt",
         dat.to_string(),
     ));
-    b.push(r_ul("VOG7lW5nIHPhu5EgdHLhuqMgbOG6oWk=", r_un.to_string()));
+    b.push(r_ul("Tổng số trả lại", r_un.to_string()));
     if !r_ur.is_empty() {
         b.push(FormBlock::Paragraph(
-            "Q8OhYyBnw7NpIHRpbiBj4bunYSBs4bqnbiBu4buZcDo=".into(),
+            "Các gói tin của lần nộp:".into(),
         ));
         b.push(FormBlock::Bullets(
             r_ur.iter()
@@ -891,11 +891,11 @@ fn f_16w(
         ));
     }
     b.push(FormBlock::SectionHeading(
-        "SUlJLiBCScOKTiBC4bqiTiDEkMODIEzhuqxQ".into(),
+        "III. BIÊN BẢN ĐÃ LẬP".into(),
     ));
     if r_ut.is_empty() {
         b.push(FormBlock::Paragraph(
-            "KENoxrBhIGzhuq1wIGJpw6puIGLhuqNuIG7DoG8uKQ==".into(),
+            "(Chưa lập biên bản nào.)".into(),
         ));
     } else {
         b.push(FormBlock::Bullets(
@@ -912,11 +912,11 @@ fn f_16w(
         ));
     }
     b.push(FormBlock::SectionHeading(
-        "SVYuIE5I4bqsVCBLw50gVEjDlE5HIELDgU8=".into(),
+        "IV. NHẬT KÝ THÔNG BÁO".into(),
     ));
     if timeline.is_empty() {
         b.push(FormBlock::Paragraph(
-            "KEtow7RuZyBjw7MgdGjDtG5nIGLDoW8uKQ==".into(),
+            "(Không có thông báo.)".into(),
         ));
     } else {
         b.push(FormBlock::Bullets(
@@ -937,14 +937,14 @@ async fn f_175(
     let r_v6 = load_in_scope(&r_v7, &r_uw, id).await?;
     if r_v6.status != "approved" && r_v6.status != "completed" {
         return Err(ApiError::conflict(format!(
-            "aOG7kyBzxqEgcXXDoSB0csOsbmggbOG6rXAgc2F1IHBow6ogZHV54buHdCAoxJFhbmcgbMOgICc={}')",
+            "hồ sơ quá trình lập sau phê duyệt (đang là '{}')",
             r_v6.status
         )));
     }
     let r_v8 = r_v7
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let items = submissions::items(&r_v7.pool, id).await?;
     let r_v3: Vec<_> = packages::list(&r_v7.pool, Some(&[r_v6.project_id]), 500, 0)
         .await?
@@ -964,27 +964,27 @@ async fn f_175(
     let r_uy = digitext_pdf::f_1cq()
         .ok_or_else(|| {
             ApiError::service_unavailable(
-                "a2jDtG5nIHTDrG0gdGjhuqV5IGZvbnQgVFRGIGNobyBo4buTIHPGoSBxdcOhIHRyw6xuaCDigJQgxJHhurd0IERJR0lURVhUX0NFUlRfRk9OVA==",
+                "không tìm thấy font TTF cho hồ sơ quá trình — đặt DIGITEXT_CERT_FONT",
             )
         })?;
     let font = std::fs::read(&r_uy).map_err(|e| {
         tracing::error!(
-            path = % r_uy.display(), error = % e, "xJHhu41jIGZvbnQgbOG7l2k="
+            path = % r_uy.display(), error = % e, "đọc font lỗi"
         );
         ApiError::internal()
     })?;
     let r_ux = f_16w(&r_v6, &items, &r_v3, &r_v5, &timeline);
     let pdf = digitext_pdf::f_ve(
-            "SOG7kyBzxqEgcXXDoSB0csOsbmggdGh1IG7hu5lwIGjhu5Mgc8ahLCB0w6BpIGxp4buHdQ==",
+            "Hồ sơ quá trình thu nộp hồ sơ, tài liệu",
             Some(
-                "KFRoZW8gxJFp4buDbSBkIGtob+G6o24gNSDEkGnhu4F1IDI1IOKAlCBUaMO0bmcgdMawIDA1LzIwMjUvVFQtQk5WKQ==",
+                "(Theo điểm d khoản 5 Điều 25 — Thông tư 05/2025/TT-BNV)",
             ),
             &r_ux,
             &font,
         )
         .map_err(|e| {
             tracing::error!(
-                error = % e, "c2luaCBQREYgaOG7kyBzxqEgcXXDoSB0csOsbmggbOG7l2k="
+                error = % e, "sinh PDF hồ sơ quá trình lỗi"
             );
             ApiError::internal()
         })?;
@@ -997,12 +997,12 @@ async fn f_175(
     );
     let r_v9 = |e: zip::result::ZipError| {
         tracing::error!(
-            error = % e, "ZOG7sW5nIFpJUCBo4buTIHPGoSBxdcOhIHRyw6xuaCBs4buXaQ=="
+            error = % e, "dựng ZIP hồ sơ quá trình lỗi"
         );
         ApiError::internal()
     };
     let r_uz = |e: std::io::Error| {
-        tracing::error!(error = % e, "Z2hpIFpJUCBo4buTIHPGoSBxdcOhIHRyw6xuaCBs4buXaQ==");
+        tracing::error!(error = % e, "ghi ZIP hồ sơ quá trình lỗi");
         ApiError::internal()
     };
     let mut r_va = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
@@ -1023,13 +1023,13 @@ async fn f_175(
             Ok(None) => {
                 tracing::warn!(
                     record = % r_v4.id, key = % r_v4.pdf_key,
-                    "UERGIGJpw6puIGLhuqNuIGtow7RuZyBjw7JuIHRyb25nIGtobw=="
+                    "PDF biên bản không còn trong kho"
                 );
             }
             Err(e) => {
                 tracing::error!(
                     record = % r_v4.id, error = % e,
-                    "xJHhu41jIFBERiBiacOqbiBi4bqjbiBs4buXaQ=="
+                    "đọc PDF biên bản lỗi"
                 );
                 return Err(ApiError::internal());
             }

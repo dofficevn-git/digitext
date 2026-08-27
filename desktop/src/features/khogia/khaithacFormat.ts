@@ -20,32 +20,32 @@ export interface V4mc {
 }
 
 export const V4md = [
-  "SOG7mXAgc+G7kQ==",
-  "SOG7kyBzxqEgc+G7kQ==",
-  "VGnDqnUgxJHhu4EgaOG7kyBzxqE=",
-  "TmfDoHkgdGjDoW5nIELEkC1OZ8OgeSB0aMOhbmcgS1Q=",
-  "U+G7kSB04bud",
-  "VGjhu51pIGjhuqFuIGLhuqNvIHF14bqjbg==",
-  "R2hpIGNow7o=",
+  "Hộp số",
+  "Hồ sơ số",
+  "Tiêu đề hồ sơ",
+  "Ngày tháng BĐ-Ngày tháng KT",
+  "Số tờ",
+  "Thời hạn bảo quản",
+  "Ghi chú",
 ];
 export const V4me = [
   "STT",
-  "U+G7kSBrw70gaGnhu4d1IFZC",
-  "TmfDoHkgdGjDoW5nIFZC",
-  "VMOhYyBnaeG6ow==",
-  "VHLDrWNoIHnhur91IG7hu5lpIGR1bmc=",
-  "VOG7nSBz4buR",
-  "R2hpIGNow7o=",
+  "Số ký hiệu VB",
+  "Ngày tháng VB",
+  "Tác giả",
+  "Trích yếu nội dung",
+  "Tờ số",
+  "Ghi chú",
 ];
 export const V4mf = [
   "STT",
-  "TuG7mWkgZHVuZw==",
-  "VOG7qyBo4buTIHPGoQ==",
-  "xJDhur9uIGjhu5Mgc8ah",
-  "VOG7qyBo4buZcCBz4buR",
-  "xJDhur9uIGjhu5lwIHPhu5E=",
-  "VHJhbmcgbeG7pWMgbOG7pWM=",
-  "R2hpIGNow7o=",
+  "Nội dung",
+  "Từ hồ sơ",
+  "Đến hồ sơ",
+  "Từ hộp số",
+  "Đến hộp số",
+  "Trang mục lục",
+  "Ghi chú",
 ];
 
 export function V4mg(r: Pick<V4le, "thoiGianBatDau" | "thoiGianKetThuc">): string {
@@ -76,7 +76,7 @@ const V4mj = (s?: string): number | null => {
 
 export function V4mk(V1v5: V4le[]): V4mc {
   const V1v6: V4mb = [
-    ["TeG6qlUgWFXhuqRUIEhPw4BOIFRISeG7hk4gVEhFTyBT4buQIEjhu5IgU8ag"],
+    ["MẪU XUẤT HOÀN THIỆN THEO SỐ HỒ SƠ"],
     [],
     [...V4md],
     V4md.map((_V1v7, i) => i + 1),
@@ -121,11 +121,11 @@ export function V4mm(V1v9: V4le[], V1va: V4lg[]): V4mc[] {
     const so = r?.hososo ?? V1vg[0]?.hoSo ?? "";
     const V1vh = r?.tieuDeHs ?? "";
     const V1vi: V4mb = [
-      ["TeG7pEMgTOG7pEMgVsSCTiBC4bqiTg=="],
+      ["MỤC LỤC VĂN BẢN"],
       [],
-      [`SOG7mXAgc+G7kTog${hop}`],
-      [`SOG7kyBzxqEgc+G7kTog${so}`],
-      [`VGnDqnUgxJHhu4EgaOG7kyBzxqE6IA==${V1vh}`],
+      [`Hộp số: ${hop}`],
+      [`Hồ sơ số: ${so}`],
+      [`Tiêu đề hồ sơ: ${V1vh}`],
       [],
       [...V4me],
       V4me.map((_V1vj, i) => i + 1),
@@ -169,7 +169,7 @@ export function V4mo(V1vk: V4le[], V1vl: (V1vm?: number) => string): V4mn[] {
     const V1vt = V1vr[0];
     const last = V1vr[V1vr.length - 1];
     return {
-      noiDung: V1vq === -1 ? "KENoxrBhIHBow6JuIG3huqNuZyk=" : V1vl(V1vq) || `TeG6o25nIA==${V1vq}`,
+      noiDung: V1vq === -1 ? "(Chưa phân mảng)" : V1vl(V1vq) || `Mảng ${V1vq}`,
       tuHoSo: V1vt?.hososo ?? "",
       denHoSo: last?.hososo ?? "",
       tuHop: V1vs.length ? String(Math.min(...V1vs)) : (V1vt?.hopTaiLieuSo ?? ""),
@@ -219,11 +219,11 @@ function V4mr(V1vy: string[], V1vz: V4ma[][]): string {
 
 export function V4ms(V1w2: V4le[], V1w3: string): string {
   const { from, to } = V4mi(V1w2);
-  const V1w4 = from && to ? `VOG7qiBOxIJNIA==${from}IMSQ4bq+TiBOxIJNIA==${to}` : "";
+  const V1w4 = from && to ? `TỪ NĂM ${from} ĐẾN NĂM ${to}` : "";
   const V1w5 =
     `<div class="rpt-head"><div class="co">${V4m6(V1w3)}</div>` +
-    `PGgyPk3hu6VjIGzhu6VjIGjhu5Mgc8ahPC9oMj4=` +
-    `PGRpdiBjbGFzcz0ic3ViIj5QSMOUTkcgTMavVSBUUuG7riA=${V4m6(V1w3)}</div>` +
+    `<h2>Mục lục hồ sơ</h2>` +
+    `<div class="sub">PHÔNG LƯU TRỮ ${V4m6(V1w3)}</div>` +
     (V1w4 ? `<div class="sub">${V1w4}</div>` : "") +
     `</div>`;
   const body = V1w2.map((r) => [
@@ -261,10 +261,10 @@ export function V4mt(V1w6: V4le[], V1w7: V4lg[]): string {
       v.ghiChu ?? "",
     ]);
     V1wa.push(
-      `PGRpdiBjbGFzcz0iaHMtYmxvY2siPjxkaXYgY2xhc3M9InJwdC1oZWFkIj48aDI+TeG7pWMgbOG7pWMgdsSDbiBi4bqjbjwvaDI+PC9kaXY+` +
-        `PGRpdiBjbGFzcz0iaHMtbWV0YSI+SOG7mXAgc+G7kTog${V4m6(hop)}</div>` +
-        `PGRpdiBjbGFzcz0iaHMtbWV0YSI+SOG7kyBzxqEgc+G7kTog${V4m6(so)}</div>` +
-        `PGRpdiBjbGFzcz0iaHMtbWV0YSI+VGnDqnUgxJHhu4EgaOG7kyBzxqE6IA==${V4m6(V1wd)}</div>` +
+      `<div class="hs-block"><div class="rpt-head"><h2>Mục lục văn bản</h2></div>` +
+        `<div class="hs-meta">Hộp số: ${V4m6(hop)}</div>` +
+        `<div class="hs-meta">Hồ sơ số: ${V4m6(so)}</div>` +
+        `<div class="hs-meta">Tiêu đề hồ sơ: ${V4m6(V1wd)}</div>` +
         V4mr(V4me, V1we) +
         `</div>`,
     );
@@ -285,7 +285,7 @@ export function V4mu(V1wf: V4le[], V1wg: (V1wh?: number) => string): string {
     "",
   ]);
   return (
-    `PGRpdiBjbGFzcz0icnB0LWhlYWQiPjxoMj5IxrDhu5tuZyBk4bqrbiB0cmEgdMOsbSBt4bulYyBs4bulYzwvaDI+PC9kaXY+` +
+    `<div class="rpt-head"><h2>Hướng dẫn tra tìm mục lục</h2></div>` +
     V4mr(V4mf, body)
   );
 }
@@ -302,7 +302,7 @@ export function V4mw(V1wi: V4le[]): V4mv[] {
   const V1wj: string[] = [];
   const V1wk = new Map<string, V4le[]>();
   for (const r of V1wi) {
-    const hop = r.hopTaiLieuSo ?? "KGNoxrBhIHjhur9wIGjhu5lwKQ==";
+    const hop = r.hopTaiLieuSo ?? "(chưa xếp hộp)";
     if (!V1wk.has(hop)) {
       V1wk.set(hop, []);
       V1wj.push(hop);
@@ -327,10 +327,10 @@ export function V4mx(V1wn: V4le[], V1wo: string): string {
     .map(
       (l) =>
         `<div class="label"><div class="co">${V4m6(V1wo)}</div>` +
-        `PGRpdiBjbGFzcz0iaG9wIj5I4buYUCBT4buQIA==${V4m6(l.hopSo)}</div>` +
-        `PGRpdiBjbGFzcz0icm5nIj5U4burIGjhu5Mgc8ahIA==${V4m6(l.tuHoSo)}IMSR4bq/biBo4buTIHPGoSA=${V4m6(l.denHoSo)}</div>` +
-        `PGRpdiBjbGFzcz0icm5nIj5T4buRIGzGsOG7o25nIGjhu5Mgc8ahOiA=${V4m6(l.soHoSo)}</div>` +
-        `PGRpdiBjbGFzcz0icm5nIj5UaOG7nWkgaOG6oW4gYuG6o28gcXXhuqNuOiA=${V4m6(l.thbq)}</div>` +
+        `<div class="hop">HỘP SỐ ${V4m6(l.hopSo)}</div>` +
+        `<div class="rng">Từ hồ sơ ${V4m6(l.tuHoSo)} đến hồ sơ ${V4m6(l.denHoSo)}</div>` +
+        `<div class="rng">Số lượng hồ sơ: ${V4m6(l.soHoSo)}</div>` +
+        `<div class="rng">Thời hạn bảo quản: ${V4m6(l.thbq)}</div>` +
         `</div>`,
     )
     .join("");

@@ -28,7 +28,7 @@ pub fn dossier_get(
     auth.require_perm(Permission::DossierRead)?;
     let r_1mo = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     store::f_1ek(&r_1mo, args.id)?
-        .ok_or_else(|| AppError::not_found("S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahLg=="))
+        .ok_or_else(|| AppError::not_found("Không tìm thấy hồ sơ."))
 }
 #[tauri::command]
 pub fn dossier_create(
@@ -40,13 +40,13 @@ pub fn dossier_create(
     let r_1mp = args.dossier;
     if r_1mp.so_tam.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBz4buRIHThuqFtIGPhu6dhIGjhu5Mgc8ahLg==",
+            "Thiếu số tạm của hồ sơ.",
         ));
     }
     let r_1mq = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     if store::f_2gf(&r_1mq, r_1mp.ma_da.as_deref(), r_1mp.so_tam.trim(), None)? {
         return Err(AppError::validation(format!(
-            "U+G7kSB04bqhbSAi{}IiDEkcOjIHThu5NuIHThuqFpIHRyb25nIHBow7RuZyBuw6B5Lg==",
+            "Số tạm \"{}\" đã tồn tại trong phông này.",
             r_1mp.so_tam.trim()
         )));
     }
@@ -60,7 +60,7 @@ pub fn dossier_create(
         r_1mp.ma_da.as_deref(),
         "create",
         &format!(
-            "VGjDqm0gaOG7kyBzxqEgc+G7kSB04bqhbSA={}",
+            "Thêm hồ sơ số tạm {}",
             r_1mp.so_tam.trim()
         ),
         &r_1mp.tieu_de,
@@ -90,7 +90,7 @@ pub fn dossier_sync_from_kho(
             args.ma_da.as_deref(),
             "create",
             &format!(
-                "xJDhu5NuZyBi4buZIA=={}IGjhu5Mgc8ahIHThu6sgS2hvIHTDoGkgbGnhu4d1IHNhbmcgbeG7pWMgbOG7pWM=",
+                "Đồng bộ {} hồ sơ từ Kho tài liệu sang mục lục",
                 r_1mt.created
             ),
             "",
@@ -113,7 +113,7 @@ pub fn dossier_update(
     let Tp5 { id, dossier: r_1mw } = args;
     if r_1mw.so_tam.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBz4buRIHThuqFtIGPhu6dhIGjhu5Mgc8ahLg==",
+            "Thiếu số tạm của hồ sơ.",
         ));
     }
     let r_1mx = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -124,13 +124,13 @@ pub fn dossier_update(
         Some(id),
     )? {
         return Err(AppError::validation(format!(
-            "U+G7kSB04bqhbSAi{}IiDEkcOjIHThu5NuIHThuqFpIHRyb25nIHBow7RuZyBuw6B5Lg==",
+            "Số tạm \"{}\" đã tồn tại trong phông này.",
             r_1mw.so_tam.trim()
         )));
     }
     if !store::f_2ne(&r_1mx, id, &r_1mw)? {
         return Err(AppError::not_found(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahIGPhuqduIHPhu61hLg==",
+            "Không tìm thấy hồ sơ cần sửa.",
         ));
     }
     store::f_2h3(&r_1mx, id, None, Some(&r_1my.user_id))?;
@@ -142,7 +142,7 @@ pub fn dossier_update(
         r_1mw.ma_da.as_deref(),
         "update",
         &format!(
-            "U+G7rWEgaOG7kyBzxqEgc+G7kSB04bqhbSA={}",
+            "Sửa hồ sơ số tạm {}",
             r_1mw.so_tam.trim()
         ),
         &r_1mw.tieu_de,
@@ -161,7 +161,7 @@ pub fn dossier_delete(
     let r_1n1 = store::f_1ek(&r_1mz, args.id)?;
     if !store::f_13v(&r_1mz, args.id)? {
         return Err(AppError::not_found(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahIGPhuqduIHhvw6Eu",
+            "Không tìm thấy hồ sơ cần xoá.",
         ));
     }
     if let Some(r_1n0) = r_1n1 {
@@ -172,7 +172,7 @@ pub fn dossier_delete(
             Some(args.id),
             r_1n0.ma_da.as_deref(),
             "delete",
-            &format!("WG/DoSBo4buTIHPGoSBz4buRIHThuqFtIA=={}", r_1n0.so_tam),
+            &format!("Xoá hồ sơ số tạm {}", r_1n0.so_tam),
             &r_1n0.tieu_de,
             &r_1n2,
         )?;
@@ -203,7 +203,7 @@ pub fn van_ban_create(
     let r_1n4 = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     if !store::f_16x(&r_1n4, dossier_id)? {
         return Err(AppError::not_found(
-            "SOG7kyBzxqEgY2jhu6lhIHbEg24gYuG6o24ga2jDtG5nIHThu5NuIHThuqFpLg==",
+            "Hồ sơ chứa văn bản không tồn tại.",
         ));
     }
     let id = store::f_12h(&r_1n4, dossier_id, &r_1n6)?;
@@ -216,7 +216,7 @@ pub fn van_ban_create(
         Some(dossier_id),
         r_1n5.as_deref(),
         "create",
-        &format!("VGjDqm0gdsSDbiBi4bqjbiB2w6BvIGjhu5Mgc8ahICM={dossier_id}"),
+        &format!("Thêm văn bản vào hồ sơ #{dossier_id}"),
         r_1n6.trich_yeu.as_deref().unwrap_or(""),
         &r_1n7,
     )?;
@@ -234,7 +234,7 @@ pub fn van_ban_update(
     let dossier_id = store::f_2ph(&r_1n9, id)?;
     if !store::f_2ni(&r_1n9, id, &r_1nb)? {
         return Err(AppError::not_found(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IHbEg24gYuG6o24gY+G6p24gc+G7rWEu",
+            "Không tìm thấy văn bản cần sửa.",
         ));
     }
     let r_1na = dossier_id.and_then(|r_1n8| store::f_16y(&r_1n9, r_1n8).ok().flatten());
@@ -245,7 +245,7 @@ pub fn van_ban_update(
         dossier_id,
         r_1na.as_deref(),
         "update",
-        "U+G7rWEgdsSDbiBi4bqjbg==",
+        "Sửa văn bản",
         r_1nb.trich_yeu.as_deref().unwrap_or(""),
         &r_1nc,
     )?;
@@ -262,7 +262,7 @@ pub fn van_ban_delete(
     let dossier_id = store::f_2ph(&r_1ne, args.id)?;
     if !store::f_149(&r_1ne, args.id)? {
         return Err(AppError::not_found(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IHbEg24gYuG6o24gY+G6p24geG/DoS4=",
+            "Không tìm thấy văn bản cần xoá.",
         ));
     }
     let r_1nf = dossier_id.and_then(|r_1nd| store::f_16y(&r_1ne, r_1nd).ok().flatten());
@@ -273,7 +273,7 @@ pub fn van_ban_delete(
         dossier_id,
         r_1nf.as_deref(),
         "delete",
-        "WG/DoSB2xINuIGLhuqNu",
+        "Xoá văn bản",
         "",
         &r_1ng,
     )?;
@@ -315,7 +315,7 @@ pub fn dossier_set_boxing(
         args.tap_so.as_deref(),
     )? {
         return Err(AppError::not_found(
-            "S2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahLg==",
+            "Không tìm thấy hồ sơ.",
         ));
     }
     Ok(())
@@ -337,7 +337,7 @@ pub fn dossier_bulk_upsert(
         None,
         args.ma_da.as_deref(),
         "update",
-        &format!("Q+G6rXAgbmjhuq10IA=={n}IGjhu5Mgc8ahIHThu6sgRXhjZWw="),
+        &format!("Cập nhật {n} hồ sơ từ Excel"),
         "",
         &r_1nn,
     )?;
@@ -367,7 +367,7 @@ pub fn van_ban_bulk_insert(
         None,
         None,
         "create",
-        &format!("Tmjhuq1wIA=={n}IHbEg24gYuG6o24gdOG7qyBFeGNlbA=="),
+        &format!("Nhập {n} văn bản từ Excel"),
         "",
         &r_1ns,
     )?;
@@ -423,7 +423,7 @@ pub fn dossier_delete_incomplete_van_ban(
         None,
         r_1nx.ma_da_opt(),
         "delete",
-        &format!("SOG7p3kg{n}IHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbg=="),
+        &format!("Hủy {n} văn bản chưa hoàn thiện"),
         "",
         &r_1o0,
     )?;
@@ -502,13 +502,13 @@ pub fn open_url(auth: State<'_, AuthState>, args: Tfk) -> Result<(), AppError> {
     if !f_1ji(r_1oa) {
         return Err(
             AppError::validation(
-                "TGnDqm4ga+G6v3Qga2jDtG5nIGjhu6NwIGzhu4cgKGNo4buJIGh0dHAocyksIGtow7RuZyBrw70gdOG7sSDEkeG6t2MgYmnhu4d0KS4=",
+                "Liên kết không hợp lệ (chỉ http(s), không ký tự đặc biệt).",
             ),
         );
     }
     f_1w8(r_1oa).map_err(|e| {
         AppError::internal(format!(
-            "S2jDtG5nIG3hu58gxJHGsOG7o2MgbGnDqm4ga+G6v3Q6IA=={e}"
+            "Không mở được liên kết: {e}"
         ))
     })
 }

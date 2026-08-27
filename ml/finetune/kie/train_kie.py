@@ -16,7 +16,7 @@ DEFAULT_MAX_LEN = 512
 
 def q_12d(bbox_xywh: list[float], width: int, height: int) -> list[int]:
     if width <= 0 or height <= 0:
-        raise ValueError(f"a8OtY2ggdGjGsOG7m2MgdHJhbmcgdsO0IGzDvTog{width}x{height}")
+        raise ValueError(f"kích thước trang vô lý: {width}x{height}")
     x, p_835, p_832, p_831 = bbox_xywh
     p_833 = int(round(x / width * LAYOUTLM_SCALE))
     p_836 = int(round(p_835 / height * LAYOUTLM_SCALE))
@@ -156,16 +156,16 @@ def train(args) -> int:
 
     records = [p_861 for p_861 in q_121(Path(args.bio_jsonl)) if q_118(p_861)]
     if not records:
-        print("TOG7lkk6IGtow7RuZyBjw7MgdHJhbmcgbsOgbyBtYW5nIG5ow6NuIGtow6FjIE8=", file=sys.stderr)
+        print("LỖI: không có trang nào mang nhãn khác O", file=sys.stderr)
         return 2
     p_865, p_867 = q_166(records, args.val_bucket, args.mod)
     if not p_867:
-        print("TOG7lkk6IHThuq1wIHZhbCBy4buXbmcg4oCUIGNo4buJbmggLS12YWwtYnVja2V0Ly0tbW9k", file=sys.stderr)
+        print("LỖI: tập val rỗng — chỉnh --val-bucket/--mod", file=sys.stderr)
         return 2
 
     print(f"train: {len(p_865)} trang | val: {len(p_867)} trang "
           f"(chia theo document_id, hash ổn định)", file=sys.stderr)
-    print(f"cGjDom4gYuG7kSBuaMOjbiAodHJhaW4pOiA={json.dumps(q_104(p_865), ensure_ascii=False)}",
+    print(f"phân bố nhãn (train): {json.dumps(q_104(p_865), ensure_ascii=False)}",
           file=sys.stderr)
 
     p_864 = AutoTokenizer.from_pretrained(args.model, add_prefix_space=True)
@@ -227,18 +227,18 @@ def train(args) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p_868 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p_868.add_argument("bio_jsonl", help="ZGF0YS9iaW8uanNvbmwgdOG7qyBidWlsZF9iaW8ucHk=")
+    p_868.add_argument("bio_jsonl", help="data/bio.jsonl từ build_bio.py")
     p_868.add_argument("--out", default="output/kie")
     p_868.add_argument("--model", default=DEFAULT_MODEL)
     p_868.add_argument("--epochs", type=float, default=10)
-    p_868.add_argument("--batch-size", type=int, default=4, help="MTZHQiBWUkFNIOKHkiBnaeG7ryBuaOG7jw==")
+    p_868.add_argument("--batch-size", type=int, default=4, help="16GB VRAM ⇒ giữ nhỏ")
     p_868.add_argument("--lr", type=float, default=5e-5)
     p_868.add_argument("--max-len", type=int, default=DEFAULT_MAX_LEN)
     p_868.add_argument("--val-bucket", type=int, default=0)
-    p_868.add_argument("--mod", type=int, default=10, help="MS9tb2QgdMOgaSBsaeG7h3UgdsOgbyB2YWw=")
+    p_868.add_argument("--mod", type=int, default=10, help="1/mod tài liệu vào val")
     p_868.add_argument("--seed", type=int, default=42)
     p_868.add_argument("--dry-run", action="store_true",
-                    help="Y2jhu4kgdGjhu5FuZyBrw6ogZOG7ryBsaeG7h3UsIGtow7RuZyBu4bqhcCB0b3JjaA==")
+                    help="chỉ thống kê dữ liệu, không nạp torch")
     args = p_868.parse_args(argv)
 
     if args.dry_run:

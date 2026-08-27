@@ -56,7 +56,7 @@ impl TelemetryConfig {
         }
     }
 }
-#[must_use = "Z2nhu68gZ3VhcmQgdOG7m2kgaOG6v3QgdsOybmcgxJHhu51pIHRp4bq/biB0csOsbmg7IGRyb3Agc+G6vSBmbHVzaCB0ZWxlbWV0cnkgY8OybiBidWZmZXI="]
+#[must_use = "giữ guard tới hết vòng đời tiến trình; drop sẽ flush telemetry còn buffer"]
 pub struct Tnx {
     providers: Option<Tht>,
 }
@@ -105,7 +105,7 @@ pub fn init(r_5hh: &TelemetryConfig) -> Tnx {
         r_5hh,
     )
     .build()
-    .expect("ZOG7sW5nIE9UTFAgc3BhbiBleHBvcnRlcg==");
+    .expect("dựng OTLP span exporter");
     let r_5hq = SdkTracerProvider::builder()
         .with_resource(r_5ho.clone())
         .with_batch_exporter(r_5hp)
@@ -115,7 +115,7 @@ pub fn init(r_5hh: &TelemetryConfig) -> Tnx {
         r_5hh,
     )
     .build()
-    .expect("ZOG7sW5nIE9UTFAgbWV0cmljIGV4cG9ydGVy");
+    .expect("dựng OTLP metric exporter");
     let r_5hk = SdkMeterProvider::builder()
         .with_resource(r_5ho.clone())
         .with_periodic_exporter(r_5hl)
@@ -125,7 +125,7 @@ pub fn init(r_5hh: &TelemetryConfig) -> Tnx {
         r_5hh,
     )
     .build()
-    .expect("ZOG7sW5nIE9UTFAgbG9nIGV4cG9ydGVy");
+    .expect("dựng OTLP log exporter");
     let r_5hj = SdkLoggerProvider::builder()
         .with_resource(r_5ho)
         .with_batch_exporter(r_5hi)

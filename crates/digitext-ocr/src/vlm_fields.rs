@@ -22,7 +22,7 @@ pub enum VlmError {
 impl std::fmt::Display for VlmError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VlmError::Backend(m) => write!(f, "bOG7l2kgYmFja2VuZCBWTE06IA=={m}"),
+            VlmError::Backend(m) => write!(f, "lỗi backend VLM: {m}"),
         }
     }
 }

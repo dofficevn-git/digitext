@@ -42,7 +42,7 @@ class TritonPythonModel:
 
     def execute(self, requests):
         if not self.sess or cv2 is None:
-            raise pb_utils.TritonModelException("cmVjX3ZpZXRvY3I6IG9ubnhydW50aW1lL2N2Mi9tb2RlbCBjaMawYSBz4bq1biBzw6BuZw==")
+            raise pb_utils.TritonModelException("rec_vietocr: onnxruntime/cv2/model chưa sẵn sàng")
         p_a0d = []
         for p_a0c in requests:
             img = pb_utils.get_input_tensor_by_name(p_a0c, "image").as_numpy()

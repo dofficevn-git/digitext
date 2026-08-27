@@ -7,14 +7,14 @@ fn f_1g7() -> Argon2<'static> {
     Argon2::new(
         Algorithm::Argon2id,
         Version::V0x13,
-        Params::new(19456, 2, 1, None).expect("dGhhbSBz4buRIGFyZ29uMiBo4bujcCBs4buH"),
+        Params::new(19456, 2, 1, None).expect("tham số argon2 hợp lệ"),
     )
 }
 pub fn hash(password: &str) -> anyhow::Result<String> {
     let r_74 = SaltString::generate(&mut OsRng);
     Ok(f_1g7()
         .hash_password(password.as_bytes(), &r_74)
-        .map_err(|e| anyhow::anyhow!("YsSDbSBt4bqtdCBraOG6qXUgdGjhuqV0IGLhuqFpOiA={e}"))?
+        .map_err(|e| anyhow::anyhow!("băm mật khẩu thất bại: {e}"))?
         .to_string())
 }
 pub fn verify(phc: &str, password: &str) -> bool {
@@ -24,7 +24,7 @@ pub fn verify(phc: &str, password: &str) -> bool {
     f_1g7().verify_password(password.as_bytes(), &r_75).is_ok()
 }
 static C_4H: LazyLock<String> =
-    LazyLock::new(|| hash("digitext-dummy-password").expect("aGFzaCBt4buTaQ=="));
+    LazyLock::new(|| hash("digitext-dummy-password").expect("hash mồi"));
 pub fn f_181(password: &str) {
     let _ = verify(&C_4H, password);
 }
@@ -32,7 +32,7 @@ pub async fn f_1g0(password: &str) -> anyhow::Result<String> {
     let password = password.to_owned();
     tokio::task::spawn_blocking(move || hash(&password))
         .await
-        .map_err(|e| anyhow::anyhow!("dMOhYyB24bulIGLEg20gbeG6rXQga2jhuql1IGzhu5dpOiA={e}"))?
+        .map_err(|e| anyhow::anyhow!("tác vụ băm mật khẩu lỗi: {e}"))?
 }
 const C_BK: usize = 8;
 static C_8U: LazyLock<tokio::sync::Semaphore> = LazyLock::new(|| tokio::sync::Semaphore::new(C_BK));

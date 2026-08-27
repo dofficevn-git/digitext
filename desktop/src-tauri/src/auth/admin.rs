@@ -12,7 +12,7 @@ pub(crate) fn map_err(r_be: ClientError) -> AppError {
     match r_be {
         ClientError::Unreachable(_) => AppError::new(
             "server_unreachable",
-            "S2jDtG5nIGvhur90IG7hu5FpIMSRxrDhu6NjIG3DoXkgY2jhu6cu",
+            "Không kết nối được máy chủ.",
         ),
         ClientError::Api {
             code,
@@ -47,11 +47,11 @@ async fn f_qj(
     }
     let r_bi = r_bg
         .snapshot()
-        .ok_or_else(|| AppError::new("unauthorized", "Q2jGsGEgxJHEg25nIG5o4bqtcC4="))?;
+        .ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?;
     let r_bn = r_bg.wrap_key().ok_or_else(|| {
         AppError::new(
             "locked",
-            "TeG7nyBraG/DoSBi4bqxbmcgbeG6rXQga2jhuql1IHRyxrDhu5tjIGtoaSBxdeG6o24gdHLhu4su",
+            "Mở khoá bằng mật khẩu trước khi quản trị.",
         )
     })?;
     let (_s, r_bl) = commands::f_26h(r_bh, r_bg, r_bn, r_bm, &r_bi.user_id).await?;
@@ -174,7 +174,7 @@ pub struct Tav {
 fn validate_password(r_c2: &str) -> Result<(), AppError> {
     if r_c2.chars().count() < 8 {
         return Err(AppError::validation(
-            "TeG6rXQga2jhuql1IHBo4bqjaSB04buRaSB0aGnhu4N1IDgga8O9IHThu7Eu",
+            "Mật khẩu phải tối thiểu 8 ký tự.",
         ));
     }
     Ok(())
@@ -207,10 +207,10 @@ pub async fn user_create(
     args: T3h,
 ) -> Result<Tl6, AppError> {
     if args.username.trim().is_empty() {
-        return Err(AppError::validation("VGhp4bq/dSB0w6puIMSRxINuZyBuaOG6rXAu"));
+        return Err(AppError::validation("Thiếu tên đăng nhập."));
     }
     if args.display_name.trim().is_empty() {
-        return Err(AppError::validation("VGhp4bq/dSB0w6puIGhp4buDbiB0aOG7iy4="));
+        return Err(AppError::validation("Thiếu tên hiển thị."));
     }
     validate_password(&args.password)?;
     let mut body = serde_json::json!(
@@ -402,7 +402,7 @@ pub async fn project_create(
 ) -> Result<Tl4, AppError> {
     if args.code.trim().is_empty() || args.name.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSBtw6MgaG/hurdjIHTDqm4gZOG7sSDDoW4u",
+            "Thiếu mã hoặc tên dự án.",
         ));
     }
     let body = serde_json::json!(

@@ -1,8 +1,63 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 use super::types::{Tb6, Tb7, Tcz, Td0, Te3, Te4, Th7, Th8, ThbqIn, To1};
 use rusqlite::{params, Connection};
-pub const C_JQ: &str = "CkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIHBob25nX2JhbiAoCiAgICBtYV9kdiAgICAgIFRFWFQgUFJJTUFSWSBLRVksCiAgICBtYV9waG9uZyAgIFRFWFQgTk9UIE5VTEwgUkVGRVJFTkNFUyBwaG9uZyhtYV9kdV9hbikgT04gREVMRVRFIENBU0NBREUsCiAgICBtYV9kb25fdmkgIFRFWFQsCiAgICB0ZW5fZG9uX3ZpIFRFWFQgTk9UIE5VTEwsCiAgICBzb190dCAgICAgIElOVEVHRVIKKTsKQ1JFQVRFIElOREVYIElGIE5PVCBFWElTVFMgaXhfcGhvbmdfYmFuX3Bob25nIE9OIHBob25nX2JhbiAobWFfcGhvbmcpOwoKQ1JFQVRFIFRBQkxFIElGIE5PVCBFWElTVFMgbWFuZ19jb25nX3ZpZWMgKAogICAgbWFuZ19jdmlkIElOVEVHRVIgUFJJTUFSWSBLRVksCiAgICBtYV9tYW5nICAgVEVYVCwKICAgIHRlbl9tYW5nICBURVhUIE5PVCBOVUxMLAogICAgbWFfZHYgICAgIFRFWFQgTk9UIE5VTEwgUkVGRVJFTkNFUyBwaG9uZ19iYW4obWFfZHYpIE9OIERFTEVURSBDQVNDQURFLAogICAgc29fdHQgICAgIElOVEVHRVIKKTsKQ1JFQVRFIElOREVYIElGIE5PVCBFWElTVFMgaXhfbWFuZ19wYiBPTiBtYW5nX2NvbmdfdmllYyAobWFfZHYpOwoKQ1JFQVRFIFRBQkxFIElGIE5PVCBFWElTVFMgdGhvaV9oYW5fYnEgKAogICAgdGhicWlkICAgICBJTlRFR0VSIFBSSU1BUlkgS0VZLAogICAgdGVuX3RoYnEgICBURVhUIE5PVCBOVUxMLAogICAgdHJhbmdfdGhhaSBJTlRFR0VSIE5PVCBOVUxMIERFRkFVTFQgMiwKICAgIGdpYV90cmkgICAgSU5URUdFUiBOT1QgTlVMTCBERUZBVUxUIDAsCiAgICBzb3J0ICAgICAgIElOVEVHRVIgTk9UIE5VTEwgREVGQVVMVCAwCik7CgpJTlNFUlQgT1IgSUdOT1JFIElOVE8gdGhvaV9oYW5fYnEgKHRoYnFpZCwgdGVuX3RoYnEsIHRyYW5nX3RoYWksIGdpYV90cmksIHNvcnQpIFZBTFVFUwogICAgKDEsICdWxKluaCB2aeG7hW4nLCAgICAgICAgICAgIDEsICAwLCAxKSwKICAgICgyLCAnNSBuxINtJywgICAgICAgICAgICAgICAgMiwgIDUsIDIpLAogICAgKDMsICcxMCBuxINtJywgICAgICAgICAgICAgICAyLCAxMCwgMyksCiAgICAoNCwgJzIwIG7Eg20nLCAgICAgICAgICAgICAgIDIsIDIwLCA0KSwKICAgICg1LCAnNTAgbsSDbScsICAgICAgICAgICAgICAgMiwgNTAsIDUpLAogICAgKDYsICc3MCBuxINtJywgICAgICAgICAgICAgICAyLCA3MCwgNiksCiAgICAoNywgJ0dp4buvIGzhuqFpIMSR4buDIHjDqXQgaOG7p3knLCAgIDMsICAwLCA3KTsK";
-pub const C_JT: &str = "CkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIG5nb25fbmd1ICgKICAgIG1hX25nb25fbmd1ICBURVhUIFBSSU1BUlkgS0VZLAogICAgdGVuX25nb25fbmd1IFRFWFQgTk9UIE5VTEwKKTsKCkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIGxvYWlfdmFuX2JhbiAoCiAgICBtYV9sb2FpICBURVhUIFBSSU1BUlkgS0VZLAogICAgdGVuX2xvYWkgVEVYVCBOT1QgTlVMTAopOwoKSU5TRVJUIE9SIElHTk9SRSBJTlRPIG5nb25fbmd1IChtYV9uZ29uX25ndSwgdGVuX25nb25fbmd1KSBWQUxVRVMKICAgICgnMDEnLCAnVGnhur9uZyBWaeG7h3QnKSwKICAgICgnMDInLCAnRW5nbGlzaCcpOwoKSU5TRVJUIE9SIElHTk9SRSBJTlRPIGxvYWlfdmFuX2JhbiAobWFfbG9haSwgdGVuX2xvYWkpIFZBTFVFUwogICAgKCcwMScsICdOZ2jhu4sgcXV54bq/dCcpLAogICAgKCcwMicsICdRdXnhur90IMSR4buLbmgnKSwKICAgICgnMDMnLCAnQ2jhu4kgdGjhu4snKSwKICAgICgnMDQnLCAnQ8O0bmcgdsSDbicpOwo=";
+pub const C_JQ: &str = r#"
+CREATE TABLE IF NOT EXISTS phong_ban (
+    ma_dv      TEXT PRIMARY KEY,
+    ma_phong   TEXT NOT NULL REFERENCES phong(ma_du_an) ON DELETE CASCADE,
+    ma_don_vi  TEXT,
+    ten_don_vi TEXT NOT NULL,
+    so_tt      INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_phong_ban_phong ON phong_ban (ma_phong);
+
+CREATE TABLE IF NOT EXISTS mang_cong_viec (
+    mang_cvid INTEGER PRIMARY KEY,
+    ma_mang   TEXT,
+    ten_mang  TEXT NOT NULL,
+    ma_dv     TEXT NOT NULL REFERENCES phong_ban(ma_dv) ON DELETE CASCADE,
+    so_tt     INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_mang_pb ON mang_cong_viec (ma_dv);
+
+CREATE TABLE IF NOT EXISTS thoi_han_bq (
+    thbqid     INTEGER PRIMARY KEY,
+    ten_thbq   TEXT NOT NULL,
+    trang_thai INTEGER NOT NULL DEFAULT 2,
+    gia_tri    INTEGER NOT NULL DEFAULT 0,
+    sort       INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT OR IGNORE INTO thoi_han_bq (thbqid, ten_thbq, trang_thai, gia_tri, sort) VALUES
+    (1, 'Vĩnh viễn',            1,  0, 1),
+    (2, '5 năm',                2,  5, 2),
+    (3, '10 năm',               2, 10, 3),
+    (4, '20 năm',               2, 20, 4),
+    (5, '50 năm',               2, 50, 5),
+    (6, '70 năm',               2, 70, 6),
+    (7, 'Giữ lại để xét hủy',   3,  0, 7);
+"#;
+pub const C_JT: &str = r#"
+CREATE TABLE IF NOT EXISTS ngon_ngu (
+    ma_ngon_ngu  TEXT PRIMARY KEY,
+    ten_ngon_ngu TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS loai_van_ban (
+    ma_loai  TEXT PRIMARY KEY,
+    ten_loai TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO ngon_ngu (ma_ngon_ngu, ten_ngon_ngu) VALUES
+    ('01', 'Tiếng Việt'),
+    ('02', 'English');
+
+INSERT OR IGNORE INTO loai_van_ban (ma_loai, ten_loai) VALUES
+    ('01', 'Nghị quyết'),
+    ('02', 'Quyết định'),
+    ('03', 'Chỉ thị'),
+    ('04', 'Công văn');
+"#;
 pub fn f_2o7(r_p2: &Connection, pb: &Th7) -> rusqlite::Result<()> {
     r_p2.execute(
         "INSERT INTO phong_ban (ma_dv, ma_phong, ma_don_vi, ten_don_vi, so_tt)

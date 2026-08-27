@@ -3,15 +3,15 @@
 import type { V4lp, V4lr, V4lo, V4lq } from "@/api/khaithac";
 
 export function V4ng(k: Pick<V4lq, "tenKho">): string | null {
-  if (!k.tenKho.trim()) return "VGhp4bq/dSB0w6puIGtobyBsxrB1IHRy4buvLg==";
+  if (!k.tenKho.trim()) return "Thiếu tên kho lưu trữ.";
   return null;
 }
 
 export function V4nh(g: Pick<V4lr, "tenGia" | "maKho" | "tuHop" | "denHop">): string | null {
-  if (!g.tenGia.trim()) return "VGhp4bq/dSB0w6puIGdpw6EgbMawdSB0cuG7ry4=";
-  if (!g.maKho || g.maKho <= 0) return "Q2jGsGEgY2jhu41uIGtobyBsxrB1IHRy4buvLg==";
+  if (!g.tenGia.trim()) return "Thiếu tên giá lưu trữ.";
+  if (!g.maKho || g.maKho <= 0) return "Chưa chọn kho lưu trữ.";
   if (g.tuHop != null && g.denHop != null && g.denHop < g.tuHop)
-    return "xJDhur9uIGjhu5lwIHBo4bqjaSDiiaUgVOG7qyBo4buZcC4=";
+    return "Đến hộp phải ≥ Từ hộp.";
   return null;
 }
 

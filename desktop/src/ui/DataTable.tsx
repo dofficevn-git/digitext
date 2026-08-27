@@ -60,10 +60,10 @@ export default function V49a<T>(Vku: {
             className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-fg-subtle"
           />
           <Input
-            placeholder="VMOsbSBraeG6v23igKY="
+            placeholder="Tìm kiếm…"
             value={q}
             onChange={(Vl5) => Vkw(Vl5.target.value)}
-            aria-label="VMOsbSBraeG6v20gdHJvbmcgYuG6o25n"
+            aria-label="Tìm kiếm trong bảng"
             className="pl-8"
           />
         </div>
@@ -75,7 +75,7 @@ export default function V49a<T>(Vku: {
             onClick={() => {
               if (
                 !window.confirm(
-                  `WMOzYSA=${Vkx.size}IG3hu6VjIMSRw6MgY2jhu41uPyBLaMO0bmcgdGjhu4MgaG/DoG4gdMOhYy4=`,
+                  `WMOzYSA=${Vkx.size} mục đã chọn? Không thể hoàn tác.`,
                 )
               )
                 return;
@@ -102,7 +102,7 @@ export default function V49a<T>(Vku: {
                 <Checkbox
                   checked={Vl1}
                   onCheckedChange={Vl2}
-                  aria-label="Q2jhu41uIHThuqV0IGPhuqMgY8OhYyBkw7JuZyDEkWFuZyBoaeG7g24gdGjhu4s="
+                  aria-label="Chọn tất cả các dòng đang hiển thị"
                 />
               </TableHead>
               {Vku.columns.map((c, i) => (
@@ -121,8 +121,8 @@ export default function V49a<T>(Vku: {
                   className="py-8 text-center text-fg-subtle"
                 >
                   {Vkz
-                    ? `S2jDtG5nIGPDsyBi4bqjbiBnaGkgbsOgbyBraOG7m3Ag4oCc${q.trim()}”.`
-                    : "Q2jGsGEgY8OzIGThu68gbGnhu4d1Lg=="}
+                    ? `Không có bản ghi nào khớp “${q.trim()}”.`
+                    : "Chưa có dữ liệu."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -135,7 +135,7 @@ export default function V49a<T>(Vku: {
                       <Checkbox
                         checked={Vl7}
                         onCheckedChange={() => Vl3(Vl6)}
-                        aria-label="Q2jhu41uIGTDsm5nIG7DoHk="
+                        aria-label="Chọn dòng này"
                       />
                     </TableCell>
                     {Vku.columns.map((c, i) => (

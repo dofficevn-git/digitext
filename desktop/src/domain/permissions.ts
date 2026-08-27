@@ -91,193 +91,193 @@ export interface V3yz {
 export const V3z0: V3yz[] = [
   {
     key: "dossier",
-    label: "SOG7kyBzxqE=",
+    label: "Hồ sơ",
     perms: [
-      { perm: "dossier.read", label: "WGVtIGjhu5Mgc8ah" },
-      { perm: "dossier.create", label: "VOG6oW8gaOG7kyBzxqE=" },
-      { perm: "dossier.update", label: "U+G7rWEgaOG7kyBzxqE=" },
-      { perm: "dossier.delete", label: "WG/DoSBo4buTIHPGoQ==" },
-      { perm: "dossier.export", label: "WHXhuqV0IGjhu5Mgc8ah" },
+      { perm: "dossier.read", label: "Xem hồ sơ" },
+      { perm: "dossier.create", label: "Tạo hồ sơ" },
+      { perm: "dossier.update", label: "Sửa hồ sơ" },
+      { perm: "dossier.delete", label: "Xoá hồ sơ" },
+      { perm: "dossier.export", label: "Xuất hồ sơ" },
     ],
   },
   {
     key: "catalog",
-    label: "RGFuaCBt4bulYw==",
+    label: "Danh mục",
     perms: [
-      { perm: "catalog.read", label: "WGVtIGRhbmggbeG7pWM=" },
-      { perm: "catalog.create", label: "VGjDqm0gbeG7pWM=" },
-      { perm: "catalog.update", label: "U+G7rWEgbeG7pWM=" },
-      { perm: "catalog.delete", label: "WG/DoSBt4bulYw==" },
-      { perm: "catalog.import", label: "Tmjhuq1wIHThu6sgRXhjZWw=" },
-      { perm: "catalog.export", label: "WHXhuqV0IGRhbmggbeG7pWM=" },
+      { perm: "catalog.read", label: "Xem danh mục" },
+      { perm: "catalog.create", label: "Thêm mục" },
+      { perm: "catalog.update", label: "Sửa mục" },
+      { perm: "catalog.delete", label: "Xoá mục" },
+      { perm: "catalog.import", label: "Nhập từ Excel" },
+      { perm: "catalog.export", label: "Xuất danh mục" },
     ],
   },
   {
     key: "scan",
     label: "UXXDqXQ=",
     perms: [
-      { perm: "scan.view", label: "TeG7nyBtw6BuIHF1w6l0" },
-      { perm: "scan.execute", label: "VGjhu7FjIGhp4buHbiBxdcOpdA==" },
+      { perm: "scan.view", label: "Mở màn quét" },
+      { perm: "scan.execute", label: "Thực hiện quét" },
     ],
   },
   {
     key: "editor",
-    label: "Q2jhu4luaCDhuqNuaA==",
+    label: "Chỉnh ảnh",
     perms: [
-      { perm: "editor.view", label: "TeG7nyB0csOsbmggY2jhu4luaCDhuqNuaA==" },
-      { perm: "editor.edit", label: "Q2jhu4luaCBz4butYSDhuqNuaA==" },
+      { perm: "editor.view", label: "Mở trình chỉnh ảnh" },
+      { perm: "editor.edit", label: "Chỉnh sửa ảnh" },
     ],
   },
   {
     key: "upload",
-    label: "VOG6o2kgbMOqbg==",
-    perms: [{ perm: "upload.execute", label: "VOG6o2kgdMOgaSBsaeG7h3UgbMOqbiBtw6F5IGNo4bun" }],
+    label: "Tải lên",
+    perms: [{ perm: "upload.execute", label: "Tải tài liệu lên máy chủ" }],
   },
   {
     key: "sign",
-    label: "S8O9IHPhu5E=",
+    label: "Ký số",
     perms: [
-      { perm: "sign.view", label: "WGVtIGvDvSBz4buR" },
-      { perm: "sign.execute", label: "VGjhu7FjIGhp4buHbiBrw70gc+G7kQ==" },
+      { perm: "sign.view", label: "Xem ký số" },
+      { perm: "sign.execute", label: "Thực hiện ký số" },
     ],
   },
   {
     key: "drive",
-    label: "S2hvIGLDoG4gZ2lhbw==",
+    label: "Kho bàn giao",
     perms: [
       { perm: "drive.view", label: "Xem kho" },
-      { perm: "drive.download", label: "VOG6o2kgdOG7qyBraG8=" },
+      { perm: "drive.download", label: "Tải từ kho" },
     ],
   },
   {
     key: "document",
-    label: "VMOgaSBsaeG7h3UgxJHDoyBu4buZcCAobcOheSBjaOG7pyk=",
+    label: "Tài liệu đã nộp (máy chủ)",
     perms: [
-      { perm: "document.list", label: "WGVtIGRhbmggc8OhY2ggdMOgaSBsaeG7h3U=" },
-      { perm: "document.download", label: "VOG6o2kgdMOgaSBsaeG7h3UgduG7gQ==" },
+      { perm: "document.list", label: "Xem danh sách tài liệu" },
+      { perm: "document.download", label: "Tải tài liệu về" },
       {
         perm: "document.review",
-        label: "RHV54buHdCAvIHThu6sgY2jhu5FpIGvhur90IHF14bqjIGLDs2MgdMOhY2g=",
+        label: "Duyệt / từ chối kết quả bóc tách",
       },
     ],
   },
   {
     key: "package",
-    label: "xJDDs25nIGfDs2kgU0lQL0FJUC9ESVA=",
+    label: "Đóng gói SIP/AIP/DIP",
     perms: [
-      { perm: "package.view", label: "WGVtIGfDs2kgdGlu" },
-      { perm: "package.create", label: "VOG6oW8gZ8OzaSB0aW4=" },
-      { perm: "package.download", label: "VOG6o2kgZ8OzaSB0aW4=" },
+      { perm: "package.view", label: "Xem gói tin" },
+      { perm: "package.create", label: "Tạo gói tin" },
+      { perm: "package.download", label: "Tải gói tin" },
     ],
   },
   {
     key: "submission",
-    label: "VGh1IG7hu5lwIGzGsHUgdHLhu68gbOG7i2NoIHPhu60=",
+    label: "Thu nộp lưu trữ lịch sử",
     perms: [
-      { perm: "submission.view", label: "WGVtIGzhuqduIG7hu5lw" },
-      { perm: "submission.create", label: "xJDEg25nIGvDvSBu4buZcA==" },
+      { perm: "submission.view", label: "Xem lần nộp" },
+      { perm: "submission.create", label: "Đăng ký nộp" },
       {
         perm: "submission.review",
-        label: "WMOhYyBuaOG6rW4gLyB0aeG6v3Agbmjhuq1uIC8gY2jhuqVtIGjhu5Mgc8ah",
+        label: "Xác nhận / tiếp nhận / chấm hồ sơ",
       },
-      { perm: "submission.approve", label: "UGjDqiBkdXnhu4d0IC8gaG/DoG4gdGjDoG5o" },
+      { perm: "submission.approve", label: "Phê duyệt / hoàn thành" },
     ],
   },
   {
     key: "record",
-    label: "QmnDqm4gYuG6o24gKFBo4bulIGzhu6VjIFZJSSk=",
+    label: "Biên bản (Phụ lục VII)",
     perms: [
-      { perm: "record.view", label: "WGVtIC8gdOG6o2kgYmnDqm4gYuG6o24=" },
-      { perm: "record.create", label: "TOG6rXAgYmnDqm4gYuG6o24=" },
+      { perm: "record.view", label: "Xem / tải biên bản" },
+      { perm: "record.create", label: "Lập biên bản" },
     ],
   },
   {
     key: "access",
-    label: "S2hhaSB0aMOhYyBsxrB1IHRy4buvIHPhu5E=",
+    label: "Khai thác lưu trữ số",
     perms: [
       {
         perm: "access.view",
-        label: "WGVtIHnDqnUgY+G6p3UgLyDEkeG7jWMgYuG6o24gbmfGsOG7nWkgZMO5bmc=",
+        label: "Xem yêu cầu / đọc bản người dùng",
       },
-      { perm: "access.request", label: "xJDEg25nIGvDvSB5w6p1IGPhuqd1IGtoYWkgdGjDoWM=" },
-      { perm: "access.review", label: "WMOpdCBkdXnhu4d0IC8gcGjDrSAvIGPhuqVwIERJUA==" },
+      { perm: "access.request", label: "Đăng ký yêu cầu khai thác" },
+      { perm: "access.review", label: "Xét duyệt / phí / cấp DIP" },
     ],
   },
   {
     key: "disposal",
-    label: "SOG7p3kgdMOgaSBsaeG7h3UgaOG6v3QgZ2nDoSB0cuG7iw==",
+    label: "Hủy tài liệu hết giá trị",
     perms: [
       {
         perm: "disposal.view",
-        label: "WGVtIGRhbmggbeG7pWMgLyDEkeG7o3QgaOG7p3kgKHRow6BuaCB2acOqbiBI4buZaSDEkeG7k25nKQ==",
+        label: "Xem danh mục / đợt hủy (thành viên Hội đồng)",
       },
       {
         perm: "disposal.review",
-        label: "UsOgIHNvw6F0IC8gbOG6rXAgxJHhu6N0IC8gdGjhuqltIMSR4buLbmg=",
+        label: "Rà soát / lập đợt / thẩm định",
       },
-      { perm: "disposal.decide", label: "UXV54bq/dCDEkeG7i25oICsgdGhhbyB0w6FjIGjhu6d5" },
+      { perm: "disposal.decide", label: "Quyết định + thao tác hủy" },
     ],
   },
   {
     key: "bk",
-    label: "QuG6o28gcXXhuqNuICYgc2FvIGzGsHU=",
+    label: "Bảo quản & sao lưu",
     perms: [
-      { perm: "bk.view", label: "WGVtIGtp4buDbSB0cmEgLyBz4buVIHNhbyBsxrB1" },
-      { perm: "bk.manage", label: "Q2jhuqF5IGtp4buDbSB0cmEgLyBnaGkgbmjhuq1uIHNhbyBsxrB1" },
+      { perm: "bk.view", label: "Xem kiểm tra / sổ sao lưu" },
+      { perm: "bk.manage", label: "Chạy kiểm tra / ghi nhận sao lưu" },
     ],
   },
   {
     key: "tree",
-    label: "Q8OieSB0aMawIG3hu6Vj",
+    label: "Cây thư mục",
     perms: [
-      { perm: "tree.view", label: "WGVtIGPDonkgdGjGsCBt4bulYw==" },
-      { perm: "tree.assign", label: "UGjDoXQgY8OieSB0aMawIG3hu6Vj" },
+      { perm: "tree.view", label: "Xem cây thư mục" },
+      { perm: "tree.assign", label: "Phát cây thư mục" },
     ],
   },
   {
     key: "stats",
-    label: "VGjhu5FuZyBrw6o=",
+    label: "Thống kê",
     perms: [
-      { perm: "stats.view", label: "QsOhbyBjw6FvIC8geGVtIHPhu5EgbGnhu4d1" },
-      { perm: "stats.view_project", label: "WGVtIHPhu5EgbGnhu4d1IHRvw6BuIGThu7Egw6Fu" },
+      { perm: "stats.view", label: "Báo cáo / xem số liệu" },
+      { perm: "stats.view_project", label: "Xem số liệu toàn dự án" },
     ],
   },
   {
     key: "user",
-    label: "UXXhuqNuIGzDvSBuZ8aw4budaSBkw7luZw==",
+    label: "Quản lý người dùng",
     perms: [
-      { perm: "user.view", label: "WGVtIGRhbmggc8OhY2g=" },
-      { perm: "user.create", label: "VOG6oW8gdMOgaSBraG/huqNu" },
-      { perm: "user.update", label: "U+G7rWEgdMOgaSBraG/huqNu" },
-      { perm: "user.revoke", label: "VsO0IGhp4buHdSBob8OhIHTDoGkga2hv4bqjbg==" },
-      { perm: "user.reset_password", label: "xJDhurd0IGzhuqFpIG3huq10IGto4bqpdQ==" },
-      { perm: "user.grant_permissions", label: "UGjDom4gcXV54buBbiBjaG8gbmfGsOG7nWkga2jDoWM=" },
+      { perm: "user.view", label: "Xem danh sách" },
+      { perm: "user.create", label: "Tạo tài khoản" },
+      { perm: "user.update", label: "Sửa tài khoản" },
+      { perm: "user.revoke", label: "Vô hiệu hoá tài khoản" },
+      { perm: "user.reset_password", label: "Đặt lại mật khẩu" },
+      { perm: "user.grant_permissions", label: "Phân quyền cho người khác" },
     ],
   },
   {
     key: "project",
-    label: "UXXhuqNuIGzDvSBk4buxIMOhbg==",
+    label: "Quản lý dự án",
     perms: [
-      { perm: "project.view", label: "WGVtIGThu7Egw6Fu" },
-      { perm: "project.create", label: "VOG6oW8gZOG7sSDDoW4=" },
-      { perm: "project.update", label: "U+G7rWEgZOG7sSDDoW4=" },
-      { perm: "project.assign_admin", label: "R8OhbiBhZG1pbiBwaOG7pSB0csOhY2g=" },
+      { perm: "project.view", label: "Xem dự án" },
+      { perm: "project.create", label: "Tạo dự án" },
+      { perm: "project.update", label: "Sửa dự án" },
+      { perm: "project.assign_admin", label: "Gán admin phụ trách" },
     ],
   },
   {
     key: "device",
-    label: "VGhp4bq/dCBi4buL",
+    label: "Thiết bị",
     perms: [
-      { perm: "device.view", label: "WGVtIHRoaeG6v3QgYuG7iw==" },
-      { perm: "device.revoke", label: "VGh1IGjhu5NpIHRoaeG6v3QgYuG7iw==" },
+      { perm: "device.view", label: "Xem thiết bị" },
+      { perm: "device.revoke", label: "Thu hồi thiết bị" },
     ],
   },
   {
     key: "settings",
-    label: "Q8OgaSDEkeG6t3Q=",
+    label: "Cài đặt",
     perms: [
-      { perm: "settings.view", label: "WGVtIGPDoGkgxJHhurd0" },
-      { perm: "settings.update", label: "xJDhu5VpIGPDoGkgxJHhurd0" },
+      { perm: "settings.view", label: "Xem cài đặt" },
+      { perm: "settings.update", label: "Đổi cài đặt" },
     ],
   },
 ];
@@ -405,12 +405,12 @@ export function V3z9(Vl: V3yx[] | undefined, Vm: V3yx): boolean {
 export function V3za(Vn: V3xs): string {
   switch (Vn) {
     case "super_admin":
-      return "UXXhuqNuIHRy4buLIGjhu4cgdGjhu5FuZw==";
+      return "Quản trị hệ thống";
     case "admin":
-      return "UXXhuqNuIHRy4buLIGThu7Egw6Fu";
+      return "Quản trị dự án";
     case "user":
-      return "TmjDom4gdmnDqm4=";
+      return "Nhân viên";
     case "customer":
-      return "S2jDoWNoIGjDoG5n";
+      return "Khách hàng";
   }
 }

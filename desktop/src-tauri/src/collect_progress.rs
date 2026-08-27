@@ -199,7 +199,7 @@ impl FileTicket {
             FileState::Cancelled,
             r_15n,
             Some(
-                "xJDDoyBo4buneSDigJQgcGjhuqduIMSRw6MgdOG6o2kgxJHGsOG7o2MgZ2nhu68gbOG6oWksIGzhuqduIGdvbSBzYXUgdOG6o2kgdGnhur9wLg=="
+                "Đã hủy — phần đã tải được giữ lại, lần gom sau tải tiếp."
                     .into(),
             ),
         )

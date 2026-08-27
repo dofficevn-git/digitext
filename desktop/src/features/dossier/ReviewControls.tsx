@@ -42,7 +42,7 @@ function V4hq({
           className="inp w-full resize-y"
           rows={3}
           autoFocus
-          placeholder="VsOtIGThu6U6IOG6o25oIG3hu50gdHJhbmcgMywgYsOzYyBzYWkgc+G7kSBxdXnhur90IMSR4buLbmjigKY="
+          placeholder="Ví dụ: ảnh mờ trang 3, bóc sai số quyết định…"
           value={V1i1}
           onChange={(V1i4) => V1i2(V1i4.target.value)}
         />
@@ -54,9 +54,9 @@ function V4hq({
             className="btn primary"
             onClick={() => V1hz(V1i1)}
             disabled={V1hx || V1i1.trim() === ""}
-            title={V1i1.trim() === "" ? "UGjhuqNpIG7DqnUgbMO9IGRvIHThu6sgY2jhu5Fp" : undefined}
+            title={V1i1.trim() === "" ? "Phải nêu lý do từ chối" : undefined}
           >
-            {V1hx ? "xJBhbmcgbMawdeKApg==" : "VOG7qyBjaOG7kWk="}
+            {V1hx ? "Đang lưu…" : "Từ chối"}
           </button>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function V4hr({
             (doc.reviewedAt
               ? `TMO6YyA=${doc.reviewedAt}`
               : doc.reviewStatus === "pending"
-                ? "Q2jGsGEgY8OzIHF1eeG6v3QgxJHhu4tuaA=="
+                ? "Chưa có quyết định"
                 : V1if.label)
           }
         >
@@ -126,7 +126,7 @@ export default function V4hr({
                 className="btn sm"
                 onClick={() => void V1ih("approved")}
                 disabled={V1ib}
-                title="RHV54buHdCBr4bq/dCBxdeG6oyBiw7NjIHTDoWNoIGPhu6dhIHTDoGkgbGnhu4d1IG7DoHk="
+                title="Duyệt kết quả bóc tách của tài liệu này"
               >
                 {V1ib ? (
                   "…"
@@ -143,7 +143,7 @@ export default function V4hr({
             className="btn sm"
             onClick={() => V1ie(true)}
             disabled={V1ib}
-            title="VHLhuqMgbOG6oWkgxJHhu4MgcXXDqXQvYsOzYyBs4bqhaSAocGjhuqNpIG7DqnUgbMO9IGRvKQ=="
+            title="Trả lại để quét/bóc lại (phải nêu lý do)"
           >
             <Icon name="tuChoi" />
             Từ chối
@@ -157,7 +157,7 @@ export default function V4hr({
             className="btn sm"
             onClick={() => void V1ih("pending")}
             disabled={V1ib}
-            title="TeG7nyBs4bqhaSDEkeG7gyBzb8OhdCB0aeG6v3AgKHhvw6EgcXV54bq/dCDEkeG7i25oIGR1eeG7h3QgxJHDoyBnaGkp"
+            title="Mở lại để soát tiếp (xoá quyết định duyệt đã ghi)"
           >
             {V1ib ? (
               "…"

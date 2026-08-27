@@ -101,7 +101,7 @@ class TritonPythonModel:
         p_951 = p_952.max(axis=-1).tolist()
         p_94e, score = ocr_logic.ctc_greedy_decode_conf(p_950, p_951, blank_id=0)
         if self.charset is None:
-            raise pb_utils.TritonModelException("dGhp4bq/dSBkaWN0X1ZJLnR4dCBj4bqhbmggbW9kZWwucHkgKMKnUzEyLjQp")
+            raise pb_utils.TritonModelException("thiếu dict_VI.txt cạnh model.py (§S12.4)")
         p_94d = [self.charset[p_94f] for p_94f in p_94e if 0 < p_94f < len(self.charset)]
         text = unicodedata.normalize("NFC", "".join(p_94d))
         return text, float(score)

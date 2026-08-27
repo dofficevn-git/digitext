@@ -75,15 +75,15 @@ def q_16c(preds: list[str]) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     p_2ff = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p_2ff.add_argument("bio_jsonl", help="QklPIGPDsyB3b3JkcyArIHBhZ2Vfbm8gKHZkIGRhdGEvYmlvX3YyX2Z1bGwuanNvbmwp")
+    p_2ff.add_argument("bio_jsonl", help="BIO có words + page_no (vd data/bio_v2_full.jsonl)")
     p_2ff.add_argument("--gold", default="data/gold_values.jsonl",
-                    help="bmjDo24gZG9jX3R5cGUgdGF5IMSR4buDIHZhbGlkYXRlIChi4buPIHF1YSBi4bqjbiBnaGkgdGhp4bq/dSBkb2NfdHlwZSk=")
-    p_2ff.add_argument("--out", default=None, help="ghi {id, coarse}IHJhIGpzb25sIChi4buZIGzhu41jIGN1cmF0aW9uKQ==")
+                    help="nhãn doc_type tay để validate (bỏ qua bản ghi thiếu doc_type)")
+    p_2ff.add_argument("--out", default=None, help="ghi {id, coarse} ra jsonl (bộ lọc curation)")
     p_2fe = p_2ff.parse_args(argv)
 
     p_300 = Path(p_2fe.bio_jsonl)
     if not p_300.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_300}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_300}", file=sys.stderr)
         return 2
 
     pred_by_id: dict[str, str] = {}

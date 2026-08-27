@@ -24,7 +24,7 @@ fn f_1v4(endpoint: &str) -> Result<String, WorkerError> {
         Ok(ep.to_owned())
     } else if ep.is_empty() {
         Err(WorkerError::ConfigInvalid(
-            "ZW5kcG9pbnQgZ1JQQyBy4buXbmc=".to_owned(),
+            "endpoint gRPC rỗng".to_owned(),
         ))
     } else {
         Ok(format!("http://{ep}"))
@@ -34,7 +34,7 @@ fn f_1mj(endpoint: &str) -> Result<Channel, WorkerError> {
     let r_388 = f_1v4(endpoint)?;
     let channel = Channel::from_shared(r_388)
         .map_err(|e| {
-            WorkerError::ConfigInvalid(format!("ZW5kcG9pbnQgZ1JQQyBraMO0bmcgaOG7o3AgbOG7hzog{e}"))
+            WorkerError::ConfigInvalid(format!("endpoint gRPC không hợp lệ: {e}"))
         })?
         .connect_lazy();
     Ok(channel)
@@ -83,7 +83,7 @@ fn f_1zz(r_38d: &[u8]) -> Result<Vec<String>, WorkerError> {
             .filter(|&e| e <= r_38d.len())
             .ok_or_else(|| {
                 WorkerError::CorruptInput(
-                    "dGVuc29yIFNUUklORzogxJHhu5kgZMOgaSB2xrDhu6N0IGJ1ZmZlcg==".to_owned(),
+                    "tensor STRING: độ dài vượt buffer".to_owned(),
                 )
             })?;
         r_38h.push(String::from_utf8_lossy(&r_38d[r_38f..r_38e]).into_owned());
@@ -146,7 +146,7 @@ fn f_1z5(r_38s: pb::ModelInferResponse) -> Result<To6, WorkerError> {
         return Err(
             WorkerError::CorruptInput(
                 format!(
-                    "b3V0cHV0IFRyaXRvbiBs4buHY2ggxJHhu5kgZMOgaTog{} box / {} text / {}IGNvbmYgKG3hu5dpIGRldGVjdGlvbiBwaOG6o2kgY8OzIMSRw7puZyBt4buZdCBi4buZKQ==",
+                    "output Triton lệch độ dài: {} box / {} text / {} conf (mỗi detection phải có đúng một bộ)",
                     boxes.len(), texts.len(), confidences.len()
                 ),
             ),

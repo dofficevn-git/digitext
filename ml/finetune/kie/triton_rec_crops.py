@@ -62,11 +62,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_87c = Path(p_878.eval_jsonl)
     if not p_87c.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_87c}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_87c}", file=sys.stderr)
         return 2
     rows = [json.loads(p_87b) for p_87b in p_87c.open(encoding="utf-8") if p_87b.strip()]
     if not rows:
-        print("TOG7lkk6IGV2YWwgcuG7l25n", file=sys.stderr)
+        print("LỖI: eval rỗng", file=sys.stderr)
         return 2
 
     p_87d = q_11a([Path(p_87e["image"]) for p_87e in rows], p_878.url, p_878.model)

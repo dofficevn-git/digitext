@@ -20,6 +20,6 @@ export function V47u(Vfs: V418): ScanTarget {
       ngayBatDau: Vfs.ngayBatDau,
       ngayKetThuc: Vfs.ngayKetThuc,
     },
-    label: `${Vfs.tenDuAn}IMK3IEjhu5lwIA==${Vfs.hopSo} · HS ${Vfs.hoSoSo}`,
+    label: `${Vfs.tenDuAn} · Hộp ${Vfs.hopSo} · HS ${Vfs.hoSoSo}`,
   };
 }

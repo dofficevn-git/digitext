@@ -213,7 +213,7 @@ async fn set_retention(
     }
     if !disposal::set_retention(&r_cw.pool, r_ct.document_id, r_ct.het_han).await? {
         return Err(ApiError::conflict(
-            "dMOgaSBsaeG7h3UgxJHDoyBo4buneSDigJQga2jDtG5nIMSR4bq3dCBo4bqhbg==".to_string(),
+            "tài liệu đã hủy — không đặt hạn".to_string(),
         ));
     }
     Ok(StatusCode::NO_CONTENT)
@@ -243,12 +243,12 @@ async fn keep_entry(
     r_d1.require_perm(Permission::DisposalReview)?;
     let r_d3 = f_1a1(&r_d4, &r_d1, id).await?;
     let note = note_of(&r_d2.note).ok_or_else(|| {
-        ApiError::bad_request("Z2nhu68gbOG6oWkgcGjhuqNpIGdoaSByw7UgbMO9IGRvIChsxrB1IHbhur90KQ==")
+        ApiError::bad_request("giữ lại phải ghi rõ lý do (lưu vết)")
     })?;
     if !disposal::keep_entry(&r_d4.pool, r_d3.id, Some(r_d1.user.id), note).await? {
         return Err(
             ApiError::conflict(
-                "Y2jhu4kgZ2nhu68gbOG6oWkgxJHGsOG7o2MgZMOybmcgxJFhbmcgJ1hlbSB4w6l0IGjhu6d5JyB2w6AgY2jGsGEgdsOgbyDEkeG7o3Q="
+                "chỉ giữ lại được dòng đang 'Xem xét hủy' và chưa vào đợt"
                     .to_string(),
             ),
         );
@@ -286,7 +286,7 @@ async fn create_batch(
     r_da.require_perm(Permission::DisposalReview)?;
     let project_id = r_db.project_id.or(r_da.user.project_id).ok_or_else(|| {
         ApiError::bad_request(
-            "dGhp4bq/dSBwcm9qZWN0SWQgKG5nxrDhu51pIGfhu41pIGtow7RuZyB0aHXhu5ljIGThu7Egw6FuIG7DoG8p",
+            "thiếu projectId (người gọi không thuộc dự án nào)",
         )
     })?;
     let r_dc = f_29a(&r_dd.pool, &r_da.user).await?;
@@ -295,7 +295,7 @@ async fn create_batch(
     }
     if r_db.entry_ids.is_empty() {
         return Err(ApiError::bad_request(
-            "Y2jhu41uIHThu5FpIHRoaeG7g3UgMDEgZMOybmcgRGFuaCBt4bulYw==",
+            "chọn tối thiểu 01 dòng Danh mục",
         ));
     }
     let Some(batch) = disposal::create_batch(
@@ -309,7 +309,7 @@ async fn create_batch(
     else {
         return Err(
             ApiError::conflict(
-                "Y8OzIGTDsm5nIGtow7RuZyBo4bujcCBs4buHIChraMOhYyBk4buxIMOhbiAvIMSRw6MgdsOgbyDEkeG7o3Qga2jDoWMgLyDEkcOjIHjhu60gbMO9KQ=="
+                "có dòng không hợp lệ (khác dự án / đã vào đợt khác / đã xử lý)"
                     .to_string(),
             ),
         );
@@ -342,12 +342,12 @@ async fn council(
     let note = note_of(&r_dj.note)
         .ok_or_else(|| {
             ApiError::bad_request(
-                "cGjhuqNpIGdoaSBr4bq/dCBxdeG6oyBsw6BtIHZp4buHYyBj4bunYSBI4buZaSDEkeG7k25nICjEkGnhu4F1IDQ5LjIuYyk=",
+                "phải ghi kết quả làm việc của Hội đồng (Điều 49.2.c)",
             )
         })?;
     if !disposal::council(&r_dk.pool, r_di.id, note, Some(r_dh.user.id)).await? {
         return Err(ApiError::conflict(format!(
-            "Y2jhu4kgY2jhu5F0IEjhu5lpIMSR4buTbmcga2hpIMSR4bujdCDEkWFuZyAn{}' ≠ hoi_dong",
+            "chỉ chốt Hội đồng khi đợt đang '{}' ≠ hoi_dong",
             r_di.status
         )));
     }
@@ -362,13 +362,13 @@ async fn appraise(
     r_dl.require_perm(Permission::DisposalReview)?;
     let r_dm = f_u8(&r_do, &r_dl, id).await?;
     let note = note_of(&r_dn.note).ok_or_else(|| {
-        ApiError::bad_request("cGjhuqNpIGdoaSBu4buZaSBkdW5nIMO9IGtp4bq/biB0aOG6qW0gxJHhu4tuaA==")
+        ApiError::bad_request("phải ghi nội dung ý kiến thẩm định")
     })?;
     if !disposal::appraise(&r_do.pool, r_dm.id, note, Some(r_dl.user.id)).await? {
         return Err(
             ApiError::conflict(
                 format!(
-                    "Y2jhu4kgbmjhuq1wIHRo4bqpbSDEkeG7i25oIOG7nyBixrDhu5tjIHRoYW1fZGluaCAoxJFhbmcgbMOgICc={}')",
+                    "chỉ nhập thẩm định ở bước tham_dinh (đang là '{}')",
                     r_dm.status
                 ),
             ),
@@ -393,7 +393,7 @@ async fn decide(
     let r_dq = f_u8(&r_ds, &r_dp, id).await?;
     if r_dr.quyet_dinh_so.trim().is_empty() {
         return Err(ApiError::bad_request(
-            "dGhp4bq/dSBz4buRIFF1eeG6v3QgxJHhu4tuaCBo4buneQ==",
+            "thiếu số Quyết định hủy",
         ));
     }
     if !disposal::decide(
@@ -407,7 +407,7 @@ async fn decide(
     {
         return Err(
             ApiError::conflict(
-                "cXV54bq/dCDEkeG7i25oIGPhuqduIMSR4bujdCDhu58gYsaw4bubYyB0aGFtX2RpbmggdsOgIMSQw4MgY8OzIMO9IGtp4bq/biB0aOG6qW0gxJHhu4tuaCAoaG/hurdjIHR1UXV5ZXQ9dHJ1ZSB0aGVvIMSQaeG7gXUgNDkuOCk="
+                "quyết định cần đợt ở bước tham_dinh và ĐÃ có ý kiến thẩm định (hoặc tuQuyet=true theo Điều 49.8)"
                     .to_string(),
             ),
         );
@@ -429,10 +429,10 @@ async fn execute(
     let r_e1 = r_e0
         .store
         .as_ref()
-        .ok_or_else(|| ApiError::service_unavailable("a2hvIG9iamVjdCBjaMawYSBj4bqldSBow6xuaA=="))?;
+        .ok_or_else(|| ApiError::service_unavailable("kho object chưa cấu hình"))?;
     let Some(entries) = disposal::f_1ad(&r_e0.pool, r_du.id, Some(r_dt.user.id)).await? else {
         return Err(ApiError::conflict(format!(
-            "Y2jhu4kgdGhhbyB0w6FjIGjhu6d5IHNhdSBRdXnhur90IMSR4buLbmggKMSRYW5nIGzDoCAn{}')",
+            "chỉ thao tác hủy sau Quyết định (đang là '{}')",
             r_du.status
         )));
     };
@@ -450,7 +450,7 @@ async fn execute(
             &r_e0.pool,
             r_dv,
             Some(r_dt.user.id),
-            &format!("aOG7p3kg{}IG9iamVjdCBraOG7j2kga2hv", r_dy.len()),
+            &format!("hủy {} object khỏi kho", r_dy.len()),
         )
         .await?
         {
@@ -460,7 +460,7 @@ async fn execute(
             if let Err(r_dw) = r_e1.delete(r_dx).await {
                 tracing::error!(
                     key = % r_dx, error = % r_dw,
-                    "cHVyZ2Ugb2JqZWN0IHNhdSBraGkgY2jhu5F0IGjhu6d5IGzhu5dpIOKAlCBt4buTIGPDtGksIHPhur0gcHVyZ2UgbOG6oWkgbOG6p24gY2jhuqF5IHNhdQ=="
+                    "purge object sau khi chốt hủy lỗi — mồ côi, sẽ purge lại lần chạy sau"
                 );
             }
         }

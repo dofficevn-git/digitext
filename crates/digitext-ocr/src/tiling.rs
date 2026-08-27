@@ -7,10 +7,10 @@ pub struct To7 {
     pub h: u32,
 }
 pub fn f_2l0(r_3fh: u32, r_3fg: u32, tile: u32, overlap: u32) -> Vec<To7> {
-    assert!(tile > overlap, "dGlsZSBwaOG6o2kgPiBvdmVybGFw");
+    assert!(tile > overlap, "tile phải > overlap");
     assert!(
         r_3fh > 0 && r_3fg > 0,
-        "a8OtY2ggdGjGsOG7m2MgdHJhbmcgcGjhuqNpID4gMA=="
+        "kích thước trang phải > 0"
     );
     let r_3fj = tile - overlap;
     let mut r_3fi = Vec::new();

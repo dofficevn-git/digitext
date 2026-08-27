@@ -10,13 +10,13 @@ export interface V4o1<T> {
 }
 
 function V4o2(ten?: string, ma?: string): string {
-  return ten || ma || "KENoxrBhIGfDoW4gcGjDtG5nKQ==";
+  return ten || ma || "(Chưa gán phông)";
 }
 
 export const V4o3: V4o1<V4nt>[] = [
-  { head: "UGjDtG5n", value: (r) => V4o2(r.tenDuAn, r.maDuAn) },
-  { head: "U+G7kSBo4buTIHPGoQ==", value: (r) => r.soHoSo, num: true },
-  { head: "U+G7kSBQREY=", value: (r) => r.soPdf, num: true },
+  { head: "Phông", value: (r) => V4o2(r.tenDuAn, r.maDuAn) },
+  { head: "Số hồ sơ", value: (r) => r.soHoSo, num: true },
+  { head: "Số PDF", value: (r) => r.soPdf, num: true },
   { head: "A0", value: (r) => r.a0, num: true },
   { head: "A1", value: (r) => r.a1, num: true },
   { head: "A2", value: (r) => r.a2, num: true },
@@ -24,41 +24,41 @@ export const V4o3: V4o1<V4nt>[] = [
   { head: "A4", value: (r) => r.a4, num: true },
   { head: "A5", value: (r) => r.a5, num: true },
   { head: "S2jDoWM=", value: (r) => r.khac, num: true },
-  { head: "VOG7lW5nIHRyYW5n", value: (r) => r.tongTrang, num: true },
-  { head: "UXV5IMSR4buVaSBBNA==", value: (r) => Math.round(r.quyDoi * 10) / 10, num: true },
+  { head: "Tổng trang", value: (r) => r.tongTrang, num: true },
+  { head: "Quy đổi A4", value: (r) => Math.round(r.quyDoi * 10) / 10, num: true },
 ];
 
 export const V4o4: V4o1<V4nu>[] = [
   {
-    head: "UGjDsm5nIGJhbg==",
-    value: (r) => r.tenDonVi || r.maDv || "KENoxrBhIGfDoW4gcGjDsm5nIGJhbik=",
+    head: "Phòng ban",
+    value: (r) => r.tenDonVi || r.maDv || "(Chưa gán phòng ban)",
   },
-  { head: "SOG7mXAgdsSpbmggdmnhu4Vu", value: (r) => r.hopVinhVien, num: true },
-  { head: "SOG7kyBzxqEgdsSpbmggdmnhu4Vu", value: (r) => r.hoSoVinhVien, num: true },
-  { head: "SOG7mXAgY8OzIHRo4budaSBo4bqhbg==", value: (r) => r.hopCoThoiHan, num: true },
-  { head: "SOG7kyBzxqEgY8OzIHRo4budaSBo4bqhbg==", value: (r) => r.hoSoCoThoiHan, num: true },
-  { head: "QsOzIGjhu5Mgc8ahIGxv4bqhaQ==", value: (r) => r.boLoai, num: true },
-  { head: "VOG6rXAgaOG7kyBzxqEgbG/huqFp", value: (r) => r.tapLoai, num: true },
+  { head: "Hộp vĩnh viễn", value: (r) => r.hopVinhVien, num: true },
+  { head: "Hồ sơ vĩnh viễn", value: (r) => r.hoSoVinhVien, num: true },
+  { head: "Hộp có thời hạn", value: (r) => r.hopCoThoiHan, num: true },
+  { head: "Hồ sơ có thời hạn", value: (r) => r.hoSoCoThoiHan, num: true },
+  { head: "Bó hồ sơ loại", value: (r) => r.boLoai, num: true },
+  { head: "Tập hồ sơ loại", value: (r) => r.tapLoai, num: true },
 ];
 
 export const V4o5: V4o1<V4nv>[] = [
-  { head: "TmjDom4gdmnDqm4=", value: (r) => r.ten },
-  { head: "U+G7kSBo4buTIHPGoQ==", value: (r) => r.soHoSo, num: true },
-  { head: "U+G7kSB2xINuIGLhuqNu", value: (r) => r.soVanBan, num: true },
-  { head: "U+G7kSB0cmFuZyBxdcOpdA==", value: (r) => r.soTrangQuet, num: true },
-  { head: "VGhhbyB0w6FjIHRow6pt", value: (r) => r.thaoTacThem, num: true },
-  { head: "VGhhbyB0w6FjIHPhu61h", value: (r) => r.thaoTacSua, num: true },
+  { head: "Nhân viên", value: (r) => r.ten },
+  { head: "Số hồ sơ", value: (r) => r.soHoSo, num: true },
+  { head: "Số văn bản", value: (r) => r.soVanBan, num: true },
+  { head: "Số trang quét", value: (r) => r.soTrangQuet, num: true },
+  { head: "Thao tác thêm", value: (r) => r.thaoTacThem, num: true },
+  { head: "Thao tác sửa", value: (r) => r.thaoTacSua, num: true },
 ];
 
 export const V4o6: V4o1<V4nw>[] = [
-  { head: "UGjDtG5n", value: (r) => V4o2(r.tenDuAn, r.maDuAn) },
-  { head: "VGjhu51pIGdpYW4ga2jhu59pIHThuqFv", value: (r) => V4dr(r.thoiGianKhoiTao) },
-  { head: "SOG7mXAgdsSpbmggdmnhu4Vu", value: (r) => r.hopVinhVien, num: true },
-  { head: "SOG7kyBzxqEgdsSpbmggdmnhu4Vu", value: (r) => r.hoSoVinhVien, num: true },
-  { head: "SOG7mXAgY8OzIHRo4budaSBo4bqhbg==", value: (r) => r.hopCoThoiHan, num: true },
-  { head: "SOG7kyBzxqEgY8OzIHRo4budaSBo4bqhbg==", value: (r) => r.hoSoCoThoiHan, num: true },
-  { head: "QsOzIGjhu5Mgc8ahIGxv4bqhaQ==", value: (r) => r.boLoai, num: true },
-  { head: "VOG6rXAgaOG7kyBzxqEgbG/huqFp", value: (r) => r.tapLoai, num: true },
+  { head: "Phông", value: (r) => V4o2(r.tenDuAn, r.maDuAn) },
+  { head: "Thời gian khởi tạo", value: (r) => V4dr(r.thoiGianKhoiTao) },
+  { head: "Hộp vĩnh viễn", value: (r) => r.hopVinhVien, num: true },
+  { head: "Hồ sơ vĩnh viễn", value: (r) => r.hoSoVinhVien, num: true },
+  { head: "Hộp có thời hạn", value: (r) => r.hopCoThoiHan, num: true },
+  { head: "Hồ sơ có thời hạn", value: (r) => r.hoSoCoThoiHan, num: true },
+  { head: "Bó hồ sơ loại", value: (r) => r.boLoai, num: true },
+  { head: "Tập hồ sơ loại", value: (r) => r.tapLoai, num: true },
 ];
 
 export function V4o7<T>(cols: V4o1<T>[], V21s: T[]): Record<string, unknown>[] {

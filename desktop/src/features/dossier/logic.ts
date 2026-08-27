@@ -92,9 +92,9 @@ export function V4cr(d: V4bl): V4bl {
 
 export function V4cs(d: V4bl): string | null {
   if (!(d.soTam ?? "").trim())
-    return "VnVpIGzDsm5nIG5o4bqtcCBz4buRIHThuqFtIGPhu6dhIGjhu5Mgc8ahLg==";
+    return "Vui lòng nhập số tạm của hồ sơ.";
   if (d.ngayBatDau && d.ngayKetThuc && d.ngayBatDau > d.ngayKetThuc) {
-    return "TmfDoHkgYuG6r3QgxJHhuqd1IHBo4bqjaSB0csaw4bubYyBob+G6t2MgYuG6sW5nIG5nw6B5IGvhur90IHRow7pjLg==";
+    return "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.";
   }
   return null;
 }
@@ -108,7 +108,7 @@ export function V4ct(r: V4bm, q: string): boolean {
 }
 
 export function V4cu(r: V4bm): string {
-  const Vx6 = [r.tenDa, `U+G7kSB04bqhbSA=${r.soTam}`];
+  const Vx6 = [r.tenDa, `Số tạm ${r.soTam}`];
   if (r.tieuDe) Vx6.push(r.tieuDe);
   return Vx6.filter(Boolean).join(" · ");
 }
@@ -169,9 +169,9 @@ export function V4cy(v: V4bp): V4bp {
 
 export function V4cz(v: V4bp): string | null {
   if (!(v.trichYeu ?? "").trim() && !(v.soKyHieu ?? "").trim()) {
-    return "Tmjhuq1wIMOtdCBuaOG6pXQgVHLDrWNoIHnhur91IGhv4bq3YyBT4buRL2vDvSBoaeG7h3UgY+G7p2EgdsSDbiBi4bqjbi4=";
+    return "Nhập ít nhất Trích yếu hoặc Số/ký hiệu của văn bản.";
   }
-  if (v.soTrang != null && v.soTrang < 0) return "U+G7kSB0cmFuZyBraMO0bmcgaOG7o3AgbOG7hy4=";
+  if (v.soTrang != null && v.soTrang < 0) return "Số trang không hợp lệ.";
   return null;
 }
 
@@ -187,7 +187,7 @@ export function V4d0(r: V4bm): V41b | null {
       ghiChu: r.ghiChu,
       thbq: r.thbq != null ? String(r.thbq) : undefined,
     },
-    label: `${r.tenDa ?? r.maDa}IMK3IFPhu5EgdOG6oW0g${r.soTam}`,
+    label: `${r.tenDa ?? r.maDa} · Số tạm ${r.soTam}`,
   };
 }
 
@@ -294,18 +294,18 @@ export function V4da(s?: string): { ngay: string; gio: string } {
 }
 
 export const V4db = [
-  "SOG7kyBzxqEgaWQ=",
-  "U+G7kSB0aOG7qSB04bux",
-  "TG/huqFpIHbEg24gYuG6o24=",
-  "U+G7kSBrw70gaGnhu4d1",
-  "TmfDoHkgdGjDoW5n",
-  "Q8ahIHF1YW4gYmFuIGjDoG5o",
-  "VHLDrWNoIHnhur91",
-  "VOG7nSBz4buR",
-  "U+G7kSB0cmFuZw==",
-  "VHJhbmcgc+G7kQ==",
-  "TmfDtG4gbmfhu68=",
-  "R2hpIGNow7o=",
+  "Hồ sơ id",
+  "Số thứ tự",
+  "Loại văn bản",
+  "Số ký hiệu",
+  "Ngày tháng",
+  "Cơ quan ban hành",
+  "Trích yếu",
+  "Tờ số",
+  "Số trang",
+  "Trang số",
+  "Ngôn ngữ",
+  "Ghi chú",
 ];
 
 function V4dc(s: string): string {
@@ -474,39 +474,39 @@ export function V4dg(
 function V4dh(Vyb: V4d7): string {
   switch (Vyb) {
     case "invalid_header":
-      return "a2jDtG5nIG5o4bqtbiBkaeG7h24gxJHGsOG7o2MgY+G7mXQgRXhjZWw=";
+      return "không nhận diện được cột Excel";
     case "missing_dossier":
-      return "dGhp4bq/dSB0aMO0bmcgdGluIGjhu5Mgc8ahIMSR4buDIMSR4buRaSBjaGnhur91";
+      return "thiếu thông tin hồ sơ để đối chiếu";
     case "dossier_not_found":
-      return "a2jDtG5nIHTDrG0gdGjhuqV5IGjhu5Mgc8ahIHTGsMahbmcg4bupbmc=";
+      return "không tìm thấy hồ sơ tương ứng";
     case "dossier_ambiguous":
-      return "a2jhu5twIG5oaeG7gXUgaOG7kyBzxqEsIGPhuqduIGzhu41jIGjhurlwIGjGoW4=";
+      return "khớp nhiều hồ sơ, cần lọc hẹp hơn";
     case "missing_content":
-      return "dGhp4bq/dSBj4bqjIHRyw61jaCB54bq/dSBs4bqrbiBz4buRIGvDvSBoaeG7h3U=";
+      return "thiếu cả trích yếu lẫn số ký hiệu";
   }
 }
 
 export function V4di(Vyc: V4d8[], Vyd = 8): string {
   if (Vyc.length === 0) return "";
-  const Vye = Vyc.slice(0, Vyd).map((x) => `LSBEw7JuZyA=${x.line}: ${V4dh(x.reason)}`);
-  if (Vyc.length > Vyd) Vye.push(`LSAuLi4gdsOgIA==${Vyc.length - Vyd}IGTDsm5nIGtow6Fj`);
+  const Vye = Vyc.slice(0, Vyd).map((x) => `- Dòng ${x.line}: ${V4dh(x.reason)}`);
+  if (Vyc.length > Vyd) Vye.push(`- ... và ${Vyc.length - Vyd} dòng khác`);
   return Vye.join("\n");
 }
 
 export function V4dj(r: V4bm, Vyf: V3yo[], Vyg: V3ym[]): Record<string, string | number> {
   return {
     Mảng: V4cn(Vyg, r.mangCvid),
-    "SUQgSOG7kyBTxqE=": r.id,
+    "ID Hồ Sơ": r.id,
     TcOjIEjhu5MgU8ah: r.maHoSo ?? "",
-    "U+G7kSBU4bqhbQ==": r.soTam,
-    "VGnDqnUgxJDhu4E=": r.tieuDe,
+    "Số Tạm": r.soTam,
+    "Tiêu Đề": r.tieuDe,
     THBQ: V4co(Vyf, r.thbq),
-    "U+G7kSBU4bud": V4dt(r.soTo),
+    "Số Tờ": V4dt(r.soTo),
     TmfDoHkgQsSQ: V4dr(r.ngayBatDau),
-    "TmfDoHkgS1Q=": V4dr(r.ngayKetThuc),
-    "VC5UaOG7q2E=": r.trungThua ? "x" : "",
-    "VC5UaMOhaQ==": V4du(r, Vyf).label,
-    "VMOgaSBMaeG7h3U=": V4cv(r),
+    "Ngày KT": V4dr(r.ngayKetThuc),
+    "T.Thừa": r.trungThua ? "x" : "",
+    "T.Thái": V4du(r, Vyf).label,
+    "Tài Liệu": V4cv(r),
     Q2jhu6ljIE7Eg25n: "",
   };
 }
@@ -630,10 +630,10 @@ export function V4dt(Vyt?: string): string {
 
 export function V4du(r: V4bm, Vyu: V3yo[]): { label: string; cls: string } {
   const ten = V4co(Vyu, r.thbq).toLowerCase();
-  if (ten.includes("dsSpbmggdmnhu4Vu")) return { label: "VsSpbmggdmnhu4Vu", cls: "badge-vv" };
+  if (ten.includes("vĩnh viễn")) return { label: "Vĩnh viễn", cls: "badge-vv" };
   if (r.trangThai && r.trangThai.toLowerCase().includes("het"))
-    return { label: "SOG6v3QgVEhCUQ==", cls: "badge-het" };
-  return { label: "R2nhu68gbOG6oWk=", cls: "badge-gl" };
+    return { label: "Hết THBQ", cls: "badge-het" };
+  return { label: "Giữ lại", cls: "badge-gl" };
 }
 
 export type V4dv = "thbqAsc" | "thbqDesc" | "timeAsc" | "timeDesc";

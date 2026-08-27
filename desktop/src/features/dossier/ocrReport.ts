@@ -22,9 +22,9 @@ export function V4hg(V1hq: Date = new Date()): V4he {
 export function V4hh(r: V4he): string | null {
   const V1hr = (s: string) => s === "" || /^\d{4}-\d{2}-\d{2}$/.test(s);
   if (!V1hr(r.from) || !V1hr(r.to))
-    return "TmfDoHkgcGjhuqNpIHRoZW8gZOG6oW5nIG7Eg20tdGjDoW5nLW5nw6B5Lg==";
+    return "Ngày phải theo dạng năm-tháng-ngày.";
   if (r.from !== "" && r.to !== "" && r.from > r.to) {
-    return "TmfDoHkgYuG6r3QgxJHhuqd1IHBo4bqjaSB0csaw4bubYyBob+G6t2MgYuG6sW5nIG5nw6B5IGvhur90IHRow7pjLg==";
+    return "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.";
   }
   return null;
 }
@@ -41,9 +41,9 @@ export function V4hj(c: V4f0): string {
 }
 
 export const V4hk: Record<V4eh, { label: string; tone: "ok" | "err" | "warn" }> = {
-  approved: { label: "xJDDoyBkdXnhu4d0", tone: "ok" },
-  rejected: { label: "VOG7qyBjaOG7kWk=", tone: "err" },
-  pending: { label: "Q2jhu50geMOhYyBuaOG6rW4=", tone: "warn" },
+  approved: { label: "Đã duyệt", tone: "ok" },
+  rejected: { label: "Từ chối", tone: "err" },
+  pending: { label: "Chờ xác nhận", tone: "warn" },
 };
 
 export function V4hl(status: string) {

@@ -51,7 +51,7 @@ export default function V4u7() {
     try {
       V2w5(await V4to());
     } catch (V2wy) {
-      V2wf(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGRhbmggc8OhY2ggecOqdSBj4bqndTog${String(V2wy)}`);
+      V2wf(`Không tải được danh sách yêu cầu: ${String(V2wy)}`);
     }
     try {
       V2w9(await V4ty());
@@ -69,7 +69,7 @@ export default function V4u7() {
         V2wv(await V4ei());
       } catch (V2x0) {
         V2wf(
-          `S2jDtG5nIHThuqNpIMSRxrDhu6NjIGRhbmggc8OhY2ggdMOgaSBsaeG7h3Ugc2VydmVyOiA=${String(V2x0)}`,
+          `Không tải được danh sách tài liệu server: ${String(V2x0)}`,
         );
       }
     }
@@ -82,7 +82,7 @@ export default function V4u7() {
       V2w7(await V4tp(V2x2));
       V2wb(false);
     } catch (V2x3) {
-      V2wf(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGNoaSB0aeG6v3Q6IA==${String(V2x3)}`);
+      V2wf(`Không tải được chi tiết: ${String(V2x3)}`);
     } finally {
       V2wd(false);
     }
@@ -106,7 +106,7 @@ export default function V4u7() {
     try {
       const V2x7 = await V4tr(V2x5);
       V2wf(
-        "xJDDoyBn4butaSB5w6p1IGPhuqd1IGtoYWkgdGjDoWMg4oCUIGNo4budIHjDqXQgZHV54buHdCAoxJBp4buBdSAzNiku",
+        "Đã gửi yêu cầu khai thác — chờ xét duyệt (Điều 36).",
       );
       V2wb(false);
       V2wx([]);
@@ -114,7 +114,7 @@ export default function V4u7() {
       await reload();
       V2w7(V2x7);
     } catch (V2x8) {
-      V2wf(`R+G7rWkgecOqdSBj4bqndSB0aOG6pXQgYuG6oWk6IA==${String(V2x8)}`);
+      V2wf(`Gửi yêu cầu thất bại: ${String(V2x8)}`);
     } finally {
       V2wd(false);
     }
@@ -123,7 +123,7 @@ export default function V4u7() {
   const V2x9 = async (V2xa: string, V2xb: "approve" | "refuse" | "pay" | "dip") => {
     let V2xc: string | undefined;
     if (V2xb === "refuse") {
-      V2xc = window.prompt("TMO9IGRvIHThu6sgY2jhu5FpICjEkGnhu4F1IDM2LjEuYyk6")?.trim() || undefined;
+      V2xc = window.prompt("Lý do từ chối (Điều 36.1.c):")?.trim() || undefined;
       if (!V2xc) return;
     }
     V2wd(true);
@@ -131,13 +131,13 @@ export default function V4u7() {
       const V2xd = await V4tu(V2xa, V2xb, V2xc);
       if (V2xb === "dip") {
         V2wf(
-          `R8OzaSBESVAg${V2xd.maXacThuc ?? ""}IMSRw6MgeOG6v3AgaMOgbmcgxJHhu6NpIOKAlCB0aGVvIGTDtWkg4bufIG3DoG4gxJDDs25nIGfDs2kgKMSQaeG7gXUgNDIpLg==`,
+          `Gói DIP ${V2xd.maXacThuc ?? ""} đã xếp hàng đợi — theo dõi ở màn Đóng gói (Điều 42).`,
         );
       }
       await reload();
       await V2x1(V2xa);
     } catch (V2xe) {
-      V2wf(`VGhhbyB0w6FjIHRo4bqldCBi4bqhaTog${String(V2xe)}`);
+      V2wf(`Thao tác thất bại: ${String(V2xe)}`);
     } finally {
       V2wd(false);
     }
@@ -149,11 +149,11 @@ export default function V4u7() {
     if (V2xi === "tu_choi") {
       V2xj =
         window
-          .prompt("TMO9IGRvIGtow7RuZyBkdXnhu4d0IHTDoGkgbGnhu4d1ICjEkGnhu4F1IDM2LjEuYyk6")
+          .prompt("Lý do không duyệt tài liệu (Điều 36.1.c):")
           ?.trim() || undefined;
       if (!V2xj) return;
       V2xk = window.confirm(
-        "VMOgaSBsaeG7h3UgdGh14buZYyBkaeG7h24gdGnhur9wIGPhuq1uIEPDkyDEkEnhu4BVIEtJ4buGTiAoxJBp4buBdSAzNi4xLmQpPw==",
+        "Tài liệu thuộc diện tiếp cận CÓ ĐIỀU KIỆN (Điều 36.1.d)?",
       );
     }
     V2wd(true);
@@ -161,7 +161,7 @@ export default function V4u7() {
       await V4ts(V2xg, V2xh, V2xi, V2xj, V2xk);
       await V2x1(V2xg);
     } catch (V2xl) {
-      V2wf(`Q2jhuqVtIHTDoGkgbGnhu4d1IHRo4bqldCBi4bqhaTog${String(V2xl)}`);
+      V2wf(`Chấm tài liệu thất bại: ${String(V2xl)}`);
     } finally {
       V2wd(false);
     }
@@ -173,7 +173,7 @@ export default function V4u7() {
       const V2xp = await V4tv(V2xn, V2xo);
       V2wj(`data:application/pdf;base64,${V2xp}`);
     } catch (V2xq) {
-      V2wf(`TeG7nyBi4bqjbiDEkeG7jWMgdGjhuqV0IGLhuqFpOiA=${String(V2xq)}`);
+      V2wf(`Mở bản đọc thất bại: ${String(V2xq)}`);
     } finally {
       V2wd(false);
     }
@@ -183,9 +183,9 @@ export default function V4u7() {
     V2wd(true);
     try {
       const path = await V4tw(V2xs, V2xt, name);
-      V2wf(`xJDDoyBsxrB1IGLhuqNuIHNhbzog${path}`);
+      V2wf(`Đã lưu bản sao: ${path}`);
     } catch (V2xu) {
-      V2wf(`VOG6o2kgYuG6o24gc2FvIHRo4bqldCBi4bqhaTog${String(V2xu)}`);
+      V2wf(`Tải bản sao thất bại: ${String(V2xu)}`);
     } finally {
       V2wd(false);
     }
@@ -196,9 +196,9 @@ export default function V4u7() {
     V2wd(true);
     try {
       V2w9(await V4tz(V2w8.phiDocTaiLieu, V2w8.phiSaoTrang));
-      V2wf("xJDDoyBsxrB1IMSRxqFuIGdpw6EgcGjDrS4=");
+      V2wf("Đã lưu đơn giá phí.");
     } catch (V2xw) {
-      V2wf(`TMawdSDEkcahbiBnacOhIHRo4bqldCBi4bqhaTog${String(V2xw)}`);
+      V2wf(`Lưu đơn giá thất bại: ${String(V2xw)}`);
     } finally {
       V2wd(false);
     }
@@ -374,7 +374,7 @@ export default function V4u7() {
                       {V4u4(r.phi)}
                       {r.phi != null &&
                         r.phi > 0 &&
-                        (r.paidAt ? "ICjEkcOjIFRUKQ==" : "IChjaMawYSBUVCk=")}
+                        (r.paidAt ? " (đã TT)" : " (chưa TT)")}
                     </td>
                     <td>{r.hanSuDung ? new Date(r.hanSuDung).toLocaleDateString("vi-VN") : "—"}</td>
                     <td>
@@ -398,9 +398,9 @@ export default function V4u7() {
           <p className="muted">
             Mục đích: {V2w6.mucDich} · phí {V4u4(V2w6.phi)}
             {V2w6.hanSuDung
-              ? `IMK3IGjhuqFuIA==${new Date(V2w6.hanSuDung).toLocaleDateString("vi-VN")}`
+              ? ` · hạn ${new Date(V2w6.hanSuDung).toLocaleDateString("vi-VN")}`
               : ""}
-            {V2w6.reviewNote ? `IMK3IGdoaSBjaMO6OiA=${V2w6.reviewNote}` : ""}
+            {V2w6.reviewNote ? ` · ghi chú: ${V2w6.reviewNote}` : ""}
           </p>
 
           <div className="flex gap-2 flex-wrap mb-3">
@@ -475,13 +475,13 @@ export default function V4u7() {
                         {V2y9.verdict === "pending"
                           ? "—"
                           : V2y9.verdict === "duyet"
-                            ? "RHV54buHdA=="
-                            : `S2jDtG5nIGR1eeG7h3Q=${V2y9.lyDo ? ` (${V2y9.lyDo})` : ""}${
+                            ? "Duyệt"
+                            : `Không duyệt${V2y9.lyDo ? ` (${V2y9.lyDo})` : ""}${
                                 V2y9.dieuKien
-                                  ? "IMK3IHRp4bq/cCBj4bqtbiBjw7MgxJFp4buBdSBraeG7h24="
+                                  ? " · tiếp cận có điều kiện"
                                   : ""
                               }`}
-                        {V2y9.deleted ? "IMK3IMSRw6MgeMOzYSB0aGVvIGjhuqFuICgzNy41LzQwLjYp" : ""}
+                        {V2y9.deleted ? " · đã xóa theo hạn (37.5/40.6)" : ""}
                       </td>
                       <td>
                         {V2w3 && V2w6.status === "submitted" && (

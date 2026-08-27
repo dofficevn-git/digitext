@@ -6,11 +6,11 @@ import { V4dr } from "@/features/dossier/logic";
 export function V4m0(status: string): { label: string; cls: string } {
   switch (status) {
     case "VV":
-      return { label: "VsSpbmggdmnhu4Vu", cls: "badge-vv" };
+      return { label: "Vĩnh viễn", cls: "badge-vv" };
     case "HET":
-      return { label: "SOG6v3QgVEhCUQ==", cls: "badge-het" };
+      return { label: "Hết THBQ", cls: "badge-het" };
     default:
-      return { label: "R2nhu68gbOG6oWk=", cls: "badge-gl" };
+      return { label: "Giữ lại", cls: "badge-gl" };
   }
 }
 
@@ -47,20 +47,20 @@ export function V4m5(V1uw: V4le[]): Record<string, unknown>[] {
   return V1uw.map((r, i) => ({
     STT: i + 1,
     TcOjIGjhu5Mgc8ah: r.maHoSo ?? "",
-    "SOG7mXAgc+G7kQ==": r.hopTaiLieuSo ?? "",
-    "U+G7kSB04bqhbQ==": r.hososo,
-    "VGnDqnUgxJHhu4EgaOG7kyBzxqE=": r.tieuDeHs,
+    "Hộp số": r.hopTaiLieuSo ?? "",
+    "Số tạm": r.hososo,
+    "Tiêu đề hồ sơ": r.tieuDeHs,
     THBQ: r.thoiHanBaoQuanStr ?? "",
-    "U+G7kSB04bud": r.soTo ?? "",
-    "U+G7kSBsxrDhu6NuZyB0cmFuZw==": r.soLuongTrang ?? "",
+    "Số tờ": r.soTo ?? "",
+    "Số lượng trang": r.soLuongTrang ?? "",
     TmfDoHkgYuG6r3QgxJHhuqd1: V4dr(r.thoiGianBatDau),
-    "TmfDoHkga+G6v3QgdGjDumM=": V4dr(r.thoiGianKetThuc),
-    "VHLDuW5nIHRo4burYQ==": r.trungThua ? "x" : "",
-    "U+G7kSB2xINuIGLhuqNu": r.soVanBan,
-    "VHLhuqFuZyB0aMOhaQ==": V4m0(r.status).label,
+    "Ngày kết thúc": V4dr(r.thoiGianKetThuc),
+    "Trùng thừa": r.trungThua ? "x" : "",
+    "Số văn bản": r.soVanBan,
+    "Trạng thái": V4m0(r.status).label,
     Kho: r.tenKho ?? "",
     R2nDoS9r4buH: r.tenGia ?? "",
-    "R2hpIGNow7o=": r.ghiChu ?? "",
+    "Ghi chú": r.ghiChu ?? "",
   }));
 }
 

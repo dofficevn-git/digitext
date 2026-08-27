@@ -108,7 +108,7 @@ export default function V4h7({
         return n;
       });
       V1ch(
-        `xJDDoyBsxrB1IA==${V1d2.length}IGJveCAoZOG7ryBsaeG7h3UgdsOgbmcpIOKAlCB0cmFuZyA=${V1d1 + 1}.`,
+        `Đã lưu ${V1d2.length} box (dữ liệu vàng) — trang ${V1d1 + 1}.`,
       );
     } catch (V1d3) {
       V1cf(V4h5(V1d3));
@@ -130,7 +130,7 @@ export default function V4h7({
         const r = V4gi(V1d8, fields);
         if (r.filled.length > 0) {
           V1d8 = r.draft;
-          V1d9 = `xJDDoyDEkWnhu4FuIHPhurVuIHThu6sgT0NSIG3DoXkgY2jhu6c6IA==${V4gj(r.filled)}LiBLaeG7g20gdHJhIHLhu5NpIGLhuqVtIEzGsHUgxJHhu4MgZ2hpIHbDoG8gQ1NETC4=`;
+          V1d9 = `Đã điền sẵn từ OCR máy chủ: ${V4gj(r.filled)}. Kiểm tra rồi bấm Lưu để ghi vào CSDL.`;
         }
       }
     } catch {}
@@ -189,7 +189,7 @@ export default function V4h7({
         V1c9(V1df);
       }
       await V1d4();
-      V1ch("xJDDoyBsxrB1Lg==");
+      V1ch("Đã lưu.");
     } catch (V1dg) {
       V1cf(V4h5(V1dg));
     } finally {
@@ -228,14 +228,14 @@ export default function V4h7({
                       className="btn btn-sm btn-outline-primary"
                       disabled={V1cr !== null}
                       onClick={() => V1ct(i)}
-                      title="Q2jhuqF5IE9DUiAoVHJpdG9uKSDEkeG7gyBiw7NjIHTDoWNoIGJveCB0csOqbiB0cmFuZyBuw6B5"
+                      title="Chạy OCR (Triton) để bóc tách box trên trang này"
                     >
                       <Icon name="tuDong" />{" "}
                       {V1cr === i
-                        ? "xJBhbmcgT0NS4oCm"
+                        ? "Đang OCR…"
                         : ocr[i]
-                          ? "T0NSIGzhuqFp"
-                          : "T0NSIGLDs2MgdMOhY2ggYm94"}
+                          ? "OCR lại"
+                          : "OCR bóc tách box"}
                     </button>
                     {ocr[i] && (
                       <span className="muted">{V1cl[i]?.length ?? 0} box — kéo/chỉnh khung</span>
@@ -264,12 +264,12 @@ export default function V4h7({
             ) : (
               <div className="ocr-empty">
                 {V1c4 ??
-                  "S2jDtG5nIGhp4buDbiB0aOG7iyDEkcaw4bujYyBu4buZaSBkdW5nIChraMO0bmcgcGjhuqNpIFBERiDhuqNuaCku"}
+                  "Không hiển thị được nội dung (không phải PDF ảnh)."}
                 <div className="mt-2.5">
                   <a
                     className="ic-word"
                     onClick={() => V40x(file.filePath).catch((V1dh) => V1cf(V4h5(V1dh)))}
-                    title="TeG7nyBi4bqxbmcgdHLDrG5oIHhlbSBQREY="
+                    title="Mở bằng trình xem PDF"
                   >
                     <Icon name="tepPdf" /> Mở file
                   </a>
@@ -280,7 +280,7 @@ export default function V4h7({
 
           {}
           <div className="ocr-right" id="rightpanel">
-            <V4h6 label="U+G7kSB0aOG7qSB04buxIFZC">
+            <V4h6 label="Số thứ tự VB">
               <input
                 type="number"
                 className="form-control pull-right"
@@ -288,7 +288,7 @@ export default function V4h7({
                 onChange={(V1di) => set({ thuTu: Number(V1di.target.value) || 0 })}
               />
             </V4h6>
-            <V4h6 label="TG/huqFpIHbEg24gYuG6o24=">
+            <V4h6 label="Loại văn bản">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -296,16 +296,16 @@ export default function V4h7({
                 onChange={(V1dj) => set({ loaiVanBan: V1dj.target.value })}
               />
             </V4h6>
-            <V4h6 label="U+G7kSBWxINuIELhuqNu">
+            <V4h6 label="Số Văn Bản">
               <input
                 type="text"
                 className="form-control pull-right"
                 value=""
                 readOnly
-                title="RGVza3RvcCBn4buZcCBz4buRICsga8O9IGhp4buHdSB2w6BvIMO0ICdLSCB2xINuIGLhuqNuJw=="
+                title="Desktop gộp số + ký hiệu vào ô 'KH văn bản'"
               />
             </V4h6>
-            <V4h6 label="S0ggdsSDbiBi4bqjbg==">
+            <V4h6 label="KH văn bản">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -313,7 +313,7 @@ export default function V4h7({
                 onChange={(V1dk) => set({ soKyHieu: V1dk.target.value })}
               />
             </V4h6>
-            <V4h6 label="TmfDoHkgdGjDoW5n">
+            <V4h6 label="Ngày tháng">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -322,7 +322,7 @@ export default function V4h7({
                 onChange={(V1dl) => set({ ngayThang: V1dl.target.value })}
               />
             </V4h6>
-            <V4h6 label="Q1EgYmFuIGjDoG5o">
+            <V4h6 label="CQ ban hành">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -330,7 +330,7 @@ export default function V4h7({
                 onChange={(V1dm) => set({ coQuanBanHanh: V1dm.target.value })}
               />
             </V4h6>
-            <V4h6 label="VHLDrWNoIHnhur91">
+            <V4h6 label="Trích yếu">
               <textarea
                 className="form-control pull-right"
                 rows={5}
@@ -338,7 +338,7 @@ export default function V4h7({
                 onChange={(V1dn) => set({ trichYeu: V1dn.target.value })}
               />
             </V4h6>
-            <V4h6 label="VOG7nSBz4buR">
+            <V4h6 label="Tờ số">
               <input
                 type="number"
                 className="form-control pull-right"
@@ -346,7 +346,7 @@ export default function V4h7({
                 onChange={(V1do) => set({ toSo: V1dd(V1do.target.value) })}
               />
             </V4h6>
-            <V4h6 label="U+G7kSB0cmFuZw==">
+            <V4h6 label="Số trang">
               <input
                 type="number"
                 className="form-control pull-right"
@@ -354,7 +354,7 @@ export default function V4h7({
                 onChange={(V1dp) => set({ soTrang: V1dd(V1dp.target.value) })}
               />
             </V4h6>
-            <V4h6 label="R2hpIGNow7o=">
+            <V4h6 label="Ghi chú">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -362,7 +362,7 @@ export default function V4h7({
                 onChange={(V1dq) => set({ ghiChu: V1dq.target.value })}
               />
             </V4h6>
-            <V4h6 label="TmfDtG4gbmfhu68=">
+            <V4h6 label="Ngôn ngữ">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -370,7 +370,7 @@ export default function V4h7({
                 onChange={(V1dr) => set({ ngonNgu: V1dr.target.value })}
               />
             </V4h6>
-            <V4h6 label="Q8SQIHPhu60gZOG7pW5n">
+            <V4h6 label="CĐ sử dụng">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -378,7 +378,7 @@ export default function V4h7({
                 onChange={(V1ds) => set({ cheDoSuDung: V1ds.target.value })}
               />
             </V4h6>
-            <V4h6 label="xJDhu5kgdGluIGPhuq15">
+            <V4h6 label="Độ tin cậy">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -386,7 +386,7 @@ export default function V4h7({
                 onChange={(V1dt) => set({ doTinCay: V1dt.target.value })}
               />
             </V4h6>
-            <V4h6 label="QsO6dCB0w61jaA==">
+            <V4h6 label="Bút tích">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -394,7 +394,7 @@ export default function V4h7({
                 onChange={(V1du) => set({ butTich: V1du.target.value })}
               />
             </V4h6>
-            <V4h6 label="VFQgduG6rXQgbMO9">
+            <V4h6 label="TT vật lý">
               <input
                 type="text"
                 className="form-control pull-right"
@@ -409,7 +409,7 @@ export default function V4h7({
                 onClick={() => void V1de()}
                 disabled={V1cc}
               >
-                <Icon name="luu" /> {V1cc ? "xJBhbmcgbMawdeKApg==" : "TMawdQ=="}
+                <Icon name="luu" /> {V1cc ? "Đang lưu…" : "TMawdQ=="}
               </button>{" "}
               <button className="btn btn-outline-danger btn-round" onClick={V1c1} disabled={V1cc}>
                 <Icon name="dong" /> Đóng

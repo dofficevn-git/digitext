@@ -64,9 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     from extract_vlm import PROMPT as NEW_PROMPT
 
     p_241 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p_241.add_argument("--pages", required=True, help="anNvbmwgY8OzIGlkIHRyYW5nICh2ZCBraWVfZ29sZC5qc29ubCk=")
+    p_241.add_argument("--pages", required=True, help="jsonl có id trang (vd kie_gold.jsonl)")
     p_241.add_argument("--data-dir", required=True)
-    p_241.add_argument("--bio", required=True, help="QklPIGPDsyBgd29yZHNgIMSR4buDIGzhuqV5IHRleHQgdHJhbmcgdGhhbSBjaGnhur91")
+    p_241.add_argument("--bio", required=True, help="BIO có `words` để lấy text trang tham chiếu")
     p_241.add_argument("--old-mod", default=str(Path(__file__).resolve().parent.parent.parent
                     / "scratchpad" / "extract_vlm_OLD.py"))
     p_241.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
@@ -79,8 +79,8 @@ def main(argv: list[str] | None = None) -> int:
     ev_old = importlib.util.module_from_spec(p_250)
     p_250.loader.exec_module(ev_old)
     p_240 = ev_old.PROMPT
-    assert "c3V5IHThu6sga8O9IGhp4buHdQ==" in p_240 and "c3V5IHThu6sga8O9IGhp4buHdQ==" not in NEW_PROMPT, \
-        "cHJvbXB0IGPFqS9t4bubaSBraMO0bmcgxJHDum5nIOKAlCBraeG7g20gLS1vbGQtbW9k"
+    assert "suy từ ký hiệu" in p_240 and "suy từ ký hiệu" not in NEW_PROMPT, \
+        "prompt cũ/mới không đúng — kiểm --old-mod"
 
     page_words = {}
     for p_247 in open(a.bio, encoding="utf-8"):
@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
             p_249 = ask(p_242, p_240)
             p_248 = ask(p_242, NEW_PROMPT)
         except Exception as e:
-            print(f"ICBi4buPIHRyYW5nIA=={p_245} ({type(e).__name__})", file=sys.stderr)
+            print(f"  bỏ trang {p_245} ({type(e).__name__})", file=sys.stderr)
             continue
         pages.append(q_173(p_249, p_248, page_words[p_24c["id"]]))
         if (p_245 + 1) % 20 == 0:

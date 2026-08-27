@@ -8,13 +8,13 @@ export interface V46i {
 }
 
 export const CATALOG_NAV: V46i[] = [
-  { key: "phong", label: "UGjDtG5nIGzGsHUgdHLhu68=" },
-  { key: "phongban", label: "UGjDsm5nIGJhbg==" },
-  { key: "mang", label: "TeG6o25nIGPDtG5nIHZp4buHYw==" },
-  { key: "thbq", label: "VGjhu51pIGjhuqFuIGLhuqNvIHF14bqjbg==" },
-  { key: "ngonngu", label: "TmfDtG4gbmfhu68=" },
-  { key: "loai", label: "TG/huqFpIHTDoGkgbGnhu4d1" },
-  { key: "hoso", label: "SOG7kyBzxqEgKG3hu6VjIGzhu6VjKQ==" },
+  { key: "phong", label: "Phông lưu trữ" },
+  { key: "phongban", label: "Phòng ban" },
+  { key: "mang", label: "Mảng công việc" },
+  { key: "thbq", label: "Thời hạn bảo quản" },
+  { key: "ngonngu", label: "Ngôn ngữ" },
+  { key: "loai", label: "Loại tài liệu" },
+  { key: "hoso", label: "Hồ sơ (mục lục)" },
 ];
 
 export const V46j: V3xv[] = CATALOG_NAV.map((i) => i.key);

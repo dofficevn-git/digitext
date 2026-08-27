@@ -10,7 +10,7 @@ export default function V4hd() {
     <>
       <Banner
         tone="info"
-        text="S8O9IHPhu5EgUEFkRVMgdHLDqm4gZGVza3RvcCBkw7luZyBVU0IgdG9rZW4gcXVhIG3DoG4g4oCcS8O9IHPhu5HigJ0uIELhuqVtIG7DunQgYsOqbiBkxrDhu5tpIMSR4buDIG3hu58gaMOgbmcgxJHhu6NpIGvDvSBz4buRLg=="
+        text="Ký số PAdES trên desktop dùng USB token qua màn “Ký số”. Bấm nút bên dưới để mở hàng đợi ký số."
       />
       <div className="py-6 px-1">
         <button className="btn primary" onClick={() => goto("sign")}>

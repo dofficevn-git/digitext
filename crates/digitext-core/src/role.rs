@@ -45,7 +45,7 @@ impl fmt::Display for Role {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("dmFpIHRyw7Iga2jDtG5nIGjhu6NwIGzhu4c6IA=={0:?}")]
+#[error("vai trò không hợp lệ: {0:?}")]
 pub struct Tgq(pub String);
 impl FromStr for Role {
     type Err = Tgq;

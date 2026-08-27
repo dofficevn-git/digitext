@@ -43,7 +43,7 @@ export default function V4wm() {
         <button
           className="uw-iconbtn"
           onClick={V35o}
-          title={V35k.collapsed ? "TeG7nyBy4buZbmcgYuG6o25n" : "VGh1IG5o4buPIGLhuqNuZw=="}
+          title={V35k.collapsed ? "Mở rộng bảng" : "Thu nhỏ bảng"}
           aria-expanded={!V35k.collapsed}
         >
           <Icon name={V35k.collapsed ? "len" : "xuong"} size={14} />
@@ -52,7 +52,7 @@ export default function V4wm() {
           className="uw-iconbtn"
           onClick={V35m}
           disabled={V35q}
-          title={V35q ? V35t.closeBusy : "xJDDs25nIGLhuqNuZw=="}
+          title={V35q ? V35t.closeBusy : "Đóng bảng"}
         >
           <Icon name="dong" size={14} />
         </button>
@@ -121,13 +121,13 @@ function V4wn({
 }) {
   const V362 = V45e(V35w);
   const cho =
-    V35w.hoSoRef ?? (V35y === "disk" ? "Q2jGsGEgcGjDom4gbG/huqFp" : "Y2jGsGEgcsO1IGjhu5Mgc8ah");
+    V35w.hoSoRef ?? (V35y === "disk" ? "Chưa phân loại" : "chưa rõ hồ sơ");
   return (
     <div className={`uw-row${V35w.state === "error" ? " err" : ""}`}>
       {V35w.state === "downloading" ? (
         <V4wj
           pct={V454(V35w)}
-          label={V35y === "disk" ? "xJBhbmcgY2jDqXAgdsOgbyBLaG8=" : "xJBhbmcgZ29tIHbhu4EgbcOheQ=="}
+          label={V35y === "disk" ? "Đang chép vào Kho" : "Đang gom về máy"}
         />
       ) : (
         <V4wk state={V35w.state === "skipped" ? "skipped" : V35w.state} />
@@ -143,7 +143,7 @@ function V4wn({
       <button
         className="uw-iconbtn"
         onClick={V362 ? V360 : V361}
-        title={V362 ? V35z : "4bqobiBraOG7j2kgYuG6o25n"}
+        title={V362 ? V35z : "Ẩn khỏi bảng"}
       >
         <Icon name="dong" size={14} />
       </button>

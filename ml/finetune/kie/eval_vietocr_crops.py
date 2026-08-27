@@ -19,7 +19,7 @@ def score(preds: list[str], truths: list[str]) -> dict:
 
 def q_16f(tag: str, vie_cer: float, tri_cer: float | None) -> str:
     s = f"# VietOCR {tag}: CER micro {vie_cer:.4f}"
-    return s + (f"IHwgVHJpdG9uIG3hu5FjIA=={tri_cer:.4f}" if tri_cer is not None else " | (khong co moc Triton)")
+    return s + (f" | Triton mốc {tri_cer:.4f}" if tri_cer is not None else " | (khong co moc Triton)")
 
 def q_15e(images: list[Path], weights: str | None) -> list[str]:
     from PIL import Image
@@ -37,13 +37,13 @@ def q_15e(images: list[Path], weights: str | None) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     p_362 = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p_362.add_argument("eval_jsonl", help="eval_hard.jsonl (image, truth, ocr_reading)")
-    p_362.add_argument("--weights", default=None, help="d2VpZ2h0cyBWaWV0T0NSIGZpbmUtdHVuZSAoYuG7jyA9IGJhc2Up")
+    p_362.add_argument("--weights", default=None, help="weights VietOCR fine-tune (bỏ = base)")
     p_362.add_argument("--img-root", default=".")
     p_361 = p_362.parse_args(argv)
 
     p_367 = [json.loads(p_364) for p_364 in open(p_361.eval_jsonl, encoding="utf-8") if p_364.strip()]
     if not p_367:
-        print("TOG7lkk6IGV2YWwgcuG7l25n", file=sys.stderr)
+        print("LỖI: eval rỗng", file=sys.stderr)
         return 2
     root = Path(p_361.img_root)
     p_363 = [(Path(p_366["image"]) if Path(p_366["image"]).is_absolute() else root / p_366["image"]) for p_366 in p_367]

@@ -94,7 +94,7 @@ fn f_x0(r_w1: &User, r_w3: &User, r_w2: &Scope) -> bool {
 fn validate_password(r_w4: &str) -> Result<(), ApiError> {
     if r_w4.chars().count() < 8 {
         return Err(ApiError::bad_request(
-            "beG6rXQga2jhuql1IHBo4bqjaSB04buRaSB0aGnhu4N1IDgga8O9IHThu7E=",
+            "mật khẩu phải tối thiểu 8 ký tự",
         ));
     }
     Ok(())
@@ -154,7 +154,7 @@ async fn f_12g(
     .await
     .map_err(|r_we| {
         if digitext_db::f_1jn(&r_we) {
-            ApiError::conflict("dXNlcm5hbWUgaG/hurdjIGVtYWlsIMSRw6MgdOG7k24gdOG6oWk=")
+            ApiError::conflict("username hoặc email đã tồn tại")
         } else {
             r_we.into()
         }
@@ -245,7 +245,7 @@ async fn f_xv(
         let r_x0 = r_x2
             .old_password
             .as_deref()
-            .ok_or_else(|| ApiError::bad_request("dGhp4bq/dSBt4bqtdCBraOG6qXUgY8Wp"))?;
+            .ok_or_else(|| ApiError::bad_request("thiếu mật khẩu cũ"))?;
         let (_, r_x1) = users::f_1ej(&r_x4.pool, &r_x5.username)
             .await?
             .ok_or_else(ApiError::not_found)?;
@@ -291,7 +291,7 @@ async fn f_2a3(
     }
     if r_x6.user.id == r_x9.id {
         return Err(ApiError::bad_request(
-            "a2jDtG5nIHRo4buDIHThu7EgdGh1IGjhu5NpIHTDoGkga2hv4bqjbiBtw6xuaA==",
+            "không thể tự thu hồi tài khoản mình",
         ));
     }
     users::update(
@@ -355,7 +355,7 @@ async fn f_sw(r_xe: &AppState, r_xc: &Ts, r_xf: &User) -> Result<(), ApiError> {
     r_xc.require_perm(Permission::UserGrantPermissions)?;
     if r_xc.user.id == r_xf.id {
         return Err(ApiError::bad_request(
-            "a2jDtG5nIHRo4buDIHThu7Egc+G7rWEgcXV54buBbiBj4bunYSBtw6xuaA==",
+            "không thể tự sửa quyền của mình",
         ));
     }
     let r_xd = f_29a(&r_xe.pool, &r_xc.user).await?;

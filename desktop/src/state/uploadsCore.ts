@@ -157,13 +157,13 @@ export function V445(s: V43q): string {
   const t = V444(s);
   if (s.running) {
     const con = V443(s);
-    return con > 0 ? `xJBhbmcgdOG6o2kg${con}IG3hu6VjIGzDqm4=` : "xJBhbmcgaG/DoG4gdOG6pXTigKY=";
+    return con > 0 ? `Đang tải ${con} mục lên` : "Đang hoàn tất…";
   }
   const V8l: string[] = [];
-  if (t.done > 0) V8l.push(`xJDDoyBob8OgbiB04bqldCA=${t.done}IHThu4dwIHThuqNpIGzDqm4=`);
-  if (t.errors > 0) V8l.push(`${t.errors}IHThu4dwIGzhu5dp`);
-  if (t.cancelled > 0) V8l.push(`${t.cancelled}IHThu4dwIMSRw6MgaOG7p3k=`);
-  if (V8l.length === 0) return "S2jDtG5nIGPDsyB04buHcCBuw6BvIMSR4buDIHThuqNpIGzDqm4=";
+  if (t.done > 0) V8l.push(`Đã hoàn tất ${t.done} tệp tải lên`);
+  if (t.errors > 0) V8l.push(`${t.errors} tệp lỗi`);
+  if (t.cancelled > 0) V8l.push(`${t.cancelled} tệp đã hủy`);
+  if (V8l.length === 0) return "Không có tệp nào để tải lên";
   return V8l.join(" · ");
 }
 
@@ -176,13 +176,13 @@ export function V446(V8m: V43p, V8n: number): string {
       return [size, V8o, V8p].filter((s) => s !== "").join(" · ");
     }
     case "done":
-      return `xJDDoyB04bqjaSBsw6puIMK3IA==${V44a(V8m.sizeBytes)}`;
+      return `Đã tải lên · ${V44a(V8m.sizeBytes)}`;
     case "skipped":
-      return V8m.message ?? "TcOheSBjaOG7pyDEkcOjIGPDsyB0w6BpIGxp4buHdSBuw6B5Lg==";
+      return V8m.message ?? "Máy chủ đã có tài liệu này.";
     case "cancelled":
-      return V8m.message ?? "xJDDoyBo4buneSB04bqjaSBsw6puLg==";
+      return V8m.message ?? "Đã hủy tải lên.";
     case "error":
-      return V8m.message ?? "VOG6o2kgbMOqbiB0aOG6pXQgYuG6oWku";
+      return V8m.message ?? "Tải lên thất bại.";
   }
 }
 
@@ -201,15 +201,15 @@ export function V448(V8r: V43p, V8s: number): string {
 }
 
 export function V449(V8t: number): string {
-  if (V8t < 60) return `${V8t}IGdpw6J5`;
+  if (V8t < 60) return `${V8t} giây`;
   if (V8t < 3600) {
     const m = Math.floor(V8t / 60);
     const s = V8t % 60;
-    return s > 0 ? `${m}IHBow7p0IA==${String(s).padStart(2, "0")}IGdpw6J5` : `${m}IHBow7p0`;
+    return s > 0 ? `${m} phút ${String(s).padStart(2, "0")} giây` : `${m} phút`;
   }
   const h = Math.floor(V8t / 3600);
   const m = Math.round((V8t % 3600) / 60);
-  return m > 0 ? `${h}IGdp4budIA==${m}IHBow7p0` : `${h}IGdp4bud`;
+  return m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`;
 }
 
 export function V44a(n: number): string {

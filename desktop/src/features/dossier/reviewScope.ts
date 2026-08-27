@@ -88,9 +88,9 @@ export interface V4kc {
   counts: V4k6;
 }
 
-export const V4kd = "KENoxrBhIHLDtSBk4buxIMOhbik=";
-export const V4ke = "KENoxrBhIHLDtSBo4buZcCBz4buRKQ==";
-export const V4kf = "KENoxrBhIGfDoW4gaOG7kyBzxqEp";
+export const V4kd = "(Chưa rõ dự án)";
+export const V4ke = "(Chưa rõ hộp số)";
+export const V4kf = "(Chưa gán hồ sơ)";
 
 export type V4kg = "none" | "some" | "all";
 
@@ -282,7 +282,7 @@ export function V4ku(V1q6: V4kc[], V1q7: ReadonlySet<string>): string[] {
 }
 
 export function V4kv<T>(V1qa: T[], size: number): T[][] {
-  if (size <= 0) throw new Error("Y+G7oSBsw7QgcGjhuqNpIGzhu5tuIGjGoW4gMA==");
+  if (size <= 0) throw new Error("cỡ lô phải lớn hơn 0");
   const V1qb: T[][] = [];
   for (let i = 0; i < V1qa.length; i += size) V1qb.push(V1qa.slice(i, i + size));
   return V1qb;

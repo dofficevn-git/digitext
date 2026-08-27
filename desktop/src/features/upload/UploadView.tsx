@@ -38,7 +38,7 @@ import { V4qa } from "./siteCodeWidth";
 import { V4qb, V4qc } from "./sharePort";
 import { Icon } from "@/components/Icon";
 
-const V4qd = "RMOhbiBtw6Mgc2l0ZSAoaG/hurdjIGLhuqVtIOKAnFNpbmggbcOjIG3huqFuaOKAnSk=";
+const V4qd = "Dán mã site (hoặc bấm “Sinh mã mạnh”)";
 
 const V4qe = {
   flex: "0 0 auto",
@@ -54,8 +54,8 @@ function V4qf({ isAdmin: V2cn }: { isAdmin: boolean }) {
       — kiểu mã ngắn/6 số dò được trong vài giây trên mạng nội bộ. Hệ thống vẫn chạy bình thường để
       không gián đoạn công việc, nhưng nên đổi sớm:{" "}
       {V2cn
-        ? "YuG6pW0g4oCcU2luaCBtw6MgbeG6oW5o4oCdIHLhu5NpIHBow6F0IGzhuqFpIGPDonkgdGjGsCBt4bulYyDigJQgY8OhYyBtw6F5IG5ow6JuIHZpw6puIHPhur0gdOG7sSBuaOG6rW4gbcOjIG3hu5tpLg=="
-        : "YsOhbyBxdeG6o24gdHLhu4sgYuG6pW0g4oCcU2luaCBtw6MgbeG6oW5o4oCdIHLhu5NpIHBow6F0IGzhuqFpIGPDonkgdGjGsCBt4bulYyBjaG8gYuG6oW4u"}
+        ? "bấm “Sinh mã mạnh” rồi phát lại cây thư mục — các máy nhân viên sẽ tự nhận mã mới."
+        : "báo quản trị bấm “Sinh mã mạnh” rồi phát lại cây thư mục cho bạn."}
     </div>
   );
 }
@@ -106,7 +106,7 @@ export default function V4qm() {
         <div className="sub">
           {V2ct?.projectName ? `· ${V2ct.projectName}` : ""}
           {V2ct?.mode === "offline"
-            ? "IMK3IG3hu5l0IHPhu5EgdGhhbyB0w6FjIGPhuqduIG3DoXkgY2jhu6c="
+            ? " · một số thao tác cần máy chủ"
             : ""}
         </div>
       </div>
@@ -150,8 +150,8 @@ function V4qn() {
       await V2d6();
       V2d5(
         V2cy.trim()
-          ? "xJDDoyBsxrB1IG3DoyBzaXRlIHbDoCBi4bqtdCBjaGlhIHPhursu"
-          : "xJDDoyB04bqvdCBjaGlhIHPhursu",
+          ? "Đã lưu mã site và bật chia sẻ."
+          : "Đã tắt chia sẻ.",
       );
     } catch (V2da) {
       V2d5(V4ql(V2da));
@@ -170,7 +170,7 @@ function V4qn() {
             <>
               {" "}
               (cổng <b>{V2cw.port}</b>
-              {V2cw.port === V4qb ? "IOKAlCBj4buVbmcgY2h1bmc=" : ""})
+              {V2cw.port === V4qb ? " — cổng chung" : ""})
             </>
           ) : null}
           . Máy quản trị sẽ <b>tự thu thập</b> — bạn không cần gửi thủ công.
@@ -178,8 +178,8 @@ function V4qn() {
       ) : (
         <p className="muted mt-0">
           {V2cw && !V2cw.hasSiteCode
-            ? "Q2jGsGEgYuG6rXQg4oCUIG3DoyBzaXRlIHRoxrDhu51uZyBU4buwIMSR4bq/biBraGkgYuG6oW4g4oCcTmjhuq1uIGPDonkgdGjGsCBt4bulY+KAnS4gSG/hurdjIG5o4bqtcCB0YXkgYsOqbiBkxrDhu5tpLg=="
-            : "Q2jGsGEgY2hpYSBz4bq7Lg=="}
+            ? "Chưa bật — mã site thường TỰ đến khi bạn “Nhận cây thư mục”. Hoặc nhập tay bên dưới."
+            : "Chưa chia sẻ."}
         </p>
       )}
       {V2cw?.siteCodeWeak && <V4qf isAdmin={false} />}
@@ -194,7 +194,7 @@ function V4qn() {
             onChange={(V2db) => V2cz(V2db.target.value)}
           />
           <button className="btn primary" onClick={() => void V2d8()} disabled={V2d2}>
-            {V2d2 ? "xJBhbmcgbMawdeKApg==" : "TMawdSAmIGLhuq10"}
+            {V2d2 ? "Đang lưu…" : "Lưu & bật"}
           </button>
         </div>
         <div className="muted text-sm">
@@ -325,7 +325,7 @@ function V4qo() {
       await V433(V2dl.trim());
       await V2ep();
       V2e0(
-        "xJDDoyBsxrB1IG3DoyBzaXRlIExBTi4gUGjhu5UgYmnhur9uIG3DoyBuw6B5IGNobyBjw6FjIG3DoXkgbmjDom4gdmnDqm4gKGhv4bq3YyBwaMOhdCBs4bqhaSBjw6J5IHRoxrAgbeG7pWMgxJHhu4MgaOG7jSB04buxIG5o4bqtbiku",
+        "Đã lưu mã site LAN. Phổ biến mã này cho các máy nhân viên (hoặc phát lại cây thư mục để họ tự nhận).",
       );
     } catch (V2ev) {
       V2e0(V4ql(V2ev));
@@ -342,8 +342,8 @@ function V4qo() {
       V2dm(c);
       await V2ep();
       V2e0(
-        `xJDDoyBzaW5oIG3DoyBzaXRlIG3hu5tpOiA=${c}LiBIw6N5IFBIw4FUIEzhuqBJIGPDonkgdGjGsCBt4bulYyDEkeG7gyBjw6FjIG3DoXkgbmjDom4gdmnDqm4gdOG7sSBuaOG6rW4gbcOjIA==` +
-          "beG7m2kg4oCUIG3DoXkgbsOgbyBjaMawYSBuaOG6rW4gc+G6vSB04bqhbSB0aOG7nWkga2jDtG5nIGdvbSDEkcaw4bujYy4=",
+        `Đã sinh mã site mới: ${c}. Hãy PHÁT LẠI cây thư mục để các máy nhân viên tự nhận mã ` +
+          "mới — máy nào chưa nhận sẽ tạm thời không gom được.",
       );
     } catch (V2ex) {
       V2e0(V4ql(V2ex));
@@ -383,8 +383,8 @@ function V4qo() {
       const n = await V43j();
       V2e0(
         n > 0
-          ? `xJDDoyBi4buPIA==${n}IGLhuqNuIGLhu4sgdOG7qyBjaOG7kWkga2jhu49pIGtobyBnb20uIELhuqVtIOKAnOKRoCBUaHUgdGjhuq1w4oCdIMSR4buDIGzhuqV5IGzhuqFpIHThu6sgbcOheSBuaMOibiB2acOqbi4=`
-          : "S2jDtG5nIGPDsyBi4bqjbiBuw6BvIGLhu4sgdOG7qyBjaOG7kWku",
+          ? `Đã bỏ ${n} bản bị từ chối khỏi kho gom. Bấm “① Thu thập” để lấy lại từ máy nhân viên.`
+          : "Không có bản nào bị từ chối.",
       );
       await V2ep();
     } catch (V2f3) {
@@ -400,7 +400,7 @@ function V4qo() {
       await V2df(V2f5);
       await V2ep();
     } catch (V2f7) {
-      V2e0(`R+G7rWkgbOG6oWkg4oCc${V2f6}4oCdIGzhu5dpOiA=${V4ql(V2f7)}`);
+      V2e0(`Gửi lại “${V2f6}” lỗi: ${V4ql(V2f7)}`);
     }
   };
 
@@ -410,7 +410,7 @@ function V4qo() {
       await V2df(V2f9);
       await V2ep();
     } catch (V2fa) {
-      V2e0(`R+G7rWkgbOG6oWkg${V2f9.length}IHTDoGkgbGnhu4d1IGzhu5dpOiA=${V4ql(V2fa)}`);
+      V2e0(`Gửi lại ${V2f9.length} tài liệu lỗi: ${V4ql(V2fa)}`);
     }
   };
 
@@ -449,8 +449,8 @@ function V4qo() {
         multiple: true,
         directory: V2fk,
         title: V2fk
-          ? "Q2jhu41uIHRoxrAgbeG7pWMgdMOgaSBsaeG7h3U="
-          : "Q2jhu41uIHThu4dwIFBERiDEkeG7gyB0aMOqbSB2w6BvIEtobw==",
+          ? "Chọn thư mục tài liệu"
+          : "Chọn tệp PDF để thêm vào Kho",
         filters: V2fk ? undefined : [{ name: "PDF", extensions: ["pdf"] }],
       });
       V2fl = typeof r === "string" ? [r] : Array.isArray(r) ? r : [];
@@ -564,8 +564,8 @@ function V4qo() {
             disabled={V2dx !== "" || V2dg || V2dj}
           >
             {V2dx === "collect" || V2dj
-              ? "xJBhbmcgdGh1IHRo4bqtcOKApg=="
-              : "4pGgIFRodSB0aOG6rXAgdOG7qyBtw6F5IHVzZXIgKExBTik="}
+              ? "Đang thu thập…"
+              : "① Thu thập từ máy user (LAN)"}
           </button>
           <button
             className="btn"
@@ -573,19 +573,19 @@ function V4qo() {
             disabled={V2dx !== "" || V2dg || V2dj || V2fp === 0}
           >
             {V2dx === "forward" || V2dg
-              ? "xJBhbmcgxJHhuql54oCm"
-              : "4pGhIMSQ4bqpeSBsw6puIG3DoXkgY2jhu6c="}
+              ? "Đang đẩy…"
+              : "② Đẩy lên máy chủ"}
           </button>
           <button className="btn" onClick={() => void V2fe()} disabled={V2dx !== "" || V2dj}>
             {V2dx === "add"
-              ? "xJBhbmcgdGjDqm3igKY="
-              : "4pGiIFRow6ptIHTDoGkgbGnhu4d1IHThu6sg4buVIGPhu6luZw=="}
+              ? "Đang thêm…"
+              : "③ Thêm tài liệu từ ổ cứng"}
           </button>
           {V2fq > 0 && (
             <button className="btn" onClick={() => void V2f2()} disabled={V2dx !== ""}>
               {V2dx === "retry"
-                ? "xJBhbmcgZ29tIGzhuqFp4oCm"
-                : `R29tIGzhuqFpIGLhuqNuIGLhu4sgdOG7qyBjaOG7kWkgKA==${V2fq})`}
+                ? "Đang gom lại…"
+                : `Gom lại bản bị từ chối (${V2fq})`}
             </button>
           )}
           {V2dz && <span className="muted text-sm">{V2dz}</span>}
@@ -603,8 +603,8 @@ function V4qo() {
                 <select className="inp" value={V2eg} onChange={(V2g8) => V2eh(V2g8.target.value)}>
                   <option value="">
                     {V2ee.length
-                      ? "4oCUIENo4buNbiBk4buxIMOhbiDEkcOtY2gg4oCU"
-                      : "ROG7sSDDoW4gY+G7p2EgdMOgaSBraG/huqNuIG7DoHk="}
+                      ? "— Chọn dự án đích —"
+                      : "Dự án của tài khoản này"}
                   </option>
                   {V2ee.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -643,8 +643,8 @@ function V4qo() {
                     >
                       <option value="">
                         {V2ei
-                          ? "4oCUIENo4buNbiBo4buTIHPGoSB0aGVvIGRhbmggbeG7pWMg4oCU"
-                          : "4oCUIENo4buNbiBwaMO0bmcgdHLGsOG7m2Mg4oCU"}
+                          ? "— Chọn hồ sơ theo danh mục —"
+                          : "— Chọn phông trước —"}
                       </option>
                       {V2g1.map((h) => (
                         <option key={h.id} value={`${h.hopSo}/${h.hoSoSo}`}>
@@ -662,7 +662,7 @@ function V4qo() {
                   <input
                     className="inp"
                     value={V2em}
-                    placeholder="VkQ6IFPhu58gVMOgaSBjaMOtbmgvMDEvMDA3"
+                    placeholder="VD: Sở Tài chính/01/007"
                     onChange={(V2gb) => V2en(V2gb.target.value)}
                   />
                 </label>
@@ -674,7 +674,7 @@ function V4qo() {
                 onClick={() => void V2fj(false)}
                 disabled={V2dx !== "" || V2g2}
               >
-                {V2dx === "add" ? "xJBhbmcgdGjDqm3igKY=" : "Q2jhu41uIHThu4dwIFBERuKApg=="}
+                {V2dx === "add" ? "Đang thêm…" : "Chọn tệp PDF…"}
               </button>
               <button
                 className="btn"
@@ -685,10 +685,10 @@ function V4qo() {
               </button>
               <span className="muted text-sm">
                 {V2g2
-                  ? "Q2jhu41uIHBow7RuZyArIGjhu5Mgc8ahIHRoZW8gZGFuaCBt4bulYyBy4buTaSBt4bubaSBjaOG7jW4gdOG7h3Au"
+                  ? "Chọn phông + hồ sơ theo danh mục rồi mới chọn tệp."
                   : V2fn
-                    ? `U+G6vSBsxrB1IHbDoG8gS2hvOiA=${V2fn}`
-                    : "U+G6vSBsxrB1IHbDoG8gS2hvOiBDaMawYSBwaMOibiBsb+G6oWk="}
+                    ? `Sẽ lưu vào Kho: ${V2fn}`
+                    : "Sẽ lưu vào Kho: Chưa phân loại"}
               </span>
             </div>
             <div className="muted text-sm">
@@ -758,8 +758,8 @@ function V4qo() {
               >
                 <option value="">
                   {V2e8.length
-                    ? "4oCUIFThuqV0IGPhuqMgVEhCUSDigJQ="
-                    : "4oCUIERhbmggbeG7pWMgY2jGsGEgY8OzIFRIQlEg4oCU"}
+                    ? "— Tất cả THBQ —"
+                    : "— Danh mục chưa có THBQ —"}
                 </option>
                 {V2e8.map((t) => (
                   <option key={t.thbqid} value={String(t.thbqid)}>
@@ -773,7 +773,7 @@ function V4qo() {
               <input
                 className="inp"
                 value={flt.search}
-                placeholder="VMOqbiB04buHcCDCtyBz4buRIGjhu5Mgc8ahIMK3IG5nxrDhu51pIHF1w6l0IMK3IHRpw6p1IMSR4buBIGjhu5Mgc8ah"
+                placeholder="Tên tệp · số hồ sơ · người quét · tiêu đề hồ sơ"
                 onChange={(V2gh) => V2e3((f) => ({ ...f, search: V2gh.target.value }))}
               />
             </label>
@@ -781,23 +781,23 @@ function V4qo() {
 
           <div className="kg-bar">
             <div className="kg-stats">
-              <V4qi value={V2fw.collected} label="VOG7lW5nIGZpbGUgxJHDoyB0aHUgdGjhuq1w" />
+              <V4qi value={V2fw.collected} label="Tổng file đã thu thập" />
               <V4qi
                 value={V2fw.forwarded}
-                label="xJDDoyDEkeG7k25nIGLhu5kgbMOqbiBtw6F5IGNo4bun"
+                label="Đã đồng bộ lên máy chủ"
                 tone="ok"
               />
               <V4qi
                 value={V2fw.notForwarded}
-                label="Q2jGsGEgxJHhu5NuZyBi4buZIGzDqm4gbcOheSBjaOG7pw=="
+                label="Chưa đồng bộ lên máy chủ"
                 tone="warn"
-                title={`xJBhbmcgY2jhu50gxJHhuql5IA==${fmtN(V2fp)}${V2fq > 0 ? `IMK3IG3DoXkgY2jhu6cgdOG7qyBjaOG7kWkg${fmtN(V2fq)}` : ""}`}
+                title={`Đang chờ đẩy ${fmtN(V2fp)}${V2fq > 0 ? `IMK3IG3DoXkgY2jhu6cgdOG7qyBjaOG7kWkg${fmtN(V2fq)}` : ""}`}
               />
               <V4qi
                 value={V2fx.length}
-                label="RmlsZSBs4buXaQ=="
+                label="File lỗi"
                 tone={V2fx.length > 0 ? "err" : undefined}
-                title="QuG6o24gbcOheSBjaOG7pyB04burIGNo4buRaSwgaG/hurdjIMSRw6MgxJHhuql5IGzhu5dpIMOtdCBuaOG6pXQgbeG7mXQgbOG6p24gbcOgIHbhuqtuIGNoxrBhIGzDqm4="
+                title="Bản máy chủ từ chối, hoặc đã đẩy lỗi ít nhất một lần mà vẫn chưa lên"
               />
             </div>
             <span className="kg-spacer" />
@@ -806,7 +806,7 @@ function V4qo() {
               <input
                 type="date"
                 className="inp"
-                aria-label="VOG7qyBuZ8OgeSB0aHUgdGjhuq1w"
+                aria-label="Từ ngày thu thập"
                 value={V2e1.from}
                 max={V2e1.to || undefined}
                 onChange={(V2gi) => V2e2((r) => ({ ...r, from: V2gi.target.value }))}
@@ -815,7 +815,7 @@ function V4qo() {
               <input
                 type="date"
                 className="inp"
-                aria-label="xJDhur9uIG5nw6B5IHRodSB0aOG6rXA="
+                aria-label="Đến ngày thu thập"
                 value={V2e1.to}
                 min={V2e1.from || undefined}
                 onChange={(V2gj) => V2e2((r) => ({ ...r, to: V2gj.target.value }))}
@@ -843,10 +843,10 @@ function V4qo() {
           {V2fz.groups.length === 0 ? (
             <p className="kg-note">
               {V4j2(flt)
-                ? "S2jDtG5nIGPDsyB0w6BpIGxp4buHdSBuw6BvIGto4bubcCBi4buZIGzhu41jIMSRYW5nIGNo4buNbiDigJQgY2jhu41uIGzhuqFpIOKAnFThuqV0IGPhuqMgcGjDtG5n4oCdIGhv4bq3YyBi4buPIGLhu5t0IHRpw6p1IGNow60u"
+                ? "Không có tài liệu nào khớp bộ lọc đang chọn — chọn lại “Tất cả phông” hoặc bỏ bớt tiêu chí."
                 : V2fv
-                  ? "S2jDtG5nIGPDsyBi4bqjbiBuw6BvIHRodSB0aOG6rXAgdHJvbmcga2hv4bqjbmcgbmfDoHkgxJHDoyBjaOG7jW4g4oCUIG7hu5tpIGtob+G6o25nIGhv4bq3YyBi4bqlbSDigJxYb8OhIGzhu41jIG5nw6B54oCdLg=="
-                  : "Q2jGsGEgY8OzIGjhu5Mgc8ahIG7DoG8gdHJvbmcgbeG7pWMgbOG7pWMgdsOgIGtobyBnb20gY8WpbmcgdHLhu5FuZyDigJQgYuG6pW0g4oCc4pGgIFRodSB0aOG6rXAgdOG7qyBtw6F5IHVzZXIgKExBTinigJ0gxJHhu4MgbOG6pXkgdMOgaSBsaeG7h3UgbmjDom4gdmnDqm4gxJHDoyDEkcOzbmcgZ8OzaS4="}
+                  ? "Không có bản nào thu thập trong khoảng ngày đã chọn — nới khoảng hoặc bấm “Xoá lọc ngày”."
+                  : "Chưa có hồ sơ nào trong mục lục và kho gom cũng trống — bấm “① Thu thập từ máy user (LAN)” để lấy tài liệu nhân viên đã đóng gói."}
             </p>
           ) : (
             <div className="tbl-scroll kg-matrix">
@@ -879,8 +879,8 @@ function V4qo() {
                         <td colSpan={V2fz.columns.length}>
                           <span className="muted">
                             {g.key === V4ia
-                              ? "S2jDtG5nIGdow6lwIMSRxrDhu6NjIHbDoG8gaOG7kyBzxqEgbsOgbyB0cm9uZyBt4bulYyBs4bulYyDigJQga2nhu4NtIHRyYSBwaMO0bmcvc+G7kSBo4buTIHPGoS4="
-                              : `${g.rows.length}IGjhu5Mgc8ahIMK3IA==${g.tally.total}IHTDoGkgbGnhu4d1IMSRw6MgZ29t`}
+                              ? "Không ghép được vào hồ sơ nào trong mục lục — kiểm tra phông/số hồ sơ."
+                              : `${g.rows.length} hồ sơ · ${g.tally.total} tài liệu đã gom`}
                           </span>
                         </td>
                       </tr>
@@ -898,7 +898,7 @@ function V4qo() {
                               {r.inTree && g.key !== V4ia && g.key !== "" && (
                                 <button
                                   className="kg-add-btn"
-                                  title={`QuG7lSBzdW5nIHTDoGkgbGnhu4d1IHbDoG8gaOG7mXAg${r.hopSo || "—"}IMK3IGjhu5Mgc8ahIA==${r.hoSoSo || "—"}`}
+                                  title={`Bổ sung tài liệu vào hộp ${r.hopSo || "—"} · hồ sơ ${r.hoSoSo || "—"}`}
                                   onClick={() => void V2ff(g.key, r.hopSo, r.hoSoSo)}
                                 >
                                   <Icon name="them" size={13} />
@@ -952,7 +952,7 @@ function V4qo() {
                 <>
                   Đang ẩn {V2fz.hiddenRows} hồ sơ chưa có dữ liệu
                   {!V2dw.current
-                    ? "ICht4bulYyBs4bulYyBs4bubbiBuw6puIHThu7Eg4bqpbiDigJQgYuG7jyB0aWNrIMSR4buDIHhlbSBj4bqjIGPDonkp"
+                    ? " (mục lục lớn nên tự ẩn — bỏ tick để xem cả cây)"
                     : ""}
                   .{" "}
                 </>
@@ -1004,8 +1004,8 @@ function V4qp({
                 <td>{r.hoSoRef || "—"}</td>
                 <td className="kg-why">
                   {r.forwardFatal
-                    ? "TcOheSBjaOG7pyB04burIGNo4buRaSB2xKluaCB2aeG7hW4="
-                    : `TOG7l2kg${r.forwardTries}×`}
+                    ? "Máy chủ từ chối vĩnh viễn"
+                    : `Lỗi ${r.forwardTries}×`}
                   {r.forwardError ? ` — ${r.forwardError}` : ""}
                 </td>
                 <td>
@@ -1020,8 +1020,8 @@ function V4qp({
                     onClick={() => V2go(r.id, r.filename)}
                     title={
                       V2gn
-                        ? `WOG6v3AgaMOgbmcgZ+G7rWkgbOG6oWkg4oCc${r.filename}4oCdIOKAlCBjaOG6oXkga2hpIHBoacOqbiBoaeG7h24gdOG6oWkgeG9uZw==`
-                        : `R+G7rWkgbOG6oWkg4oCc${r.filename}4oCdIGzDqm4gbcOheSBjaOG7pw==`
+                        ? `Xếp hàng gửi lại “${r.filename}” — chạy khi phiên hiện tại xong`
+                        : `Gửi lại “${r.filename}” lên máy chủ`
                     }
                   >
                     <Icon name="lamMoi" size={13} />
@@ -1052,7 +1052,7 @@ function V4qq({
     return (
       <span
         className="kg-empty"
-        title={`${V2gr.label}OiBjaMawYSBjw7MgdMOgaSBsaeG7h3UgdHJvbmcgaOG7kyBzxqEgbsOgeQ==`}
+        title={`${V2gr.label}: chưa có tài liệu trong hồ sơ này`}
       >
         ·
       </span>
@@ -1072,8 +1072,8 @@ function V4qq({
           onClick={() => V2gt(V2gv)}
           title={
             V2gs
-              ? `WOG6v3AgaMOgbmcgZ+G7rWkgbOG6oWkg${V2gv.length}IHTDoGkgbGnhu4d1IOKAlCBjaOG6oXkga2hpIHBoacOqbiBoaeG7h24gdOG6oWkgeG9uZw==`
-              : `R+G7rWkgbOG6oWkg${V2gv.length}IHTDoGkgbGnhu4d1IGPhu6dhIMO0IG7DoHkgbMOqbiBtw6F5IGNo4bun`
+              ? `Xếp hàng gửi lại ${V2gv.length} tài liệu — chạy khi phiên hiện tại xong`
+              : `Gửi lại ${V2gv.length} tài liệu của ô này lên máy chủ`
           }
         >
           <Icon name="lamMoi" size={13} />

@@ -22,11 +22,11 @@ def q_f8(base: str, out: str, epochs: int, batch: int, train_root: str):
 
 def main(argv=None) -> int:
     p_8cb = argparse.ArgumentParser(description="Fine-tune VietOCR fallback (node GPU) — §S12.7/8")
-    p_8cb.add_argument("--train", required=True, help="dHJhaW4udHh0ICg84bqjbmg+XHQ8dGV4dD4p")
+    p_8cb.add_argument("--train", required=True, help="train.txt (<ảnh>\\t<text>)")
     p_8cb.add_argument("--val", required=True, help="val.txt")
-    p_8cb.add_argument("--train-root", default=".", help="dGjGsCBt4bulYyBn4buRYyBjaOG7qWEg4bqjbmg=")
-    p_8cb.add_argument("--out", required=True, help="dGnhu4FuIHThu5EgY2hlY2twb2ludCDEkeG6p3UgcmE=")
-    p_8cb.add_argument("--base", default="vgg_transformer", help="bW9kZWwgcHJldHJhaW5lZCBu4buBbg==")
+    p_8cb.add_argument("--train-root", default=".", help="thư mục gốc chứa ảnh")
+    p_8cb.add_argument("--out", required=True, help="tiền tố checkpoint đầu ra")
+    p_8cb.add_argument("--base", default="vgg_transformer", help="model pretrained nền")
     p_8cb.add_argument("--epochs", type=int, default=20)
     p_8cb.add_argument("--batch", type=int, default=32)
     p_8cc = p_8cb.parse_args(argv)
@@ -37,7 +37,7 @@ def main(argv=None) -> int:
     trainer = Trainer(p_8cd, pretrained=True)
     trainer.train()
     trainer.save_weights(f"{p_8cc.out}.pth")
-    print(f"✅ VietOCR fine-tuned → {p_8cc.out}LnB0aCAoa2nhu4NtIENFUiBxdWEgZ2F0ZS5weSB0csaw4bubYyBjYW5hcnkgwqdHNyAjNyk=")
+    print(f"✅ VietOCR fine-tuned → {p_8cc.out}.pth (kiểm CER qua gate.py trước canary §G7 #7)")
     return 0
 
 if __name__ == "__main__":

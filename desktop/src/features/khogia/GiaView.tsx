@@ -21,7 +21,7 @@ interface V4np {
 
 function V4nq(V20c: unknown): void {
   const V20d = V20c instanceof V3xq || V20c instanceof Error ? V20c.message : String(V20c);
-  window.alert(`TMawdSBnacOhIGzGsHUgdHLhu68gdGjhuqV0IGLhuqFpOiA=${V20d}`);
+  window.alert(`Lưu giá lưu trữ thất bại: ${V20d}`);
 }
 
 export default function V4nr() {
@@ -135,13 +135,13 @@ export default function V4nr() {
   const V219 = async (g: V4lp) => {
     if (g.tuHop == null || g.denHop == null) {
       window.alert(
-        "R2nDoSBuw6B5IGNoxrBhIG5o4bqtcCBk4bqjaSBo4buZcCAoVOG7qyBo4buZcCAvIMSQ4bq/biBo4buZcCkgbsOqbiBjaMawYSB0aOG7gyB04buxIHjhur9wIGjhu5Mgc8ahLg==",
+        "Giá này chưa nhập dải hộp (Từ hộp / Đến hộp) nên chưa thể tự xếp hồ sơ.",
       );
       return;
     }
     if (
       !window.confirm(
-        `VOG7sSB44bq/cCBjw6FjIGjhu5Mgc8ahIGPDsyBo4buZcCBz4buRIHRyb25nIFs=${g.tuHop} – ${g.denHop}XSB2w6BvIGdpw6EgIg==${g.tenGia}"?`,
+        `Tự xếp các hồ sơ có hộp số trong [${g.tuHop} – ${g.denHop}] vào giá "${g.tenGia}"?`,
       )
     )
       return;
@@ -149,7 +149,7 @@ export default function V4nr() {
       if (isTauri()) {
         const n = await V4lz(g.maGia);
         reload();
-        window.alert(`xJDDoyB44bq/cCA=${n}IGjhu5Mgc8ahIHbDoG8gZ2nDoSAi${g.tenGia}".`);
+        window.alert(`Đã xếp ${n} hồ sơ vào giá "${g.tenGia}".`);
       }
     } catch (V21a) {
       V4nq(V21a);
@@ -159,9 +159,9 @@ export default function V4nr() {
   const V21b = async (g: V4lp) => {
     const V21c =
       g.soHoSo > 0
-        ? ` ${g.soHoSo}IGjhu5Mgc8ahIMSRYW5nIHjhur9wIOG7nyBnacOhIG7DoHkgc+G6vSDEkcaw4bujYyBn4buhIHbhu4EgImNoxrBhIHjhur9wIi4=`
+        ? ` ${g.soHoSo} hồ sơ đang xếp ở giá này sẽ được gỡ về "chưa xếp".`
         : "";
-    if (!window.confirm(`WG/DoSBnacOhICI=${g.tenGia}"?${V21c}IEtow7RuZyB0aOG7gyBob8OgbiB0w6FjLg==`))
+    if (!window.confirm(`Xoá giá "${g.tenGia}"?${V21c} Không thể hoàn tác.`))
       return;
     try {
       if (isTauri()) {
@@ -195,7 +195,7 @@ export default function V4nr() {
         </div>
       )}
       <V49a<V4lp>
-        addLabel="VGjDqm0gZ2nDoQ=="
+        addLabel="Thêm giá"
         onAdd={V20f ? V20y : undefined}
         rows={V20i}
         getId={(r) => r.maGia}
@@ -211,13 +211,13 @@ export default function V4nr() {
           </select>
         }
         columns={[
-          { head: "UGjDtG5n", cell: (r) => r.tenDuAn ?? r.maDa ?? "" },
-          { head: "UGjDsm5nIGJhbg==", cell: (r) => r.tenDonVi ?? "" },
-          { head: "VMOqbiBraG8=", cell: (r) => r.tenKho ?? "" },
-          { head: "VMOqbiBnacOh", cell: (r) => r.tenGia },
-          { head: "VOG7qyBo4buZcA==", cell: (r) => r.tuHop ?? "", cls: "tnum" },
-          { head: "xJDhur9uIGjhu5lw", cell: (r) => r.denHop ?? "", cls: "tnum" },
-          { head: "U+G7kSBo4buTIHPGoQ==", cell: (r) => r.soHoSo, cls: "tnum" },
+          { head: "Phông", cell: (r) => r.tenDuAn ?? r.maDa ?? "" },
+          { head: "Phòng ban", cell: (r) => r.tenDonVi ?? "" },
+          { head: "Tên kho", cell: (r) => r.tenKho ?? "" },
+          { head: "Tên giá", cell: (r) => r.tenGia },
+          { head: "Từ hộp", cell: (r) => r.tuHop ?? "", cls: "tnum" },
+          { head: "Đến hộp", cell: (r) => r.denHop ?? "", cls: "tnum" },
+          { head: "Số hồ sơ", cell: (r) => r.soHoSo, cls: "tnum" },
         ]}
         rowActions={(r) => (
           <>
@@ -225,7 +225,7 @@ export default function V4nr() {
               <button
                 className="linkbtn"
                 onClick={() => V219(r)}
-                title="VOG7sSB44bq/cCBo4buTIHPGoSB0aGVvIGThuqNpIGjhu5lw"
+                title="Tự xếp hồ sơ theo dải hộp"
               >
                 <Icon name="nhapKho" /> Xếp hồ sơ
               </button>
@@ -247,13 +247,13 @@ export default function V4nr() {
         <Modal
           title={
             V20s.mode === "add"
-              ? "VGjDqm0gZ2nDoSBsxrB1IHRy4buv"
-              : "Q+G6rXAgbmjhuq10IGdpw6EgbMawdSB0cuG7rw=="
+              ? "Thêm giá lưu trữ"
+              : "Cập nhật giá lưu trữ"
           }
           onClose={() => V20t(null)}
           onSave={V210}
         >
-          <V49j label="S2hvIGzGsHUgdHLhu68=">
+          <V49j label="Kho lưu trữ">
             <select
               className="inp"
               value={V20s.draft.maKho || ""}
@@ -265,7 +265,7 @@ export default function V4nr() {
               {V21e}
             </select>
           </V49j>
-          <V49j label="UGjDtG5nIGzGsHUgdHLhu68=">
+          <V49j label="Phông lưu trữ">
             <select
               className="inp"
               value={V20s.draft.maDa ?? ""}
@@ -284,7 +284,7 @@ export default function V4nr() {
               ))}
             </select>
           </V49j>
-          <V49j label="UGjDsm5nIGJhbg==">
+          <V49j label="Phòng ban">
             <select
               className="inp"
               value={V20s.draft.maDv ?? ""}
@@ -300,7 +300,7 @@ export default function V4nr() {
               ))}
             </select>
           </V49j>
-          <V49j label="VMOqbiBnacOh">
+          <V49j label="Tên giá">
             <input
               className="inp"
               value={V20s.draft.tenGia}
@@ -309,7 +309,7 @@ export default function V4nr() {
               }
             />
           </V49j>
-          <V49j label="VOG7qyBo4buZcA==">
+          <V49j label="Từ hộp">
             <input
               className="inp"
               type="number"
@@ -319,7 +319,7 @@ export default function V4nr() {
               }
             />
           </V49j>
-          <V49j label="xJDhur9uIGjhu5lw">
+          <V49j label="Đến hộp">
             <input
               className="inp"
               type="number"
@@ -329,7 +329,7 @@ export default function V4nr() {
               }
             />
           </V49j>
-          <V49j label="R2hpIGNow7o=">
+          <V49j label="Ghi chú">
             <input
               className="inp"
               value={V20s.draft.ghiChu ?? ""}
@@ -338,7 +338,7 @@ export default function V4nr() {
               }
             />
           </V49j>
-          <V49j label="U+G7kSB0aOG7qSB04bux">
+          <V49j label="Số thứ tự">
             <input
               className="inp"
               type="number"

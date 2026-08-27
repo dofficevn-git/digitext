@@ -184,7 +184,7 @@ pub fn lan_publish_start(
     auth.require_perm(Permission::TreeAssign)?;
     if args.phong.ma_du_an.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0aMO0bmcgdGluIGPGoSBxdWFuIChQaMO0bmcpLg==",
+            "Thiếu thông tin cơ quan (Phông).",
         ));
     }
     f_2hj(&lan);
@@ -204,13 +204,13 @@ pub fn lan_publish_start(
     })
     .map_err(|e| {
         AppError::internal(format!(
-            "xJHDs25nIGfDs2kgY8OieSB0aMawIG3hu6VjIGzhu5dpOiA={e}"
+            "đóng gói cây thư mục lỗi: {e}"
         ))
     })?;
     let code = f_1u4();
     let r_211 = lan_session::code_key(&code).map_err(|e| {
         AppError::internal(format!(
-            "ZOG6q24geHXhuqV0IGtob8OhIG3DoyBnaMOpcCBu4buRaSBs4buXaTog{e}"
+            "dẫn xuất khoá mã ghép nối lỗi: {e}"
         ))
     })?;
     let r_21a = match crate::data_share::C_MT
@@ -219,17 +219,17 @@ pub fn lan_publish_start(
     {
         Some(s) => s,
         None => tiny_http::Server::http("0.0.0.0:0")
-            .map_err(|e| AppError::internal(format!("beG7nyBsaXN0ZW5lciBMQU4gbOG7l2k6IA=={e}")))?,
+            .map_err(|e| AppError::internal(format!("mở listener LAN lỗi: {e}")))?,
     };
     let port = r_21a
         .server_addr()
         .to_ip()
         .map(|r_20y| r_20y.port())
         .ok_or_else(|| {
-            AppError::internal("a2jDtG5nIGzhuqV5IMSRxrDhu6NjIGPhu5VuZyBsaXN0ZW5lcg==")
+            AppError::internal("không lấy được cổng listener")
         })?;
     let daemon = ServiceDaemon::new()
-        .map_err(|e| AppError::internal(format!("bUROUyBraOG7n2kgdOG6oW8gbOG7l2k6IA=={e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS khởi tạo lỗi: {e}")))?;
     let instance = format!("digitext-{}-{}", sanitize(&args.project), port);
     let r_218 = crate::lan_identity::pubkey_b64(&r_21b);
     let r_217: [(&str, &str); 3] = [
@@ -245,12 +245,12 @@ pub fn lan_publish_start(
         port,
         &r_217[..],
     )
-    .map_err(|e| AppError::internal(format!("bUROUyBzZXJ2aWNlIGluZm8gbOG7l2k6IA=={e}")))?
+    .map_err(|e| AppError::internal(format!("mDNS service info lỗi: {e}")))?
     .enable_addr_auto();
     let fullname = info.get_fullname().to_string();
     daemon
         .register(info)
-        .map_err(|e| AppError::internal(format!("bUROUyDEkcSDbmcga8O9IGzhu5dpOiA={e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS đăng ký lỗi: {e}")))?;
     let stop = Arc::new(AtomicBool::new(false));
     let discovery = crate::data_share::f_2gm(
         &crate::data_share::C_MR,
@@ -270,7 +270,7 @@ pub fn lan_publish_start(
             let _ = daemon.shutdown();
             stop.store(true, Ordering::SeqCst);
             return Err(AppError::internal(format!(
-                "dOG6oW8gbHXhu5NuZyBwaOG7pWMgduG7pSBMQU4gbOG7l2k6IA=={e}"
+                "tạo luồng phục vụ LAN lỗi: {e}"
             )));
         }
     };
@@ -343,7 +343,7 @@ fn serve_loop(
                                     &b"Content-Type"[..],
                                     &b"application/json"[..],
                                 )
-                                .expect("aGVhZGVyIGjhu6NwIGzhu4c=");
+                                .expect("header hợp lệ");
                                 let _ = r_21t.respond(
                                     tiny_http::Response::from_string(body).with_header(r_21n),
                                 );
@@ -365,12 +365,12 @@ fn serve_loop(
                                             &b"Content-Type"[..],
                                             &b"application/octet-stream"[..],
                                         )
-                                        .expect("aGVhZGVyIGjhu6NwIGzhu4c=");
+                                        .expect("header hợp lệ");
                                         let r_21r = tiny_http::Header::from_bytes(
                                             SESSION_PROOF_HEADER.as_bytes(),
                                             r_21s.as_bytes(),
                                         )
-                                        .expect("aGVhZGVyIGjhu6NwIGzhu4c=");
+                                        .expect("header hợp lệ");
                                         let _ = r_21t.respond(
                                             tiny_http::Response::from_data(body)
                                                 .with_header(r_21l)
@@ -465,7 +465,7 @@ pub async fn lan_discover(auth: State<'_, AuthState>, args: Tao) -> Result<Vec<T
     });
     let peers = tauri::async_runtime::spawn_blocking(move || f_v7(r_226))
         .await
-        .map_err(|e| AppError::internal(format!("bHXhu5NuZyBxdcOpdCBMQU4gbOG7l2k6IA=={e}")))??;
+        .map_err(|e| AppError::internal(format!("luồng quét LAN lỗi: {e}")))??;
     let r_224 = bcast.await.unwrap_or_default();
     Ok(f_1s7(peers, r_224))
 }
@@ -493,10 +493,10 @@ pub(crate) fn f_1s7(mut peers: Vec<Tap>, r_228: Vec<crate::collect::T1c>) -> Vec
 }
 fn f_v7(r_22h: Duration) -> Result<Vec<Tap>, AppError> {
     let daemon = ServiceDaemon::new()
-        .map_err(|e| AppError::internal(format!("bUROUyBraOG7n2kgdOG6oW8gbOG7l2k6IA=={e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS khởi tạo lỗi: {e}")))?;
     let r_22e = daemon
         .browse(SERVICE_TYPE)
-        .map_err(|e| AppError::internal(format!("bUROUyBxdcOpdCBs4buXaTog{e}")))?;
+        .map_err(|e| AppError::internal(format!("mDNS quét lỗi: {e}")))?;
     let r_22a = std::time::Instant::now() + r_22h;
     let mut r_22b: Vec<Tap> = Vec::new();
     while let Some(r_22d) = r_22a.checked_duration_since(std::time::Instant::now()) {
@@ -562,7 +562,7 @@ pub async fn lan_pull(
     let r_22v = auth.require(Perm::Operate)?;
     if args.addr.trim().is_empty() || args.code.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSDEkeG7i2EgY2jhu4kgbcOheSBob+G6t2MgbcOjIGdow6lwIG7hu5FpLg==",
+            "Thiếu địa chỉ máy hoặc mã ghép nối.",
         ));
     }
     let http = reqwest::Client::builder()
@@ -579,7 +579,7 @@ pub async fn lan_pull(
             return Err(
                 AppError::new(
                     "lan_identity",
-                    "TcOheSBwaMOhdCBraGFpIG3hu5l0IGtob8OhIGRhbmggdMOtbmggS0jDgUMga2hvw6EgxJHDoyBnaGltIGNobyBtw6F5IMSRw7Mg4oCUIG5naGkgbeG6oW8gZGFuaC4gxJDDoyBk4burbmcsIGtow7RuZyBuaOG6rW4gZ8OsLg==",
+                    "Máy phát khai một khoá danh tính KHÁC khoá đã ghim cho máy đó — nghi mạo danh. Đã dừng, không nhận gì.",
                 ),
             );
         }
@@ -587,7 +587,7 @@ pub async fn lan_pull(
             return Err(
                 AppError::new(
                     "lan_identity",
-                    "TcOheSBwaMOhdCBraMO0bmcga8O9IMSRxrDhu6NjIHBoacOqbiAoY2jhu68ga8O9IHNhaSkg4oCUIMSRw6MgZOG7q25nLg==",
+                    "Máy phát không ký được phiên (chữ ký sai) — đã dừng.",
                 ),
             );
         }
@@ -595,14 +595,14 @@ pub async fn lan_pull(
             return Err(
                 AppError::new(
                     "lan_outdated",
-                    "TcOheSBwaMOhdCDEkWFuZyBjaOG6oXkgYuG6o24gY8WpLCBj4bqnbiBj4bqtcCBuaOG6rXQg4oCUIGvDqm5oIExBTiBraMO0bmcgbcOjIGhvw6EgxJHDoyBi4buLIGfhu6EgdsOgIEtIw5RORyBjw7MgY2jhur8gxJHhu5kgdMawxqFuZyB0aMOtY2ggbmfGsOG7o2Mu",
+                    "Máy phát đang chạy bản cũ, cần cập nhật — kênh LAN không mã hoá đã bị gỡ và KHÔNG có chế độ tương thích ngược.",
                 ),
             );
         }
         crate::collect::SessionVerdict::Unreachable(e) => {
             return Err(AppError::new(
                 "lan_unreachable",
-                format!("S2jDtG5nIGvhur90IG7hu5FpIMSRxrDhu6NjIG3DoXk6IA=={e}"),
+                format!("Không kết nối được máy: {e}"),
             ));
         }
     };
@@ -611,12 +611,12 @@ pub async fn lan_pull(
         .await
         .map_err(|e| {
             AppError::internal(format!(
-                "bHXhu5NuZyBk4bqrbiB4deG6pXQga2hvw6EgbOG7l2k6IA=={e}"
+                "luồng dẫn xuất khoá lỗi: {e}"
             ))
         })?
         .map_err(|e| {
             AppError::internal(format!(
-                "ZOG6q24geHXhuqV0IGtob8OhIG3DoyBnaMOpcCBu4buRaSBs4buXaTog{e}"
+                "dẫn xuất khoá mã ghép nối lỗi: {e}"
             ))
         })?;
     let r_22w = format!("http://{}:{}{}", args.addr, args.port, C_MS);
@@ -629,44 +629,44 @@ pub async fn lan_pull(
     let r_22t = r_22s.send().await.map_err(|e| {
         AppError::new(
             "lan_unreachable",
-            format!("S2jDtG5nIGvhur90IG7hu5FpIMSRxrDhu6NjIG3DoXk6IA=={e}"),
+            format!("Không kết nối được máy: {e}"),
         )
     })?;
     if r_22t.status() == reqwest::StatusCode::FORBIDDEN {
         return Err(AppError::new(
             "pair_code",
-            "TcOjIGdow6lwIG7hu5FpIGtow7RuZyDEkcO6bmcu",
+            "Mã ghép nối không đúng.",
         ));
     }
     if r_22t.status().as_u16() == 429 {
         return Err(
             AppError::new(
                 "pair_code",
-                "xJDDoyBuaOG6rXAgc2FpIG3DoyBnaMOpcCBu4buRaSBxdcOhIG5oaeG7gXUgbOG6p24g4oCUIGNo4budIG3hu5l0IHBow7p0IHLhu5NpIHRo4butIGzhuqFpLg==",
+                "Đã nhập sai mã ghép nối quá nhiều lần — chờ một phút rồi thử lại.",
             ),
         );
     }
     if !r_22t.status().is_success() {
         return Err(AppError::new(
             "lan_error",
-            format!("TcOheSBwaMOhdCB0cuG6oyBs4buXaSA={}.", r_22t.status()),
+            format!("Máy phát trả lỗi {}.", r_22t.status()),
         ));
     }
     crate::collect::f_ya(&r_22t, &mut r_22m, &r_22q, &r_22j)
         .map_err(|e| AppError::new("lan_identity", e))?;
     let r_22u = crate::collect::f_25n(r_22t, C_C6)
         .await
-        .map_err(|e| AppError::new("lan_error", format!("xJDhu41jIGfDs2kgY8OieSBs4buXaTog{e}")))?;
+        .map_err(|e| AppError::new("lan_error", format!("Đọc gói cây lỗi: {e}")))?;
     let r_22r = lan_session::f_1w6(&mut r_22m, &r_22u).map_err(|e| {
         AppError::new(
             "lan_error",
-            format!("R8OzaSBjw6J5IHRoxrAgbeG7pWMgaOG7j25nOiA={e}"),
+            format!("Gói cây thư mục hỏng: {e}"),
         )
     })?;
     let r_22p: Toh = serde_json::from_slice(&r_22r).map_err(|e| {
         AppError::new(
             "lan_error",
-            format!("R8OzaSBjw6J5IHRoxrAgbeG7pWMga2jDtG5nIGjhu6NwIGzhu4c6IA=={e}"),
+            format!("Gói cây thư mục không hợp lệ: {e}"),
         )
     })?;
     let r_22l = r_22p
@@ -692,7 +692,7 @@ pub async fn lan_pull(
     .await?;
     tracing::info!(
         from = % args.addr, created = r_22n.created,
-        "bGFuX3B1bGw6IMSRw6Mgw6FwIGPDonkgdGjGsCBt4bulYw=="
+        "lan_pull: đã áp cây thư mục"
     );
     Ok(Thy {
         applied: true,

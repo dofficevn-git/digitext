@@ -186,7 +186,7 @@ async fn login(
         &r_ap.pool,
         devices::Til {
             id: device_id,
-            name: r_an.device_name.as_deref().unwrap_or("bcOheSB0cuG6oW0="),
+            name: r_an.device_name.as_deref().unwrap_or("máy trạm"),
             platform: r_an.platform.as_deref().unwrap_or("unknown"),
             app_version: r_an.app_version.as_deref(),
             project_id: user.project_id,

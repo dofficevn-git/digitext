@@ -26,7 +26,7 @@ export default function V4qy() {
     if (!isTauri()) {
       V2hd({
         kind: "info",
-        text: "Q2jhuqF5IHRyb25nIOG7qW5nIGThu6VuZyBkZXNrdG9wIMSR4buDIGvDvSAoY2jhur8gxJHhu5kgdHLDrG5oIGR1eeG7h3Qga2jDtG5nIGPDsyB0b2tlbiku",
+        text: "Chạy trong ứng dụng desktop để ký (chế độ trình duyệt không có token).",
       });
       return;
     }
@@ -37,7 +37,7 @@ export default function V4qy() {
     } catch (V2hf) {
       V2hd({
         kind: "err",
-        text: `S2jDtG5nIGzhuqV5IMSRxrDhu6NjIGjDoG5nIMSR4bujaSBrw706IA==${V4qx(V2hf)}`,
+        text: `Không lấy được hàng đợi ký: ${V4qx(V2hf)}`,
       });
     } finally {
       V2hb(null);
@@ -71,13 +71,13 @@ export default function V4qy() {
           ? {
               kind: "err",
               text:
-                "S2jDtG5nIHRo4bqleSB0b2tlbiBuw6BvIMSRYW5nIGPhuq9tIOKAlCBraeG7g20gdHJhIFVTQiB0b2tlbiDEkcOjIGPhuq9tIGNoxrBhLCB2w6AgdGjGsCB2aeG7h24gUEtDUyMxMSA=" +
-                "KHBo4bqnbiBt4buBbSB0b2tlbiBj4bunYSBDQSkgxJHDoyBjw6BpIGNoxrBhLg==",
+                "Không thấy token nào đang cắm — kiểm tra USB token đã cắm chưa, và thư viện PKCS#11 " +
+                "(phần mềm token của CA) đã cài chưa.",
             }
-          : { kind: "ok", text: `VGjhuqV5IA==${t.length} token.` },
+          : { kind: "ok", text: `Thấy ${t.length} token.` },
       );
     } catch (V2hj) {
-      V2hd({ kind: "err", text: `RMOyIHRva2VuIGzhu5dpOiA=${V4qx(V2hj)}` });
+      V2hd({ kind: "err", text: `Dò token lỗi: ${V4qx(V2hj)}` });
     } finally {
       V2hb(null);
     }
@@ -87,12 +87,12 @@ export default function V4qy() {
     if (V2h6 === null) {
       V2hd({
         kind: "err",
-        text: "Q2jhu41uIHRva2VuIHRyxrDhu5tjIGtoaSBrw70gKGLhuqVtIOKAnETDsiB0b2tlbuKAnSku",
+        text: "Chọn token trước khi ký (bấm “Dò token”).",
       });
       return;
     }
     if (!V2h8) {
-      V2hd({ kind: "err", text: "Tmjhuq1wIG3DoyBQSU4gY+G7p2EgdG9rZW4u" });
+      V2hd({ kind: "err", text: "Nhập mã PIN của token." });
       return;
     }
     V2hb(V2hk.id);
@@ -104,17 +104,17 @@ export default function V4qy() {
         pin: V2h8,
       });
       if (status === "signed") {
-        V2hd({ kind: "ok", text: `xJDDoyBrw70g4oCc${V2hk.filename}”.` });
+        V2hd({ kind: "ok", text: `Đã ký “${V2hk.filename}”.` });
         V2h0((V2hl) => V2hl.filter((V2hm) => V2hm.id !== V2hk.id));
       } else {
         V2hd({
           kind: "err",
-          text: `TcOheSBjaOG7pyBU4buqIENI4buQSSBjaOG7ryBrw70gY2hvIOKAnA==${V2hk.filename}4oCdICh0cuG6oW5nIHRow6FpOiA=${status}).`,
+          text: `Máy chủ TỪ CHỐI chữ ký cho “${V2hk.filename}” (trạng thái: ${status}).`,
         });
         void V2he();
       }
     } catch (V2hn) {
-      V2hd({ kind: "err", text: `Ký “${V2hk.filename}4oCdIGzhu5dpOiA=${V4qx(V2hn)}` });
+      V2hd({ kind: "err", text: `Ký “${V2hk.filename}” lỗi: ${V4qx(V2hn)}` });
     } finally {
       V2hb(null);
     }
@@ -148,15 +148,15 @@ export default function V4qy() {
             <span className="muted text-sm">
               Đường dẫn module PKCS#11{" "}
               {V2h3.length > 0
-                ? "KHThu7EgZMOyIMSRxrDhu6NjLCBz4butYSBu4bq/dSBj4bqnbik="
-                : "KMSR4buDIHRy4buRbmcgPSB04buxIGTDsik="}
+                ? "(tự dò được, sửa nếu cần)"
+                : "(để trống = tự dò)"}
             </span>
             <input
               value={V2h1}
               onChange={(V2ho) => V2h2(V2ho.target.value)}
               spellCheck={false}
               list="pkcs11-modules"
-              placeholder="dOG7sSBkw7IgdGjGsCB2aeG7h24gdG9rZW4gdHLDqm4gbcOheQ=="
+              placeholder="tự dò thư viện token trên máy"
             />
             <datalist id="pkcs11-modules">
               {V2h3.map((m) => (
@@ -172,7 +172,7 @@ export default function V4qy() {
           </label>
           <div className="flex gap-2 items-center flex-wrap">
             <button className="btn" onClick={V2hi} disabled={V2ha !== null}>
-              {V2ha === "tokens" ? "xJBhbmcgZMOy4oCm" : "RMOyIHRva2Vu"}
+              {V2ha === "tokens" ? "Đang dò…" : "Dò token"}
             </button>
             {tokens.length > 0 && (
               <select value={V2h6 ?? ""} onChange={(V2hp) => V2h7(Number(V2hp.target.value))}>
@@ -200,7 +200,7 @@ export default function V4qy() {
         <div className="flex justify-between items-center">
           <h3>Chờ ký ({V2gz.length})</h3>
           <button className="btn ghost" onClick={V2he} disabled={V2ha !== null}>
-            {V2ha === "jobs" ? "xJBhbmcgdOG6o2nigKY=" : "TMOgbSBt4bubaQ=="}
+            {V2ha === "jobs" ? "Đang tải…" : "Làm mới"}
           </button>
         </div>
         {V2gz.length === 0 ? (
@@ -224,7 +224,7 @@ export default function V4qy() {
                     <td className="py-2 px-1 text-fg-muted">{V2hr.pageCount ?? "—"}</td>
                     <td className="py-2 px-1 text-right">
                       <button className="btn" onClick={() => sign(V2hr)} disabled={V2ha !== null}>
-                        {V2ha === V2hr.id ? "xJBhbmcga8O94oCm" : "Ký"}
+                        {V2ha === V2hr.id ? "Đang ký…" : "Ký"}
                       </button>
                     </td>
                   </tr>

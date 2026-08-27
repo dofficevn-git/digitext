@@ -222,11 +222,11 @@ export default function KhaiThacView() {
     }
   };
 
-  const V1yv = async (V1yw: () => Promise<number>, V1yx = "xJDDoyBr4bq/dCB4deG6pXQu") => {
+  const V1yv = async (V1yw: () => Promise<number>, V1yx = "Đã kết xuất.") => {
     V1y5(true);
     try {
       const n = await V1yw();
-      if (V1yx) window.alert(`${V1yx} (${n}IGTDsm5nKQ==`);
+      if (V1yx) window.alert(`${V1yx} (${n} dòng)`);
     } catch (V1yy) {
       window.alert(V1yy instanceof Error ? V1yy.message : String(V1yy));
     } finally {
@@ -235,7 +235,7 @@ export default function KhaiThacView() {
   };
 
   const V1yz = useMemo(() => {
-    if (!V1xq.maDa) return "VOG6pXQgY+G6oyBwaMO0bmcgbMawdSB0cuG7rw==";
+    if (!V1xq.maDa) return "Tất cả phông lưu trữ";
     return V1xd.find((p) => p.maDuAn === V1xq.maDa)?.tenDuAn ?? V1xq.maDa;
   }, [V1xq.maDa, V1xd]);
 
@@ -436,7 +436,7 @@ export default function KhaiThacView() {
             <input
               className="form-control solo searchInput"
               value={f.search}
-              placeholder="Tmjhuq1wIGvDvSB04buxIGLhuqV0IGvhu7MgdsOgIG5o4bqlbiBwaMOtbSBFbnRlciDEkeG7gyB0w6xtIGtp4bq/bQ=="
+              placeholder="Nhập ký tự bất kỳ và nhấn phím Enter để tìm kiếm"
               onChange={(V1zg) => set({ search: V1zg.target.value })}
               onKeyDown={(V1zh) => V1zh.key === "Enter" && V1yq()}
             />
@@ -449,7 +449,7 @@ export default function KhaiThacView() {
             <button
               className="btn btn-outline-secondary btn-round"
               disabled={V1y4}
-              onClick={() => void V1yv(() => V4n3({ ...V1xq }), "xJDDoyB4deG6pXQgTWV0YWRhdGEu")}
+              onClick={() => void V1yv(() => V4n3({ ...V1xq }), "Đã xuất Metadata.")}
             >
               <Icon name="tepExcel" /> Xuất toàn bộ Metadata
             </button>
@@ -462,7 +462,7 @@ export default function KhaiThacView() {
             <button
               className="btn btn-outline-success btn-round"
               disabled={V1y4}
-              onClick={() => void V1yv(() => V4n4({ ...V1xq }), "xJDDoyB4deG6pXQgTUxIUy4=")}
+              onClick={() => void V1yv(() => V4n4({ ...V1xq }), "Đã xuất MLHS.")}
             >
               <Icon name="xuatTep" /> Xuất MLHS
             </button>
@@ -476,7 +476,7 @@ export default function KhaiThacView() {
             <button
               className="btn btn-outline-success btn-round"
               disabled={V1y4}
-              onClick={() => void V1yv(() => V4n5({ ...V1xq }), "xJDDoyB4deG6pXQgTUxWQi4=")}
+              onClick={() => void V1yv(() => V4n5({ ...V1xq }), "Đã xuất MLVB.")}
             >
               <Icon name="xuatTep" /> Xuất MLVB
             </button>
@@ -505,7 +505,7 @@ export default function KhaiThacView() {
               className="btn btn-outline-success btn-round"
               disabled={V1y4}
               onClick={() =>
-                void V1yv(() => V4n6({ ...V1xq }, V1z5), "xJDDoyB4deG6pXQgcGjhu6UgbOG7pWMu")
+                void V1yv(() => V4n6({ ...V1xq }, V1z5), "Đã xuất phụ lục.")
               }
             >
               <Icon name="tepExcel" /> Xuất phụ lục
@@ -570,7 +570,7 @@ export default function KhaiThacView() {
                         <a
                           className="tbllink"
                           onClick={() => void V1yu(r)}
-                          title="Q2hpIHRp4bq/dCB2xINuIGLhuqNu"
+                          title="Chi tiết văn bản"
                         >
                           {V1z7(r)}
                         </a>
@@ -589,7 +589,7 @@ export default function KhaiThacView() {
                           <a
                             className="ic-word"
                             onClick={() => void V1yu(r)}
-                            title="WGVtIHbEg24gYuG6o24="
+                            title="Xem văn bản"
                           >
                             <Icon name="tepWord" />
                           </a>
@@ -609,7 +609,7 @@ export default function KhaiThacView() {
                 <td className="footer-restore" colSpan={V1z2}>
                   <a
                     className="toggle-vis"
-                    title="SGnhu4NuIHRo4buLIHRvw6BuIGLhu5kgY+G7mXQ="
+                    title="Hiển thị toàn bộ cột"
                     onClick={() =>
                       V1y8({
                         kho: true,

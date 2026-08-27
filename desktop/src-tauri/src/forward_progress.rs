@@ -184,7 +184,7 @@ impl FileTicket {
             FileState::Skipped,
             self.size_bytes,
             Some(
-                "TcOheSBjaOG7pyDEkcOjIGPDsyB0w6BpIGxp4buHdSBuw6B5IOKAlCBraMO0bmcgdOG6o2kgbOG6oWku"
+                "Máy chủ đã có tài liệu này — không tải lại."
                     .into(),
             ),
         )
@@ -194,7 +194,7 @@ impl FileTicket {
             FileState::Cancelled,
             sent_bytes,
             Some(
-                "xJDDoyBo4buneSDigJQgcGjhuqduIMSRw6MgZ+G7rWkgxJHGsOG7o2MgZ2nhu68gbOG6oWksIGzhuqduIHNhdSB04bqjaSB0aeG6v3AgdOG7qyBjaOG7lyBk4burbmcu"
+                "Đã hủy — phần đã gửi được giữ lại, lần sau tải tiếp từ chỗ dừng."
                     .into(),
             ),
         )

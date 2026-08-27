@@ -53,22 +53,22 @@ def q_d6(path):
                 p_8a6 += 1
     if p_8a6:
         onnx.save(p_8a7, path)
-    print(f"    {os.path.basename(path)}OiBz4butYSA={p_8a6}IFRyYW5zcG9zZSBwZXJtIMOibQ==")
+    print(f"    {os.path.basename(path)}: sửa {p_8a6} Transpose perm âm")
 
 def main():
     p_8ac = argparse.ArgumentParser()
     p_8ac.add_argument("--out", required=True)
     p_8ac.add_argument("--name", default="vgg_transformer")
     p_8ac.add_argument("--opset", type=int, default=17)
-    p_8ac.add_argument("--max-len", type=int, default=128, help="Y+G7rWEgc+G7lSBnaeG6o2kgbcOjIGPhu5EgxJHhu4tuaA==")
-    p_8ac.add_argument("--rec-w", type=int, default=256, help="YuG7gSBy4buZbmcgY3JvcCBD4buQIMSQ4buKTkggbMO6YyBpbmZlcg==")
+    p_8ac.add_argument("--max-len", type=int, default=128, help="cửa sổ giải mã cố định")
+    p_8ac.add_argument("--rec-w", type=int, default=256, help="bề rộng crop CỐ ĐỊNH lúc infer")
     p_8ac.add_argument("--weights", default=None,
-                    help="Y2hlY2twb2ludCBWaWV0T0NSIGZpbmUtdHVuZSAoYuG7jyB0cuG7kW5nID0gcHJldHJhaW5lZCBn4buRYyk=")
+                    help="checkpoint VietOCR fine-tune (bỏ trống = pretrained gốc)")
     p_8ad = p_8ac.parse_args()
     os.makedirs(p_8ad.out, exist_ok=True)
 
     cfg = apply_weights(Cfg.load_config_from_name(p_8ad.name), p_8ad.weights)
-    print(f"wrcgdOG6o2kgVmlldE9DUiAn{p_8ad.name}'"
+    print(f"· tải VietOCR '{p_8ad.name}'"
           f"{f' + weights {p_8ad.weights}' if p_8ad.weights else ' (pretrained)'}…", flush=True)
     predictor = Predictor(cfg)
     model = predictor.model.eval()
@@ -78,7 +78,7 @@ def main():
     with open(os.path.join(p_8ad.out, "vocab.txt"), "w", encoding="utf-8") as p_8b5:
         p_8b5.write("\n".join(str(vocab.i2c.get(p_8b6, "*")) for p_8b6 in range(p_8bb)) + "\n")
     print(f"· vocab.txt: {p_8bb} token (pad={vocab.pad} SOS={vocab.go} EOS={vocab.eos})")
-    assert vocab.pad == 0 and vocab.go == 1 and vocab.eos == 2, "UEFEL1NPUy9FT1MgcGjhuqNpID0wLzEvMg=="
+    assert vocab.pad == 0 and vocab.go == 1 and vocab.eos == 2, "PAD/SOS/EOS phải =0/1/2"
 
     import numpy as np
     import onnxruntime as ort
@@ -96,7 +96,7 @@ def main():
                       dynamic_axes={"image": {3: "W"}, "memory": {0: "S"}},
                       opset_version=p_8ad.opset)
     q_d6(p_8b3)
-    print(f"wrcgZW5jb2Rlci5vbm54IOKckyAoVyDEkeG7mW5nKSAgbWVtb3J5{tuple(memory.shape)}")
+    print(f"· encoder.onnx ✓ (W động)  memory{tuple(memory.shape)}")
 
     tgt = torch.full((1, p_8ad.max_len), vocab.pad, dtype=torch.long)
     tgt[0, 0] = vocab.go
@@ -107,7 +107,7 @@ def main():
                       dynamic_axes={"memory": {0: "S"}},
                       opset_version=p_8ad.opset)
     q_d6(p_8b0)
-    print(f"· decoder.onnx ✓ (T={p_8ad.max_len}IGPhu5EgxJHhu4tuaCwgUyDEkeG7mW5nKSAgbG9naXRz{tuple(logits.shape)}")
+    print(f"· decoder.onnx ✓ (T={p_8ad.max_len} cố định, S động)  logits{tuple(logits.shape)}")
 
     p_8b4 = ort.InferenceSession(p_8b3, providers=["CPUExecutionProvider"])
     p_8b1 = ort.InferenceSession(p_8b0, providers=["CPUExecutionProvider"])

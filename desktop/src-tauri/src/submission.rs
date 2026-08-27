@@ -110,7 +110,7 @@ pub async fn submission_action(
         "complete" => Permission::SubmissionApprove,
         other => {
             return Err(AppError::validation(format!(
-                "aMOgbmggxJHhu5luZyBraMO0bmcgaOG7o3AgbOG7hzog{other}"
+                "hành động không hợp lệ: {other}"
             )));
         }
     };
@@ -383,11 +383,11 @@ pub async fn submission_dossier(
         Ok(r_326.to_string_lossy().into_owned())
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyBsxrB1IGZpbGUgbOG7l2k6IA=={e}")))?
-    .map_err(|e| AppError::internal(format!("bMawdSBmaWxlIGzhu5dpOiA={e}")))?;
+    .map_err(|e| AppError::internal(format!("luồng lưu file lỗi: {e}")))?
+    .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     tracing::info!(
         submission = % args.id,
-        "c3VibWlzc2lvbl9kb3NzaWVyOiDEkcOjIGzGsHUgaOG7kyBzxqEgcXXDoSB0csOsbmg="
+        "submission_dossier: đã lưu hồ sơ quá trình"
     );
     Ok(r_327)
 }

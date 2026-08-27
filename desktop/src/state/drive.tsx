@@ -84,7 +84,7 @@ export function V42d({ children: V54 }: { children: ReactNode }) {
       const V5t = V5e.current[V5s];
 
       if (isTauri() && V5t?.path) {
-        V414(V5t.path, name || "VGjGsCBt4bulYyBt4bubaQ==")
+        V414(V5t.path, name || "Thư mục mới")
           .then(() => V5m(V5s))
           .catch(() => {});
         return;
@@ -97,7 +97,7 @@ export function V42d({ children: V54 }: { children: ReactNode }) {
           [V5u]: {
             id: V5u,
             type: "folder",
-            name: name || "ROG7sSDDoW4gbeG7m2k=",
+            name: name || "Dự án mới",
             owner: "VMO0aQ==",
             members: [],
             kids: [],

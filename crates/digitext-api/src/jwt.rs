@@ -43,16 +43,16 @@ pub struct JwtKeys {
 impl JwtKeys {
     pub fn from_private_pem(r_4x: &str) -> anyhow::Result<Self> {
         let r_4y = SigningKey::from_pkcs8_pem(r_4x)
-            .context("UEVNIGtob8OhIGvDvSBFZDI1NTE5IGtow7RuZyBo4bujcCBs4buHIChj4bqnbiBQS0NTIzgp")?;
+            .context("PEM khoá ký Ed25519 không hợp lệ (cần PKCS#8)")?;
         let public_pem = r_4y
             .verifying_key()
             .to_public_key_pem(LineEnding::LF)
-            .context("a2jDtG5nIHh14bqldCDEkcaw4bujYyBwdWJsaWMga2V5IFBFTQ==")?;
+            .context("không xuất được public key PEM")?;
         Ok(JwtKeys {
             encoding: EncodingKey::from_ed_pem(r_4x.as_bytes())
-                .context("anNvbndlYnRva2VuIGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mga2hvw6Ega8O9")?,
+                .context("jsonwebtoken không đọc được khoá ký")?,
             decoding: DecodingKey::from_ed_pem(public_pem.as_bytes())
-                .context("anNvbndlYnRva2VuIGtow7RuZyDEkeG7jWMgxJHGsOG7o2MgcHVibGljIGtleQ==")?,
+                .context("jsonwebtoken không đọc được public key")?,
             public_pem,
         })
     }
@@ -60,24 +60,24 @@ impl JwtKeys {
         let r_50 = SigningKey::generate(&mut rand::rngs::OsRng);
         let r_4z = r_50
             .to_pkcs8_pem(LineEnding::LF)
-            .expect("eHXhuqV0IFBFTSBraG/DoSB04bqhbQ==");
-        Self::from_private_pem(&r_4z).expect("a2hvw6EgdOG6oW0gaOG7o3AgbOG7hw==")
+            .expect("xuất PEM khoá tạm");
+        Self::from_private_pem(&r_4z).expect("khoá tạm hợp lệ")
     }
     pub fn load_or_generate(path: &str) -> anyhow::Result<Self> {
         if std::path::Path::new(path).exists() {
             let pem = std::fs::read_to_string(path)
-                .with_context(|| format!("a2jDtG5nIMSR4buNYyDEkcaw4bujYyBraG/DoSBrw70g{path}"))?;
+                .with_context(|| format!("không đọc được khoá ký {path}"))?;
             return Self::from_private_pem(&pem);
         }
         tracing::warn!(
-            "Y2jGsGEgY8OzIGtob8OhIGvDvSA={path}IOKAlCB04buxIHNpbmggRWQyNTUxOSBt4bubaSAoZ2nhu68gZmlsZSBuw6B5IMSR4buDIHRva2VuIGtow7RuZyBi4buLIHbDtCBoaeG7h3Up"
+            "chưa có khoá ký {path} — tự sinh Ed25519 mới (giữ file này để token không bị vô hiệu)"
         );
         let r_51 = SigningKey::generate(&mut rand::rngs::OsRng);
         let pem = r_51
             .to_pkcs8_pem(LineEnding::LF)
-            .context("eHXhuqV0IFBFTSBraG/DoSBt4bubaQ==")?;
+            .context("xuất PEM khoá mới")?;
         std::fs::write(path, pem.as_bytes())
-            .with_context(|| format!("a2jDtG5nIGdoaSDEkcaw4bujYyBraG/DoSBrw70g{path}"))?;
+            .with_context(|| format!("không ghi được khoá ký {path}"))?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -87,7 +87,7 @@ impl JwtKeys {
     }
     fn sign(&self, r_52: &T2s) -> anyhow::Result<String> {
         jsonwebtoken::encode(&Header::new(Algorithm::EdDSA), r_52, &self.encoding)
-            .context("a8O9IEpXVCB0aOG6pXQgYuG6oWk=")
+            .context("ký JWT thất bại")
     }
     pub fn sign_access(
         &self,

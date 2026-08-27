@@ -39,47 +39,47 @@ def _metric(block: dict, name: str) -> Optional[float]:
 
 def _validate(obj, label: str) -> None:
     if not isinstance(obj, dict):
-        raise GateError(f"{label}OiBwaOG6o2kgbMOgIG3hu5l0IG9iamVjdCBKU09O")
+        raise GateError(f"{label}: phải là một object JSON")
     p_3d5 = obj.get("overall")
     if not isinstance(p_3d5, dict) or _metric(p_3d5, "f1_macro") is None:
-        raise GateError(f"{label}OiB0aGnhur91ICdvdmVyYWxsLmYxX21hY3JvJyAoc+G7kSk=")
+        raise GateError(f"{label}: thiếu 'overall.f1_macro' (số)")
     by = obj.get("by_field", {})
     if not isinstance(by, dict):
-        raise GateError(f"{label}OiAnYnlfZmllbGQnIHBo4bqjaSBsw6Agb2JqZWN0IA=={tên_trường: {...}}")
+        raise GateError(f"{label}: 'by_field' phải là object {tên_trường: {...}}")
     for name, p_3d4 in by.items():
         if not isinstance(p_3d4, dict) or _metric(p_3d4, "f1") is None:
-            raise GateError(f"{label}: by_field['{name}J10uZjEgdGhp4bq/dSBob+G6t2Mga2jDtG5nIHBo4bqjaSBz4buR")
+            raise GateError(f"{label}: by_field['{name}'].f1 thiếu hoặc không phải số")
 
 def q_ca(name: str, new_v, base_v, tol: float, ctx: str, failures: list) -> None:
     if new_v is None or base_v is None:
         return
     if new_v < base_v - tol:
         failures.append(
-            f"{ctx}: {name} {base_v:.4f} → {new_v:.4f} ({new_v - base_v:+.4f}LCB04buldCBxdcOhIHRvbCA={tol:.4f})"
+            f"{ctx}: {name} {base_v:.4f} → {new_v:.4f} ({new_v - base_v:+.4f}, tụt quá tol {tol:.4f})"
         )
 
 def _check_regression(report, baseline, cfg: q_4, failures: list, notes: list) -> None:
     p_3d9, p_3d7 = report["overall"], baseline["overall"]
     q_ca("F1 macro", _metric(p_3d9, "f1_macro"), _metric(p_3d7, "f1_macro"),
               cfg.f1_tol, "overall", failures)
-    q_ca("RjEgxJHhu4tuaCBkYW5o", _metric(p_3d9, "f1_identifier"), _metric(p_3d7, "f1_identifier"),
+    q_ca("F1 định danh", _metric(p_3d9, "f1_identifier"), _metric(p_3d7, "f1_identifier"),
               cfg.ident_tol, "overall", failures)
 
     p_3d6, p_3d8 = baseline.get("by_field", {}), report.get("by_field", {})
     for name in sorted(p_3d6):
-        ctx = f"dHLGsOG7nW5nICc={name}'"
+        ctx = f"trường '{name}'"
         if name not in p_3d8:
             if cfg.require_baseline_fields:
-                failures.append(f"coverage: {ctx}IGPDsyB0cm9uZyBiYXNlbGluZSBuaMawbmcgVEhJ4bq+VSDhu58gcmVwb3J0")
+                failures.append(f"coverage: {ctx} có trong baseline nhưng THIẾU ở report")
             else:
-                notes.append(f"{ctx}IHRoaeG6v3Ug4bufIHJlcG9ydCAoYuG7jyBxdWEgdGhlbyAtLWFsbG93LW1pc3NpbmctZmllbGRzKQ==")
+                notes.append(f"{ctx} thiếu ở report (bỏ qua theo --allow-missing-fields)")
             continue
         q_ca("F1", _metric(p_3d8[name], "f1"), _metric(p_3d6[name], "f1"),
                   cfg.field_tol, ctx, failures)
 
     for name in sorted(p_3d8):
         if name not in p_3d6:
-            notes.append(f"dHLGsOG7nW5nIG3hu5tpICc={name}JyAoY2jGsGEgY8OzIGJhc2VsaW5lKSDigJQgY2jhu4kgw6FwIHPDoG4gbuG6v3UgYuG6rXQ=")
+            notes.append(f"trường mới '{name}' (chưa có baseline) — chỉ áp sàn nếu bật")
 
 def q_c2(report, floor: dict, failures: list) -> None:
     p_3de = floor.get("overall", {})
@@ -87,7 +87,7 @@ def q_c2(report, floor: dict, failures: list) -> None:
         for p_3dc in ("f1_macro", "f1_identifier", "f1_non_identifier"):
             p_3db, p_3e0 = _metric(p_3de, p_3dc), _metric(report["overall"], p_3dc)
             if p_3db is not None and p_3e0 is not None and p_3e0 < p_3db:
-                failures.append(f"c8OgbiBvdmVyYWxsOiA={p_3dc} {p_3e0:.4f}IDwgc8OgbiA={p_3db:.4f}")
+                failures.append(f"sàn overall: {p_3dc} {p_3e0:.4f} < sàn {p_3db:.4f}")
 
     p_3df = report.get("by_field", {})
     for name in sorted(floor.get("by_field", {})):
@@ -96,19 +96,19 @@ def q_c2(report, floor: dict, failures: list) -> None:
         p_3dd = p_3df.get(name)
         p_3e0 = _metric(p_3dd, "f1") if isinstance(p_3dd, dict) else None
         if p_3db is not None and p_3e0 is not None and p_3e0 < p_3db:
-            failures.append(f"c8OgbiB0csaw4budbmcgJw=={name}': F1 {p_3e0:.4f}IDwgc8OgbiA={p_3db:.4f}")
+            failures.append(f"sàn trường '{name}': F1 {p_3e0:.4f} < sàn {p_3db:.4f}")
 
 def q_c3(signoff: Optional[dict], required_fields, failures: list) -> None:
     if not isinstance(signoff, dict):
-        failures.append("wqdHNzogdGhp4bq/dSBjaOG7ryBrw70gbmfGsOG7nWkgxJHhu4tuaCBkYW5oIChnb2xkX3NpZ25vZmYuanNvbikg4oCUIGtow7RuZyDEkeG7jWMgxJHGsOG7o2Mva2jDtG5nIGPDsw==")
+        failures.append("§G7: thiếu chữ ký người định danh (gold_signoff.json) — không đọc được/không có")
         return
     if signoff.get("kind") != "human_identifier_signoff":
-        failures.append(f"§G7: signoff.kind='{signoff.get('kind')}JyBraMO0bmcgcGjhuqNpIGNo4buvIGvDvSBuZ8aw4budaSBo4bujcCBs4buH")
+        failures.append(f"§G7: signoff.kind='{signoff.get('kind')}' không phải chữ ký người hợp lệ")
     missing = set(required_fields) - set(signoff.get("fields", []))
     if missing:
-        failures.append(f"wqdHNzogY2jhu68ga8O9IG5nxrDhu51pIENIxq9BIHBo4bunIHRyxrDhu51uZyDEkeG7i25oIGRhbmgg{sorted(missing)}")
+        failures.append(f"§G7: chữ ký người CHƯA phủ trường định danh {sorted(missing)}")
     if not signoff.get("by") or not signoff.get("date"):
-        failures.append("wqdHNzogY2jhu68ga8O9IHRoaeG6v3UgJ2J5JyBob+G6t2MgJ2RhdGUnIOKAlCBraMO0bmcgxJHhu6cgdMawIGPDoWNoIChhaSBrw70/IGtoaSBuw6BvPyk=")
+        failures.append("§G7: chữ ký thiếu 'by' hoặc 'date' — không đủ tư cách (ai ký? khi nào?)")
 
 def evaluate(report: dict, baseline: Optional[dict], cfg: q_4) -> q_5:
     failures: list = []
@@ -117,8 +117,8 @@ def evaluate(report: dict, baseline: Optional[dict], cfg: q_4) -> q_5:
     if cfg.require_identifier_signoff:
         q_c3(cfg.identifier_signoff, PAGE_IDENTIFIER_FIELDS, failures)
     elif isinstance(cfg.identifier_signoff, dict):
-        notes.append(f"Y2jhu68ga8O9IG5nxrDhu51pIMSR4buLbmggZGFuaDog{cfg.identifier_signoff.get('by')} "
-                     f"@ {cfg.identifier_signoff.get('date')}ICh0aMO0bmcgdGluLCBjaMawYSBi4bqvdCBideG7mWMp")
+        notes.append(f"chữ ký người định danh: {cfg.identifier_signoff.get('by')} "
+                     f"@ {cfg.identifier_signoff.get('date')} (thông tin, chưa bắt buộc)")
 
     p_3e1 = report.get("meta", {}).get("eval_source")
     if cfg.require_gold and p_3e1 != "gold":
@@ -128,10 +128,10 @@ def evaluate(report: dict, baseline: Optional[dict], cfg: q_4) -> q_5:
             "--allow-silver nếu chỉ theo dõi xu hướng."
         )
     elif p_3e1 != "gold":
-        notes.append(f"eval_source='{p_3e1}JyDigJQgxJFvICdraOG7m3AgVkxNJywgS0jDlE5HIHBo4bqjaSAnxJHDum5nJyAoLS1hbGxvdy1zaWx2ZXIpLg==")
+        notes.append(f"eval_source='{p_3e1}' — đo 'khớp VLM', KHÔNG phải 'đúng' (--allow-silver).")
 
     if baseline is None:
-        notes.append("S2jDtG5nIGPDsyBiYXNlbGluZSDihpIgYuG7jyBraeG7g20gaOG7k2kgcXV5IChs4bqnbiDEkeG6p3UpLg==")
+        notes.append("Không có baseline → bỏ kiểm hồi quy (lần đầu).")
     else:
         _check_regression(report, baseline, cfg, failures, notes)
     if cfg.floor:
@@ -143,9 +143,9 @@ def _load_json(path: str, label: str) -> dict:
         with open(path, encoding="utf-8") as p_3e2:
             return json.load(p_3e2)
     except FileNotFoundError as e:
-        raise GateError(f"{label}OiBraMO0bmcgdGjhuqV5IGZpbGU6IA=={path}") from e
+        raise GateError(f"{label}: không thấy file: {path}") from e
     except json.JSONDecodeError as e:
-        raise GateError(f"{label}OiBKU09OIGjhu49uZyAo{e})") from e
+        raise GateError(f"{label}: JSON hỏng ({e})") from e
 
 def run(args: argparse.Namespace) -> int:
     try:
@@ -173,7 +173,7 @@ def run(args: argparse.Namespace) -> int:
         )
         p_3e5 = evaluate(report, baseline, cfg)
     except GateError as e:
-        print(f"TOG7lkk6IA=={e}", file=sys.stderr)
+        print(f"LỖI: {e}", file=sys.stderr)
         return 2
 
     for p_3e4 in p_3e5.notes:
@@ -187,21 +187,21 @@ def run(args: argparse.Namespace) -> int:
     return 1
 
 def main(argv=None) -> int:
-    p_3e6 = argparse.ArgumentParser(description="Q+G7lW5nIGjhu5NpIHF1eSBjaOG6pXQgbMaw4bujbmcgS0lFIChGMSkg4oCUIG5ow6FpIMKnUzEzLkIuMw==")
-    p_3e6.add_argument("--report", required=True, help="a2llX3JlcG9ydC5qc29uIGLhuqNuIG3hu5tpIChldmFsX2tpZS5weSBzaW5oKQ==")
-    p_3e6.add_argument("--baseline", default=None, help="a2llX2Jhc2VsaW5lLmpzb24gKGLhu48gdHLhu5FuZyA9IGzhuqduIMSR4bqndSk=")
-    p_3e6.add_argument("--floor", default=None, help="Zmxvb3IuanNvbiBzw6BuIEYxIHR1eeG7h3QgxJHhu5FpICh0deG7syBjaOG7jW4p")
+    p_3e6 = argparse.ArgumentParser(description="Cổng hồi quy chất lượng KIE (F1) — nhái §S13.B.3")
+    p_3e6.add_argument("--report", required=True, help="kie_report.json bản mới (eval_kie.py sinh)")
+    p_3e6.add_argument("--baseline", default=None, help="kie_baseline.json (bỏ trống = lần đầu)")
+    p_3e6.add_argument("--floor", default=None, help="floor.json sàn F1 tuyệt đối (tuỳ chọn)")
     p_3e6.add_argument("--tol", type=float, default=DEFAULT_F1_TOL,
-                    help=f"ZHVuZyBzYWkgRjEgbWFjcm8gKG3hurdjIMSR4buLbmgg{DEFAULT_F1_TOL})")
+                    help=f"dung sai F1 macro (mặc định {DEFAULT_F1_TOL})")
     p_3e6.add_argument("--id-tol", type=float, default=DEFAULT_IDENT_TOL,
-                    help=f"ZHVuZyBzYWkgRjEgbmjDs20gxJHhu4tuaCBkYW5oLCBjaOG6t3QgaMahbiAobeG6t2MgxJHhu4tuaCA={DEFAULT_IDENT_TOL})")
+                    help=f"dung sai F1 nhóm định danh, chặt hơn (mặc định {DEFAULT_IDENT_TOL})")
     p_3e6.add_argument("--field-tol", type=float, default=DEFAULT_FIELD_TOL,
-                    help=f"ZHVuZyBzYWkgRjEgdOG7q25nIHRyxrDhu51uZyAobeG6t2MgxJHhu4tuaCA={DEFAULT_FIELD_TOL})")
+                    help=f"dung sai F1 từng trường (mặc định {DEFAULT_FIELD_TOL})")
     p_3e6.add_argument("--allow-missing-fields", action="store_true",
                     help="KHÔNG fail khi trường trong baseline thiếu ở report "
                          "(mặc định = fail để chặn né trường khó)")
     p_3e6.add_argument("--allow-silver", action="store_true",
-                    help="Y2hvIHBow6lwIGfDoWMgY+G7lW5nIGLhurFuZyDEkWnhu4NtIHNpbHZlciAobeG6t2MgxJHhu4tuaCA9IMSRw7JpIGdvbGQgbmfGsOG7nWkgc2/DoXQp")
+                    help="cho phép gác cổng bằng điểm silver (mặc định = đòi gold người soát)")
     p_3e6.add_argument("--require-identifier-signoff", default=None, metavar="PATH",
                     help="đòi CHỮ KÝ NGƯỜI (gold_signoff.json) phủ nhóm định danh §G7 — "
                          "thiếu/không phủ đủ = FAIL")

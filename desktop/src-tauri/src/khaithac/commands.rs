@@ -78,7 +78,7 @@ pub fn kho_upsert(
     auth.require_perm(Permission::CatalogUpdate)?;
     if args.kho.ten_kho.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0w6puIGtobyBsxrB1IHRy4buvLg==",
+            "Thiếu tên kho lưu trữ.",
         ));
     }
     let r_1xh = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
@@ -116,13 +116,13 @@ pub fn gia_upsert(
     auth.require_perm(Permission::CatalogUpdate)?;
     if args.gia.ten_gia.trim().is_empty() {
         return Err(AppError::validation(
-            "VGhp4bq/dSB0w6puIGdpw6EgbMawdSB0cuG7ry4=",
+            "Thiếu tên giá lưu trữ.",
         ));
     }
     if let (Some(r_1xn), Some(r_1xl)) = (args.gia.tu_hop, args.gia.den_hop) {
         if r_1xl < r_1xn {
             return Err(AppError::validation(
-                "xJDhur9uIGjhu5lwIHBo4bqjaSDiiaUgVOG7qyBo4buZcC4=",
+                "Đến hộp phải ≥ Từ hộp.",
             ));
         }
     }

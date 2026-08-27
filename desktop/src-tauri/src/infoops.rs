@@ -64,7 +64,7 @@ pub async fn info_action(
         "approve" | "refuse" | "pay" | "generate" | "fulfill"
     ) {
         return Err(AppError::validation(format!(
-            "aMOgbmggxJHhu5luZyBraMO0bmcgaOG7o3AgbOG7hzog{}",
+            "hành động không hợp lệ: {}",
             args.action
         )));
     }
@@ -122,10 +122,10 @@ pub async fn info_download(
         Ok(r_1ws.to_string_lossy().into_owned())
     })
     .await
-    .map_err(|e| AppError::internal(format!("bHXhu5NuZyBsxrB1IGZpbGUgbOG7l2k6IA=={e}")))?
-    .map_err(|e| AppError::internal(format!("bMawdSBmaWxlIGzhu5dpOiA={e}")))?;
+    .map_err(|e| AppError::internal(format!("luồng lưu file lỗi: {e}")))?
+    .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     tracing::info!(
-        request = % args.id, "aW5mb19kb3dubG9hZDogxJHDoyBsxrB1IGvhur90IHF14bqj"
+        request = % args.id, "info_download: đã lưu kết quả"
     );
     Ok(r_1wt)
 }

@@ -23,23 +23,23 @@ pub struct Tgh {
 }
 #[derive(Debug, thiserror::Error)]
 pub enum PdfError {
-    #[error("a2jDtG5nIGPDsyB0cmFuZyBuw6BvIMSR4buDIGdow6lw")]
+    #[error("không có trang nào để ghép")]
     Empty,
-    #[error("trang {page}OiBrw61jaCB0aMaw4bubYy9EUEkga2jDtG5nIGjhu6NwIGzhu4c=")]
+    #[error("trang {page}: kích thước/DPI không hợp lệ")]
     BadPageSize { page: usize },
-    #[error("bcOjIGhvw6EgY29udGVudCBzdHJlYW0gbOG7l2k6IA=={0}")]
+    #[error("mã hoá content stream lỗi: {0}")]
     Encode(String),
-    #[error("Z2hpIFBERiBs4buXaTog{0}")]
+    #[error("ghi PDF lỗi: {0}")]
     Save(String),
-    #[error("dMOhY2gg4bqjbmggdHJhbmcgbOG7l2k6IA=={0}")]
+    #[error("tách ảnh trang lỗi: {0}")]
     NoPageImage(String),
     #[error(
-        "trang {page}IGtow7RuZyBjw7Mg4bqjbmggSlBFRyBuaMO6bmcgKERDVERlY29kZSkg4oCUIGPhuqduIHJhc3RlciBob8Oh"
+        "trang {page} không có ảnh JPEG nhúng (DCTDecode) — cần raster hoá"
     )]
     PageNotJpeg { page: i32 },
-    #[error("Zm9udCBUVEYga2jDtG5nIMSR4buNYyDEkcaw4bujYzog{0}")]
+    #[error("font TTF không đọc được: {0}")]
     BadFont(String),
-    #[error("Zm9udCB0aGnhur91IGdseXBoIGNobyBrw70gdOG7sSA={0:?}")]
+    #[error("font thiếu glyph cho ký tự {0:?}")]
     MissingGlyph(char),
 }
 fn f_24n(dpi: u32) -> f32 {
@@ -177,11 +177,11 @@ pub fn f_1b5(pdf: &[u8], page_no: i32) -> Result<(Vec<u8>, Option<u32>), PdfErro
     let r_49p =
         Document::load_mem(pdf).map_err(|e| PdfError::NoPageImage(format!("load PDF: {e}")))?;
     let r_49t = u32::try_from(page_no)
-        .map_err(|_| PdfError::NoPageImage(format!("page_no {page_no}IGtow7RuZyBo4bujcCBs4buH")))?;
+        .map_err(|_| PdfError::NoPageImage(format!("page_no {page_no} không hợp lệ")))?;
     let pages = r_49p.get_pages();
     let r_49s = *pages.get(&r_49t).ok_or_else(|| {
         PdfError::NoPageImage(format!(
-            "a2jDtG5nIGPDsyB0cmFuZyA={page_no} (PDF {} trang)",
+            "không có trang {page_no} (PDF {} trang)",
             pages.len()
         ))
     })?;
@@ -277,7 +277,7 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
                 has_image: false,
                 min_dpi: None,
                 min_bit_depth: None,
-                reason: Some(format!("a2jDtG5nIG3hu58gxJHGsOG7o2MgUERGOiA={e}")),
+                reason: Some(format!("không mở được PDF: {e}")),
             };
         }
     };
@@ -291,7 +291,7 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
             has_image: false,
             min_dpi: None,
             min_bit_depth: None,
-            reason: Some("UERGIMSRxrDhu6NjIG3DoyBob8OhIChQREYvQSBraMO0bmcgY2hvIHBow6lwKQ==".into()),
+            reason: Some("PDF được mã hoá (PDF/A không cho phép)".into()),
         };
     }
     let pages = r_4a5.get_pages();
@@ -363,30 +363,30 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
     }
     let has_text_layer = pages_with_text > 0;
     let reason = if n == 0 {
-        Some("UERGIGtow7RuZyBjw7MgdHJhbmcgbsOgbw==".into())
+        Some("PDF không có trang nào".into())
     } else if matches!(r_4a6, Some(exp) if exp > 0 && exp as usize != n) {
         Some(format!(
-            "c+G7kSB0cmFuZyBs4buHY2g6IFBERiA={n}IHRyYW5nLCB0w6BpIGxp4buHdSBnaGkg{} trang",
+            "số trang lệch: PDF {n} trang, tài liệu ghi {} trang",
             r_4a6.unwrap()
         ))
     } else if !has_text_layer {
         Some(
-            "bOG7m3AgdGV4dCBy4buXbmcgdG/DoG4gYuG7mSAoT0NSIGtow7RuZyByYSBjaOG7ryBuw6BvIOKAlCBraMO0bmcgcGjhuqNpIFBERiAyIGzhu5twIHRyYS1j4bupdS3Ekcaw4bujYyk="
+            "lớp text rỗng toàn bộ (OCR không ra chữ nào — không phải PDF 2 lớp tra-cứu-được)"
                 .into(),
         )
     } else if !has_image {
-        Some("dGhp4bq/dSDhuqNuaCBu4buBbiB0cmFuZw==".into())
+        Some("thiếu ảnh nền trang".into())
     } else if matches!(min_bit_depth, Some(d) if d < FM1_MIN_BIT_DEPTH) {
         Some(
             format!(
-                "4bqjbmggbuG7gW4g{}IGJpdCDigJQgRk0tMSAoxJBp4buBdSA4LjIuYSkgxJHDsmkg4bqjbmggbcOgdSB04buRaSB0aGnhu4N1IA=={FM1_MIN_BIT_DEPTH} bit",
+                "ảnh nền {} bit — FM-1 (Điều 8.2.a) đòi ảnh màu tối thiểu {FM1_MIN_BIT_DEPTH} bit",
                 min_bit_depth.unwrap()
             ),
         )
     } else if matches!(min_dpi, Some(d) if d < FM1_MIN_DPI) {
         Some(
             format!(
-                "xJHhu5kgcGjDom4gZ2nhuqNpIA=={}IGRwaSDigJQgRk0tMSAoxJBp4buBdSA4LjIuYSkgxJHDsmkgdOG7kWkgdGhp4buDdSA={FM1_MIN_DPI}IGRwaSB24bubaSB0w6BpIGxp4buHdSBow6BuaCBjaMOtbmggKDMwMCBkcGkgduG7m2kgYuG6o24gxJHhu5MsIGLhuqNuIHbhur0p",
+                "độ phân giải {} dpi — FM-1 (Điều 8.2.a) đòi tối thiểu {FM1_MIN_DPI} dpi với tài liệu hành chính (300 dpi với bản đồ, bản vẽ)",
                 min_dpi.unwrap()
             ),
         )
@@ -1208,14 +1208,14 @@ pub fn f_ve(
         });
     };
     r_4f6(
-        "Q+G7mE5HIEhPw4AgWMODIEjhu5hJIENI4bumIE5HSMSoQSBWSeG7hlQgTkFN".into(),
+        "CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(),
         12.0,
         true,
         0.0,
         C_7D,
     );
     r_4f6(
-        "xJDhu5ljIGzhuq1wIC0gVOG7sSBkbyAtIEjhuqFuaCBwaMO6Yw==".into(),
+        "Độc lập - Tự do - Hạnh phúc".into(),
         11.5,
         true,
         0.0,
@@ -1499,7 +1499,7 @@ pub fn f_2h7(pdf: &[u8], r_4gh: &str, r_4g4: bool, r_4gc: &[u8]) -> Result<Vec<u
         }
     }
     let r_4gi = f_2eo(&r_4ga, r_4gh)?;
-    let r_4g6 = "QuG6ok4gU0FP";
+    let r_4g6 = "BẢN SAO";
     let r_4g5 = f_2eo(&r_4ga, r_4g6)?;
     let mut r_4go: Vec<(char, u16, u16)> = Vec::new();
     for (text, r_4gn) in [(r_4gh, &r_4gi), (r_4g6, &r_4g5)] {

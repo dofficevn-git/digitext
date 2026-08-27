@@ -99,10 +99,10 @@ def run(path: Path, dpi: int, pages: str | None, device: str, out_dir: Path | No
         text = q_14a(p_919)
         fields = q_112(text)
 
-        print(f"\n{'=' * 70}\nTRANG {p_91a}  ({len(p_919)}IGTDsm5nKSDigJQgVmlldE9DUgo={'=' * 70}")
-        print("4pSA4pSAIFRFWFQgVEjDlCAodGjhu6kgdOG7sSDEkeG7jWMpIOKUgOKUgA==")
+        print(f"\n{'=' * 70}\nTRANG {p_91a}  ({len(p_919)} dòng) — VietOCR\n{'=' * 70}")
+        print("── TEXT THÔ (thứ tự đọc) ──")
         print(text)
-        print("CuKUgOKUgCBUUsav4bucTkcgSOG7kiBTxqAgKGhldXJpc3RpYykg4pSA4pSA")
+        print("\n── TRƯỜNG HỒ SƠ (heuristic) ──")
         print(json.dumps(fields, ensure_ascii=False, indent=2))
 
         if out_dir:
@@ -111,18 +111,18 @@ def run(path: Path, dpi: int, pages: str | None, device: str, out_dir: Path | No
                 json.dumps(fields, ensure_ascii=False, indent=2), encoding="utf-8"
             )
     if out_dir:
-        print(f"CuKchSDEkMOjIGdoaSB0ZXh0L2pzb24gdsOgbzog{out_dir}")
+        print(f"\n✅ Đã ghi text/json vào: {out_dir}")
 
 def main(argv=None):
-    p_91b = argparse.ArgumentParser(description="T0NSIHRp4bq/bmcgVmnhu4d0OiBQYWRkbGVPQ1ItZGV0ICsgVmlldE9DUi1yZWMgKEdQVSk=")
-    p_91b.add_argument("file", type=Path, help="UERGIGhv4bq3YyDhuqNuaA==")
+    p_91b = argparse.ArgumentParser(description="OCR tiếng Việt: PaddleOCR-det + VietOCR-rec (GPU)")
+    p_91b.add_argument("file", type=Path, help="PDF hoặc ảnh")
     p_91b.add_argument("--dpi", type=int, default=300)
-    p_91b.add_argument("--pages", default=None, help="dmQgJzEnIGhv4bq3YyAnMS0zJyAobeG6t2MgxJHhu4tuaDogdOG6pXQgY+G6oyk=")
-    p_91b.add_argument("--device", default="cuda:0", help="Y3VkYTowIChHUFUpIGhv4bq3YyBjcHU=")
+    p_91b.add_argument("--pages", default=None, help="vd '1' hoặc '1-3' (mặc định: tất cả)")
+    p_91b.add_argument("--device", default="cuda:0", help="cuda:0 (GPU) hoặc cpu")
     p_91b.add_argument("--out", type=Path, default=None)
     p_91c = p_91b.parse_args(argv)
     if not p_91c.file.exists():
-        raise SystemExit(f"4p2MIGtow7RuZyB0aOG6pXkgZmlsZTog{p_91c.file}")
+        raise SystemExit(f"❌ không thấy file: {p_91c.file}")
     run(p_91c.file, p_91c.dpi, p_91c.pages, p_91c.device, p_91c.out)
 
 if __name__ == "__main__":

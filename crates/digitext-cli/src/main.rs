@@ -21,7 +21,7 @@ fn main() -> ExitCode {
         Route::Wipe => digitext_cli::wipe::cli_main("digitext wipe", r_1wk),
         Route::Tt02 => digitext_cli::tt02::cli_main("digitext tt02", r_1wk),
         Route::Unknown(cmd) => {
-            eprintln!("bOG7h25oIGtow7RuZyByw7U6IA=={cmd}\n");
+            eprintln!("lệnh không rõ: {cmd}\n");
             eprint!("{}", help_text());
             ExitCode::from(2)
         }

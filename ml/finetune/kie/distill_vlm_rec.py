@@ -18,7 +18,7 @@ LINE_PROMPT = (
     "Đọc CHÍNH XÁC dòng chữ tiếng Việt trong ảnh. Chỉ trả về đúng văn bản trên dòng, "
     "giữ nguyên dấu và chữ hoa/thường, KHÔNG giải thích, KHÔNG thêm dấu nháy."
 )
-_DATE = re.compile("\\d{1,2}\\s*[/-]\\s*\\d{1,2}\\s*[/-]\\s*\\d{2,4}fG5nw6B5XHMrXGR8dGjDoW5nXHMrXGQ=", re.I)
+_DATE = re.compile("\\d{1,2}\\s*[/-]\\s*\\d{1,2}\\s*[/-]\\s*\\d{2,4}|ngày\\s+\\d|tháng\\s+\\d", re.I)
 
 def q_117(bboxes: list[list[float]], y_tol_frac: float = 0.6) -> list[list[int]]:
     if not bboxes:
@@ -97,21 +97,21 @@ def main(argv: list[str] | None = None) -> int:
     p_2e0.add_argument("data_dir")
     p_2e0.add_argument("--endpoint", default="http://127.0.0.1:8003/v1/chat/completions")
     p_2e0.add_argument("--model", default="Qwen2.5-VL-7B-Instruct-AWQ")
-    p_2e0.add_argument("--limit", type=int, default=500, help="c+G7kSBUUkFORyBCSU8geOG7rSBsw70gKHBpbG90IDUwMCk=")
+    p_2e0.add_argument("--limit", type=int, default=500, help="số TRANG BIO xử lý (pilot 500)")
     p_2e0.add_argument("--offset", type=int, default=0,
-                    help="QuG7jiBRVUEgbiB0cmFuZyDEkeG6p3Ug4oCUIGTDuW5nIMSR4buDIGzhuqV5IHRyYW5nIE3hu5pJIGzDoG0gZXZhbCBoZWxkLW91dCAoa2jDtG5nIG5oaeG7hW0gdHJhaW4p")
+                    help="BỎ QUA n trang đầu — dùng để lấy trang MỚI làm eval held-out (không nhiễm train)")
     p_2e0.add_argument("--dpi", type=int, default=150)
     p_2e0.add_argument("--pad", type=int, default=4)
     p_2e0.add_argument("--timeout", type=int, default=120)
     p_2e0.add_argument("--max-disagree", type=float, default=0.3,
-                    help="Z2nhu68gZMOybmcgbuG6v3UgQ0VSKFZMTSxUcml0b24pIOKJpCBuZ8aw4buhbmcgKGxv4bqhaSByw6FjIG5vbi10ZXh0IDIgZW5naW5lIGLhuqV0IMSR4buTbmcp")
+                    help="giữ dòng nếu CER(VLM,Triton) ≤ ngưỡng (loại rác non-text 2 engine bất đồng)")
     p_2e0.add_argument("--out-dir", default="data/rec_distill")
-    p_2e0.add_argument("--dry-run", action="store_true", help="Y2jhu4kgZ29tIGTDsm5nICsgbOG7jWMsIEtIw5RORyBn4buNaSBWTE0gKMSR4bq/bSk=")
+    p_2e0.add_argument("--dry-run", action="store_true", help="chỉ gom dòng + lọc, KHÔNG gọi VLM (đếm)")
     p_2df = p_2e0.parse_args(argv)
 
     p_2e1, data_dir = Path(p_2df.bio_jsonl), Path(p_2df.data_dir)
     if not p_2e1.is_file():
-        print(f"TOG7lkk6IGtow7RuZyB0aOG6pXkg{p_2e1}", file=sys.stderr)
+        print(f"LỖI: không thấy {p_2e1}", file=sys.stderr)
         return 2
     p_2ec = load_jsonl(p_2e1)[p_2df.offset : p_2df.offset + p_2df.limit]
     p_2eb = Path(p_2df.out_dir)
@@ -152,9 +152,9 @@ def main(argv: list[str] | None = None) -> int:
     if not p_2df.dry_run:
         (p_2eb / "pairs.txt").write_text("\n".join(pairs) + "\n", encoding="utf-8")
 
-    print(f"trang {len(p_2ec)}IHwgZMOybmcg{p_2e8}IHwgYm9keS10ZXh0IChzYXUgbOG7jWMgxJHhu4tuaCBkYW5oKSA={p_2e7}", file=sys.stderr)
+    print(f"trang {len(p_2ec)} | dòng {p_2e8} | body-text (sau lọc định danh) {p_2e7}", file=sys.stderr)
     if not p_2df.dry_run:
-        print(f"  VLM transcribe OK {p_2e9}IGPhurdwIChi4buPIA=={p_2ea}) → {p_2eb}/pairs.txt", file=sys.stderr)
+        print(f"  VLM transcribe OK {p_2e9} cặp (bỏ {p_2ea}) → {p_2eb}/pairs.txt", file=sys.stderr)
     return 0
 
 if __name__ == "__main__":

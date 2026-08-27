@@ -38,7 +38,7 @@ export function V49u({ data, setData: Vov }: V49k) {
   return (
     <>
       <V49a<V3yq>
-        addLabel="VGjDqm0gbG/huqFpIHTDoGkgbGnhu4d1"
+        addLabel="Thêm loại tài liệu"
         onAdd={
           !Voy.canCreate
             ? undefined
@@ -50,8 +50,8 @@ export function V49u({ data, setData: Vov }: V49k) {
           r.tenLoai.toLowerCase().includes(q) || r.maLoai.toLowerCase().includes(q)
         }
         columns={[
-          { head: "TcOjIGxv4bqhaSB0w6BpIGxp4buHdQ==", cell: (r) => r.maLoai, cls: "tnum" },
-          { head: "VMOqbiBsb+G6oWkgdMOgaSBsaeG7h3U=", cell: (r) => r.tenLoai },
+          { head: "Mã loại tài liệu", cell: (r) => r.maLoai, cls: "tnum" },
+          { head: "Tên loại tài liệu", cell: (r) => r.tenLoai },
         ]}
         rowActions={(r) =>
           V49o(
@@ -67,13 +67,13 @@ export function V49u({ data, setData: Vov }: V49k) {
         <Modal
           title={
             Vow.mode === "add"
-              ? "VGjDqm0gbG/huqFpIHTDoGkgbGnhu4d1"
-              : "Q+G6rXAgbmjhuq10IGxv4bqhaSB2xINuIGLhuqNu"
+              ? "Thêm loại tài liệu"
+              : "Cập nhật loại văn bản"
           }
           onClose={() => Vox(null)}
           onSave={Voz}
         >
-          <V49j label="TcOjIGxv4bqhaSB0w6BpIGxp4buHdQ==">
+          <V49j label="Mã loại tài liệu">
             <input
               className="inp"
               value={Vow.draft.maLoai}
@@ -81,7 +81,7 @@ export function V49u({ data, setData: Vov }: V49k) {
               onChange={(Vp5) => Vox({ ...Vow, draft: { ...Vow.draft, maLoai: Vp5.target.value } })}
             />
           </V49j>
-          <V49j label="VMOqbiBsb+G6oWkgdMOgaSBsaeG7h3U=">
+          <V49j label="Tên loại tài liệu">
             <input
               className="inp"
               value={Vow.draft.tenLoai}

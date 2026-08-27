@@ -46,14 +46,14 @@ export default function V4wp() {
       className="uw"
       role="status"
       aria-live="polite"
-      aria-label="VHLhuqFuZyB0aMOhaSB04bqjaSBsw6pu"
+      aria-label="Trạng thái tải lên"
     >
       <header className="uw-head">
         <span className="uw-title">{V445(V363)}</span>
         <button
           className="uw-iconbtn"
           onClick={V369}
-          title={V363.collapsed ? "TeG7nyBy4buZbmcgYuG6o25n" : "VGh1IG5o4buPIGLhuqNuZw=="}
+          title={V363.collapsed ? "Mở rộng bảng" : "Thu nhỏ bảng"}
           aria-expanded={!V363.collapsed}
         >
           <Icon name={V363.collapsed ? "len" : "xuong"} size={14} />
@@ -64,8 +64,8 @@ export default function V4wp() {
           disabled={V36j}
           title={
             V36j
-              ? "xJBhbmcgdOG6o2kgbMOqbiDigJQgdGh1IG5o4buPIGLhuqNuZywgaG/hurdjIGjhu6d5IHBoacOqbiB0csaw4bubYyBraGkgxJHDs25n"
-              : "xJDDs25nIGLhuqNuZw=="
+              ? "Đang tải lên — thu nhỏ bảng, hoặc hủy phiên trước khi đóng"
+              : "Đóng bảng"
           }
         >
           <Icon name="dong" size={14} />
@@ -109,8 +109,8 @@ export default function V4wp() {
               <>
                 <span>
                   {V36i.done} tệp lên máy chủ
-                  {V36i.errors > 0 ? ` · ${V36i.errors}IGzhu5dp` : ""}
-                  {V36i.cancelled > 0 ? ` · ${V36i.cancelled}IMSRw6MgaOG7p3k=` : ""}
+                  {V36i.errors > 0 ? ` · ${V36i.errors} lỗi` : ""}
+                  {V36i.cancelled > 0 ? ` · ${V36i.cancelled} đã hủy` : ""}
                 </span>
                 <span className="flex-1" />
                 {V36g.length > 0 && (
@@ -170,7 +170,7 @@ function V4wq({
           <button
             className="uw-name"
             onClick={V36s}
-            title={`TeG7nyB24buLIHRyw60gbMawdTog${V36m.filename}`}
+            title={`Mở vị trí lưu: ${V36m.filename}`}
           >
             {V36m.filename}
           </button>
@@ -181,7 +181,7 @@ function V4wq({
         )}
         <div className={`uw-detail${V36m.state === "error" ? " err" : ""}`}>
           {V446(V36m, V36n)}
-          {V36o ? "IMK3IMSRYW5nIGNo4budIGfhu61pIGzhuqFp" : ""}
+          {V36o ? " · đang chờ gửi lại" : ""}
         </div>
       </div>
       {V44c(V36m) && (
@@ -190,8 +190,8 @@ function V4wq({
           onClick={V36q}
           title={
             V36o
-              ? "xJBhbmcgY2jhu50gdOG7m2kgbMaw4bujdCBn4butaSBs4bqhaQ=="
-              : "R+G7rWkgbOG6oWkgdOG7h3AgbsOgeSBsw6puIG3DoXkgY2jhu6c="
+              ? "Đang chờ tới lượt gửi lại"
+              : "Gửi lại tệp này lên máy chủ"
           }
         >
           <Icon name={V36o ? "dangCho" : "lamMoi"} size={14} />
@@ -201,7 +201,7 @@ function V4wq({
         <button
           className="uw-iconbtn"
           onClick={V36s}
-          title="xJBpIMSR4bq/biB24buLIHRyw60gbMawdSB04buHcA=="
+          title="Đi đến vị trí lưu tệp"
         >
           <Icon name="thuMuc" size={14} />
         </button>
@@ -209,7 +209,7 @@ function V4wq({
       <button
         className="uw-iconbtn"
         onClick={V36u ? V36p : V36r}
-        title={V36u ? "SOG7p3kgdOG6o2kgdOG7h3AgbsOgeQ==" : "4bqobiBraOG7j2kgYuG6o25n"}
+        title={V36u ? "Hủy tải tệp này" : "Ẩn khỏi bảng"}
       >
         <Icon name="dong" size={14} />
       </button>
@@ -218,7 +218,7 @@ function V4wq({
 }
 
 function V4wr({ item: V36v }: { item: V43p }) {
-  if (V36v.state === "uploading") return <V4wj pct={V43z(V36v)} label="xJBhbmcgdOG6o2kgbMOqbg==" />;
+  if (V36v.state === "uploading") return <V4wj pct={V43z(V36v)} label="Đang tải lên" />;
 
   return <V4wk state={V36v.state} />;
 }

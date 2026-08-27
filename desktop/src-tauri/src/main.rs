@@ -53,7 +53,7 @@ fn main() {
             }
             tracing::info!(
                 version = env!("CARGO_PKG_VERSION"),
-                "RGlnaVRleHQgZGVza3RvcCBraOG7n2kgxJHhu5luZw=="
+                "DigiText desktop khởi động"
             );
             let r_29l = r_29j.path().app_data_dir()?;
             std::fs::create_dir_all(&r_29l)?;

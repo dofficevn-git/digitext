@@ -13,9 +13,9 @@ import { V4su, V4sn, V4sk, V4ss, type V4sm, type V4sj } from "./packageWire";
 import { Icon } from "@/components/Icon";
 
 const V4sv: Record<string, string> = {
-  queued: "Q2jhu50gZOG7sW5n",
-  building: "xJBhbmcgZOG7sW5n",
-  built: "SG/DoG4gdOG6pXQ=",
+  queued: "Chờ dựng",
+  building: "Đang dựng",
+  built: "Hoàn tất",
   failed: "TOG7l2k=",
 };
 
@@ -53,7 +53,7 @@ export default function V4sx() {
     try {
       V2p6(await V4ru());
     } catch (V2pr) {
-      V2pi(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIGRhbmggc8OhY2ggZ8OzaTog${String(V2pr)}`);
+      V2pi(`Không tải được danh sách gói: ${String(V2pr)}`);
     }
   }, []);
 
@@ -85,12 +85,12 @@ export default function V4sx() {
       if (V2py.length === 0) {
         V2pi(
           V2px
-            ? `S2jDtG5nIGPDsyB0w6BpIGxp4buHdSBuw6BvIHRyw6puIG3DoXkgY2jhu6cga2jhu5twIG3DoyBo4buTIHPGoSAi${V2px}".`
-            : "TcOheSBjaOG7pyBjaMawYSBjw7MgdMOgaSBsaeG7h3UgbsOgbyB0cm9uZyBwaOG6oW0gdmkgY+G7p2EgYuG6oW4u",
+            ? `Không có tài liệu nào trên máy chủ khớp mã hồ sơ "${V2px}".`
+            : "Máy chủ chưa có tài liệu nào trong phạm vi của bạn.",
         );
       }
     } catch (V2pz) {
-      V2pi(`S2jDtG5nIHThuqNpIMSRxrDhu6NjIHTDoGkgbGnhu4d1IHThu6sgbcOheSBjaOG7pzog${String(V2pz)}`);
+      V2pi(`Không tải được tài liệu từ máy chủ: ${String(V2pz)}`);
     } finally {
       V2pg(false);
     }
@@ -129,11 +129,11 @@ export default function V4sx() {
         request: V2q6,
       });
       V2pi(
-        `xJDDoyB04bqhbyB5w6p1IGPhuqd1IMSRw7NuZyBnw7NpICI=${row.label}IiDigJQgbcOheSBjaOG7pyBz4bq9IGThu7FuZyBnw7NpIG7hu4FuLg==`,
+        `Đã tạo yêu cầu đóng gói "${row.label}" — máy chủ sẽ dựng gói nền.`,
       );
       await V2pq();
     } catch (V2qa) {
-      V2pi(`VOG6oW8gecOqdSBj4bqndSB0aOG6pXQgYuG6oWk6IA==${String(V2qa)}`);
+      V2pi(`Tạo yêu cầu thất bại: ${String(V2qa)}`);
     } finally {
       V2pg(false);
     }
@@ -144,9 +144,9 @@ export default function V4sx() {
     V2pg(true);
     try {
       const path = await V4rw(row.id, row.zipName);
-      V2pi(`xJDDoyBsxrB1IGfDs2kgdGluOiA=${path}`);
+      V2pi(`Đã lưu gói tin: ${path}`);
     } catch (V2qc) {
-      V2pi(`VOG6o2kgZ8OzaSB0aOG6pXQgYuG6oWk6IA==${String(V2qc)}`);
+      V2pi(`Tải gói thất bại: ${String(V2qc)}`);
     } finally {
       V2pg(false);
     }
@@ -204,7 +204,7 @@ export default function V4sx() {
           {!V2pp && (
             <>
               <div className="field">
-                <label>{V2po ? "TcOjIGjhu5Mgc8ahIGzGsHUgdHLhu68=" : "TcOjIGfDs2kgdGlu"}</label>
+                <label>{V2po ? "Mã hồ sơ lưu trữ" : "Mã gói tin"}</label>
                 <input
                   className="inp"
                   value={V2ox.fileCode}
@@ -442,7 +442,7 @@ export default function V4sx() {
                   className="inp"
                   value={V2ox.certTenLoai}
                   onChange={(V2r3) => set("certTenLoai", V2r3.target.value)}
-                  placeholder="UXV54bq/dCDEkeG7i25o"
+                  placeholder="Quyết định"
                 />
               </div>
               <div className="field">
@@ -488,7 +488,7 @@ export default function V4sx() {
               className="inp"
               value={V2oz}
               onChange={(V2r8) => V2p0(V2r8.target.value)}
-              placeholder="SOG7mXAgMDEvSOG7kyBzxqEgMDAx"
+              placeholder="Hộp 01/Hồ sơ 001"
             />
           </div>
           <button className="btn" onClick={() => void V2pv()} disabled={V2pf || !isTauri()}>

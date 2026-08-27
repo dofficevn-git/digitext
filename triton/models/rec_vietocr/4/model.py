@@ -42,16 +42,16 @@ class TritonPythonModel:
         p_a2c = self.sess[REC_W][0].get_providers()[0]
         if p_a2c != "CUDAExecutionProvider":
             print(
-                f"V0FSTiByZWNfdmlldG9jciB2NDogcHJvdmlkZXIgVEjhu7BDIFThur4gPSA={p_a2c} (rớt về CPU) — thiếu "
+                f"WARN rec_vietocr v4: provider THỰC TẾ = {p_a2c} (rớt về CPU) — thiếu "
                 "onnxruntime-gpu/CUDA trong python backend; MẤT mức tăng GPU, health vẫn xanh.",
                 file=sys.stderr, flush=True,
             )
         else:
-            print("SU5GTyByZWNfdmlldG9jciB2NDogQ1VEQUV4ZWN1dGlvblByb3ZpZGVyIGhv4bqhdCDEkeG7mW5nLg==", file=sys.stderr, flush=True)
+            print("INFO rec_vietocr v4: CUDAExecutionProvider hoạt động.", file=sys.stderr, flush=True)
 
     def execute(self, requests):
         if not self.sess or cv2 is None:
-            raise pb_utils.TritonModelException("cmVjX3ZpZXRvY3I6IG9ubnhydW50aW1lL2N2Mi9tb2RlbCBjaMawYSBz4bq1biBzw6BuZw==")
+            raise pb_utils.TritonModelException("rec_vietocr: onnxruntime/cv2/model chưa sẵn sàng")
         p_a31 = []
         for p_a30 in requests:
             img = pb_utils.get_input_tensor_by_name(p_a30, "image").as_numpy()

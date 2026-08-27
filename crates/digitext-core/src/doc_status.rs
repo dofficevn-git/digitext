@@ -89,7 +89,7 @@ impl fmt::Display for DocStatus {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("dHLhuqFuZyB0aMOhaSB0w6BpIGxp4buHdSBraMO0bmcgaOG7o3AgbOG7hzog{0:?}")]
+#[error("trạng thái tài liệu không hợp lệ: {0:?}")]
 pub struct Tgl(pub String);
 impl FromStr for DocStatus {
     type Err = Tgl;

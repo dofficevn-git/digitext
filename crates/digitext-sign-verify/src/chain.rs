@@ -24,7 +24,7 @@ impl TrustStore {
         if roots.is_empty() {
             return Err(
                 SignError::Cms(
-                    "dHJ1c3Qgc3RvcmUgcuG7l25nOiBraMO0bmcgY8OzIGto4buRaSBDRVJUSUZJQ0FURSBuw6BvIHRyb25nIFBFTQ=="
+                    "trust store rỗng: không có khối CERTIFICATE nào trong PEM"
                         .into(),
                 ),
             );
@@ -83,7 +83,7 @@ impl TrustStore {
         if !f_1fy(r_4ka) {
             return Err(
                 SignError::Cms(
-                    "Y2VydCBUU0EgdGhp4bq/dSBFS1UgaWQta3AtdGltZVN0YW1waW5nIChraMO0bmcgcGjhuqNpIGNlcnQgxJHDs25nIGThuqV1IHRo4budaSBnaWFuKQ=="
+                    "cert TSA thiếu EKU id-kp-timeStamping (không phải cert đóng dấu thời gian)"
                         .into(),
                 ),
             );
@@ -98,10 +98,10 @@ impl TrustStore {
     ) -> Result<(), SignError> {
         if self.roots.is_empty() {
             return Err(SignError::Cms(
-                "dHJ1c3Qgc3RvcmUgY2jGsGEgxJHGsOG7o2MgY+G6pXUgaMOsbmg=".into(),
+                "trust store chưa được cấu hình".into(),
             ));
         }
-        f_ye(r_4ke, at_unix, "Y2VydCBuZ8aw4budaSBrw70=")?;
+        f_ye(r_4ke, at_unix, "cert người ký")?;
         f_yc(r_4ke)?;
         let mut r_4kb = r_4ke.clone();
         for depth in 0..MAX_DEPTH {
@@ -113,12 +113,12 @@ impl TrustStore {
                 .ok_or_else(|| {
                     SignError::Cms(
                         format!(
-                            "a2jDtG5nIHTDrG0gxJHGsOG7o2MgY+G6pXAgcGjDoXQgdGluIGPhuq15IGNobyAn{}JyAoxJHhu5kgc8OidSA={depth})",
+                            "không tìm được cấp phát tin cậy cho '{}' (độ sâu {depth})",
                             r_4kb.tbs_certificate.subject
                         ),
                     )
                 })?;
-            f_ye(&r_4kd, at_unix, "Y2VydCBj4bqlcCBwaMOhdA==")?;
+            f_ye(&r_4kd, at_unix, "cert cấp phát")?;
             if self.is_root(&r_4kd) {
                 return Ok(());
             }
@@ -128,7 +128,7 @@ impl TrustStore {
         Err(
             SignError::Cms(
                 format!(
-                    "Y2h14buXaSBjaOG7qW5nIHRoxrAgdsaw4bujdCDEkeG7mSBzw6J1IHThu5FpIMSRYSA={MAX_DEPTH}IG3DoCBjaMawYSB04bubaSByb290IHRpbiBj4bqteQ=="
+                    "chuỗi chứng thư vượt độ sâu tối đa {MAX_DEPTH} mà chưa tới root tin cậy"
                 ),
             ),
         )
@@ -153,7 +153,7 @@ fn f_2fb(r_4kj: &Certificate, r_4kk: &Certificate) -> Result<bool, SignError> {
         return Err(
             SignError::Cms(
                 format!(
-                    "dGh14bqtdCB0b8OhbiBrw70gY2VydCBraMO0bmcgaOG7lyB0cuG7ozog{}IChjaOG7iSBzaGEyNTZXaXRoUlNBKQ==",
+                    "thuật toán ký cert không hỗ trợ: {} (chỉ sha256WithRSA)",
                     r_4kj.signature_algorithm.oid
                 ),
             ),
@@ -179,14 +179,14 @@ fn f_ye(cert: &Certificate, at_unix: i64, what: &str) -> Result<(), SignError> {
         return Err(
             SignError::Cms(
                 format!(
-                    "{what}IGNoxrBhIGPDsyBoaeG7h3UgbOG7sWMgdOG6oWkgdGjhu51pIMSRaeG7g20ga8O9ICg={at_unix} < {nb})"
+                    "{what} chưa có hiệu lực tại thời điểm ký ({at_unix} < {nb})"
                 ),
             ),
         );
     }
     if at_unix > na {
         return Err(SignError::Cms(format!(
-            "{what}IMSRw6MgaOG6v3QgaOG6oW4gdOG6oWkgdGjhu51pIMSRaeG7g20ga8O9ICg={at_unix} > {na})"
+            "{what} đã hết hạn tại thời điểm ký ({at_unix} > {na})"
         )));
     }
     Ok(())
@@ -200,7 +200,7 @@ fn f_yc(cert: &Certificate) -> Result<(), SignError> {
     if r_4km & 0b1100_0000 == 0 {
         return Err(
             SignError::Cms(
-                "Y2VydCBuZ8aw4budaSBrw70ga2jDtG5nIGPDsyBLZXlVc2FnZSBkaWdpdGFsU2lnbmF0dXJlL25vblJlcHVkaWF0aW9u"
+                "cert người ký không có KeyUsage digitalSignature/nonRepudiation"
                     .into(),
             ),
         );
@@ -210,14 +210,14 @@ fn f_yc(cert: &Certificate) -> Result<(), SignError> {
 fn f_y2(cert: &Certificate) -> Result<(), SignError> {
     let Some(r_4kp) = f_1cv(cert, C_EO) else {
         return Err(SignError::Cms(
-            "Y2VydCB0cnVuZyBnaWFuIHRoaeG6v3UgYmFzaWNDb25zdHJhaW50cyAoa2jDtG5nIHBo4bqjaSBDQSk="
+            "cert trung gian thiếu basicConstraints (không phải CA)"
                 .into(),
         ));
     };
     let r_4kq = r_4kp.windows(3).any(|r_4kr| r_4kr == [0x01, 0x01, 0xFF]);
     if !r_4kq {
         return Err(SignError::Cms(
-            "Y2VydCB0cnVuZyBnaWFuIGPDsyBiYXNpY0NvbnN0cmFpbnRzIG5oxrBuZyBDQT1GQUxTRQ==".into(),
+            "cert trung gian có basicConstraints nhưng CA=FALSE".into(),
         ));
     }
     Ok(())

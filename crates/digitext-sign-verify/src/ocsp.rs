@@ -105,7 +105,7 @@ pub fn f_vm(
         let r_4tv = Nonce::new(r_4tx.to_vec()).map_err(SignError::der)?;
         r_4tt = r_4tt
             .with_extension(r_4tv)
-            .map_err(|e| SignError::Cms(format!("Z+G6r24gbm9uY2UgT0NTUCBs4buXaTog{e}")))?;
+            .map_err(|e| SignError::Cms(format!("gắn nonce OCSP lỗi: {e}")))?;
     }
     r_4tt.build().to_der().map_err(SignError::der)
 }
@@ -164,7 +164,7 @@ pub fn f_y6(r_4un: &[u8], r_4ul: &Certificate, r_4uq: &Certificate) -> Result<Tj
         });
     }
     let r_4uk = r_4um.response_bytes.ok_or_else(|| {
-        SignError::Cms("T0NTUCBzdWNjZXNzZnVsIG5oxrBuZyB0aGnhur91IHJlc3BvbnNlQnl0ZXM=".into())
+        SignError::Cms("OCSP successful nhưng thiếu responseBytes".into())
     })?;
     let r_4uj = BasicOcspResponse::from_der(r_4uk.response.as_bytes()).map_err(SignError::der)?;
     let signature_ok = f_u4(&r_4uj, r_4ul);
@@ -176,7 +176,7 @@ pub fn f_y6(r_4un: &[u8], r_4ul: &Certificate, r_4uq: &Certificate) -> Result<Tj
         .find(|r_4uo| r_4uo.cert_id == r_4us)
         .ok_or_else(|| {
             SignError::Cms(
-                "T0NTUCByZXNwb25zZSBraMO0bmcga2jhu5twIENlcnRJRCBuZ8aw4budaSBrw70=".into(),
+                "OCSP response không khớp CertID người ký".into(),
             )
         })?;
     let status = match &r_4up.cert_status {

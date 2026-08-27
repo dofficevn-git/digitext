@@ -261,7 +261,7 @@ impl fmt::Display for Permission {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("cXV54buBbiBraMO0bmcgaOG7o3AgbOG7hzog{0:?}")]
+#[error("quyền không hợp lệ: {0:?}")]
 pub struct Tgo(pub String);
 impl FromStr for Permission {
     type Err = Tgo;
