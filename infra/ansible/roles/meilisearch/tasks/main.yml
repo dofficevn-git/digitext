@@ -1,0 +1,4 @@
+---
+- name: "meilisearch (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role meilisearch (xem infra/ansible/README.md)"

@@ -1,0 +1,4 @@
+---
+- name: "dispatcher (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role dispatcher (xem infra/ansible/README.md)"

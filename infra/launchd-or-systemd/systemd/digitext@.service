@@ -1,0 +1,28 @@
+[Unit]
+Description=Dịch vụ DigiText %i
+# vault-agent render /etc/digitext/%i.env trước khi service này start (khi dùng Vault).
+After=network-online.target vault-agent.service
+Wants=network-online.target
+
+[Service]
+User=digitext
+Group=digitext
+# Cấu hình + secret tiêm qua EnvironmentFile (Ansible role `api` render, mode 0640
+# root:digitext). '-' = optional: instance không cần file env sẽ không fail khởi động.
+# Vd digitext@api → /etc/digitext/api.env (chứa DATABASE_URL…).
+EnvironmentFile=-/etc/digitext/common.env
+EnvironmentFile=-/etc/digitext/%i.env
+ExecStart=/usr/local/bin/digitext-%i
+Restart=on-failure
+RestartSec=2
+LimitNOFILE=1048576
+
+# ── Hardening cơ bản (§11) ──
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+ReadWritePaths=/var/lib/digitext
+
+[Install]
+WantedBy=multi-user.target

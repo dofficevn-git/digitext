@@ -1,0 +1,48 @@
+# {{ ansible_managed }}
+# /etc/vault-agent/agent.hcl — Vault Agent trên {{ inventory_hostname }}.
+pid_file = "/run/vault-agent/pid"
+
+vault {
+  address = "{{ vault_addr }}"
+{% if vault_ca_cert is defined %}
+  ca_cert = "{{ vault_ca_cert }}"
+{% endif %}
+}
+
+# Xác thực AppRole. RoleID (không bí mật) + SecretID response-wrapped (Ansible giao
+# lúc deploy, TTL ngắn, dùng 1 lần) → giải bài "secret zero". Agent tự unwrap & xoá file.
+auto_auth {
+  method "approle" {
+    mount_path = "auth/approle"
+    config = {
+      role_id_file_path                   = "/etc/vault-agent/role_id"
+      secret_id_file_path                 = "/etc/vault-agent/secret_id"
+      secret_id_response_wrapping_path    = "auth/approle/role/{{ vault_approle_name }}/secret-id"
+      remove_secret_id_file_after_reading = true
+    }
+  }
+  sink "file" {
+    config = { path = "/run/vault-agent/token" }
+  }
+}
+
+cache {
+  use_auto_auth_token = true
+}
+
+# (1) EnvironmentFile cho digitext@api. DATABASE_URL = dynamic creds → tự xoay.
+#     0640 root:root: systemd (root) đọc lúc start, KHÔNG cần app-user đọc trực tiếp.
+template {
+  source      = "/etc/vault-agent/templates/api.env.ctmpl"
+  destination = "/etc/digitext/api.env"
+  perms       = "0640"
+  command     = "systemctl try-restart digitext@api.service"
+}
+
+# (2) Khoá ký JWT Ed25519 từ KV → file app đọc (chown sang group {{ deploy_user }}).
+template {
+  source      = "/etc/vault-agent/templates/jwt-ed25519.pem.ctmpl"
+  destination = "{{ digitext_api_jwt_key_path }}"
+  perms       = "0640"
+  command     = "sh -c 'chown root:{{ deploy_user }} {{ digitext_api_jwt_key_path }}; systemctl try-restart digitext@api.service'"
+}

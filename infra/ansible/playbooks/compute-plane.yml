@@ -1,0 +1,5 @@
+---
+- hosts: compute_plane
+  become: true
+  roles:
+    - common,triton,ocr_worker

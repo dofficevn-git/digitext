@@ -1,0 +1,9 @@
+name: "pre_rec"
+backend: "python"
+max_batch_size: 64
+input [
+  { name: "in", data_type: TYPE_FP32, dims: [3, 48, -1] }
+]
+output [
+  { name: "out", data_type: TYPE_FP32, dims: [3, 48, 320] }
+]

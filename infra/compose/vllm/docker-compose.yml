@@ -1,0 +1,47 @@
+name: digitext-vllm
+
+services:
+  vllm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.7.3}
+    restart: unless-stopped
+    command:
+      - "--model"
+      - "Qwen/Qwen2.5-VL-7B-Instruct-AWQ"
+      - "--served-model-name"
+      - "Qwen2.5-VL-7B-Instruct-AWQ"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8003"
+      - "--gpu-memory-utilization"
+      - "0.60"
+      - "--max-model-len"
+      - "4096"
+      - "--limit-mm-per-prompt"
+      - "image=1"
+      - "--dtype"
+      - "half"
+      - "--enforce-eager"
+      - "--max-num-seqs"
+      - "6"
+    ports:
+      - "127.0.0.1:8003:8003"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "curl -sf localhost:8003/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 40
+      start_period: 600s
+
+volumes:
+  hf_cache:

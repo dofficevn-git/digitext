@@ -1,0 +1,86 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+name: digitext-triton
+
+services:
+  triton:
+    image: ${TRITON_IMAGE:-nvcr.io/nvidia/tritonserver:24.08-py3}
+    restart: unless-stopped
+
+
+
+
+    entrypoint: ["/bin/bash", "-lc"]
+    command:
+      - |
+        set -e
+        pip install "numpy<2" opencv-python-headless pyclipper onnxruntime-gpu==1.19.2 >/tmp/bls-deps.log 2>&1 || \
+          echo "WARN: pip deps lỗi — xem /tmp/bls-deps.log (ocr_pipeline/rec_vietocr có thể chưa chạy)"
+        exec tritonserver \
+          --model-repository=/models \
+          --model-control-mode=explicit \
+          --load-model=det_dbnet --load-model=cls_angle --load-model=rec_svtr_vi \
+          --load-model=rec_vietocr --load-model=ocr_pipeline \
+          --disable-auto-complete-config \
+          --strict-readiness=true --log-verbose=0
+    ports:
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8002:8002"
+    volumes:
+      - ../../../triton/models:/models:ro
+      - pipcache:/root/.cache/pip
+    shm_size: "1g"
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "curl -sf localhost:8000/v2/health/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 240s
+
+
+
+
+
+
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - clamdb:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
+volumes:
+  pipcache:
+    external: true
+    name: ocr_pipcache
+  clamdb:

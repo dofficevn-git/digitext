@@ -1,0 +1,17 @@
+[package]
+name = "digitext-telemetry"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "digitext_telemetry"
+path = "src/lib.rs"
+
+[dependencies]
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry-appender-tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-opentelemetry = { workspace = true }

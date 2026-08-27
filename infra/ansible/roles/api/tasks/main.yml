@@ -1,0 +1,93 @@
+---
+
+- name: Đảm bảo có các secret vault bắt buộc
+  ansible.builtin.assert:
+    that:
+      - vault_pg_user is defined
+      - vault_pg_password is defined
+    fail_msg: "Thiếu vault_pg_user/vault_pg_password — kiểm tra group_vars/all/vault.yml (ansible-vault)."
+    quiet: true
+
+- name: Tạo group hệ thống {{ deploy_user }}
+  ansible.builtin.group:
+    name: "{{ deploy_user }}"
+    system: true
+
+- name: Tạo user hệ thống {{ deploy_user }} (no-login)
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Tạo thư mục cấu hình {{ digitext_config_dir }}
+  ansible.builtin.file:
+    path: "{{ digitext_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+- name: Tạo data_dir {{ digitext_api_data_dir }}
+  ansible.builtin.file:
+    path: "{{ digitext_api_data_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+- name: Tạo thư mục trust anchor {{ digitext_api_sign_trust_roots | dirname }}
+  ansible.builtin.file:
+    path: "{{ digitext_api_sign_trust_roots | dirname }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+- name: Cài trust anchor chuỗi cert người ký (VNRCA + I-CA SHA-256)
+  ansible.builtin.copy:
+    src: "{{ digitext_api_sign_trust_roots_src }}"
+    dest: "{{ digitext_api_sign_trust_roots }}"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  notify: restart digitext-api
+
+- name: Cài binary digitext-api
+  ansible.builtin.copy:
+    src: "{{ digitext_api_artifact }}"
+    dest: "{{ digitext_bin_dir }}/digitext-api"
+    owner: root
+    group: root
+    mode: "0755"
+  notify: restart digitext-api
+
+- name: Render EnvironmentFile api.env (0640, chứa secret) — backend ansible_vault
+  ansible.builtin.template:
+    src: api.env.j2
+    dest: "{{ digitext_config_dir }}/api.env"
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+  when: digitext_secrets_backend == 'ansible_vault'
+  notify: restart digitext-api
+
+- name: Cài systemd template unit digitext@.service
+  ansible.builtin.copy:
+    src: "{{ digitext_systemd_unit_src }}"
+    dest: /etc/systemd/system/digitext@.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart digitext-api
+
+- name: Bật + chạy digitext@api
+  ansible.builtin.systemd:
+    name: "digitext@api"
+    enabled: true
+    state: started
+    daemon_reload: true

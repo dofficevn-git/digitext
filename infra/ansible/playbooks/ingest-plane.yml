@@ -1,0 +1,5 @@
+---
+- hosts: ingest_plane
+  become: true
+  roles:
+    - common,nginx_lb,rustus,vault_agent,ingest,api,dispatcher

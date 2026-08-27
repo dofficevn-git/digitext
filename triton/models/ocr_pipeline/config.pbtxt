@@ -1,0 +1,22 @@
+name: "ocr_pipeline"
+backend: "python"
+max_batch_size: 0
+input [
+  { name: "tile", data_type: TYPE_UINT8, dims: [-1, -1, 3] }
+]
+output [
+  { name: "boxes", data_type: TYPE_FP32, dims: [-1, 4] },
+  { name: "texts", data_type: TYPE_STRING, dims: [-1] },
+  { name: "confidences", data_type: TYPE_FP32, dims: [-1] }
+]
+instance_group [
+  { count: 6, kind: KIND_CPU }
+]
+parameters {
+  key: "conf_fallback"
+  value: { string_value: "0.80" }
+}
+parameters {
+  key: "svtr_enabled"
+  value: { string_value: "false" }
+}

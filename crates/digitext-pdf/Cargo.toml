@@ -1,0 +1,12 @@
+[package]
+name = "digitext-pdf"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+lopdf = "0.43"
+thiserror = { workspace = true }
+blake3 = { workspace = true }
+ttf-parser = "0.25"
+

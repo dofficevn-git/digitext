@@ -1,0 +1,4 @@
+---
+- name: "triton (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role triton (xem infra/ansible/README.md)"

@@ -1,0 +1,7 @@
+{
+  "kind": "human_identifier_signoff",
+  "by": "nguoi-soat-fixture",
+  "date": "2026-01-01",
+  "fields": ["soKyHieu", "ngayThang"],
+  "note": "FIXTURE TONG HOP cho CI — chu ky gia, KHONG dung de gac cong that"
+}

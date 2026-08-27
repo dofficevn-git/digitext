@@ -1,0 +1,872 @@
+// Copyright (c) 2026 DigiText. All rights reserved.
+use crate::config::WorkerConfig;
+use crate::error::WorkerError;
+use crate::infer::{f_1si, Tgi, Tile, To6, Tok};
+use digitext_core::{DocStatus, JobKind};
+use digitext_db::ocr_results::Tdx;
+use digitext_db::{documents, ocr_jobs, ocr_results, review_queue};
+use sqlx::PgPool;
+use std::future::Future;
+use std::time::Duration;
+use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
+pub const C_CD: u32 = 256;
+const C_F5: u32 = 32;
+pub trait Tgj: Send + Sync {
+    fn load_tiles(
+        &self,
+        document_id: Uuid,
+        page_no: i32,
+    ) -> impl Future<Output = Result<Vec<Tile>, WorkerError>> + Send;
+    fn load_page_image(
+        &self,
+        document_id: Uuid,
+        page_no: i32,
+    ) -> impl Future<Output = Result<crate::render::Tgf, WorkerError>> + Send;
+}
+fn f_12t(tile: &Tile, r_3l4: u32, r_3l5: u32, r_3l8: u32, r_3l3: u32) -> Tile {
+    let mut r_3l6 = Vec::new();
+    if !tile.pixels.is_empty() {
+        r_3l6.reserve((r_3l8 * r_3l3 * 3) as usize);
+        for r_3l9 in r_3l5..r_3l5 + r_3l3 {
+            let r_3l7 = ((r_3l9 * tile.width + r_3l4) * 3) as usize;
+            let r_3l2 = r_3l7 + (r_3l8 * 3) as usize;
+            if r_3l2 <= tile.pixels.len() {
+                r_3l6.extend_from_slice(&tile.pixels[r_3l7..r_3l2]);
+            }
+        }
+    }
+    Tile {
+        x: tile.x + r_3l4,
+        y: tile.y + r_3l5,
+        width: r_3l8,
+        height: r_3l3,
+        pixels: r_3l6,
+    }
+}
+fn f_2gw(tile: &Tile) -> Vec<Tile> {
+    if tile.width >= tile.height {
+        let ov = C_F5.min(tile.width / 4);
+        let r_3lb = (tile.width / 2 + ov).min(tile.width);
+        let r_3lc = (tile.width / 2).saturating_sub(ov);
+        vec![
+            f_12t(tile, 0, 0, r_3lb, tile.height),
+            f_12t(tile, r_3lc, 0, tile.width - r_3lc, tile.height),
+        ]
+    } else {
+        let ov = C_F5.min(tile.height / 4);
+        let r_3ld = (tile.height / 2 + ov).min(tile.height);
+        let r_3la = (tile.height / 2).saturating_sub(ov);
+        vec![
+            f_12t(tile, 0, 0, tile.width, r_3ld),
+            f_12t(tile, 0, r_3la, tile.width, tile.height - r_3la),
+        ]
+    }
+}
+pub async fn f_1i1<P: Tok>(
+    infer: &P,
+    tile: &Tile,
+    r_3lf: usize,
+    r_3lk: u32,
+    r_3lg: &mut u32,
+) -> Result<To6, WorkerError> {
+    match infer.infer_tile(tile, r_3lf).await {
+        Ok(ocr) => Ok(ocr),
+        Err(e) if e.is_oom() => {
+            if tile.width.max(tile.height) <= r_3lk {
+                return Err(e);
+            }
+            *r_3lg += 1;
+            let mut r_3lj = To6 {
+                boxes: Vec::new(),
+                texts: Vec::new(),
+                confidences: Vec::new(),
+            };
+            for r_3ll in f_2gw(tile) {
+                let r_3lm = Box::pin(f_1i1(infer, &r_3ll, r_3lf, r_3lk, r_3lg)).await?;
+                let (r_3lh, r_3li) = ((r_3ll.x - tile.x) as f32, (r_3ll.y - tile.y) as f32);
+                for r_3le in &r_3lm.boxes {
+                    r_3lj.boxes.push([
+                        r_3le[0] + r_3lh,
+                        r_3le[1] + r_3li,
+                        r_3le[2] + r_3lh,
+                        r_3le[3] + r_3li,
+                    ]);
+                }
+                r_3lj.texts.extend(r_3lm.texts);
+                r_3lj.confidences.extend(r_3lm.confidences);
+            }
+            Ok(r_3lj)
+        }
+        Err(e) => Err(e),
+    }
+}
+pub async fn f_242<P: Tok>(
+    infer: &P,
+    r_3lr: &[Tile],
+    r_3ln: usize,
+    r_3lq: u32,
+    r_3lo: &mut u32,
+) -> Result<Tgi, WorkerError> {
+    let mut r_3lp = Vec::with_capacity(r_3lr.len());
+    for tile in r_3lr {
+        let ocr = f_1i1(infer, tile, r_3ln, r_3lq, r_3lo).await?;
+        r_3lp.push((tile.x, tile.y, ocr));
+    }
+    Ok(f_1si(&r_3lp))
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReviewReason {
+    LowConfidence,
+    EmptyPage,
+}
+impl ReviewReason {
+    fn as_str(self) -> &'static str {
+        match self {
+            ReviewReason::LowConfidence => review_queue::C_I3,
+            ReviewReason::EmptyPage => review_queue::C_I0,
+        }
+    }
+}
+fn needs_review(r_3lu: usize, r_3ls: Option<f32>, r_3lv: f32) -> Option<ReviewReason> {
+    if r_3lu == 0 {
+        return Some(ReviewReason::EmptyPage);
+    }
+    match r_3ls {
+        Some(r_3lt) if r_3lt > 0.0 && r_3lt >= r_3lv => Some(ReviewReason::LowConfidence),
+        _ => None,
+    }
+}
+#[derive(Debug)]
+pub enum HeartbeatEnd {
+    LeaseLost,
+    Db(sqlx::Error),
+}
+pub async fn f_2bg<T, W, R, RF>(r_3lz: W, r_3lw: Duration, mut r_3lx: R) -> Result<T, HeartbeatEnd>
+where
+    W: Future<Output = T>,
+    R: FnMut() -> RF,
+    RF: Future<Output = sqlx::Result<bool>>,
+{
+    tokio::pin!(r_3lz);
+    let mut r_3ly = tokio::time::interval(r_3lw);
+    r_3ly.tick().await;
+    loop {
+        tokio::select! {
+            biased; out = & mut r_3lz => return Ok(out), _ = r_3ly.tick() => match
+            r_3lx(). await { Ok(true) => {} Ok(false) => return
+            Err(HeartbeatEnd::LeaseLost), Err(e) => return Err(HeartbeatEnd::Db(e)), },
+        }
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RunOutcome {
+    Idle,
+    Done(Uuid),
+    PageFailed(Uuid),
+    Requeued(Uuid),
+    FailedTransient(Uuid),
+    LeaseLost(Uuid),
+}
+pub struct Worker<'a, S, I, C = crate::corrector::T4s> {
+    pool: &'a PgPool,
+    source: &'a S,
+    infer: &'a I,
+    cfg: &'a WorkerConfig,
+    worker_id: &'a str,
+    engine_version_id: Uuid,
+    corrector: Option<(&'a C, &'a digitext_vi::Lexicon)>,
+    store: Option<&'a dyn digitext_storage::ObjectStore>,
+    vlm: Option<&'a dyn crate::vlm_fields::T5b>,
+    fields_v2: Option<(&'a dyn crate::fields_v2::T80, Uuid)>,
+    metrics: Option<&'a crate::metrics::Metrics>,
+}
+impl<'a, S: Tgj, I: Tok> Worker<'a, S, I, crate::corrector::T4s> {
+    pub fn new(
+        pool: &'a PgPool,
+        source: &'a S,
+        infer: &'a I,
+        cfg: &'a WorkerConfig,
+        worker_id: &'a str,
+        engine_version_id: Uuid,
+    ) -> Self {
+        Worker {
+            pool,
+            source,
+            infer,
+            cfg,
+            worker_id,
+            engine_version_id,
+            corrector: None,
+            store: None,
+            vlm: None,
+            fields_v2: None,
+            metrics: None,
+        }
+    }
+}
+impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_corrector(
+        pool: &'a PgPool,
+        source: &'a S,
+        infer: &'a I,
+        cfg: &'a WorkerConfig,
+        worker_id: &'a str,
+        engine_version_id: Uuid,
+        corrector: &'a C,
+        r_3m0: &'a digitext_vi::Lexicon,
+    ) -> Self {
+        Worker {
+            pool,
+            source,
+            infer,
+            cfg,
+            worker_id,
+            engine_version_id,
+            corrector: Some((corrector, r_3m0)),
+            store: None,
+            vlm: None,
+            fields_v2: None,
+            metrics: None,
+        }
+    }
+    pub fn with_store(mut self, store: &'a dyn digitext_storage::ObjectStore) -> Self {
+        self.store = Some(store);
+        self
+    }
+    pub fn with_metrics(mut self, metrics: &'a crate::metrics::Metrics) -> Self {
+        self.metrics = Some(metrics);
+        self
+    }
+    pub fn with_vlm(mut self, vlm: &'a dyn crate::vlm_fields::T5b) -> Self {
+        self.vlm = Some(vlm);
+        self
+    }
+    pub fn with_fields_v2(
+        mut self,
+        extractor: &'a dyn crate::fields_v2::T80,
+        engine_version_id: Uuid,
+    ) -> Self {
+        self.fields_v2 = Some((extractor, engine_version_id));
+        self
+    }
+    pub async fn run_once(&self) -> sqlx::Result<RunOutcome> {
+        let lease = self.cfg.lease.as_secs() as i64;
+        let r_3m7: &[&str] = if self.fields_v2.is_some() {
+            &["ocr", "re_ocr", "audit", "make_pdf2", "extract_fields"]
+        } else {
+            &["ocr", "re_ocr", "audit", "make_pdf2"]
+        };
+        let Some(job) = ocr_jobs::f_zj(self.pool, self.worker_id, lease, r_3m7).await? else {
+            return Ok(RunOutcome::Idle);
+        };
+        if job.kind == JobKind::MakePdf2.as_str() {
+            return self.run_make_pdf2(&job, lease).await;
+        }
+        if job.kind == JobKind::ExtractFields.as_str() {
+            return self.run_extract_fields(&job, lease).await;
+        }
+        let r_3m1 = self.cfg.infer_batch_size;
+        let mut r_3m4 = 0u32;
+        let r_3md = async {
+            match self.source.load_tiles(job.document_id, job.page_no).await {
+                Ok(r_3mg) => f_242(self.infer, &r_3mg, r_3m1, C_CD, &mut r_3m4).await,
+                Err(e) => Err(e),
+            }
+        };
+        let r_3m5 = (self.cfg.lease / 3).max(Duration::from_secs(1));
+        let r_3mc = match f_2bg(r_3md, r_3m5, || {
+            ocr_jobs::f_1gk(self.pool, job.id, self.worker_id, lease)
+        })
+        .await
+        {
+            Ok(r_3me) => r_3me,
+            Err(HeartbeatEnd::LeaseLost) => {
+                tracing::warn!(
+                    job = % job.id,
+                    "beG6pXQgbGVhc2Uga2hpIHjhu60gbMO9IOKAlCBi4buPIChjaOG7pyBt4bubaSBz4bq9IGzDoG0gbOG6oWkp"
+                );
+                return Ok(RunOutcome::LeaseLost(job.id));
+            }
+            Err(HeartbeatEnd::Db(e)) => return Err(e),
+        };
+        if r_3m4 > 0 {
+            tracing::info!(
+                job = % job.id, r_3m4,
+                "xJHDoyBjaGlhIG5o4buPIHRpbGUgZG8gR1BVIE9PTSAowqdQNCk="
+            );
+            if let Some(m) = self.metrics {
+                m.oom_downshift_total.add(r_3m4 as u64);
+            }
+        }
+        match r_3mc {
+            Ok(r_3ma) => {
+                if let Some(m) = self.metrics {
+                    if let Some(c) = r_3ma.mean_confidence() {
+                        m.page_confidence.observe(c as f64);
+                    }
+                }
+                let r_3m2 = digitext_vi::normalize(&r_3ma.text());
+                ocr_results::upsert(
+                    self.pool,
+                    Tdx {
+                        document_id: job.document_id,
+                        page_no: job.page_no,
+                        engine_version_id: self.engine_version_id,
+                        text_source: "ocr_raw",
+                        content: &r_3m2,
+                        mean_confidence: r_3ma.mean_confidence(),
+                        low_conf_ratio: r_3ma.low_conf_ratio(self.cfg.conf_fallback),
+                        boxes: Some(crate::assemble::f_2gl(&r_3ma)),
+                    },
+                )
+                .await?;
+                let fields = if self.cfg.fields_engine == crate::config::FieldsEngine::V1 {
+                    let fields = crate::fields::extract_fields(&r_3ma);
+                    crate::fields::f_2ho(
+                        self.pool,
+                        job.document_id,
+                        job.page_no,
+                        self.engine_version_id,
+                        "ocr_raw",
+                        &fields,
+                    )
+                    .await?;
+                    Some(fields)
+                } else {
+                    None
+                };
+                if let Some(reason) = needs_review(
+                    r_3ma.confidences.len(),
+                    r_3ma.low_conf_ratio(self.cfg.conf_fallback),
+                    self.cfg.review_low_conf_ratio,
+                ) {
+                    if reason == ReviewReason::EmptyPage {
+                        tracing::warn!(
+                            document = % job.document_id, r_3ma = job.page_no,
+                            "dHJhbmcgT0NSIHJhIEtIw5RORyBjw7Mgc3BhbiBuw6BvIOKGkiDEkcawYSBuZ8aw4budaSBzb8OhdA=="
+                        );
+                    }
+                    review_queue::enqueue(self.pool, job.document_id, job.page_no, reason.as_str())
+                        .await?;
+                }
+                if self.cfg.llm_corrector_enabled {
+                    if let Some((r_3m3, r_3m8)) = self.corrector {
+                        let gate = crate::corrector::T8j {
+                            tau: self.cfg.corrector_tau,
+                            max_edit: self.cfg.corrector_max_edit,
+                            min_llm_conf: self.cfg.corrector_min_conf,
+                        };
+                        match crate::corrector::f_s4(
+                            self.pool,
+                            job.document_id,
+                            job.page_no,
+                            self.engine_version_id,
+                            &r_3ma,
+                            r_3m3,
+                            gate,
+                            self.cfg.conf_fallback,
+                            |r_3mh| r_3m8.contains(r_3mh),
+                        )
+                        .await
+                        {
+                            Ok(c) => {
+                                if let Some(m) = self.metrics {
+                                    if c.accepted > 0 {
+                                        m.llm_edits_applied_total.add(c.accepted as u64);
+                                    }
+                                    if c.needs_review {
+                                        m.llm_edits_rejected_total.inc();
+                                    }
+                                }
+                                if c.accepted > 0 || c.needs_review {
+                                    tracing::info!(
+                                        job = % job.id, accepted = c.accepted, review = c
+                                        .needs_review, "Y29ycmVjdG9yIExMTSDEkcOjIMOhcCAowqdHNik="
+                                    );
+                                }
+                            }
+                            Err(crate::corrector::ApplyError::Corrector(e)) => {
+                                tracing::warn!(
+                                    job = % job.id,
+                                    "Y29ycmVjdG9yIExMTSBs4buXaSwgZ2nhu68gcmF3OiA={e}"
+                                )
+                            }
+                            Err(crate::corrector::ApplyError::Db(e)) => return Err(e),
+                        }
+                    }
+                }
+                if self.cfg.vlm_fallback_enabled {
+                    if let (Some(vlm), Some(fields)) = (self.vlm, fields.as_ref()) {
+                        let gate = crate::vlm_fields::Tpy {
+                            min_fields: 3,
+                            tau: 0.6,
+                            max_low_conf: 0.3,
+                            keep_heuristic_conf: 0.7,
+                        };
+                        if crate::vlm_fields::f_2ey(
+                            fields.len(),
+                            r_3ma.mean_confidence().unwrap_or(1.0),
+                            r_3ma.low_conf_ratio(self.cfg.conf_fallback).unwrap_or(0.0),
+                            gate,
+                        ) {
+                            match self
+                                .source
+                                .load_page_image(job.document_id, job.page_no)
+                                .await
+                            {
+                                Ok(r_3m6) => {
+                                    match vlm
+                                        .extract_dyn(&r_3m6.jpeg, r_3m6.width_px, r_3m6.height_px)
+                                        .await
+                                    {
+                                        Ok(raw) => {
+                                            let r_3mb = crate::vlm_fields::f_1sk(
+                                                fields,
+                                                raw,
+                                                gate.keep_heuristic_conf,
+                                            );
+                                            let r_3m9 = crate::vlm_fields::f_s5(
+                                                self.pool,
+                                                job.document_id,
+                                                job.page_no,
+                                                self.engine_version_id,
+                                                &r_3mb,
+                                            )
+                                            .await?;
+                                            if r_3m9 > 0 {
+                                                tracing::info!(
+                                                    job = % job.id, fields = r_3m9,
+                                                    "VkxNIE1vZGUgMiBiw7NjIHRyxrDhu51uZyBjYSBraMOzICjCp0c2KSDihpIgcmV2aWV3"
+                                                );
+                                            }
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!(
+                                                job = % job.id,
+                                                "VkxNIE1vZGUgMiBs4buXaSwgZ2nhu68gaGV1cmlzdGljOiA={e}"
+                                            )
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::warn!(
+                                        job = % job.id,
+                                        "VkxNIE1vZGUgMjogdOG6o2kg4bqjbmggdHJhbmcgbOG7l2ksIGLhu486IA=={e}"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                if ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await? {
+                    self.maybe_enqueue_make_pdf2(job.document_id).await?;
+                }
+                if let Some(m) = self.metrics {
+                    m.pages_processed.inc("done");
+                }
+                Ok(RunOutcome::Done(job.id))
+            }
+            Err(e) if e.is_permanent() => {
+                tracing::warn!(
+                    job = % job.id, doc = % job.document_id, r_3ma = job.page_no,
+                    "dHJhbmcgbOG7l2kgVsSoTkggVknhu4ROIOKAlCBjw7QgbOG6rXAsIGtow7RuZyB0aOG7rSBs4bqhaTog{e}"
+                );
+                if ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &e.to_string()).await? {
+                    self.maybe_enqueue_make_pdf2(job.document_id).await?;
+                }
+                if let Some(m) = self.metrics {
+                    m.pages_processed.inc("page_failed");
+                }
+                Ok(RunOutcome::PageFailed(job.id))
+            }
+            Err(e) => {
+                let r_3mf = ocr_jobs::f_1bn(
+                    self.pool,
+                    job.id,
+                    self.worker_id,
+                    &e.to_string(),
+                    self.cfg.max_retries as i32,
+                )
+                .await?;
+                if r_3mf.as_deref() == Some("queued") {
+                    if let Some(m) = self.metrics {
+                        m.pages_processed.inc("queued");
+                    }
+                    Ok(RunOutcome::Requeued(job.id))
+                } else {
+                    self.maybe_enqueue_make_pdf2(job.document_id).await?;
+                    if let Some(m) = self.metrics {
+                        m.pages_processed.inc("failed_transient");
+                    }
+                    Ok(RunOutcome::FailedTransient(job.id))
+                }
+            }
+        }
+    }
+    async fn maybe_enqueue_make_pdf2(&self, r_3mi: Uuid) -> sqlx::Result<()> {
+        if ocr_jobs::f_2na(self.pool, r_3mi).await? == 0 {
+            documents::transition(self.pool, r_3mi, DocStatus::OcrDone).await?;
+            if self.cfg.auto_make_pdf2 {
+                ocr_jobs::f_19r(self.pool, r_3mi).await?;
+            }
+        }
+        Ok(())
+    }
+    async fn run_make_pdf2(&self, job: &ocr_jobs::Ta2, lease: i64) -> sqlx::Result<RunOutcome> {
+        let r_3mk = (self.cfg.lease / 3).max(Duration::from_secs(1));
+        let r_3mj =
+            crate::assemble::f_va(self.pool, self.source, job.document_id, self.cfg.pdf_dpi);
+        let r_3mn = match f_2bg(r_3mj, r_3mk, || {
+            ocr_jobs::f_1gk(self.pool, job.id, self.worker_id, lease)
+        })
+        .await
+        {
+            Ok(r_3mm) => r_3mm,
+            Err(HeartbeatEnd::LeaseLost) => {
+                tracing::warn!(
+                    job = % job.id,
+                    "beG6pXQgbGVhc2Uga2hpIGdow6lwIFBERiDigJQgYuG7jyAoY2jhu6cgbeG7m2kgc+G6vSBsw6BtIGzhuqFpKQ=="
+                );
+                return Ok(RunOutcome::LeaseLost(job.id));
+            }
+            Err(HeartbeatEnd::Db(e)) => return Err(e),
+        };
+        use crate::assemble::AssembleError;
+        match r_3mn {
+            Ok(None) => {
+                tracing::info!(
+                    job = % job.id, doc = % job.document_id,
+                    "bWFrZV9wZGYyOiBraMO0bmcgY8OzIHRyYW5nIE9DUiBuw6BvIOKAlCBi4buPIHF1YSBnaMOpcCBQREY="
+                );
+                ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+                Ok(RunOutcome::Done(job.id))
+            }
+            Ok(Some(r_3ml)) => self.persist_pdf(job, r_3ml).await,
+            Err(AssembleError::Db(e)) => Err(e),
+            Err(AssembleError::Data(msg)) => {
+                tracing::warn!(
+                    job = % job.id, doc = % job.document_id,
+                    "Z2jDqXAgUERGIDIgbOG7m3AgaOG7j25nIFbEqE5IIFZJ4buETiDigJQga2jDtG5nIHRo4butIGzhuqFpOiA={msg}"
+                );
+                ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &msg).await?;
+                Ok(RunOutcome::PageFailed(job.id))
+            }
+            Err(AssembleError::Source(e)) if e.is_permanent() => {
+                tracing::warn!(
+                    job = % job.id, doc = % job.document_id,
+                    "Z2jDqXAgUERGIDIgbOG7m3A6IG5ndeG7k24g4bqjbmggaOG7j25nIFbEqE5IIFZJ4buETiDigJQga2jDtG5nIHRo4butIGzhuqFpOiA={e}"
+                );
+                ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &e.to_string()).await?;
+                Ok(RunOutcome::PageFailed(job.id))
+            }
+            Err(AssembleError::Source(e)) => {
+                let r_3mo = ocr_jobs::f_1bn(
+                    self.pool,
+                    job.id,
+                    self.worker_id,
+                    &e.to_string(),
+                    self.cfg.max_retries as i32,
+                )
+                .await?;
+                Ok(if r_3mo.as_deref() == Some("queued") {
+                    RunOutcome::Requeued(job.id)
+                } else {
+                    RunOutcome::FailedTransient(job.id)
+                })
+            }
+        }
+    }
+    async fn run_extract_fields(
+        &self,
+        job: &ocr_jobs::Ta2,
+        lease: i64,
+    ) -> sqlx::Result<RunOutcome> {
+        use crate::fields_v2::ExtractV2Error;
+        let Some((extractor, r_3n0)) = self.fields_v2 else {
+            let status = ocr_jobs::f_1bn(
+                self.pool,
+                job.id,
+                self.worker_id,
+                "d29ya2VyIGtow7RuZyBjw7MgVkxNIGV4dHJhY3RvciB2MiAoRElHSVRFWFRfRklFTERTX0VOR0lORSk=",
+                self.cfg.max_retries as i32,
+            )
+            .await?;
+            return Ok(if status.as_deref() == Some("queued") {
+                RunOutcome::Requeued(job.id)
+            } else {
+                RunOutcome::FailedTransient(job.id)
+            });
+        };
+        let Some(r_3mq) = documents::get(self.pool, job.document_id).await? else {
+            tracing::warn!(
+                job = % job.id, r_3mq = % job.document_id,
+                "dMOgaSBsaeG7h3Uga2jDtG5nIGPDsm4g4oCUIGLhu48gYsOzYyB0csaw4budbmc="
+            );
+            ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+            return Ok(RunOutcome::Done(job.id));
+        };
+        let page_count = r_3mq.page_count.unwrap_or(0);
+        if page_count < 1 {
+            tracing::warn!(
+                job = % job.id, r_3mq = % job.document_id,
+                "YsOzYyB0csaw4budbmcgdjI6IGNoxrBhIGJp4bq/dCBz4buRIHRyYW5nIChwYWdlX2NvdW50KSDigJQgYuG7jyBWxKhOSCBWSeG7hE4="
+            );
+            ocr_jobs::f_1re(
+                    self.pool,
+                    job.id,
+                    self.worker_id,
+                    "Y2jGsGEgYmnhur90IHPhu5EgdHJhbmcgKHBhZ2VfY291bnQpIOKAlCBwcm9iZSBz4buRIHRyYW5nIHLhu5NpIGNo4bqheSBs4bqhaQ==",
+                )
+                .await?;
+            return Ok(RunOutcome::PageFailed(job.id));
+        }
+        let r_3mu = (self.cfg.fields_v2_max_pages as i32).min(page_count);
+        let r_3mt = (self.cfg.lease / 3).max(Duration::from_secs(1));
+        let r_3mr = async {
+            let mut per_page: Vec<(i32, Vec<(digitext_core::VanBanField, String)>)> = Vec::new();
+            for r_3mx in 1..=r_3mu {
+                let img = match self.source.load_page_image(job.document_id, r_3mx).await {
+                    Ok(img) => img,
+                    Err(e) if e.is_permanent() && r_3mx > 1 => {
+                        tracing::warn!(
+                            job = % job.id, page = r_3mx,
+                            "YsOzYyB0csaw4budbmcgdjI6IOG6o25oIHRyYW5nIGjhu49uZywgYuG7jyB0cmFuZzog{e}"
+                        );
+                        continue;
+                    }
+                    Err(e) => return Err(ExtractV2Error::Source(e)),
+                };
+                let r_3ms = extractor
+                    .extract_v2(&img.jpeg)
+                    .await
+                    .map_err(ExtractV2Error::Vlm)?;
+                per_page.push((r_3mx, r_3ms));
+            }
+            Ok(per_page)
+        };
+        let r_3mz = match f_2bg(r_3mr, r_3mt, || {
+            ocr_jobs::f_1gk(self.pool, job.id, self.worker_id, lease)
+        })
+        .await
+        {
+            Ok(r_3my) => r_3my,
+            Err(HeartbeatEnd::LeaseLost) => {
+                tracing::warn!(
+                    job = % job.id,
+                    "beG6pXQgbGVhc2Uga2hpIGLDs2MgdHLGsOG7nW5nIHYyIOKAlCBi4buPIChjaOG7pyBt4bubaSBsw6BtIGzhuqFpKQ=="
+                );
+                return Ok(RunOutcome::LeaseLost(job.id));
+            }
+            Err(HeartbeatEnd::Db(e)) => return Err(e),
+        };
+        match r_3mz {
+            Ok(per_page) => {
+                let r_3mv = crate::fields_v2::f_1sa(&per_page);
+                let r_3mp = crate::fields_v2::f_14m(r_3mq.page_count, &r_3mv);
+                let r_3mw =
+                    crate::fields_v2::f_s3(self.pool, job.document_id, r_3n0, &r_3mv, &r_3mp)
+                        .await?;
+                tracing::info!(
+                    job = % job.id, r_3mq = % job.document_id, pages = r_3mu, r_3ms =
+                    r_3mw,
+                    "YsOzYyAxNiB0csaw4budbmcgdjIgKFZMTS1wcmltYXJ5KSDihpIgbOG7m3AgZ+G7o2kgw70gKyByZXZpZXcgKMKnRzcp"
+                );
+                ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+                Ok(RunOutcome::Done(job.id))
+            }
+            Err(e) if e.is_permanent() => {
+                tracing::warn!(
+                    job = % job.id, r_3mq = % job.document_id,
+                    "YsOzYyB0csaw4budbmcgdjIgaOG7j25nIFbEqE5IIFZJ4buETiDigJQga2jDtG5nIHRo4butIGzhuqFpOiA={e}"
+                );
+                ocr_jobs::f_1re(self.pool, job.id, self.worker_id, &e.to_string()).await?;
+                Ok(RunOutcome::PageFailed(job.id))
+            }
+            Err(e) => {
+                let status = ocr_jobs::f_1bn(
+                    self.pool,
+                    job.id,
+                    self.worker_id,
+                    &e.to_string(),
+                    self.cfg.max_retries as i32,
+                )
+                .await?;
+                Ok(if status.as_deref() == Some("queued") {
+                    RunOutcome::Requeued(job.id)
+                } else {
+                    RunOutcome::FailedTransient(job.id)
+                })
+            }
+        }
+    }
+    async fn persist_pdf(&self, job: &ocr_jobs::Ta2, r_3n4: Vec<u8>) -> sqlx::Result<RunOutcome> {
+        let Some(store) = self.store else {
+            tracing::info!(
+                job = % job.id, r_3n2 = % job.document_id, bytes = r_3n4.len(),
+                "UERGIDIgbOG7m3AgxJHDoyBk4buxbmcgKGNoxrBhIFBVVCDigJQgY2jGsGEgY+G6pXUgaMOsbmgga2hvIERJR0lURVhUX1BERl9TVE9SRV9ESVIp"
+            );
+            ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+            return Ok(RunOutcome::Done(job.id));
+        };
+        let Some(r_3n2) = documents::get(self.pool, job.document_id).await? else {
+            tracing::warn!(
+                job = % job.id, r_3n2 = % job.document_id,
+                "dMOgaSBsaeG7h3Uga2jDtG5nIGPDsm4g4oCUIGLhu48gUFVUIFBERg=="
+            );
+            ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+            return Ok(RunOutcome::Done(job.id));
+        };
+        let r_3n1 = digitext_pdf::f_2p9(&r_3n4, r_3n2.page_count);
+        if !r_3n1.ok {
+            let reason = r_3n1
+                .reason
+                .unwrap_or_else(|| "a2jDtG5nIMSR4bqhdA==".into());
+            tracing::error!(
+                job = % job.id, r_3n2 = % job.document_id, pages = r_3n1.pages,
+                page_count = ? r_3n2.page_count, reason = % reason,
+                "UERGIDIgbOG7m3AgS0jDlE5HIMSR4bqhdCDigJQga2jDtG5nIFBVVCwga2jDtG5nIGNodXnhu4NuIHBoYSBrw70="
+            );
+            self.notify_pdf2_rejected(&r_3n2, &reason).await?;
+            ocr_jobs::f_1re(
+                self.pool,
+                job.id,
+                self.worker_id,
+                &format!("UERGIDIgbOG7m3Aga2jDtG5nIMSR4bqhdDog{reason}"),
+            )
+            .await?;
+            return Ok(RunOutcome::PageFailed(job.id));
+        }
+        let r_3n3 = digitext_storage::f_2qs(r_3n2.project_id, job.document_id);
+        match store.put(&r_3n3, &r_3n4).await {
+            Ok(()) => {
+                documents::f_1rf(
+                    self.pool,
+                    job.document_id,
+                    documents::Tgy {
+                        key: &r_3n3,
+                        pages: r_3n1.pages as i32,
+                        pdfa_2b: digitext_pdf::pdfa::f_1rh(&r_3n4).is_pdfa2b(),
+                    },
+                )
+                .await?;
+                documents::transition(self.pool, job.document_id, DocStatus::ToSign).await?;
+                ocr_jobs::f_19u(self.pool, job.document_id).await?;
+                tracing::info!(
+                    job = % job.id, r_3n2 = % job.document_id, bytes = r_3n4.len(), r_3n3
+                    = % r_3n3,
+                    "UERGIDIgbOG7m3AgxJHDoyBQVVQga2hvIHdhcm0g4oaSIHRvX3NpZ24sIGNo4budIGvDvSAowqdTNS40IEcp"
+                );
+                ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+                Ok(RunOutcome::Done(job.id))
+            }
+            Err(e) => {
+                let r_3n5 = ocr_jobs::f_1bn(
+                    self.pool,
+                    job.id,
+                    self.worker_id,
+                    &format!("PUT PDF: {e}"),
+                    self.cfg.max_retries as i32,
+                )
+                .await?;
+                Ok(if r_3n5.as_deref() == Some("queued") {
+                    RunOutcome::Requeued(job.id)
+                } else {
+                    RunOutcome::FailedTransient(job.id)
+                })
+            }
+        }
+    }
+    async fn notify_pdf2_rejected(
+        &self,
+        r_3n7: &documents::Document,
+        reason: &str,
+    ) -> sqlx::Result<()> {
+        let msg = format!(
+            "VMOgaSBsaeG7h3UgIg=={}IjogUERGIDIgbOG7m3AgS0jDlE5HIMSR4bqhdCAo{reason}KSDigJQgY2jGsGEgY2h1eeG7g24ga8O9LiBD4bqnbiBPQ1IgbOG6oWkgdHJhbmcgbOG7l2kgcuG7k2kgZ2jDqXAgbOG6oWku",
+            r_3n7.filename
+        );
+        for r_3n6 in digitext_db::projects::f_re(self.pool, r_3n7.project_id).await? {
+            digitext_db::notifications::f_1v8(self.pool, r_3n6, None, "pdf2_rejected", &msg)
+                .await?;
+        }
+        Ok(())
+    }
+    pub async fn run_loop(&self, r_3na: Duration, r_3nf: &CancellationToken) -> sqlx::Result<u64> {
+        let r_3nb = self.cfg.worker_concurrency.max(1);
+        let r_3ng = r_3nf.child_token();
+        let mut r_3ne = Vec::with_capacity(r_3nb);
+        {
+            let r_3n9: Vec<_> = (0..r_3nb)
+                .map(|_| async {
+                    let r = self.run_lane(r_3na, &r_3ng).await;
+                    if r.is_err() {
+                        r_3ng.cancel();
+                    }
+                    r
+                })
+                .collect();
+            for r in futures_util::future::join_all(r_3n9).await {
+                r_3ne.push(r);
+            }
+        }
+        let mut r_3nd = 0u64;
+        let mut r_3n8 = None;
+        for r in r_3ne {
+            match r {
+                Ok(r_3nc) => r_3nd += r_3nc,
+                Err(e) => {
+                    r_3n8.get_or_insert(e);
+                }
+            }
+        }
+        tracing::info!(
+            worker_id = self.worker_id,
+            r_3nd,
+            r_3nb,
+            "dsOybmcgbOG6t3Agd29ya2VyIGThu6tuZw=="
+        );
+        if let Some(e) = r_3n8 {
+            return Err(e);
+        }
+        Ok(r_3nd)
+    }
+    async fn run_lane(&self, r_3nh: Duration, r_3nl: &CancellationToken) -> sqlx::Result<u64> {
+        let mut r_3nj = 0u64;
+        while !r_3nl.is_cancelled() {
+            let Some(r_3nk) = f_1u9(self.run_once(), r_3nl).await else {
+                break;
+            };
+            let r_3ni = r_3nk?;
+            if r_3ni == RunOutcome::Idle {
+                tokio::select! {
+                    _ = r_3nl.cancelled() => break, _ = tokio::time::sleep(r_3nh) => {}
+                }
+            } else {
+                r_3nj += 1;
+            }
+        }
+        Ok(r_3nj)
+    }
+}
+async fn f_1u9<F: Future>(r_3nm: F, r_3nn: &CancellationToken) -> Option<F::Output> {
+    tokio::select! {
+        biased; r = r_3nm => Some(r), _ = r_3nn.cancelled() => None,
+    }
+}
+pub async fn f_2b8(
+    pool: &PgPool,
+    r_3no: Duration,
+    r_3np: i32,
+    r_3nq: &CancellationToken,
+) -> sqlx::Result<()> {
+    while !r_3nq.is_cancelled() {
+        tokio::select! {
+            _ = r_3nq.cancelled() => break, _ = tokio::time::sleep(r_3no) => { let n =
+            ocr_jobs::requeue_expired(pool, r_3np). await ?; if n > 0 {
+            tracing::warn!(requeued = n, "cmVxdWV1ZSBqb2IgaOG6v3QgaOG6oW4gbGVhc2U="); } }
+        }
+    }
+    Ok(())
+}

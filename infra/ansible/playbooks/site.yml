@@ -1,0 +1,44 @@
+---
+
+- name: Hardening nền tảng trên mọi host
+  hosts: all
+  roles:
+    - common
+    - security_hardening
+
+- name: Storage plane (MinIO distributed EC 8+4, §S3)
+  hosts: storage_plane
+  roles:
+    - minio
+
+- name: Control/data plane (Postgres + Meilisearch, §S7)
+  hosts: control_plane
+  roles:
+    - { role: postgres, when: "'postgres' in group_names" }
+    - { role: meilisearch, when: "'meilisearch' in group_names" }
+
+- name: Ingest plane (nginx VRRP + rustus + ingest + api + dispatcher, §S2/§S7.5)
+  hosts: ingest_plane
+  roles:
+    - nginx_lb
+    - rustus
+    - vault_agent
+    - ingest
+    - api
+    - dispatcher
+
+- name: "Compute plane (OCR GPU: Triton + worker Rust, §S5/§S12)"
+  hosts: compute_plane
+  roles:
+    - triton
+    - ocr_worker
+
+- name: Observability (Prometheus + Grafana + DCGM, §S8.3)
+  hosts: observability
+  roles:
+    - observability
+
+- name: Backup & DR (mc mirror offsite, PITR, §S6/§S8)
+  hosts: storage_plane:postgres
+  roles:
+    - backup_dr

@@ -1,0 +1,24 @@
+---
+
+deploy_user: digitext
+digitext_config_dir: /etc/digitext
+digitext_bin_dir: /usr/local/bin
+
+digitext_secrets_backend: vault
+
+digitext_api_artifact: "files/digitext-api"
+
+digitext_systemd_unit_src: "{{ playbook_dir }}/../../launchd-or-systemd/systemd/digitext@.service"
+
+digitext_api_bind: "127.0.0.1:8080"
+digitext_api_jwt_key_path: "/etc/digitext/jwt-ed25519.pem"
+digitext_api_data_dir: "/var/lib/digitext"
+digitext_api_log: "info"
+digitext_api_behind_proxy: true
+
+digitext_api_sign_trust_roots_src: "{{ playbook_dir }}/../../../trust/ica-sign-trust-roots.pem"
+digitext_api_sign_trust_roots: "{{ digitext_config_dir }}/trust/ica-sign-trust-roots.pem"
+
+postgres_host: "127.0.0.1"
+postgres_port: 5432
+postgres_db: "digitext"

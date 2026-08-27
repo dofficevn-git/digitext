@@ -1,0 +1,16 @@
+---
+digitext_version: "0.1.0"
+deploy_user: digitext
+
+minio_ec_scheme: "8+4"
+minio_tiers: [hot, warm, cold]
+minio_object_lock: true
+
+triton_model_repository: /srv/triton/models
+ocr_workers_per_gpu: 10
+
+postgres_partition_by: proj_id
+meili_index_per_project: true
+
+mtls_enabled: true
+encrypt_at_rest: true

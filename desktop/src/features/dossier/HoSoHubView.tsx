@@ -1,0 +1,36 @@
+// Copyright (c) 2026 DigiText. All rights reserved.
+
+import { useCallback, useState } from "react";
+import { V41p } from "@/live/useLive";
+import { V460 } from "@/state";
+import { isTauri } from "@/api/ipc";
+import { V40w, type V40v } from "@/api/archive";
+import LapHoSoView from "./LapHoSoView";
+import HeThongHoaPane from "./HeThongHoaPane";
+import V4ef from "./CapNhatCsdlPane";
+import SoHoaPane from "./SoHoaPane";
+import V4hd from "./KySoPane";
+import OcrPane from "./OcrPane";
+
+export default function V4lc() {
+  const { hoSoPane: V1ug } = V460();
+  const [V1uh, V1ui] = useState<V40v[]>([]);
+
+  const V1uj = useCallback(() => {
+    V40w()
+      .then(V1ui)
+      .catch(() => {});
+  }, []);
+  V41p(V1uj, { topics: ["catalog", "hoso"], enabled: isTauri() });
+
+  return (
+    <section className="view active">
+      {V1ug === "laphoso" && <LapHoSoView />}
+      {V1ug === "hethonghoa" && <HeThongHoaPane />}
+      {V1ug === "capnhat" && <V4ef />}
+      {V1ug === "sohoa" && <SoHoaPane phongs={V1uh} />}
+      {V1ug === "kyso" && <V4hd />}
+      {V1ug === "ocr" && <OcrPane />}
+    </section>
+  );
+}

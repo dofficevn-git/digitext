@@ -1,0 +1,369 @@
+{
+ "digitext-api": {
+  "Tab": {
+   "orig": "KiemTraForm",
+   "votes": 1,
+   "total": 1
+  },
+  "Te7": {
+   "orig": "NhatKyForm",
+   "votes": 1,
+   "total": 1
+  },
+  "Tkj": {
+   "orig": "SaoLuuForm",
+   "votes": 1,
+   "total": 1
+  },
+  "Tm4": {
+   "orig": "SuCoForm",
+   "votes": 1,
+   "total": 1
+  },
+  "To3": {
+   "orig": "ThuNopForm",
+   "votes": 1,
+   "total": 1
+  },
+  "To5": {
+   "orig": "ThuNopTrucTiepForm",
+   "votes": 1,
+   "total": 1
+  },
+  "T8q": {
+   "orig": "GiaoNhanForm",
+   "votes": 1,
+   "total": 1
+  },
+  "Tob": {
+   "orig": "TraLaiForm",
+   "votes": 1,
+   "total": 1
+  },
+  "Ts": {
+   "orig": "AuthUser",
+   "votes": 55,
+   "total": 55
+  },
+  "Tim": {
+   "orig": "RegisterDeviceRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Tax": {
+   "orig": "ListDocsQuery",
+   "votes": 1,
+   "total": 1
+  },
+  "Thk": {
+   "orig": "ProbeQuery",
+   "votes": 1,
+   "total": 1
+  },
+  "Tpe": {
+   "orig": "UploadQuery",
+   "votes": 1,
+   "total": 1
+  },
+  "Tiu": {
+   "orig": "ReportCell",
+   "votes": 1,
+   "total": 1
+  },
+  "Thp": {
+   "orig": "ProjectReportDto",
+   "votes": 1,
+   "total": 1
+  },
+  "Tj9": {
+   "orig": "ReviewReq",
+   "votes": 1,
+   "total": 1
+  },
+  "Tfb": {
+   "orig": "OcrField",
+   "votes": 1,
+   "total": 1
+  },
+  "T34": {
+   "orig": "CorrectFieldRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "T72": {
+   "orig": "ExportQuery",
+   "votes": 1,
+   "total": 1
+  },
+  "T3b": {
+   "orig": "CreatePackageRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "T3e": {
+   "orig": "CreateProjectRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Tgs": {
+   "orig": "PatchProjectRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Tlb": {
+   "orig": "SetAdminsRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Te": {
+   "orig": "AddAdminRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "T3g": {
+   "orig": "CreateRecordRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Tiw": {
+   "orig": "ReportStatsRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "To4": {
+   "orig": "ThuNopReportBody",
+   "votes": 1,
+   "total": 1
+  },
+  "Tm8": {
+   "orig": "SubmissionRow",
+   "votes": 1,
+   "total": 1
+  },
+  "Tm7": {
+   "orig": "SubmissionItemRow",
+   "votes": 1,
+   "total": 1
+  },
+  "Tgc": {
+   "orig": "PackageRow",
+   "votes": 1,
+   "total": 1
+  },
+  "To8": {
+   "orig": "TimelineDto",
+   "votes": 1,
+   "total": 1
+  },
+  "Tb1": {
+   "orig": "ListUsersQuery",
+   "votes": 1,
+   "total": 1
+  },
+  "T3i": {
+   "orig": "CreateUserRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Tgt": {
+   "orig": "PatchUserRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "T2n": {
+   "orig": "ChangePasswordRequest",
+   "votes": 1,
+   "total": 1
+  },
+  "Tpi": {
+   "orig": "UserPermissionsDto",
+   "votes": 1,
+   "total": 1
+  }
+ },
+ "digitext-db": {
+  "T4w": {
+   "orig": "DisposalEntryRow",
+   "votes": 1,
+   "total": 1
+  },
+  "Tm8": {
+   "orig": "SubmissionRow",
+   "votes": 1,
+   "total": 1
+  },
+  "T1e": {
+   "orig": "BuiltInfo",
+   "votes": 1,
+   "total": 1
+  }
+ },
+ "digitext-ocr": {
+  "Tgi": {
+   "orig": "PageOcr",
+   "votes": 2,
+   "total": 2
+  },
+  "T76": {
+   "orig": "ExtractedField",
+   "votes": 1,
+   "total": 1
+  },
+  "To6": {
+   "orig": "TileOcr",
+   "votes": 2,
+   "total": 2
+  },
+  "Tid": {
+   "orig": "RasterCfg",
+   "votes": 2,
+   "total": 2
+  },
+  "To7": {
+   "orig": "TileRect",
+   "votes": 1,
+   "total": 1
+  },
+  "Tm9": {
+   "orig": "Suggestion",
+   "votes": 1,
+   "total": 1
+  },
+  "Thi": {
+   "orig": "PreparedImage",
+   "votes": 1,
+   "total": 1
+  },
+  "Tpx": {
+   "orig": "VlmField",
+   "votes": 2,
+   "total": 2
+  },
+  "Tpy": {
+   "orig": "VlmGateConfig",
+   "votes": 1,
+   "total": 1
+  }
+ },
+ "digitext-package": {
+  "Tga": {
+   "orig": "PackageBuildRequest",
+   "votes": 2,
+   "total": 2
+  },
+  "T9n": {
+   "orig": "IdSource",
+   "votes": 5,
+   "total": 5
+  },
+  "T1g": {
+   "orig": "BuiltPackage",
+   "votes": 1,
+   "total": 1
+  },
+  "T9a": {
+   "orig": "HosoEad",
+   "votes": 2,
+   "total": 2
+  },
+  "T8s": {
+   "orig": "GoiTinEad",
+   "votes": 2,
+   "total": 2
+  },
+  "T4o": {
+   "orig": "DipRequestEad",
+   "votes": 2,
+   "total": 2
+  },
+  "T7z": {
+   "orig": "FetchRef",
+   "votes": 1,
+   "total": 1
+  },
+  "Td6": {
+   "orig": "MdRef",
+   "votes": 2,
+   "total": 2
+  },
+  "T84": {
+   "orig": "FileRef",
+   "votes": 1,
+   "total": 1
+  },
+  "Tgb": {
+   "orig": "PackageMetsParams",
+   "votes": 1,
+   "total": 1
+  },
+  "Tis": {
+   "orig": "RepMetsParams",
+   "votes": 1,
+   "total": 1
+  },
+  "The": {
+   "orig": "PremisContext",
+   "votes": 3,
+   "total": 3
+  },
+  "Thf": {
+   "orig": "PremisFileObject",
+   "votes": 1,
+   "total": 1
+  }
+ },
+ "digitext-pdf": {
+  "Tgh": {
+   "orig": "PageInput",
+   "votes": 3,
+   "total": 3
+  },
+  "T8r": {
+   "orig": "GlyphRun",
+   "votes": 2,
+   "total": 2
+  },
+  "Tlz": {
+   "orig": "CertField",
+   "votes": 1,
+   "total": 1
+  },
+  "Th0": {
+   "orig": "PdfaObjects",
+   "votes": 1,
+   "total": 1
+  }
+ },
+ "digitext-sign-verify": {
+  "Thh": {
+   "orig": "PreparedDocTimestamp",
+   "votes": 1,
+   "total": 1
+  },
+  "Tjb": {
+   "orig": "RevocationCheck",
+   "votes": 3,
+   "total": 3
+  },
+  "Tpv": {
+   "orig": "VisibleBlock",
+   "votes": 1,
+   "total": 1
+  },
+  "Thg": {
+   "orig": "Prepared",
+   "votes": 1,
+   "total": 1
+  },
+  "Tpr": {
+   "orig": "VerifyReport",
+   "votes": 1,
+   "total": 1
+  },
+  "Too": {
+   "orig": "TsVerify",
+   "votes": 2,
+   "total": 2
+  }
+ }
+}

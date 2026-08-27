@@ -1,0 +1,29 @@
+[package]
+name = "digitext-cli"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+
+[lib]
+name = "digitext_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "digitext"
+path = "src/main.rs"
+
+[dependencies]
+digitext-api = { path = "../digitext-api" }
+digitext-db = { path = "../digitext-db" }
+digitext-dispatcher = { path = "../digitext-dispatcher" }
+digitext-ingest = { path = "../digitext-ingest" }
+digitext-ocr = { path = "../digitext-ocr" }
+digitext-storage = { path = "../digitext-storage" }
+digitext-token-signpdf = { path = "../digitext-token-signpdf" }
+digitext-wipe = { path = "../digitext-wipe" }
+digitext-package = { path = "../digitext-package" }
+chrono = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }

@@ -1,0 +1,4 @@
+---
+- name: "ocr_worker (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role ocr_worker (xem infra/ansible/README.md)"

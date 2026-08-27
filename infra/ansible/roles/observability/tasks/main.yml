@@ -1,0 +1,4 @@
+---
+- name: "observability (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role observability (xem infra/ansible/README.md)"

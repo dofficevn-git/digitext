@@ -1,0 +1,92 @@
+---
+
+- name: Kiểm tra đã cung cấp RoleID + wrapped SecretID
+  ansible.builtin.assert:
+    that:
+      - vault_role_id | length > 0
+      - vault_role_id != "ĐẶT_role_id_trong_group_vars"
+      - vault_wrapped_secret_id | length > 0
+    fail_msg: >
+      Thiếu vault_role_id / vault_wrapped_secret_id. Tạo wrapped SecretID:
+      vault write -wrap-ttl=120s -f auth/approle/role/{{ vault_approle_name }}/secret-id
+    quiet: true
+
+- name: Tải & cài Vault Agent binary
+  ansible.builtin.unarchive:
+    src: "https://releases.hashicorp.com/vault/{{ vault_agent_version }}/vault_{{ vault_agent_version }}_linux_amd64.zip"
+    dest: /usr/local/bin
+    remote_src: true
+    creates: /usr/local/bin/vault
+    mode: "0755"
+
+- name: Thư mục cấu hình /etc/vault-agent/templates
+  ansible.builtin.file:
+    path: /etc/vault-agent/templates
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Đảm bảo /etc/digitext tồn tại (đích render)
+  ansible.builtin.file:
+    path: "{{ digitext_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0750"
+
+- name: Đặt RoleID (không bí mật)
+  ansible.builtin.copy:
+    content: "{{ vault_role_id }}"
+    dest: /etc/vault-agent/role_id
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Giao wrapped SecretID (single-use, TTL ngắn)
+  ansible.builtin.copy:
+    content: "{{ vault_wrapped_secret_id }}"
+    dest: /etc/vault-agent/secret_id
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Copy consul-template (.ctmpl)
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/vault-agent/templates/{{ item }}"
+    owner: root
+    group: root
+    mode: "0640"
+  loop:
+    - api.env.ctmpl
+    - jwt-ed25519.pem.ctmpl
+  notify: restart vault-agent
+
+- name: Render agent.hcl
+  ansible.builtin.template:
+    src: vault-agent.hcl.j2
+    dest: /etc/vault-agent/agent.hcl
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart vault-agent
+
+- name: Cài systemd unit vault-agent.service
+  ansible.builtin.template:
+    src: vault-agent.service.j2
+    dest: /etc/systemd/system/vault-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart vault-agent
+
+- name: Bật + chạy vault-agent
+  ansible.builtin.systemd:
+    name: vault-agent
+    enabled: true
+    state: started
+    daemon_reload: true

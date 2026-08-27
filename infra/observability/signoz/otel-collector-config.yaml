@@ -1,0 +1,57 @@
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: dcgm
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["${env:DCGM_TARGET}"]
+
+processors:
+  memory_limiter:
+    check_interval: 2s
+    limit_percentage: 75
+    spike_limit_percentage: 15
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+exporters:
+  otlp/signoz:
+    endpoint: "${env:SIGNOZ_OTLP_ENDPOINT}"
+    tls:
+      insecure: ${env:SIGNOZ_OTLP_INSECURE}
+    headers:
+      signoz-ingestion-key: "${env:SIGNOZ_INGESTION_KEY}"
+    retry_on_failure:
+      enabled: true
+    sending_queue:
+      enabled: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlp/signoz]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlp/signoz]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlp/signoz]
+  telemetry:
+    logs:
+      level: info

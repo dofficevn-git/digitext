@@ -1,0 +1,29 @@
+# {{ ansible_managed }}
+[Unit]
+Description=HashiCorp Vault Agent (DigiText secrets)
+After=network-online.target
+Wants=network-online.target
+Before=digitext@api.service
+
+[Service]
+User=root
+# Giá trị KHÔNG bí mật cho consul-template (hàm env "..." trong các .ctmpl):
+Environment=POSTGRES_HOST={{ postgres_host }}
+Environment=POSTGRES_PORT={{ postgres_port }}
+Environment=POSTGRES_DB={{ postgres_db }}
+Environment=DIGITEXT_BIND={{ digitext_api_bind }}
+Environment=DIGITEXT_JWT_KEY_PATH={{ digitext_api_jwt_key_path }}
+Environment=DIGITEXT_DATA_DIR={{ digitext_api_data_dir }}
+# api.env.ctmpl có `env "DIGITEXT_BEHIND_PROXY"` — không set ở đây thì render RỖNG ⇒ API coi như
+# không đứng sau proxy (lấy sai IP client cho log/rate-limit).
+Environment=DIGITEXT_BEHIND_PROXY={{ digitext_api_behind_proxy | lower }}
+# Thiếu biến này ⇒ /sign/begin trả 503 (fail-closed): không kiểm được chuỗi cert người ký.
+Environment=DIGITEXT_SIGN_TRUST_ROOTS={{ digitext_api_sign_trust_roots }}
+Environment=DIGITEXT_LOG={{ digitext_api_log }}
+RuntimeDirectory=vault-agent
+ExecStart=/usr/local/bin/vault agent -config=/etc/vault-agent/agent.hcl
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

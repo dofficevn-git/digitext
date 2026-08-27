@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "engine_version": "svtr_vi@2026-07-01",
+    "golden_version": "gs-v1",
+    "note": "VÍ DỤ TỔNG HỢP — bản mới cải thiện nhẹ so baseline (mọi tầng trong dung sai) → PASS."
+  },
+  "overall": { "cer": 0.019, "wer": 0.049, "cer_no_diac": 0.012, "n_lines": 5000 },
+  "by_stratum": {
+    "ro": { "cer": 0.008, "wer": 0.021, "cer_no_diac": 0.006, "n_lines": 1500 },
+    "xau_mo": { "cer": 0.058, "wer": 0.126, "cer_no_diac": 0.040, "n_lines": 1200 },
+    "chu_tay": { "cer": 0.079, "wer": 0.171, "cer_no_diac": 0.056, "n_lines": 800 },
+    "co_bang": { "cer": 0.027, "wer": 0.069, "cer_no_diac": 0.017, "n_lines": 700 },
+    "dau_nhieu": { "cer": 0.023, "wer": 0.059, "cer_no_diac": 0.010, "n_lines": 800 }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "eval_source": "gold",
+    "note": "FIXTURE TONG HOP cho CI — so bia, KHONG phai ket qua that, KHONG co noi dung tai lieu"
+  },
+  "overall": {
+    "f1_macro": 0.4200,
+    "f1_identifier": 0.9500,
+    "f1_non_identifier": 0.4100
+  },
+  "by_field": {
+    "soKyHieu":        {"f1": 0.9600},
+    "ngayThang":       {"f1": 0.9400},
+    "trichYeu":        {"f1": 0.3800},
+    "coQuanBanHanh":   {"f1": 0.4500},
+    "loaiVanBan":      {"f1": 0.4300}
+  }
+}

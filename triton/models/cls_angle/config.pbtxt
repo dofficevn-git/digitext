@@ -1,0 +1,26 @@
+name: "cls_angle"
+platform: "tensorrt_plan"
+max_batch_size: 128
+input [
+  { name: "x", data_type: TYPE_FP32, dims: [3, 48, 192] }
+]
+output [
+  { name: "softmax", data_type: TYPE_FP32, dims: [2] }
+]
+dynamic_batching {
+  preferred_batch_size: [ 32, 64, 128 ]
+  max_queue_delay_microseconds: 3000
+}
+instance_group [
+  { count: 1, kind: KIND_GPU }
+]
+model_warmup [
+  {
+    name: "warmup_zero"
+    batch_size: 1
+    inputs {
+      key: "x"
+      value: { data_type: TYPE_FP32, dims: [3, 48, 192], zero_data: true }
+    }
+  }
+]

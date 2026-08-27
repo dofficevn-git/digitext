@@ -1,0 +1,4 @@
+---
+- name: "nginx_lb (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role nginx_lb (xem infra/ansible/README.md)"

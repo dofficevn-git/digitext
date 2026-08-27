@@ -1,0 +1,5 @@
+---
+- hosts: control_plane
+  become: true
+  roles:
+    - common,postgres,meilisearch

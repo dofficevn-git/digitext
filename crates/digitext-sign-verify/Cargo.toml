@@ -1,0 +1,24 @@
+[package]
+name = "digitext-sign-verify"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+cms = "0.2"
+x509-cert = { version = "0.2", features = ["builder"] }
+der = { version = "0.7", features = ["oid", "derive"] }
+spki = "0.7"
+const-oid = "0.9"
+rsa = { version = "0.9", features = ["sha2"] }
+sha2 = "0.10"
+lopdf = "0.43"
+thiserror = { workspace = true }
+x509-ocsp = { version = "0.2.1", features = ["builder", "rand"] }
+sha1 = { version = "0.10", features = ["oid"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+digitext-pdf = { path = "../digitext-pdf" }
+tracing = { workspace = true }
+
+[dev-dependencies]
+rand = "0.8"

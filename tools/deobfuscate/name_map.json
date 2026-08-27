@@ -1,0 +1,3796 @@
+{
+ "f_rv": {
+  "orig": "api_v1",
+  "file": "crates/digitext-api/src/app.rs",
+  "line_obf": 103,
+  "line_goc": 168,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28w": {
+  "orig": "resolve_local",
+  "file": "crates/digitext-api/src/backfill.rs",
+  "line_obf": 13,
+  "line_goc": 33,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2f9": {
+  "orig": "signatures",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 16,
+  "line_goc": 39,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ga": {
+  "orig": "header_blocks",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 28,
+  "line_goc": 49,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27h": {
+  "orig": "render_kiem_tra",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 58,
+  "line_goc": 89,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27j": {
+  "orig": "render_nhat_ky",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 134,
+  "line_goc": 158,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27k": {
+  "orig": "render_sao_luu",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 179,
+  "line_goc": 206,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27l": {
+  "orig": "render_su_co",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 231,
+  "line_goc": 253,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27n": {
+  "orig": "render_thu_nop",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 292,
+  "line_goc": 301,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27p": {
+  "orig": "render_thu_nop_truc_tiep",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 366,
+  "line_goc": 365,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27f": {
+  "orig": "render_giao_nhan",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 449,
+  "line_goc": 431,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27r": {
+  "orig": "render_tra_lai",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 512,
+  "line_goc": 492,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2i2": {
+  "orig": "subtitle_of",
+  "file": "crates/digitext-api/src/bienban.rs",
+  "line_obf": 579,
+  "line_goc": 535,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gp": {
+  "orig": "spawn_sign_session_sweeper",
+  "file": "crates/digitext-api/src/cli.rs",
+  "line_obf": 246,
+  "line_goc": 266,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gr": {
+  "orig": "spawn_stale_part_sweeper",
+  "file": "crates/digitext-api/src/cli.rs",
+  "line_obf": 271,
+  "line_goc": 291,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gs": {
+  "orig": "spawn_upload_batch_reaper",
+  "file": "crates/digitext-api/src/cli.rs",
+  "line_obf": 283,
+  "line_goc": 317,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ye": {
+  "orig": "parse_bootstrap_args",
+  "file": "crates/digitext-api/src/cli.rs",
+  "line_obf": 308,
+  "line_goc": 339,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_v2": {
+  "orig": "bootstrap_superadmin",
+  "file": "crates/digitext-api/src/cli.rs",
+  "line_obf": 322,
+  "line_goc": 356,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1a5": {
+  "orig": "env_flag",
+  "file": "crates/digitext-api/src/config.rs",
+  "line_obf": 21,
+  "line_goc": 76,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ov": {
+  "orig": "load_signer",
+  "file": "crates/digitext-api/src/copy_sign.rs",
+  "line_obf": 5,
+  "line_goc": 18,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_222": {
+  "orig": "pem_to_der",
+  "file": "crates/digitext-api/src/copy_sign.rs",
+  "line_obf": 23,
+  "line_goc": 36,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2f1": {
+  "orig": "sign_copy",
+  "file": "crates/digitext-api/src/copy_sign.rs",
+  "line_obf": 32,
+  "line_goc": 47,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_23t": {
+  "orig": "primary_project_grants",
+  "file": "crates/digitext-api/src/extract.rs",
+  "line_obf": 43,
+  "line_goc": 95,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_249": {
+  "orig": "project_touch_allowed",
+  "file": "crates/digitext-api/src/extract.rs",
+  "line_obf": 49,
+  "line_goc": 104,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_247": {
+  "orig": "project_list_filter",
+  "file": "crates/digitext-api/src/extract.rs",
+  "line_obf": 60,
+  "line_goc": 122,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_29a": {
+  "orig": "resolve_scope",
+  "file": "crates/digitext-api/src/extract.rs",
+  "line_obf": 95,
+  "line_goc": 170,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_13s": {
+  "orig": "delay_for",
+  "file": "crates/digitext-api/src/limiter.rs",
+  "line_obf": 16,
+  "line_goc": 37,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_wh": {
+  "orig": "bump",
+  "file": "crates/digitext-api/src/limiter.rs",
+  "line_obf": 34,
+  "line_goc": 60,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1g7": {
+  "orig": "hasher",
+  "file": "crates/digitext-api/src/password.rs",
+  "line_obf": 6,
+  "line_goc": 9,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_181": {
+  "orig": "dummy_verify",
+  "file": "crates/digitext-api/src/password.rs",
+  "line_obf": 28,
+  "line_goc": 39,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1g0": {
+  "orig": "hash_async",
+  "file": "crates/digitext-api/src/password.rs",
+  "line_obf": 31,
+  "line_goc": 48,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2pn": {
+  "orig": "verify_async",
+  "file": "crates/digitext-api/src/password.rs",
+  "line_obf": 39,
+  "line_goc": 70,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_182": {
+  "orig": "dummy_verify_async",
+  "file": "crates/digitext-api/src/password.rs",
+  "line_obf": 48,
+  "line_goc": 85,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2od": {
+  "orig": "user_copy",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 442,
+  "line_goc": 477,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25r": {
+  "orig": "read_item",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 562,
+  "line_goc": 590,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_178": {
+  "orig": "download_item",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 578,
+  "line_goc": 608,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_127": {
+  "orig": "create_dip",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 611,
+  "line_goc": 646,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1bz": {
+  "orig": "fee_project",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 804,
+  "line_goc": 836,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1el": {
+  "orig": "get_fees",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 816,
+  "line_goc": 851,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24w": {
+  "orig": "put_fees",
+  "file": "crates/digitext-api/src/routes/access.rs",
+  "line_obf": 830,
+  "line_goc": 866,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1g3": {
+  "orig": "hash_refresh_token",
+  "file": "crates/digitext-api/src/routes/auth.rs",
+  "line_obf": 102,
+  "line_goc": 120,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1u6": {
+  "orig": "new_refresh_token",
+  "file": "crates/digitext-api/src/routes/auth.rs",
+  "line_obf": 106,
+  "line_goc": 125,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1jp": {
+  "orig": "issue_session",
+  "file": "crates/digitext-api/src/routes/auth.rs",
+  "line_obf": 111,
+  "line_goc": 132,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_sr": {
+  "orig": "audit_login_failed",
+  "file": "crates/digitext-api/src/routes/auth.rs",
+  "line_obf": 328,
+  "line_goc": 412,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24h": {
+  "orig": "prune_due",
+  "file": "crates/digitext-api/src/routes/changes.rs",
+  "line_obf": 24,
+  "line_goc": 47,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_153": {
+  "orig": "device_assignable",
+  "file": "crates/digitext-api/src/routes/devices.rs",
+  "line_obf": 63,
+  "line_goc": 81,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_19w": {
+  "orig": "ensure_device_assignable",
+  "file": "crates/digitext-api/src/routes/devices.rs",
+  "line_obf": 76,
+  "line_goc": 102,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26o": {
+  "orig": "register_device",
+  "file": "crates/digitext-api/src/routes/devices.rs",
+  "line_obf": 99,
+  "line_goc": 131,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2a0": {
+  "orig": "revoke_device",
+  "file": "crates/digitext-api/src/routes/devices.rs",
+  "line_obf": 122,
+  "line_goc": 157,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1a1": {
+  "orig": "entry_in_scope",
+  "file": "crates/digitext-api/src/routes/disposal.rs",
+  "line_obf": 133,
+  "line_goc": 163,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_u8": {
+  "orig": "batch_in_scope",
+  "file": "crates/digitext-api/src/routes/disposal.rs",
+  "line_obf": 143,
+  "line_goc": 178,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1nd": {
+  "orig": "list_entries",
+  "file": "crates/digitext-api/src/routes/disposal.rs",
+  "line_obf": 164,
+  "line_goc": 207,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2be": {
+  "orig": "run_sweep",
+  "file": "crates/digitext-api/src/routes/disposal.rs",
+  "line_obf": 186,
+  "line_goc": 232,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ed": {
+  "orig": "get_batch",
+  "file": "crates/digitext-api/src/routes/disposal.rs",
+  "line_obf": 319,
+  "line_goc": 374,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_zy": {
+  "orig": "clean_rel_path",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 66,
+  "line_goc": 106,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_29f": {
+  "orig": "resolve_uploaded_by",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 123,
+  "line_goc": 188,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28s": {
+  "orig": "resolve_batch",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 147,
+  "line_goc": 220,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28v": {
+  "orig": "resolve_insert_conflict",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 161,
+  "line_goc": 241,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24y": {
+  "orig": "put_source_pdf",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 185,
+  "line_goc": 273,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2nl": {
+  "orig": "upload_doc",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 206,
+  "line_goc": 292,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2m3": {
+  "orig": "tree_docs",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 383,
+  "line_goc": 500,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1nb": {
+  "orig": "list_docs",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 412,
+  "line_goc": 533,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_173": {
+  "orig": "download_doc",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 428,
+  "line_goc": 551,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_177": {
+  "orig": "download_headers",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 454,
+  "line_goc": 591,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ge": {
+  "orig": "header_u64",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 484,
+  "line_goc": 631,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1w0": {
+  "orig": "offset_response",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 487,
+  "line_goc": 635,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_10s": {
+  "orig": "completed_response",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 495,
+  "line_goc": 657,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1g9": {
+  "orig": "head_upload",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 511,
+  "line_goc": 677,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_20h": {
+  "orig": "patch_upload",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 530,
+  "line_goc": 702,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2id": {
+  "orig": "sweep_stale_parts",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 693,
+  "line_goc": 906,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ic": {
+  "orig": "sweep_parts_older_than",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 696,
+  "line_goc": 912,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_us": {
+  "orig": "blake3_of_file",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 733,
+  "line_goc": 992,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_264": {
+  "orig": "rebuildable",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 977,
+  "line_goc": 1340,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1fz": {
+  "orig": "has_warm_pdf_stage",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 1120,
+  "line_goc": 1533,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_21r": {
+  "orig": "pdfa_report",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 1130,
+  "line_goc": 1545,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1yf": {
+  "orig": "parse_bound",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 1242,
+  "line_goc": 1732,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2a6": {
+  "orig": "rollup_report",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 1257,
+  "line_goc": 1758,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_29u": {
+  "orig": "review_doc",
+  "file": "crates/digitext-api/src/routes/documents.rs",
+  "line_obf": 1372,
+  "line_goc": 1878,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2pl": {
+  "orig": "verbatim_snippet",
+  "file": "crates/digitext-api/src/routes/info.rs",
+  "line_obf": 292,
+  "line_goc": 316,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1kc": {
+  "orig": "key_of",
+  "file": "crates/digitext-api/src/routes/info.rs",
+  "line_obf": 307,
+  "line_goc": 332,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1o3": {
+  "orig": "list_notifications",
+  "file": "crates/digitext-api/src/routes/notifications.rs",
+  "line_obf": 52,
+  "line_goc": 63,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25v": {
+  "orig": "read_one",
+  "file": "crates/digitext-api/src/routes/notifications.rs",
+  "line_obf": 65,
+  "line_goc": 77,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25m": {
+  "orig": "read_all",
+  "file": "crates/digitext-api/src/routes/notifications.rs",
+  "line_obf": 75,
+  "line_goc": 88,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_sv": {
+  "orig": "authorize_document",
+  "file": "crates/digitext-api/src/routes/ocr_fields.rs",
+  "line_obf": 49,
+  "line_goc": 69,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ne": {
+  "orig": "list_fields",
+  "file": "crates/digitext-api/src/routes/ocr_fields.rs",
+  "line_obf": 61,
+  "line_goc": 87,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_ud": {
+  "orig": "bbox_nums",
+  "file": "crates/digitext-api/src/routes/ocr_fields.rs",
+  "line_obf": 87,
+  "line_goc": 123,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1j8": {
+  "orig": "is_noop",
+  "file": "crates/digitext-api/src/routes/ocr_fields.rs",
+  "line_obf": 92,
+  "line_goc": 134,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_11n": {
+  "orig": "correct_field",
+  "file": "crates/digitext-api/src/routes/ocr_fields.rs",
+  "line_obf": 97,
+  "line_goc": 155,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1aj": {
+  "orig": "export_fields",
+  "file": "crates/digitext-api/src/routes/ocr_fields.rs",
+  "line_obf": 199,
+  "line_goc": 266,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ik": {
+  "orig": "integrity_report",
+  "file": "crates/digitext-api/src/routes/ops.rs",
+  "line_obf": 41,
+  "line_goc": 63,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1il": {
+  "orig": "integrity_run",
+  "file": "crates/digitext-api/src/routes/ops.rs",
+  "line_obf": 74,
+  "line_goc": 106,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1n6": {
+  "orig": "list_backups",
+  "file": "crates/digitext-api/src/routes/ops.rs",
+  "line_obf": 143,
+  "line_goc": 178,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27y": {
+  "orig": "report_backup",
+  "file": "crates/digitext-api/src/routes/ops.rs",
+  "line_obf": 169,
+  "line_goc": 214,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12b": {
+  "orig": "create_package",
+  "file": "crates/digitext-api/src/routes/packages.rs",
+  "line_obf": 84,
+  "line_goc": 112,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1o6": {
+  "orig": "list_packages",
+  "file": "crates/digitext-api/src/routes/packages.rs",
+  "line_obf": 218,
+  "line_goc": 231,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1es": {
+  "orig": "get_package",
+  "file": "crates/digitext-api/src/routes/packages.rs",
+  "line_obf": 241,
+  "line_goc": 260,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1zq": {
+  "orig": "parse_range",
+  "file": "crates/digitext-api/src/routes/packages.rs",
+  "line_obf": 256,
+  "line_goc": 283,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_17c": {
+  "orig": "download_package",
+  "file": "crates/digitext-api/src/routes/packages.rs",
+  "line_obf": 292,
+  "line_goc": 323,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_17s": {
+  "orig": "dtos_with_admins",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 52,
+  "line_goc": 68,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_17r": {
+  "orig": "dto_with_admins",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 67,
+  "line_goc": 88,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12c": {
+  "orig": "create_project",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 110,
+  "line_goc": 142,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_20g": {
+  "orig": "patch_project",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 153,
+  "line_goc": 192,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28k": {
+  "orig": "require_project_admin_scope",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 180,
+  "line_goc": 233,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28e": {
+  "orig": "require_assignable_admin",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 188,
+  "line_goc": 247,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2eb": {
+  "orig": "set_primary_project_if_unset",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 199,
+  "line_goc": 260,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ed": {
+  "orig": "set_project_admins",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 207,
+  "line_goc": 278,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_qt": {
+  "orig": "add_project_admin",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 244,
+  "line_goc": 326,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_276": {
+  "orig": "remove_project_admin",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 271,
+  "line_goc": 362,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24r": {
+  "orig": "publish_tree",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 359,
+  "line_goc": 472,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24s": {
+  "orig": "pull_tree",
+  "file": "crates/digitext-api/src/routes/projects.rs",
+  "line_obf": 387,
+  "line_goc": 509,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26d": {
+  "orig": "record_pdf_key",
+  "file": "crates/digitext-api/src/routes/records.rs",
+  "line_obf": 57,
+  "line_goc": 73,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12e": {
+  "orig": "create_record_inner",
+  "file": "crates/digitext-api/src/routes/records.rs",
+  "line_obf": 60,
+  "line_goc": 79,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12d": {
+  "orig": "create_record",
+  "file": "crates/digitext-api/src/routes/records.rs",
+  "line_obf": 113,
+  "line_goc": 129,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1o9": {
+  "orig": "list_records",
+  "file": "crates/digitext-api/src/routes/records.rs",
+  "line_obf": 145,
+  "line_goc": 161,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_17e": {
+  "orig": "download_record",
+  "file": "crates/digitext-api/src/routes/records.rs",
+  "line_obf": 158,
+  "line_goc": 176,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_13e": {
+  "orig": "decode_b64",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 20,
+  "line_goc": 38,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_195": {
+  "orig": "encode_b64",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 29,
+  "line_goc": 44,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2f2": {
+  "orig": "sign_err",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 36,
+  "line_goc": 53,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1np": {
+  "orig": "list_jobs",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 65,
+  "line_goc": 95,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_sm": {
+  "orig": "attach_lt",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 352,
+  "line_goc": 479,
+  "how": "doan-uoc-luong"
+ },
+ "f_1pw": {
+  "orig": "lta_startup",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 459,
+  "line_goc": 578,
+  "how": "doan-uoc-luong"
+ },
+ "f_sn": {
+  "orig": "attach_lta",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 470,
+  "line_goc": 596,
+  "how": "doan-uoc-luong"
+ },
+ "f_1c7": {
+  "orig": "fetch_ocsp",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 475,
+  "line_goc": 603,
+  "how": "doan-uoc-luong"
+ },
+ "f_1c3": {
+  "orig": "fetch_crl",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 493,
+  "line_goc": 623,
+  "how": "doan-uoc-luong"
+ },
+ "f_25o": {
+  "orig": "read_capped",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 504,
+  "line_goc": 636,
+  "how": "doan-uoc-luong"
+ },
+ "f_st": {
+  "orig": "auth_now",
+  "file": "crates/digitext-api/src/routes/sign.rs",
+  "line_obf": 521,
+  "line_goc": 650,
+  "how": "doan-uoc-luong"
+ },
+ "f_28a": {
+  "orig": "report_stats",
+  "file": "crates/digitext-api/src/routes/stats.rs",
+  "line_obf": 61,
+  "line_goc": 71,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1od": {
+  "orig": "list_stats",
+  "file": "crates/digitext-api/src/routes/stats.rs",
+  "line_obf": 81,
+  "line_goc": 93,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1z3": {
+  "orig": "parse_han_nop",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 185,
+  "line_goc": 227,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1d7": {
+  "orig": "fmt_bytes",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 202,
+  "line_goc": 244,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26p": {
+  "orig": "register_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 216,
+  "line_goc": 262,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1oe": {
+  "orig": "list_submissions",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 340,
+  "line_goc": 380,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ex": {
+  "orig": "get_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 353,
+  "line_goc": 394,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_116": {
+  "orig": "confirm_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 382,
+  "line_goc": 427,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26m": {
+  "orig": "refuse_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 398,
+  "line_goc": 445,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_267": {
+  "orig": "reconcile_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 419,
+  "line_goc": 465,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_266": {
+  "orig": "receive_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 429,
+  "line_goc": 477,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_s6": {
+  "orig": "approve_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 494,
+  "line_goc": 550,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_10r": {
+  "orig": "complete_submission",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 572,
+  "line_goc": 623,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_29t": {
+  "orig": "returned_report",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 611,
+  "line_goc": 678,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12f": {
+  "orig": "create_thu_nop_record",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 664,
+  "line_goc": 735,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2qf": {
+  "orig": "vn_time",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 776,
+  "line_goc": 856,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_16w": {
+  "orig": "dossier_blocks",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 781,
+  "line_goc": 863,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_175": {
+  "orig": "download_dossier",
+  "file": "crates/digitext-api/src/routes/submissions.rs",
+  "line_obf": 931,
+  "line_goc": 986,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28g": {
+  "orig": "require_hub",
+  "file": "crates/digitext-api/src/routes/upload_batches.rs",
+  "line_obf": 77,
+  "line_goc": 102,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_u6": {
+  "orig": "batch_dto_by_id",
+  "file": "crates/digitext-api/src/routes/upload_batches.rs",
+  "line_obf": 148,
+  "line_goc": 189,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_u9": {
+  "orig": "batch_matrix",
+  "file": "crates/digitext-api/src/routes/upload_batches.rs",
+  "line_obf": 175,
+  "line_goc": 230,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_x0": {
+  "orig": "can_manage",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 87,
+  "line_goc": 110,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ox": {
+  "orig": "load_target",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 102,
+  "line_goc": 126,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1oo": {
+  "orig": "list_users",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 107,
+  "line_goc": 134,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12g": {
+  "orig": "create_user",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 120,
+  "line_goc": 150,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1f0": {
+  "orig": "get_user",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 178,
+  "line_goc": 218,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_20i": {
+  "orig": "patch_user",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 192,
+  "line_goc": 235,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_xv": {
+  "orig": "change_password",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 236,
+  "line_goc": 286,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2a3": {
+  "orig": "revoke_user",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 281,
+  "line_goc": 340,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_vt": {
+  "orig": "build_permissions_dto",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 339,
+  "line_goc": 409,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_sw": {
+  "orig": "authorize_grant",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 354,
+  "line_goc": 432,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1f1": {
+  "orig": "get_user_permissions",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 367,
+  "line_goc": 444,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24z": {
+  "orig": "put_user_permissions",
+  "file": "crates/digitext-api/src/routes/users.rs",
+  "line_obf": 377,
+  "line_goc": 459,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18s": {
+  "orig": "effective_set",
+  "file": "crates/digitext-core/src/permission.rs",
+  "line_obf": 308,
+  "line_goc": 388,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1j3": {
+  "orig": "is_invisible",
+  "file": "crates/digitext-core/src/text.rs",
+  "line_obf": 3,
+  "line_goc": 21,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_x2": {
+  "orig": "canon_field_value",
+  "file": "crates/digitext-core/src/text.rs",
+  "line_obf": 9,
+  "line_goc": 33,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_ue": {
+  "orig": "bbox_unchanged",
+  "file": "crates/digitext-core/src/text.rs",
+  "line_obf": 46,
+  "line_goc": 83,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1c0": {
+  "orig": "fee_rates",
+  "file": "crates/digitext-db/src/access.rs",
+  "line_obf": 149,
+  "line_goc": 188,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2e2": {
+  "orig": "set_fee_rates",
+  "file": "crates/digitext-db/src/access.rs",
+  "line_obf": 158,
+  "line_goc": 198,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ej": {
+  "orig": "set_user_copy_key",
+  "file": "crates/digitext-db/src/access.rs",
+  "line_obf": 244,
+  "line_goc": 305,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ag": {
+  "orig": "expired_copies",
+  "file": "crates/digitext-db/src/access.rs",
+  "line_obf": 253,
+  "line_goc": 320,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1r9": {
+  "orig": "mark_copies_deleted",
+  "file": "crates/digitext-db/src/access.rs",
+  "line_obf": 263,
+  "line_goc": 331,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1rc": {
+  "orig": "mark_expired",
+  "file": "crates/digitext-db/src/access.rs",
+  "line_obf": 271,
+  "line_goc": 341,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1pf": {
+  "orig": "logs_for_batch",
+  "file": "crates/digitext-db/src/disposal.rs",
+  "line_obf": 88,
+  "line_goc": 112,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18b": {
+  "orig": "duplicate_sweep",
+  "file": "crates/digitext-db/src/disposal.rs",
+  "line_obf": 97,
+  "line_goc": 125,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ah": {
+  "orig": "expiry_sweep",
+  "file": "crates/digitext-db/src/disposal.rs",
+  "line_obf": 135,
+  "line_goc": 164,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_u7": {
+  "orig": "batch_entries",
+  "file": "crates/digitext-db/src/disposal.rs",
+  "line_obf": 321,
+  "line_goc": 362,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ad": {
+  "orig": "execute_begin",
+  "file": "crates/digitext-db/src/disposal.rs",
+  "line_obf": 437,
+  "line_goc": 494,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1d0": {
+  "orig": "finish_entry_disposal",
+  "file": "crates/digitext-db/src/disposal.rs",
+  "line_obf": 473,
+  "line_goc": 545,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1n8": {
+  "orig": "list_by_status",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 137,
+  "line_goc": 153,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1n9": {
+  "orig": "list_by_status_in_docs",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 145,
+  "line_goc": 169,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_281": {
+  "orig": "report_counts",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 195,
+  "line_goc": 259,
+  "how": "doan-uoc-luong"
+ },
+ "f_2ef": {
+  "orig": "set_review",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 233,
+  "line_goc": 304,
+  "how": "doan-uoc-luong"
+ },
+ "f_2eg": {
+  "orig": "set_review_many",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 264,
+  "line_goc": 351,
+  "how": "doan-uoc-luong"
+ },
+ "f_1o0": {
+  "orig": "list_needing_ocr",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 295,
+  "line_goc": 391,
+  "how": "doan-uoc-luong"
+ },
+ "f_1nx": {
+  "orig": "list_needing_field_extract_in_docs",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 315,
+  "line_goc": 438,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ny": {
+  "orig": "count_missing_page_count_in_docs",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 323,
+  "line_goc": 487,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ol": {
+  "orig": "list_tree",
+  "file": "crates/digitext-db/src/documents.rs",
+  "line_obf": 414,
+  "line_goc": 590,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_ql": {
+  "orig": "active_for_role",
+  "file": "crates/digitext-db/src/engine_versions.rs",
+  "line_obf": 56,
+  "line_goc": 70,
+  "how": "doan-uoc-luong"
+ },
+ "f_2ee": {
+  "orig": "set_result",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 113,
+  "line_goc": 145,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25g": {
+  "orig": "quota_and_fee",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 141,
+  "line_goc": 178,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1a9": {
+  "orig": "escape_like",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 158,
+  "line_goc": 203,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_x8": {
+  "orig": "catalog_search",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 164,
+  "line_goc": 210,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1b9": {
+  "orig": "extract_search",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 191,
+  "line_goc": 243,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2i4": {
+  "orig": "summary_search",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 220,
+  "line_goc": 277,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1wq": {
+  "orig": "overdue_candidates",
+  "file": "crates/digitext-db/src/info.rs",
+  "line_obf": 246,
+  "line_goc": 307,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1jn": {
+  "orig": "is_unique_violation",
+  "file": "crates/digitext-db/src/lib.rs",
+  "line_obf": 31,
+  "line_goc": 43,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1v8": {
+  "orig": "notify",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 18,
+  "line_goc": 29,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1v9": {
+  "orig": "notify_info_overdue",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 38,
+  "line_goc": 54,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1vb": {
+  "orig": "notify_submission_status",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 56,
+  "line_goc": 75,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1nk": {
+  "orig": "list_for_user",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 66,
+  "line_goc": 94,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2n9": {
+  "orig": "unread_count",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 75,
+  "line_goc": 108,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1rg": {
+  "orig": "mark_read",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 81,
+  "line_goc": 116,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1r4": {
+  "orig": "mark_all_read",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 92,
+  "line_goc": 128,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2qc": {
+  "orig": "vn_date",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 110,
+  "line_goc": 156,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2fx": {
+  "orig": "sla_sweep",
+  "file": "crates/digitext-db/src/notifications.rs",
+  "line_obf": 115,
+  "line_goc": 168,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1nj": {
+  "orig": "list_for_document",
+  "file": "crates/digitext-db/src/ocr_fields.rs",
+  "line_obf": 84,
+  "line_goc": 130,
+  "how": "doan-uoc-luong"
+ },
+ "f_1nh": {
+  "orig": "export_gold",
+  "file": "crates/digitext-db/src/ocr_fields.rs",
+  "line_obf": 103,
+  "line_goc": 170,
+  "how": "doan-uoc-luong"
+ },
+ "f_19s": {
+  "orig": "enqueue_document_ocr",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 30,
+  "line_goc": 76,
+  "how": "doan-uoc-luong"
+ },
+ "f_19m": {
+  "orig": "enqueue_extract_fields",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 48,
+  "line_goc": 128,
+  "how": "doan-uoc-luong"
+ },
+ "f_19p": {
+  "orig": "count_docs_page_failed_in_docs",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 77,
+  "line_goc": 166,
+  "how": "doan-uoc-luong"
+ },
+ "f_11x": {
+  "orig": "extract_fields_progress",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 92,
+  "line_goc": 207,
+  "how": "doan-uoc-luong"
+ },
+ "f_11y": {
+  "orig": "enqueue_make_pdf2",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 95,
+  "line_goc": 241,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ax": {
+  "orig": "enqueue_sign_wait",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 129,
+  "line_goc": 260,
+  "how": "doan-uoc-luong"
+ },
+ "f_19r": {
+  "orig": "unresolved_page_jobs",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 154,
+  "line_goc": 279,
+  "how": "doan-uoc-luong"
+ },
+ "f_19u": {
+  "orig": "claim_next_kinds",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 169,
+  "line_goc": 313,
+  "how": "doan-uoc-luong"
+ },
+ "f_2na": {
+  "orig": "heartbeat",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 184,
+  "line_goc": 337,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ra": {
+  "orig": "mark_done",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 246,
+  "line_goc": 382,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1re": {
+  "orig": "mark_page_failed",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 257,
+  "line_goc": 397,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1bn": {
+  "orig": "fail_transient",
+  "file": "crates/digitext-db/src/ocr_jobs.rs",
+  "line_obf": 270,
+  "line_goc": 419,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ni": {
+  "orig": "list_latest_raw_for_document",
+  "file": "crates/digitext-db/src/ocr_results.rs",
+  "line_obf": 57,
+  "line_goc": 98,
+  "how": "doan-uoc-luong"
+ },
+ "f_1nt": {
+  "orig": "pages_done_in_scope",
+  "file": "crates/digitext-db/src/ocr_results.rs",
+  "line_obf": 74,
+  "line_goc": 147,
+  "how": "doan-uoc-luong"
+ },
+ "f_17z": {
+  "orig": "due_for_check",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 6,
+  "line_goc": 24,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26a": {
+  "orig": "record_check",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 20,
+  "line_goc": 40,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1bp": {
+  "orig": "failed_checks",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 67,
+  "line_goc": 94,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_269": {
+  "orig": "record_backup",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 106,
+  "line_goc": 142,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1me": {
+  "orig": "last_ok_backup",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 131,
+  "line_goc": 170,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_ti": {
+  "orig": "backup_alert_recent",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 136,
+  "line_goc": 177,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_rk": {
+  "orig": "all_admins",
+  "file": "crates/digitext-db/src/ops.rs",
+  "line_obf": 146,
+  "line_goc": 190,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1r5": {
+  "orig": "mark_built",
+  "file": "crates/digitext-db/src/packages.rs",
+  "line_obf": 118,
+  "line_goc": 149,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1rd": {
+  "orig": "mark_failed",
+  "file": "crates/digitext-db/src/packages.rs",
+  "line_obf": 137,
+  "line_goc": 176,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ek": {
+  "orig": "set_virus_scan",
+  "file": "crates/digitext-db/src/packages.rs",
+  "line_obf": 150,
+  "line_goc": 197,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_w8": {
+  "orig": "built_sip_for_submission",
+  "file": "crates/digitext-db/src/packages.rs",
+  "line_obf": 159,
+  "line_goc": 208,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1o5": {
+  "orig": "list_overrides",
+  "file": "crates/digitext-db/src/permissions.rs",
+  "line_obf": 5,
+  "line_goc": 13,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2e7": {
+  "orig": "set_overrides",
+  "file": "crates/digitext-db/src/permissions.rs",
+  "line_obf": 29,
+  "line_goc": 43,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1if": {
+  "orig": "insert_one",
+  "file": "crates/digitext-db/src/permissions.rs",
+  "line_obf": 50,
+  "line_goc": 65,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_11d": {
+  "orig": "connect_and_migrate",
+  "file": "crates/digitext-db/src/pool.rs",
+  "line_obf": 10,
+  "line_goc": 20,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12a": {
+  "orig": "create_owned",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 17,
+  "line_goc": 32,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ng": {
+  "orig": "list_for_admin",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 44,
+  "line_goc": 61,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_re": {
+  "orig": "admins_of",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 54,
+  "line_goc": 73,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_rd": {
+  "orig": "admins_for_projects",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 62,
+  "line_goc": 86,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2dy": {
+  "orig": "set_admins",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 71,
+  "line_goc": 107,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1n7": {
+  "orig": "list_by_ids",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 114,
+  "line_goc": 158,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_qm": {
+  "orig": "add_admin",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 138,
+  "line_goc": 186,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_275": {
+  "orig": "remove_admin",
+  "file": "crates/digitext-db/src/projects.rs",
+  "line_obf": 155,
+  "line_goc": 205,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1m5": {
+  "orig": "kind_abbr",
+  "file": "crates/digitext-db/src/records.rs",
+  "line_obf": 21,
+  "line_goc": 31,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ea": {
+  "orig": "set_prepared",
+  "file": "crates/digitext-db/src/sign_sessions.rs",
+  "line_obf": 70,
+  "line_goc": 104,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26q": {
+  "orig": "reject",
+  "file": "crates/digitext-db/src/sign_sessions.rs",
+  "line_obf": 107,
+  "line_goc": 147,
+  "how": "doan-uoc-luong"
+ },
+ "f_272": {
+  "orig": "release_expired",
+  "file": "crates/digitext-db/src/sign_sessions.rs",
+  "line_obf": 131,
+  "line_goc": 168,
+  "how": "doan-uoc-luong"
+ },
+ "f_1er": {
+  "orig": "doc_status_tx",
+  "file": "crates/digitext-db/src/sign_sessions.rs",
+  "line_obf": 165,
+  "line_goc": 221,
+  "how": "doan-uoc-luong"
+ },
+ "f_162": {
+  "orig": "sign_wait_status_tx",
+  "file": "crates/digitext-db/src/sign_sessions.rs",
+  "line_obf": 173,
+  "line_goc": 241,
+  "how": "doan-uoc-luong"
+ },
+ "f_2hy": {
+  "orig": "stt_of",
+  "file": "crates/digitext-db/src/submissions.rs",
+  "line_obf": 187,
+  "line_goc": 222,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2hx": {
+  "orig": "stt_bounds",
+  "file": "crates/digitext-db/src/submissions.rs",
+  "line_obf": 200,
+  "line_goc": 238,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18c": {
+  "orig": "duplicates_in_system",
+  "file": "crates/digitext-db/src/submissions.rs",
+  "line_obf": 470,
+  "line_goc": 513,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_29z": {
+  "orig": "revoke_all_for_user",
+  "file": "crates/digitext-db/src/tokens.rs",
+  "line_obf": 63,
+  "line_goc": 80,
+  "how": "doan-uoc-luong"
+ },
+ "f_29y": {
+  "orig": "revoke_family",
+  "file": "crates/digitext-db/src/tokens.rs",
+  "line_obf": 74,
+  "line_goc": 115,
+  "how": "doan-uoc-luong"
+ },
+ "f_qf": {
+  "orig": "abandon_stale",
+  "file": "crates/digitext-db/src/upload_batches.rs",
+  "line_obf": 78,
+  "line_goc": 106,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1j9": {
+  "orig": "is_open_owned_by",
+  "file": "crates/digitext-db/src/upload_batches.rs",
+  "line_obf": 93,
+  "line_goc": 126,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ev": {
+  "orig": "get_row",
+  "file": "crates/digitext-db/src/upload_batches.rs",
+  "line_obf": 120,
+  "line_goc": 167,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_rf": {
+  "orig": "admins_with_shortfall",
+  "file": "crates/digitext-db/src/upload_batches.rs",
+  "line_obf": 156,
+  "line_goc": 221,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1eg": {
+  "orig": "get_by_id",
+  "file": "crates/digitext-db/src/users.rs",
+  "line_obf": 60,
+  "line_goc": 70,
+  "how": "doan-uoc-luong"
+ },
+ "f_1eh": {
+  "orig": "get_credential",
+  "file": "crates/digitext-db/src/users.rs",
+  "line_obf": 66,
+  "line_goc": 94,
+  "how": "doan-uoc-luong"
+ },
+ "f_2e8": {
+  "orig": "set_password",
+  "file": "crates/digitext-db/src/users.rs",
+  "line_obf": 121,
+  "line_goc": 141,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_wi": {
+  "orig": "bump_token_version",
+  "file": "crates/digitext-db/src/users.rs",
+  "line_obf": 131,
+  "line_goc": 153,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ec": {
+  "orig": "set_project",
+  "file": "crates/digitext-db/src/users.rs",
+  "line_obf": 156,
+  "line_goc": 183,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1d5": {
+  "orig": "fixed_holidays",
+  "file": "crates/digitext-db/src/workdays.rs",
+  "line_obf": 5,
+  "line_goc": 16,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1z4": {
+  "orig": "parse_holidays",
+  "file": "crates/digitext-db/src/workdays.rs",
+  "line_obf": 11,
+  "line_goc": 24,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1hg": {
+  "orig": "holiday_set",
+  "file": "crates/digitext-db/src/workdays.rs",
+  "line_obf": 17,
+  "line_goc": 32,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ri": {
+  "orig": "working_days_between",
+  "file": "crates/digitext-db/src/workdays.rs",
+  "line_obf": 24,
+  "line_goc": 42,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2qu": {
+  "orig": "weighted_lag",
+  "file": "crates/digitext-dispatcher/src/lib.rs",
+  "line_obf": 9,
+  "line_goc": 23,
+  "how": "doan-uoc-luong"
+ },
+ "f_105": {
+  "orig": "project_stats_with_pending",
+  "file": "crates/digitext-dispatcher/src/lib.rs",
+  "line_obf": 25,
+  "line_goc": 78,
+  "how": "doan-uoc-luong"
+ },
+ "f_2gl": {
+  "orig": "spans_json_from_page",
+  "file": "crates/digitext-ocr/src/assemble.rs",
+  "line_obf": 19,
+  "line_goc": 44,
+  "how": "doan-uoc-luong"
+ },
+ "f_1eu": {
+  "orig": "parse_worker_kinds",
+  "file": "crates/digitext-ocr/src/config.rs",
+  "line_obf": 369,
+  "line_goc": 564,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ee": {
+  "orig": "get_bool",
+  "file": "crates/digitext-ocr/src/config.rs",
+  "line_obf": 394,
+  "line_goc": 602,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1jf": {
+  "orig": "is_protected",
+  "file": "crates/digitext-ocr/src/corrector.rs",
+  "line_obf": 56,
+  "line_goc": 111,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1jh": {
+  "orig": "is_roman_numeral",
+  "file": "crates/digitext-ocr/src/corrector.rs",
+  "line_obf": 62,
+  "line_goc": 121,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1mw": {
+  "orig": "levenshtein",
+  "file": "crates/digitext-ocr/src/corrector.rs",
+  "line_obf": 68,
+  "line_goc": 129,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ap": {
+  "orig": "run_health",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 51,
+  "line_goc": 79,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2bh": {
+  "orig": "run_worker",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 64,
+  "line_goc": 96,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2re": {
+  "orig": "worker_exit_is_fatal",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 160,
+  "line_goc": 200,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gu": {
+  "orig": "spawn_worker_loop",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 163,
+  "line_goc": 206,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1os": {
+  "orig": "load_lexicon",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 507,
+  "line_goc": 577,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_v9": {
+  "orig": "build_corrector",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 533,
+  "line_goc": 600,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gq": {
+  "orig": "spawn_signal_handler",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 564,
+  "line_goc": 634,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2qn": {
+  "orig": "wait_for_signal",
+  "file": "crates/digitext-ocr/src/entry.rs",
+  "line_obf": 571,
+  "line_goc": 642,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ft": {
+  "orig": "has_dmy",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 56,
+  "line_goc": 85,
+  "how": "doan-uoc-luong"
+ },
+ "f_1pp": {
+  "orig": "looks_like_date",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 67,
+  "line_goc": 97,
+  "how": "doan-uoc-luong"
+ },
+ "f_1fv": {
+  "orig": "has_doc_number",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 71,
+  "line_goc": 103,
+  "how": "doan-uoc-luong"
+ },
+ "f_1j7": {
+  "orig": "is_national_header",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 82,
+  "line_goc": 116,
+  "how": "doan-uoc-luong"
+ },
+ "f_1jk": {
+  "orig": "is_signature",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 96,
+  "line_goc": 132,
+  "how": "doan-uoc-luong"
+ },
+ "f_1jg": {
+  "orig": "is_reference_line",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 99,
+  "line_goc": 138,
+  "how": "doan-uoc-luong"
+ },
+ "f_1j6": {
+  "orig": "is_mostly_upper",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 103,
+  "line_goc": 144,
+  "how": "doan-uoc-luong"
+ },
+ "f_2ra": {
+  "orig": "word_count",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 111,
+  "line_goc": 154,
+  "how": "doan-uoc-luong"
+ },
+ "f_1rm": {
+  "orig": "match_doc_type",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 114,
+  "line_goc": 161,
+  "how": "doan-uoc-luong"
+ },
+ "f_2ho": {
+  "orig": "store_fields",
+  "file": "crates/digitext-ocr/src/fields.rs",
+  "line_obf": 250,
+  "line_goc": 328,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1sa": {
+  "orig": "merge_pages",
+  "file": "crates/digitext-ocr/src/fields_v2.rs",
+  "line_obf": 37,
+  "line_goc": 75,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_14m": {
+  "orig": "derive_fields",
+  "file": "crates/digitext-ocr/src/fields_v2.rs",
+  "line_obf": 51,
+  "line_goc": 99,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_s3": {
+  "orig": "apply_fields_v2",
+  "file": "crates/digitext-ocr/src/fields_v2.rs",
+  "line_obf": 67,
+  "line_goc": 121,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1v4": {
+  "orig": "normalize_endpoint",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 19,
+  "line_goc": 35,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1mj": {
+  "orig": "lazy_channel",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 33,
+  "line_goc": 48,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1qz": {
+  "orig": "map_status",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 42,
+  "line_goc": 58,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1z0": {
+  "orig": "parse_fp32_le",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 58,
+  "line_goc": 76,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1dl": {
+  "orig": "fp32_to_boxes",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 67,
+  "line_goc": 84,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1zz": {
+  "orig": "parse_string_tensor",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 70,
+  "line_goc": 91,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ia": {
+  "orig": "inject_current_context",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 105,
+  "line_goc": 126,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_vf": {
+  "orig": "build_infer_request",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 111,
+  "line_goc": 136,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1z5": {
+  "orig": "parse_infer_response",
+  "file": "crates/digitext-ocr/src/grpc.rs",
+  "line_obf": 130,
+  "line_goc": 155,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ip": {
+  "orig": "iou",
+  "file": "crates/digitext-ocr/src/infer.rs",
+  "line_obf": 67,
+  "line_goc": 98,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ux": {
+  "orig": "nms",
+  "file": "crates/digitext-ocr/src/infer.rs",
+  "line_obf": 81,
+  "line_goc": 115,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_260": {
+  "orig": "reading_order",
+  "file": "crates/digitext-ocr/src/infer.rs",
+  "line_obf": 104,
+  "line_goc": 139,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1si": {
+  "orig": "merge_tiles",
+  "file": "crates/digitext-ocr/src/infer.rs",
+  "line_obf": 140,
+  "line_goc": 182,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2bd": {
+  "orig": "run_sla_sweeper",
+  "file": "crates/digitext-ocr/src/package_worker.rs",
+  "line_obf": 394,
+  "line_goc": 422,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2am": {
+  "orig": "run_access_expiry_sweeper",
+  "file": "crates/digitext-ocr/src/package_worker.rs",
+  "line_obf": 408,
+  "line_goc": 451,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2an": {
+  "orig": "run_disposal_sweeper",
+  "file": "crates/digitext-ocr/src/package_worker.rs",
+  "line_obf": 431,
+  "line_goc": 490,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2b5": {
+  "orig": "run_ops_sweeper",
+  "file": "crates/digitext-ocr/src/package_worker.rs",
+  "line_obf": 484,
+  "line_goc": 572,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1hv": {
+  "orig": "image_dimensions",
+  "file": "crates/digitext-ocr/src/render.rs",
+  "line_obf": 37,
+  "line_goc": 64,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_13f": {
+  "orig": "decode_image",
+  "file": "crates/digitext-ocr/src/render.rs",
+  "line_obf": 52,
+  "line_goc": 73,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2l3": {
+  "orig": "tile_rgb",
+  "file": "crates/digitext-ocr/src/render.rs",
+  "line_obf": 58,
+  "line_goc": 80,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1xk": {
+  "orig": "page_bytes_from_pdf",
+  "file": "crates/digitext-ocr/src/render.rs",
+  "line_obf": 178,
+  "line_goc": 258,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25k": {
+  "orig": "rasterize_page_jpeg",
+  "file": "crates/digitext-ocr/src/render.rs",
+  "line_obf": 202,
+  "line_goc": 302,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2l0": {
+  "orig": "tile_grid",
+  "file": "crates/digitext-ocr/src/tiling.rs",
+  "line_obf": 9,
+  "line_goc": 18,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1yk": {
+  "orig": "parse_completion",
+  "file": "crates/digitext-ocr/src/vllm.rs",
+  "line_obf": 36,
+  "line_goc": 68,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_23i": {
+  "orig": "prepare_image",
+  "file": "crates/digitext-ocr/src/vlm.rs",
+  "line_obf": 19,
+  "line_goc": 70,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_28r": {
+  "orig": "rescale_bbox_to_page",
+  "file": "crates/digitext-ocr/src/vlm.rs",
+  "line_obf": 55,
+  "line_goc": 111,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ju": {
+  "orig": "jpeg_data_uri",
+  "file": "crates/digitext-ocr/src/vlm.rs",
+  "line_obf": 96,
+  "line_goc": 163,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ce": {
+  "orig": "fields_schema",
+  "file": "crates/digitext-ocr/src/vlm.rs",
+  "line_obf": 100,
+  "line_goc": 181,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_11k": {
+  "orig": "corners_to_xywh",
+  "file": "crates/digitext-ocr/src/vlm.rs",
+  "line_obf": 126,
+  "line_goc": 235,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1yy": {
+  "orig": "parse_fields",
+  "file": "crates/digitext-ocr/src/vlm.rs",
+  "line_obf": 132,
+  "line_goc": 244,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ey": {
+  "orig": "should_use_vlm",
+  "file": "crates/digitext-ocr/src/vlm_fields.rs",
+  "line_obf": 75,
+  "line_goc": 121,
+  "how": "doan-uoc-luong"
+ },
+ "f_1j1": {
+  "orig": "merge_vlm",
+  "file": "crates/digitext-ocr/src/vlm_fields.rs",
+  "line_obf": 78,
+  "line_goc": 149,
+  "how": "doan-uoc-luong"
+ },
+ "f_1sk": {
+  "orig": "apply_vlm_fields",
+  "file": "crates/digitext-ocr/src/vlm_fields.rs",
+  "line_obf": 89,
+  "line_goc": 181,
+  "how": "doan-uoc-luong"
+ },
+ "f_24a": {
+  "orig": "prompt_v2",
+  "file": "crates/digitext-ocr/src/vlm_prompt_v2.rs",
+  "line_obf": 44,
+  "line_goc": 69,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_12t": {
+  "orig": "crop_tile",
+  "file": "crates/digitext-ocr/src/worker.rs",
+  "line_obf": 27,
+  "line_goc": 50,
+  "how": "doan-uoc-luong"
+ },
+ "f_2gw": {
+  "orig": "split_tile",
+  "file": "crates/digitext-ocr/src/worker.rs",
+  "line_obf": 47,
+  "line_goc": 73,
+  "how": "doan-uoc-luong"
+ },
+ "f_2bg": {
+  "orig": "run_requeue_sweeper",
+  "file": "crates/digitext-ocr/src/worker.rs",
+  "line_obf": 145,
+  "line_goc": 1144,
+  "how": "doan-uoc-luong"
+ },
+ "f_2en": {
+  "orig": "sha256_upper",
+  "file": "crates/digitext-package/src/builder.rs",
+  "line_obf": 25,
+  "line_goc": 40,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1dg": {
+  "orig": "format_datetime",
+  "file": "crates/digitext-package/src/builder.rs",
+  "line_obf": 31,
+  "line_goc": 49,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2pc": {
+  "orig": "validate_request",
+  "file": "crates/digitext-package/src/builder.rs",
+  "line_obf": 34,
+  "line_goc": 53,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2sa": {
+  "orig": "zip_datetime",
+  "file": "crates/digitext-package/src/builder.rs",
+  "line_obf": 168,
+  "line_goc": 163,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_w6": {
+  "orig": "build_zip",
+  "file": "crates/digitext-package/src/builder.rs",
+  "line_obf": 179,
+  "line_goc": 175,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_vn": {
+  "orig": "build_package",
+  "file": "crates/digitext-package/src/builder.rs",
+  "line_obf": 201,
+  "line_goc": 199,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1jd": {
+  "orig": "is_padded_code",
+  "file": "crates/digitext-package/src/codes.rs",
+  "line_obf": 18,
+  "line_goc": 37,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ix": {
+  "orig": "is_bool_flag",
+  "file": "crates/digitext-package/src/codes.rs",
+  "line_obf": 25,
+  "line_goc": 46,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1wi": {
+  "orig": "opt_num",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 133,
+  "line_goc": 172,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_190": {
+  "orig": "emit_hoso",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 145,
+  "line_goc": 187,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18z": {
+  "orig": "emit_goi_tin",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 175,
+  "line_goc": 215,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18w": {
+  "orig": "emit_dip_request",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 190,
+  "line_goc": 232,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18x": {
+  "orig": "emit_doc_ead",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 203,
+  "line_goc": 247,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_xz": {
+  "orig": "check_code",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 287,
+  "line_goc": 324,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_y8": {
+  "orig": "check_opt_code",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 294,
+  "line_goc": 330,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_y9": {
+  "orig": "check_risk",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 299,
+  "line_goc": 336,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_y3": {
+  "orig": "check_maintenance",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 312,
+  "line_goc": 347,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2p2": {
+  "orig": "validate_hoso",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 323,
+  "line_goc": 357,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2p1": {
+  "orig": "validate_goi_tin",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 362,
+  "line_goc": 396,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ox": {
+  "orig": "validate_dip_request",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 384,
+  "line_goc": 417,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2oy": {
+  "orig": "validate_doc_ead",
+  "file": "crates/digitext-package/src/ead.rs",
+  "line_obf": 401,
+  "line_goc": 436,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1c1": {
+  "orig": "fetch_content",
+  "file": "crates/digitext-package/src/fetch.rs",
+  "line_obf": 3,
+  "line_goc": 9,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1j0": {
+  "orig": "is_fetch_name",
+  "file": "crates/digitext-package/src/fetch.rs",
+  "line_obf": 9,
+  "line_goc": 17,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1sm": {
+  "orig": "metadata_stem",
+  "file": "crates/digitext-package/src/fetch.rs",
+  "line_obf": 12,
+  "line_goc": 23,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2op": {
+  "orig": "uuid_id",
+  "file": "crates/digitext-package/src/ids.rs",
+  "line_obf": 19,
+  "line_goc": 33,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1x2": {
+  "orig": "package_objid",
+  "file": "crates/digitext-package/src/ids.rs",
+  "line_obf": 25,
+  "line_goc": 44,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2sb": {
+  "orig": "zip_file_name",
+  "file": "crates/digitext-package/src/ids.rs",
+  "line_obf": 35,
+  "line_goc": 60,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1s0": {
+  "orig": "mdref_attrs",
+  "file": "crates/digitext-package/src/mets.rs",
+  "line_obf": 53,
+  "line_goc": 85,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2rt": {
+  "orig": "write_mdref",
+  "file": "crates/digitext-package/src/mets.rs",
+  "line_obf": 74,
+  "line_goc": 106,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2rs": {
+  "orig": "write_file",
+  "file": "crates/digitext-package/src/mets.rs",
+  "line_obf": 82,
+  "line_goc": 112,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1wc": {
+  "orig": "open_mets",
+  "file": "crates/digitext-package/src/mets.rs",
+  "line_obf": 104,
+  "line_goc": 135,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1x0": {
+  "orig": "package_mets",
+  "file": "crates/digitext-package/src/mets.rs",
+  "line_obf": 130,
+  "line_goc": 163,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27s": {
+  "orig": "rep_mets",
+  "file": "crates/digitext-package/src/mets.rs",
+  "line_obf": 288,
+  "line_goc": 347,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ds": {
+  "orig": "from_file_name",
+  "file": "crates/digitext-package/src/mime.rs",
+  "line_obf": 8,
+  "line_goc": 18,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1wd": {
+  "orig": "open_premis",
+  "file": "crates/digitext-package/src/premis.rs",
+  "line_obf": 23,
+  "line_goc": 43,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2rr": {
+  "orig": "write_event_and_agent",
+  "file": "crates/digitext-package/src/premis.rs",
+  "line_obf": 35,
+  "line_goc": 56,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1x3": {
+  "orig": "package_premis",
+  "file": "crates/digitext-package/src/premis.rs",
+  "line_obf": 62,
+  "line_goc": 86,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_27u": {
+  "orig": "rep_premis",
+  "file": "crates/digitext-package/src/premis.rs",
+  "line_obf": 79,
+  "line_goc": 108,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2fi": {
+  "orig": "simpledc_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 4,
+  "line_goc": 18,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_26g": {
+  "orig": "redirect_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 36,
+  "line_goc": 51,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1wy": {
+  "orig": "package_ead_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 41,
+  "line_goc": 63,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18j": {
+  "orig": "ead_doc_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 81,
+  "line_goc": 105,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18l": {
+  "orig": "ead_pic_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 107,
+  "line_goc": 133,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_18k": {
+  "orig": "ead_media_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 130,
+  "line_goc": 158,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1sq": {
+  "orig": "mets_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 154,
+  "line_goc": 183,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_23g": {
+  "orig": "premis_xsd",
+  "file": "crates/digitext-package/src/schemas.rs",
+  "line_obf": 160,
+  "line_goc": 190,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2io": {
+  "orig": "table_head",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 17,
+  "line_goc": 39,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ip": {
+  "orig": "table_hhea",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 37,
+  "line_goc": 60,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2is": {
+  "orig": "table_maxp",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 55,
+  "line_goc": 79,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2iq": {
+  "orig": "table_hmtx",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 62,
+  "line_goc": 89,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ir": {
+  "orig": "table_loca",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 67,
+  "line_goc": 96,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2in": {
+  "orig": "table_cmap",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 70,
+  "line_goc": 102,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2it": {
+  "orig": "table_name",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 93,
+  "line_goc": 128,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2iu": {
+  "orig": "table_post",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 119,
+  "line_goc": 156,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1f8": {
+  "orig": "glyphless_ttf",
+  "file": "crates/digitext-pdf/src/glyphless.rs",
+  "line_obf": 129,
+  "line_goc": 168,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2bi": {
+  "orig": "s15f16",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 3,
+  "line_goc": 18,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gy": {
+  "orig": "srgb_to_linear",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 6,
+  "line_goc": 23,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2j1": {
+  "orig": "tag_xyz",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 13,
+  "line_goc": 32,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2iz": {
+  "orig": "tag_trc_srgb",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 22,
+  "line_goc": 43,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ix": {
+  "orig": "tag_desc",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 34,
+  "line_goc": 58,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2iy": {
+  "orig": "tag_text",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 49,
+  "line_goc": 75,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2gx": {
+  "orig": "srgb_icc",
+  "file": "crates/digitext-pdf/src/icc.rs",
+  "line_obf": 58,
+  "line_goc": 92,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_24n": {
+  "orig": "pt_per_px",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 45,
+  "line_goc": 71,
+  "how": "doan-uoc-luong"
+ },
+ "f_196": {
+  "orig": "encode_identity_h",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 64,
+  "line_goc": 97,
+  "how": "doan-uoc-luong"
+ },
+ "f_qq": {
+  "orig": "add_invisible_cid_font",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 72,
+  "line_goc": 111,
+  "how": "doan-uoc-luong"
+ },
+ "f_1xm": {
+  "orig": "page_content",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 103,
+  "line_goc": 163,
+  "how": "doan-uoc-luong"
+ },
+ "f_1b3": {
+  "orig": "dpi_from_page_width",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 157,
+  "line_goc": 245,
+  "how": "doan-uoc-luong"
+ },
+ "f_17h": {
+  "orig": "extract_page_jpeg_with_dpi",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 164,
+  "line_goc": 265,
+  "how": "doan-uoc-luong"
+ },
+ "f_1b5": {
+  "orig": "validate_pdfa_basic",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 176,
+  "line_goc": 386,
+  "how": "doan-uoc-luong"
+ },
+ "f_1xp": {
+  "orig": "page_has_text",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 437,
+  "line_goc": 564,
+  "how": "doan-uoc-luong"
+ },
+ "f_11f": {
+  "orig": "content_fingerprint",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 459,
+  "line_goc": 585,
+  "how": "doan-uoc-luong"
+ },
+ "f_vz": {
+  "orig": "build_searchable_pdf",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 475,
+  "line_goc": 604,
+  "how": "doan-uoc-luong"
+ },
+ "f_1cq": {
+  "orig": "find_cert_font",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 539,
+  "line_goc": 700,
+  "how": "doan-uoc-luong"
+ },
+ "f_1cr": {
+  "orig": "find_cert_font_for",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 550,
+  "line_goc": 719,
+  "how": "doan-uoc-luong"
+ },
+ "f_2eo": {
+  "orig": "shape",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 584,
+  "line_goc": 763,
+  "how": "doan-uoc-luong"
+ },
+ "f_2bf": {
+  "orig": "run_width_pt",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 602,
+  "line_goc": 786,
+  "how": "doan-uoc-luong"
+ },
+ "f_2k2": {
+  "orig": "cid_bytes",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 605,
+  "line_goc": 806,
+  "how": "doan-uoc-luong"
+ },
+ "f_zc": {
+  "orig": "hex_of",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 613,
+  "line_goc": 815,
+  "how": "doan-uoc-luong"
+ },
+ "f_1gw": {
+  "orig": "add_embedded_font",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 620,
+  "line_goc": 825,
+  "how": "doan-uoc-luong"
+ },
+ "f_qn": {
+  "orig": "build_signature_block",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 627,
+  "line_goc": 913,
+  "how": "doan-uoc-luong"
+ },
+ "f_w0": {
+  "orig": "circle_ops",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 680,
+  "line_goc": 1043,
+  "how": "doan-uoc-luong"
+ },
+ "f_zf": {
+  "orig": "arc_angle",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 777,
+  "line_goc": 1071,
+  "how": "doan-uoc-luong"
+ },
+ "f_s7": {
+  "orig": "split_arc_text",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 829,
+  "line_goc": 1078,
+  "how": "doan-uoc-luong"
+ },
+ "f_2gv": {
+  "orig": "arc_text_ops",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 833,
+  "line_goc": 1107,
+  "how": "doan-uoc-luong"
+ },
+ "f_s8": {
+  "orig": "build_signature_stamp",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 855,
+  "line_goc": 1168,
+  "how": "doan-uoc-luong"
+ },
+ "f_w1": {
+  "orig": "build_cert_pdf",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 909,
+  "line_goc": 1322,
+  "how": "doan-uoc-luong"
+ },
+ "f_v8": {
+  "orig": "wrap_text",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 1039,
+  "line_goc": 1488,
+  "how": "doan-uoc-luong"
+ },
+ "f_2rm": {
+  "orig": "build_form_pdf",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 1166,
+  "line_goc": 1517,
+  "how": "doan-uoc-luong"
+ },
+ "f_ve": {
+  "orig": "effective_media_box",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 1192,
+  "line_goc": 1736,
+  "how": "doan-uoc-luong"
+ },
+ "f_18n": {
+  "orig": "prepend_page_content",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 1372,
+  "line_goc": 1763,
+  "how": "doan-uoc-luong"
+ },
+ "f_23r": {
+  "orig": "add_watermark_font",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 1396,
+  "line_goc": 1788,
+  "how": "doan-uoc-luong"
+ },
+ "f_qv": {
+  "orig": "stamp_user_copy",
+  "file": "crates/digitext-pdf/src/lib.rs",
+  "line_obf": 1414,
+  "line_goc": 1837,
+  "how": "doan-uoc-luong"
+ },
+ "f_2s1": {
+  "orig": "xmp_packet",
+  "file": "crates/digitext-pdf/src/pdfa.rs",
+  "line_obf": 13,
+  "line_goc": 40,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_qs": {
+  "orig": "add_pdfa_objects",
+  "file": "crates/digitext-pdf/src/pdfa.rs",
+  "line_obf": 47,
+  "line_goc": 82,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2e3": {
+  "orig": "set_file_id",
+  "file": "crates/digitext-pdf/src/pdfa.rs",
+  "line_obf": 77,
+  "line_goc": 127,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1rh": {
+  "orig": "markers",
+  "file": "crates/digitext-pdf/src/pdfa.rs",
+  "line_obf": 103,
+  "line_goc": 167,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2j0": {
+  "orig": "tag_value",
+  "file": "crates/digitext-pdf/src/pdfa.rs",
+  "line_obf": 164,
+  "line_goc": 228,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1j4": {
+  "orig": "is_issuer_of",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 147,
+  "line_goc": 205,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2fb": {
+  "orig": "signed_by",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 151,
+  "line_goc": 211,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_ye": {
+  "orig": "check_validity",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 165,
+  "line_goc": 223,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_yc": {
+  "orig": "check_signing_key_usage",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 194,
+  "line_goc": 251,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_y2": {
+  "orig": "check_is_ca",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 210,
+  "line_goc": 268,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1fy": {
+  "orig": "has_timestamping_eku",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 225,
+  "line_goc": 287,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1cv": {
+  "orig": "find_extension",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 234,
+  "line_goc": 298,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_21z": {
+  "orig": "pem_blocks",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 241,
+  "line_goc": 306,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_u1": {
+  "orig": "base64_decode",
+  "file": "crates/digitext-sign-verify/src/chain.rs",
+  "line_obf": 260,
+  "line_goc": 324,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_w2": {
+  "orig": "build_signed_attrs",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 61,
+  "line_goc": 90,
+  "how": "doan-uoc-luong"
+ },
+ "f_2fa": {
+  "orig": "signed_attrs_tbs",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 95,
+  "line_goc": 135,
+  "how": "doan-uoc-luong"
+ },
+ "f_sd": {
+  "orig": "assemble_cms_with_timestamp",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 98,
+  "line_goc": 153,
+  "how": "doan-uoc-luong"
+ },
+ "f_se": {
+  "orig": "parse_signed_data",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 105,
+  "line_goc": 279,
+  "how": "doan-uoc-luong"
+ },
+ "f_1zy": {
+  "orig": "verify_cms_with_trust",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 186,
+  "line_goc": 307,
+  "how": "doan-uoc-luong"
+ },
+ "f_2pq": {
+  "orig": "extract_signing_time",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 196,
+  "line_goc": 407,
+  "how": "doan-uoc-luong"
+ },
+ "f_2ps": {
+  "orig": "extract_timestamp_token",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 199,
+  "line_goc": 424,
+  "how": "doan-uoc-luong"
+ },
+ "f_2pr": {
+  "orig": "extract_signing_cert_hash",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 206,
+  "line_goc": 439,
+  "how": "doan-uoc-luong"
+ },
+ "f_1bb": {
+  "orig": "extract_message_digest",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 281,
+  "line_goc": 457,
+  "how": "doan-uoc-luong"
+ },
+ "f_1bc": {
+  "orig": "all_certs",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 296,
+  "line_goc": 478,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ba": {
+  "orig": "cert_ski",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 309,
+  "line_goc": 497,
+  "how": "doan-uoc-luong"
+ },
+ "f_2pw": {
+  "orig": "verify_rsa_sha256",
+  "file": "crates/digitext-sign-verify/src/cms.rs",
+  "line_obf": 391,
+  "line_goc": 538,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2aa": {
+  "orig": "root_id",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 22,
+  "line_goc": 52,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_23s": {
+  "orig": "prev_startxref",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 30,
+  "line_goc": 62,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25l": {
+  "orig": "raw_object",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 50,
+  "line_goc": 83,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_x9": {
+  "orig": "catalog_with_dss",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 71,
+  "line_goc": 104,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2ht": {
+  "orig": "stream_object",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 90,
+  "line_goc": 127,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2di": {
+  "orig": "serialize_id",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 194,
+  "line_goc": 250,
+  "how": "doan-uoc-luong"
+ },
+ "f_2p0": {
+  "orig": "ensure_only_dss_added",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 210,
+  "line_goc": 338,
+  "how": "doan-uoc-luong"
+ },
+ "f_1a0": {
+  "orig": "collect_dss_ids",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 264,
+  "line_goc": 369,
+  "how": "doan-uoc-luong"
+ },
+ "f_10d": {
+  "orig": "read_dss",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 294,
+  "line_goc": 396,
+  "how": "doan-uoc-luong"
+ },
+ "f_25q": {
+  "orig": "write_byte_range",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 318,
+  "line_goc": 447,
+  "how": "doan-uoc-luong"
+ },
+ "f_2ro": {
+  "orig": "append_ref_to_array",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 357,
+  "line_goc": 468,
+  "how": "doan-uoc-luong"
+ },
+ "f_rz": {
+  "orig": "append_xref_trailer",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 372,
+  "line_goc": 499,
+  "how": "doan-uoc-luong"
+ },
+ "f_s0": {
+  "orig": "prepare_doc_timestamp",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 406,
+  "line_goc": 541,
+  "how": "doan-uoc-luong"
+ },
+ "f_23h": {
+  "orig": "finalize_doc_timestamp",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 445,
+  "line_goc": 642,
+  "how": "doan-uoc-luong"
+ },
+ "f_1cp": {
+  "orig": "ensure_array_grew_by",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 528,
+  "line_goc": 683,
+  "how": "doan-uoc-luong"
+ },
+ "f_19v": {
+  "orig": "page_holding_field",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 553,
+  "line_goc": 729,
+  "how": "doan-uoc-luong"
+ },
+ "f_1xq": {
+  "orig": "validate_doc_timestamp_object",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 607,
+  "line_goc": 752,
+  "how": "doan-uoc-luong"
+ },
+ "f_2oz": {
+  "orig": "validate_increments",
+  "file": "crates/digitext-sign-verify/src/dss.rs",
+  "line_obf": 621,
+  "line_goc": 837,
+  "how": "doan-uoc-luong"
+ },
+ "f_12n": {
+  "orig": "crl_url",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 53,
+  "line_goc": 99,
+  "how": "doan-uoc-luong"
+ },
+ "f_1vw": {
+  "orig": "ocsp_url_der",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 70,
+  "line_goc": 118,
+  "how": "doan-uoc-luong"
+ },
+ "f_12o": {
+  "orig": "crl_url_der",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 73,
+  "line_goc": 122,
+  "how": "doan-uoc-luong"
+ },
+ "f_vl": {
+  "orig": "build_ocsp_request_der",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 76,
+  "line_goc": 126,
+  "how": "doan-uoc-luong"
+ },
+ "f_y7": {
+  "orig": "check_ocsp_response_der",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 81,
+  "line_goc": 132,
+  "how": "doan-uoc-luong"
+ },
+ "f_y1": {
+  "orig": "check_crl_der",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 86,
+  "line_goc": 142,
+  "how": "doan-uoc-luong"
+ },
+ "f_vk": {
+  "orig": "build_ocsp_request",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 92,
+  "line_goc": 162,
+  "how": "doan-uoc-luong"
+ },
+ "f_vm": {
+  "orig": "build_ocsp_request_with_nonce",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 97,
+  "line_goc": 175,
+  "how": "doan-uoc-luong"
+ },
+ "f_1vu": {
+  "orig": "rsa_sha256_ok",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 112,
+  "line_goc": 201,
+  "how": "doan-uoc-luong"
+ },
+ "f_2al": {
+  "orig": "has_ocsp_signing_eku",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 118,
+  "line_goc": 206,
+  "how": "doan-uoc-luong"
+ },
+ "f_1fw": {
+  "orig": "basic_signature_ok",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 121,
+  "line_goc": 222,
+  "how": "doan-uoc-luong"
+ },
+ "f_u4": {
+  "orig": "issuer_signed",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 133,
+  "line_goc": 246,
+  "how": "doan-uoc-luong"
+ },
+ "f_1jq": {
+  "orig": "check_ocsp_response",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 150,
+  "line_goc": 255,
+  "how": "doan-uoc-luong"
+ },
+ "f_y6": {
+  "orig": "evidence_time_ok",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 156,
+  "line_goc": 316,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ac": {
+  "orig": "evaluate_revocation_at",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 198,
+  "line_goc": 344,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ab": {
+  "orig": "check_crl",
+  "file": "crates/digitext-sign-verify/src/ocsp.rs",
+  "line_obf": 209,
+  "line_goc": 384,
+  "how": "doan-uoc-luong"
+ },
+ "f_23p": {
+  "orig": "prepare_visible",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 58,
+  "line_goc": 172,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1cm": {
+  "orig": "finalize_detached",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 92,
+  "line_goc": 238,
+  "how": "doan-uoc-luong"
+ },
+ "f_1co": {
+  "orig": "finalize_detached_timestamped",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 100,
+  "line_goc": 256,
+  "how": "doan-uoc-luong"
+ },
+ "f_1cn": {
+  "orig": "finalize_detached_full",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 109,
+  "line_goc": 276,
+  "how": "doan-uoc-luong"
+ },
+ "f_18u": {
+  "orig": "embed_cms",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 127,
+  "line_goc": 297,
+  "how": "doan-uoc-luong"
+ },
+ "f_xy": {
+  "orig": "check_certificate",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 148,
+  "line_goc": 318,
+  "how": "doan-uoc-luong"
+ },
+ "f_2q2": {
+  "orig": "verify_with_trust",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 156,
+  "line_goc": 350,
+  "how": "doan-uoc-luong"
+ },
+ "f_2q1": {
+  "orig": "revocation_reference",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 159,
+  "line_goc": 459,
+  "how": "doan-uoc-luong"
+ },
+ "f_29x": {
+  "orig": "revocation_from_dss",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 245,
+  "line_goc": 478,
+  "how": "doan-uoc-luong"
+ },
+ "f_29w": {
+  "orig": "format_signing_time_vn",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 260,
+  "line_goc": 519,
+  "how": "doan-uoc-luong"
+ },
+ "f_1di": {
+  "orig": "signer_display_name",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 292,
+  "line_goc": 541,
+  "how": "doan-uoc-luong"
+ },
+ "f_2fg": {
+  "orig": "signature_block_lines",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 309,
+  "line_goc": 571,
+  "how": "doan-uoc-luong"
+ },
+ "f_2f7": {
+  "orig": "signer_tax_code",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 337,
+  "line_goc": 581,
+  "how": "doan-uoc-luong"
+ },
+ "f_2fh": {
+  "orig": "visible_block_from_cert",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 343,
+  "line_goc": 615,
+  "how": "doan-uoc-luong"
+ },
+ "f_2qb": {
+  "orig": "media_box",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 369,
+  "line_goc": 677,
+  "how": "doan-uoc-luong"
+ },
+ "f_1s2": {
+  "orig": "insert_signature_placeholder",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 410,
+  "line_goc": 696,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ig": {
+  "orig": "signature_object_span",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 438,
+  "line_goc": 831,
+  "how": "doan-uoc-luong"
+ },
+ "f_2f8": {
+  "orig": "find_contents_hex",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 535,
+  "line_goc": 894,
+  "how": "doan-uoc-luong"
+ },
+ "f_1ct": {
+  "orig": "find_contents_hex_within",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 600,
+  "line_goc": 900,
+  "how": "doan-uoc-luong"
+ },
+ "f_1cu": {
+  "orig": "write_byte_range_within",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 604,
+  "line_goc": 920,
+  "how": "doan-uoc-luong"
+ },
+ "f_2rp": {
+  "orig": "parse_byte_range",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 621,
+  "line_goc": 942,
+  "how": "doan-uoc-luong"
+ },
+ "f_1yg": {
+  "orig": "byte_range_span_within",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 636,
+  "line_goc": 958,
+  "how": "doan-uoc-luong"
+ },
+ "f_ws": {
+  "orig": "byte_range_covers_all",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 648,
+  "line_goc": 978,
+  "how": "doan-uoc-luong"
+ },
+ "f_wo": {
+  "orig": "gap_is_contents_slot",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 655,
+  "line_goc": 1001,
+  "how": "doan-uoc-luong"
+ },
+ "f_1e2": {
+  "orig": "byte_range_frames_contents",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 661,
+  "line_goc": 1017,
+  "how": "doan-uoc-luong"
+ },
+ "f_wp": {
+  "orig": "digest_over_byte_range",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 671,
+  "line_goc": 1034,
+  "how": "doan-uoc-luong"
+ },
+ "f_1gv": {
+  "orig": "hex_encode",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 690,
+  "line_goc": 1049,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1gu": {
+  "orig": "hex_decode",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 697,
+  "line_goc": 1057,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1uw": {
+  "orig": "nib",
+  "file": "crates/digitext-sign-verify/src/pdf.rs",
+  "line_obf": 701,
+  "line_goc": 1061,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2le": {
+  "orig": "token_from_response",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 47,
+  "line_goc": 81,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2py": {
+  "orig": "verify_token",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 97,
+  "line_goc": 157,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2q0": {
+  "orig": "verify_token_with_trust",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 100,
+  "line_goc": 165,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2mm": {
+  "orig": "tsa_chain_ok",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 135,
+  "line_goc": 219,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2pz": {
+  "orig": "verify_token_signature",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 148,
+  "line_goc": 239,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2mq": {
+  "orig": "tstinfo_message_imprint_hash",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 166,
+  "line_goc": 266,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2mr": {
+  "orig": "tstinfo_nonce",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 178,
+  "line_goc": 284,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2mp": {
+  "orig": "tstinfo_gen_time",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 190,
+  "line_goc": 298,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1z2": {
+  "orig": "parse_generalized_time",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 198,
+  "line_goc": 308,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_136": {
+  "orig": "days_from_civil",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 215,
+  "line_goc": 323,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25x": {
+  "orig": "read_tlv",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 229,
+  "line_goc": 343,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_25t": {
+  "orig": "read_len",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 247,
+  "line_goc": 363,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2df": {
+  "orig": "seq_content",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 262,
+  "line_goc": 380,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1ij": {
+  "orig": "int_value",
+  "file": "crates/digitext-sign-verify/src/tsa.rs",
+  "line_obf": 272,
+  "line_goc": 394,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_296": {
+  "orig": "resolve_range",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 52,
+  "line_goc": 123,
+  "how": "doan-uoc-luong"
+ },
+ "f_2qs": {
+  "orig": "warm_pdf_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 66,
+  "line_goc": 141,
+  "how": "doan-uoc-luong"
+ },
+ "f_23q": {
+  "orig": "prepared_pdf_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 69,
+  "line_goc": 146,
+  "how": "doan-uoc-luong"
+ },
+ "f_2fc": {
+  "orig": "signed_pdf_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 72,
+  "line_goc": 151,
+  "how": "doan-uoc-luong"
+ },
+ "f_1xr": {
+  "orig": "page_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 75,
+  "line_goc": 157,
+  "how": "doan-uoc-luong"
+ },
+ "f_1x5": {
+  "orig": "package_zip_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 78,
+  "line_goc": 163,
+  "how": "doan-uoc-luong"
+ },
+ "f_2p4": {
+  "orig": "validate_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 81,
+  "line_goc": 168,
+  "how": "doan-uoc-luong"
+ },
+ "f_2pa": {
+  "orig": "validate_prefix",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 87,
+  "line_goc": 177,
+  "how": "doan-uoc-luong"
+ },
+ "f_2l9": {
+  "orig": "parse_content_range",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 227,
+  "line_goc": 636,
+  "how": "doan-uoc-luong"
+ },
+ "f_vr": {
+  "orig": "is_package_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 240,
+  "line_goc": 653,
+  "how": "doan-uoc-luong"
+ },
+ "f_1yp": {
+  "orig": "decode_key",
+  "file": "crates/digitext-storage/src/lib.rs",
+  "line_obf": 488,
+  "line_goc": 717,
+  "how": "doan-uoc-luong"
+ },
+ "f_vd": {
+  "orig": "build_filter",
+  "file": "crates/digitext-telemetry/src/lib.rs",
+  "line_obf": 82,
+  "line_goc": 127,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_vy": {
+  "orig": "build_resource",
+  "file": "crates/digitext-telemetry/src/lib.rs",
+  "line_obf": 85,
+  "line_goc": 131,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_1jm": {
+  "orig": "is_tone",
+  "file": "crates/digitext-vi/src/lib.rs",
+  "line_obf": 7,
+  "line_goc": 19,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_2hu": {
+  "orig": "strip_diacritics",
+  "file": "crates/digitext-vi/src/lib.rs",
+  "line_obf": 10,
+  "line_goc": 25,
+  "how": "doan-khop-chinh-xac"
+ },
+ "f_x5": {
+  "orig": "canonicalize_tone_nfd",
+  "file": "crates/digitext-vi/src/lib.rs",
+  "line_obf": 21,
+  "line_goc": 42,
+  "how": "doan-khop-chinh-xac"
+ }
+}

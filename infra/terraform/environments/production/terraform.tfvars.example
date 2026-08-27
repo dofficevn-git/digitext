@@ -1,0 +1,9 @@
+# Copy thành terraform.tfvars và điền cho site của bạn. KHÔNG commit secret thật.
+gpu_node_count     = 4   # §S5.3
+minio_node_count   = 6   # EC 8+4, ~450TB raw (§S3.1)
+postgres_count     = 2   # primary + replica
+meili_node_count   = 3
+ingest_app_count   = 2
+ec_scheme          = "8+4"
+network_backbone   = "25GbE"
+dr_offsite_enabled = true
