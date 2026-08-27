@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Tauri tự trộn file này vào Info.plist của bundle macOS.
+
+     Từ macOS 15 (Sequoia), quyền riêng tư "Local Network" áp cho CẢ app Mac: app không
+     được cấp quyền thì mDNS (Bonjour) và kết nối tới IP LAN đều bị chặn im lặng — đúng
+     triệu chứng "Thu thập từ máy user (LAN)" trả peers=0 dù hai máy cùng wifi. Hai khoá
+     dưới đây khai báo nhu cầu để macOS hiện hộp thoại xin quyền (kèm lời giải thích) và
+     cho phép duyệt đúng các dịch vụ Bonjour của DigiText. -->
+<plist version="1.0">
+<dict>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>DigiText dùng mạng nội bộ (LAN) để máy quản trị thu thập tài liệu từ máy nhân viên và phát cây thư mục giữa các máy trong cùng cơ quan (mDNS/Bonjour).</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_digitext-data._tcp</string>
+    <string>_digitext-tree._tcp</string>
+  </array>
+
+  <!-- Ổ lưu trữ mặc định là ~/Documents/DigiText, và người dùng có thể trỏ ổ sang
+       ~/Desktop, ~/Downloads hay ổ ngoài — tất cả đều nằm sau TCC từ macOS 10.15.
+       Thiếu các khoá này, hộp thoại xin quyền không nói app dùng thư mục để làm gì; tệ hơn,
+       khi chưa được cấp quyền thì Preview (do DigiText bật qua `open`, chạy dưới trách nhiệm
+       của DigiText) chỉ báo "bạn không có quyền xem tệp đó" trong khi quyền file hoàn toàn
+       bình thường — người dùng không có manh mối nào để tìm ra phải cấp quyền cho DigiText. -->
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>DigiText lưu hồ sơ đã quét và file PDF vào thư mục Tài liệu (mặc định ~/Documents/DigiText), cần quyền này để tạo, đọc và mở lại các tệp đó.</string>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>DigiText cần quyền này khi bạn đặt ổ lưu trữ hoặc xuất báo cáo ra Màn hình nền.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>DigiText cần quyền này khi bạn đặt ổ lưu trữ hoặc xuất báo cáo ra thư mục Tải về.</string>
+  <key>NSRemovableVolumesUsageDescription</key>
+  <string>DigiText cần quyền này khi ổ lưu trữ tài liệu đặt trên ổ cứng ngoài hoặc USB.</string>
+</dict>
+</plist>

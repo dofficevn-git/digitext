@@ -1,0 +1,4 @@
+---
+- name: "backup_dr (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role backup_dr (xem infra/ansible/README.md)"

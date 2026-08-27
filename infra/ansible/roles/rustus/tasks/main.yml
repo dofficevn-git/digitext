@@ -1,0 +1,4 @@
+---
+- name: "rustus (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role rustus (xem infra/ansible/README.md)"

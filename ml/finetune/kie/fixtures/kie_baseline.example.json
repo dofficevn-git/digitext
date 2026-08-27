@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "eval_source": "gold",
+    "note": "FIXTURE TONG HOP cho CI — moc gia de smoke-test cong, KHONG phai baseline that"
+  },
+  "overall": {
+    "f1_macro": 0.4150,
+    "f1_identifier": 0.9450,
+    "f1_non_identifier": 0.4050
+  },
+  "by_field": {
+    "soKyHieu":        {"f1": 0.9550},
+    "ngayThang":       {"f1": 0.9400},
+    "trichYeu":        {"f1": 0.3750},
+    "coQuanBanHanh":   {"f1": 0.4500},
+    "loaiVanBan":      {"f1": 0.4250}
+  }
+}

@@ -1,0 +1,5 @@
+# Bí mật + artefact do Foundry sinh — không commit.
+.env
+pours/
+# File khoá tạm do công cụ sinh (vd casting.yaml.lock) — không commit.
+*.lock

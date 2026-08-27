@@ -1,0 +1,4 @@
+---
+- name: "minio (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role minio (xem infra/ansible/README.md)"

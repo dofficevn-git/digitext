@@ -1,0 +1,15 @@
+name: digitext-observability
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.156.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    env_file: [.env]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,0 +1,21 @@
+[package]
+name = "digitext-dispatcher"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+digitext-db = { path = "../digitext-db" }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+digitext-db = { path = "../digitext-db" }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }

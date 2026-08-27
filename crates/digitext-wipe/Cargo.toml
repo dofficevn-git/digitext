@@ -1,0 +1,16 @@
+[package]
+name = "digitext-wipe"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+
+[dependencies]
+digitext-db = { path = "../digitext-db" }
+digitext-storage = { path = "../digitext-storage" }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[dev-dependencies]
+tokio = { workspace = true }

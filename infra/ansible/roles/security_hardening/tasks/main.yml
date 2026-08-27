@@ -1,0 +1,4 @@
+---
+- name: "security_hardening (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role security_hardening (xem infra/ansible/README.md)"

@@ -1,0 +1,68 @@
+[package]
+name = "digitext-desktop"
+version = "0.15.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+digitext-core = { path = "../../crates/digitext-core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+aes-gcm = "0.10"
+argon2 = "0.5"
+blake3 = "1"
+chrono = { version = "0.4", features = ["serde"] }
+hkdf = "0.12"
+jsonwebtoken = "9"
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = [
+  "json",
+  "rustls-tls",
+] }
+sha2 = "0.10"
+subtle = "2"
+tokio = { version = "1", features = ["fs", "io-util", "net", "sync", "time"] }
+mdns-sd = "0.11"
+tiny_http = "0.12"
+if-addrs = "0.13"
+image = { version = "0.25", default-features = false, features = [
+  "png",
+  "jpeg",
+  "tiff",
+  "bmp",
+] }
+base64 = "0.22"
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
+x25519-dalek = "2"
+cryptoki = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
+lopdf = "0.42.0"
+x509-cert = "0.2"
+der = { version = "0.7", features = ["oid"] }
+unicode-normalization = "0.1.25"
+tauri-plugin-dialog = "2.7.1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-appender = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+libloading = { version = "0.8", optional = true }
+
+[features]
+mock-scanner = []
+twain = ["dep:libloading"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

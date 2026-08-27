@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "engine_version": "svtr_vi@2026-06-01",
+    "golden_version": "gs-v1",
+    "note": "VÍ DỤ TỔNG HỢP — số liệu bịa để minh hoạ định dạng, KHÔNG phải dữ liệu thật."
+  },
+  "overall": { "cer": 0.021, "wer": 0.052, "cer_no_diac": 0.013, "n_lines": 5000 },
+  "by_stratum": {
+    "ro": { "cer": 0.009, "wer": 0.022, "cer_no_diac": 0.006, "n_lines": 1500 },
+    "xau_mo": { "cer": 0.061, "wer": 0.130, "cer_no_diac": 0.041, "n_lines": 1200 },
+    "chu_tay": { "cer": 0.078, "wer": 0.170, "cer_no_diac": 0.055, "n_lines": 800 },
+    "co_bang": { "cer": 0.028, "wer": 0.070, "cer_no_diac": 0.018, "n_lines": 700 },
+    "dau_nhieu": { "cer": 0.024, "wer": 0.060, "cer_no_diac": 0.010, "n_lines": 800 }
+  }
+}

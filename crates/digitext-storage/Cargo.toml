@@ -1,0 +1,18 @@
+[package]
+name = "digitext-storage"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+thiserror = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+reqwest = { workspace = true }
+rusty-s3 = "0.5"
+url = "2"
+percent-encoding = "2"
+bytes = "1"
+futures-core = "0.3"
+futures-util = { version = "0.3", default-features = false }
+tokio-util = { version = "0.7", features = ["io"] }

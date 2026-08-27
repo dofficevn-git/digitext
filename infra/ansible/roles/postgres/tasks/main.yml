@@ -1,0 +1,4 @@
+---
+- name: "postgres (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role postgres (xem infra/ansible/README.md)"

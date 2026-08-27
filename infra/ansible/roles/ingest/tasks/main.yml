@@ -1,0 +1,4 @@
+---
+- name: "ingest (tạm)"
+  ansible.builtin.debug:
+    msg: "TODO: hiện thực role ingest (xem infra/ansible/README.md)"

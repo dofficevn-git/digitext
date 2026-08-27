@@ -1,0 +1,84 @@
+ 
+ 
+
+ 
+.khaithac .col-3 {
+  flex: 0 0 25%;
+  max-width: 25%;
+  padding: var(--do-sp-1) var(--do-sp-2);
+}
+
+ 
+.khaithac .kt-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--do-sp-4);
+  align-items: center;
+  padding-top: var(--do-sp-2);
+}
+
+ 
+.khaithac .kt-exportbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--do-sp-2);
+  padding-top: var(--do-sp-2);
+}
+
+ 
+.khaithac mark {
+  background: var(--color-warning-50);
+  color: var(--color-warning-700);
+  border-radius: var(--radius-sm);
+  padding: 0 2px;
+}
+
+ 
+.khaithac .kt-err {
+  background: var(--color-danger-50);
+  border: 1px solid var(--color-danger-200);
+  color: var(--color-danger-700);
+  border-radius: var(--radius-md);
+  padding: var(--do-sp-2) var(--do-sp-3);
+  margin-bottom: var(--do-sp-2);
+  font-size: var(--text-sm);
+}
+
+ 
+.khaithac .kt-busy {
+  position: fixed;
+  inset: 0;
+  background: rgb(248 249 250 / 0.65);  
+  z-index: 1060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.khaithac .kt-busy span {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--do-sp-3) var(--do-sp-5);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+ 
+.lhs-overlay .kt-detail-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--do-sp-1) var(--do-sp-6);
+  margin-bottom: var(--do-sp-3);
+  font-size: var(--text-sm);
+}
+ 
+.lhs-overlay .kt-red {
+  color: var(--color-fg-strong);
+  font-weight: 600;
+}
+.lhs-overlay .kt-vbtable th,
+.lhs-overlay .kt-vbtable td {
+  font-size: var(--text-xs);
+  padding: var(--do-sp-1) var(--do-sp-2);
+}

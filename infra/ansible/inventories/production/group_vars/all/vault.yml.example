@@ -1,0 +1,30 @@
+---
+# infra/ansible/inventories/production/group_vars/all/vault.yml.example
+#
+# MẪU cho ansible-vault. .gitignore chặn **/vault.yml — CHỈ file *.example này (plaintext)
+# được commit làm template. Quy trình:
+#
+#   cd infra/ansible/inventories/production/group_vars/all
+#   cp vault.yml.example vault.yml
+#   # điền secret THẬT vào vault.yml
+#   ansible-vault encrypt vault.yml                 # mã hoá tại chỗ
+#   # chạy playbook: ansible-playbook … --ask-vault-pass   (hoặc --vault-password-file)
+#
+# vault.yml (đã mã hoá bằng ansible-vault) MỚI được commit; đừng commit bản plaintext.
+
+# ── Postgres (role api ghép thành DATABASE_URL) ──
+vault_pg_user: "digitext"
+vault_pg_password: "ĐỔI_TÔI_mật_khẩu_Postgres_mạnh"
+
+# ── MinIO (role minio) ──
+vault_minio_root_user: "digitext"
+vault_minio_root_password: "ĐỔI_TÔI_mật_khẩu_MinIO"
+
+# ── Meilisearch (role meilisearch) — master key >= 16 bytes ──
+vault_meili_master_key: "ĐỔI_TÔI_master_key_Meili"
+
+# ── PKI/CA cho mTLS giữa các plane (§S9) — dán PEM hoặc trỏ tới file cấp phát ──
+# vault_internal_ca_cert: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----

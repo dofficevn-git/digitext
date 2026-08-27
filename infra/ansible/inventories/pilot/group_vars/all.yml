@@ -1,0 +1,3 @@
+---
+minio_ec_scheme: "4+2"
+ocr_workers_per_gpu: 6

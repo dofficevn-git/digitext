@@ -1,0 +1,11 @@
+# Generated / vendored / large source-of-truth — không format.
+node_modules
+**/node_modules
+desktop/dist
+desktop/src-tauri/target
+desktop/src-tauri/gen
+data
+**/*.lock
+**/package-lock.json
+# Tài liệu thiết kế gốc (tiếng Việt, 2k+ dòng) — giữ nguyên định dạng.
+docs/architecture.md

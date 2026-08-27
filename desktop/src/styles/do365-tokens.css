@@ -1,0 +1,85 @@
+ 
+
+:root {
+   
+  --do-primary: var(--color-brand-500);
+  --do-primary-dark: var(--color-brand-600);
+  --do-primary-darker: var(--color-brand-700);
+  --do-primary-bg: var(--color-brand-50);
+  --do-primary-bg2: var(--color-brand-100);
+   
+  --do-accent: var(--color-brand-500);
+  --do-accent-bg: var(--color-brand-50);
+
+   
+  --do-success: var(--color-success-700);
+  --do-success-bg: var(--color-success-50);
+  --do-danger: var(--color-danger-700);
+  --do-danger-bg: var(--color-danger-50);
+  --do-warning: var(--color-warning-700);
+  --do-warning-bg: var(--color-warning-50);
+  --do-info: var(--color-info-700);
+  --do-info-bg: var(--color-info-50);
+
+   
+  --do-surface-page: var(--color-canvas);
+  --do-surface-card: var(--color-surface);
+  --do-surface-raised: var(--color-surface-sunken);
+  --do-surface-overlay: var(--color-surface);
+
+   
+  --do-text-primary: var(--color-fg);
+  --do-text-secondary: var(--color-fg-muted);
+  --do-text-muted: var(--color-fg-subtle);
+  --do-text-disabled: var(--color-fg-disabled);
+  --do-text-onbrand: var(--color-fg-onbrand);
+
+   
+  --do-border: var(--color-border);
+  --do-border-strong: var(--color-border-strong);
+  --do-border-subtle: var(--color-border-subtle);
+
+   
+  --do-shadow-sm: var(--shadow-xs);
+  --do-shadow-md: var(--shadow-sm);
+  --do-shadow-lg: var(--shadow-lg);
+
+   
+  --do-radius-xs: var(--radius-none);
+  --do-radius-sm: var(--radius-sm);
+  --do-radius-md: var(--radius-md);
+  --do-radius-lg: var(--radius-md);
+  --do-radius-xl: var(--radius-lg);
+  --do-radius-pill: var(--radius-full);
+
+   
+  --do-font-family: var(--font-sans);
+  --do-text-xs: var(--text-xs);
+  --do-text-sm: var(--text-sm);
+  --do-text-base: var(--text-base);
+  --do-text-md: var(--text-md);
+  --do-text-lg: var(--text-lg);
+  --do-text-xl: var(--text-xl);
+  --do-text-2xl: var(--text-2xl);
+  --do-text-3xl: var(--text-3xl);
+  --do-weight-regular: 400;
+  --do-weight-medium: 500;
+  --do-weight-semibold: 600;
+  --do-weight-bold: 700;
+
+   
+  --do-sp-1: calc(var(--spacing) * 1);  
+  --do-sp-2: calc(var(--spacing) * 2);  
+  --do-sp-3: calc(var(--spacing) * 3 * var(--ui-density, 1));  
+  --do-sp-4: calc(var(--spacing) * 4 * var(--ui-density, 1));  
+  --do-sp-5: calc(var(--spacing) * 5 * var(--ui-density, 1));  
+  --do-sp-6: calc(var(--spacing) * 6 * var(--ui-density, 1));  
+  --do-sp-8: calc(var(--spacing) * 8 * var(--ui-density, 1));  
+  --do-sp-10: calc(var(--spacing) * 10 * var(--ui-density, 1));  
+  --do-sp-12: calc(var(--spacing) * 12 * var(--ui-density, 1));  
+
+   
+  --do-duration-fast: var(--duration-fast);
+  --do-duration-normal: var(--duration-normal);
+  --do-duration-slow: 240ms;
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Quyền lõi cho cửa sổ chính (main) + tự cập nhật + nhận event quét + hộp thoại chọn thư mục.",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:event:default", "updater:default", "process:default", "dialog:default"]
+}

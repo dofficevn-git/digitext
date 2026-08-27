@@ -1,0 +1,76 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/digitext-core",
+    "crates/digitext-db",
+    "crates/digitext-storage",
+    "crates/digitext-ingest",
+    "crates/digitext-api",
+    "crates/digitext-dispatcher",
+    "crates/digitext-ocr",
+    "crates/digitext-vi",
+    "crates/digitext-package",
+    "crates/digitext-pdf",
+    "crates/digitext-sign-verify",
+    "crates/digitext-telemetry",
+    "crates/digitext-token-signpdf",
+    "crates/digitext-cli",
+    "crates/digitext-wipe",
+]
+exclude = ["desktop", "dev/obfuscate/rust-rename"]
+
+[workspace.package]
+edition = "2021"
+license = "Proprietary"
+publish = false
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+thiserror = "2"
+uuid = { version = "1", features = ["v7", "serde"] }
+blake3 = "1"
+tracing = "0.1"
+anyhow = "1"
+argon2 = "0.5"
+axum = "0.8"
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
+http-body-util = "0.1"
+jsonwebtoken = "9"
+quick-xml = "0.37"
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+rpassword = "7"
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "json",
+    "migrate",
+    "macros",
+] }
+tower = "0.5"
+unicode-normalization = "0.1"
+tower-http = { version = "0.6", features = ["trace"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+opentelemetry = { version = "0.32", features = ["trace", "metrics", "logs"] }
+opentelemetry_sdk = { version = "0.32", features = ["rt-tokio", "trace", "metrics", "logs"] }
+opentelemetry-otlp = { version = "0.32", default-features = false, features = [
+    "grpc-tonic",
+    "trace",
+    "metrics",
+    "logs",
+] }
+opentelemetry-appender-tracing = "0.32"
+tracing-opentelemetry = "0.33"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

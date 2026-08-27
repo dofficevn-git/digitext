@@ -1,0 +1,156 @@
+ 
+ 
+
+ 
+.srv-scope.kg-flt {
+  padding: 0 0 12px;
+  margin-bottom: 4px;
+}
+
+.srv-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+ 
+.srv-progbtn {
+  position: relative;
+  overflow: hidden;
+  min-width: 240px;
+  border: 1px solid var(--do-primary-bg2, var(--line-2));
+  border-radius: var(--do-radius-lg);
+  background: var(--do-surface-raised, var(--line-2));
+  color: var(--do-text-primary);
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.srv-progbtn:hover:not(:disabled) {
+  border-color: var(--do-primary, #6b3fb5);
+}
+.srv-progbtn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+ 
+.srv-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--do-primary-bg, rgba(107, 63, 181, 0.18));
+  border-right: 2px solid var(--do-primary, #6b3fb5);
+  transition: width 0.4s ease;
+  pointer-events: none;
+}
+.srv-fill.pdf2 {
+  background: var(--green-bg, rgba(34, 160, 90, 0.18));
+  border-right-color: var(--green, #22a05a);
+}
+.srv-fill.fields {
+  background: var(--amber-bg, rgba(217, 130, 20, 0.18));
+  border-right-color: var(--amber, #d98214);
+}
+
+.srv-label {
+  position: relative;  
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+}
+.srv-label b {
+  font-size: var(--do-text-base);
+}
+.srv-sub {
+  font-size: 12px;
+  color: var(--muted, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+.srv-meta {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.srv-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+ 
+.srv-msg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+ 
+.srv-tree .srv-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  word-break: break-word;
+}
+.srv-folder td {
+  user-select: none;
+  font-weight: 600;
+}
+ 
+.srv-tree .srv-folder td:nth-child(2) {
+  cursor: pointer;
+}
+.srv-folder:hover td {
+  background: var(--do-surface-raised, var(--line-2));
+}
+
+ 
+.srv-tickcell {
+  width: 34px;
+  text-align: center;
+}
+.srv-tick {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--do-primary, #6b3fb5);
+}
+
+ 
+.srv-size {
+  color: var(--muted, #666);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+ 
+.srv-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+.srv-caret {
+  display: inline-block;
+  width: 12px;
+  color: var(--muted, #666);
+  font-weight: 400;
+}
+.srv-count {
+  color: var(--muted, #666);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+ 
+.srv-hit > td {
+  background: var(--do-primary-bg, #eeedf8);
+  box-shadow: inset 3px 0 0 var(--do-primary, #5a58a6);
+}

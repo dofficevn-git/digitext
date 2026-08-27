@@ -1,0 +1,942 @@
+// Copyright (c) 2026 DigiText. All rights reserved.
+
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { V41p } from "@/live/useLive";
+import "./laphoso.css";
+import { isTauri, V3xq } from "@/api/ipc";
+import type { V40v } from "@/api/archive";
+import { V48j } from "@/api/catalog";
+import type { V3ym, V3yl, V3yo } from "@/domain/types";
+import {
+  V4cg,
+  V4c8,
+  V4c1,
+  V4c9,
+  V4br,
+  V4c7,
+  type V4bo,
+  type V4bm,
+  type V4c5,
+  type V4c6,
+} from "@/api/dossier";
+import { V460 } from "@/state";
+import { bangTrongText, chuaChonPhong } from "./phongScope";
+import V4dy from "./VanBanPanel";
+import V4h8 from "./TaiLieuPanel";
+import { V4e3, V4e8 } from "./excel";
+import { type V4dk, V4d0, V4di, V4dr, V4cm, V4ct, V4cl, V4dt, V4dp, V4du, V4co } from "./logic";
+import { Icon } from "@/components/Icon";
+
+const V4h9 = [10, 25, 50, 100];
+
+const V4ha = [
+  { value: "nop", label: "R8OzaSBu4buZcCAoU0lQKQ==" },
+  { value: "luutru", label: "R8OzaSBsxrB1IHRy4buvIChBSVAp" },
+  { value: "khaithac", label: "R8OzaSBraGFpIHRow6FjIChESVAp" },
+];
+
+type V4hb = "import" | "tinhchinh" | "dpi" | "pdfa" | "inpack" | null;
+type V4hc = { key: V4dk; dir: "asc" | "desc" };
+
+export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
+  const { setScanTarget: V1e8, goto } = V460();
+
+  const [V1e9, V1ea] = useState<V3yl[]>([]);
+  const [V1eb, V1ec] = useState<V3ym[]>([]);
+  const [V1ed, V1ee] = useState<V3yo[]>([]);
+
+  const [maDa, V1ef] = useState("");
+  const [V1eg, V1eh] = useState("");
+  const [V1ei, V1ej] = useState<string>("");
+  const [V1ek, V1el] = useState<string[]>([]);
+  const [V1em, V1en] = useState("");
+  const [V1eo, V1ep] = useState(false);
+  const [V1eq, V1er] = useState(false);
+
+  const [V1es, V1et] = useState<V4bm[]>([]);
+  const [V1eu, V1ev] = useState<Set<number>>(new Set());
+  const [V1ew, V1ex] = useState<V4bm | null>(null);
+  const [V1ey, V1ez] = useState<V4bm | null>(null);
+
+  const [cols, V1f0] = useState({ thbq: false, soTo: false, nbd: false, nkt: false });
+
+  const [V1f1, V1f2] = useState(25);
+  const [V1f3, V1f4] = useState(1);
+  const [V1f5, V1f6] = useState("");
+  const [V1f7, V1f8] = useState<V4hc>({ key: "id", dir: "asc" });
+
+  const [V1f9, V1fa] = useState<V4hb>(null);
+  const [V1fb, V1fc] = useState<V4c5[]>([]);
+  const [V1fd, V1fe] = useState<Set<number>>(new Set());
+  const [V1ff, V1fg] = useState<V4c6[]>([]);
+  const [V1fh, V1fi] = useState(true);
+  const [V1fj, V1fk] = useState("nop");
+  const [V1fl, V1fm] = useState(false);
+  const V1fn = useRef<HTMLInputElement>(null);
+  const V1fo = useRef<HTMLInputElement>(null);
+
+  const V1fp = useCallback(() => {
+    V48j()
+      .then((c) => {
+        V1ea(c.phongBans);
+        V1ec(c.mangs);
+        V1ee(c.thbqs);
+      })
+      .catch(() => {});
+  }, []);
+  V41p(V1fp, { topics: ["catalog"], enabled: isTauri() });
+
+  const V1fq = useCallback(
+    (): V4bo => ({
+      maDa: maDa || undefined,
+      maDv: V1eg || undefined,
+      mangCvid: V1ei ? Number(V1ei) : undefined,
+      thbq: V1ek.find((x) => x !== "-1") ? Number(V1ek.find((x) => x !== "-1")) : undefined,
+      search: V1em.trim() || undefined,
+    }),
+    [maDa, V1eg, V1ei, V1ek, V1em],
+  );
+
+  const V1fr = useCallback(() => {
+    if (!isTauri()) return;
+
+    if (chuaChonPhong(maDa)) {
+      V1et([]);
+      return;
+    }
+    V4br({
+      maDa,
+      maDv: V1eg || undefined,
+      mangCvid: V1ei ? Number(V1ei) : undefined,
+    })
+      .then(V1et)
+      .catch(() => V1et([]));
+  }, [maDa, V1eg, V1ei]);
+
+  V41p(V1fr, { topics: ["dossier", "khogia"] });
+
+  const V1fs = useMemo(() => {
+    let V1ft = V1es;
+    const q = V1em.trim().toLowerCase();
+    if (q) V1ft = V1ft.filter((r) => V4ct(r, q));
+    if (V1ek.length && !V1ek.includes("-1")) {
+      const set = new Set(V1ek.map(Number));
+      V1ft = V1ft.filter((r) => r.thbq != null && set.has(r.thbq));
+    }
+    if (V1eq) V1ft = V1ft.filter((r) => V4du(r, V1ed).cls === "badge-gl");
+    if (V1eo) V1ft = V1ft.filter((r) => V4du(r, V1ed).cls === "badge-het");
+    return V4dp(V1ft, V1f7.key, V1f7.dir, V1ed, V1eb);
+  }, [V1es, V1em, V1ek, V1eq, V1eo, V1f7, V1ed, V1eb]);
+
+  useEffect(() => V1f4(1), [V1fs.length, V1f7]);
+
+  const V1fu = V4cl(V1e9, maDa);
+  const V1fv = V4cm(V1eb, V1eg);
+
+  const V1fw = (v: string) => {
+    V1ef(v);
+    V1eh("");
+    V1ej("");
+  };
+  const V1fx = (v: string) => {
+    V1eh(v);
+    V1ej("");
+  };
+
+  const V1fy = V1fs.length;
+  const V1fz = Math.max(1, Math.ceil(V1fy / V1f1));
+  const V1g0 = Math.min(V1f3, V1fz);
+  const V1g1 = useMemo(() => V1fs.slice((V1g0 - 1) * V1f1, V1g0 * V1f1), [V1fs, V1g0, V1f1]);
+
+  const V1g2 = (V1g3: number) =>
+    V1ev((s) => {
+      const n = new Set(s);
+      n.has(V1g3) ? n.delete(V1g3) : n.add(V1g3);
+      return n;
+    });
+  const V1g4 = V1g1.length > 0 && V1g1.every((r) => V1eu.has(r.id));
+  const V1g5 = () =>
+    V1ev((s) => {
+      const n = new Set(s);
+      if (V1g4) V1g1.forEach((r) => n.delete(r.id));
+      else V1g1.forEach((r) => n.add(r.id));
+      return n;
+    });
+
+  const V1g6 = (V1g7: unknown) =>
+    V1g7 instanceof V3xq || V1g7 instanceof Error ? V1g7.message : String(V1g7);
+
+  const V1g8 = (r: V4bm) => {
+    const target = V4d0(r);
+    if (!target) {
+      window.alert(
+        "SOG7kyBzxqEgY2jGsGEgZ+G6r24gcGjDtG5nIG7Dqm4ga2jDtG5nIHThuqFvIMSRxrDhu6NjIGPDonkgdGjGsCBt4bulYyDEkeG7gyBxdcOpdC4gSMOjeSBjaOG7jW4gcGjDtG5nIGNobyBo4buTIHPGoSB0csaw4bubYy4=",
+      );
+      return;
+    }
+    V1e8(target);
+    goto("scan");
+  };
+
+  const V1g9 = async (file: File | undefined) => {
+    if (!file) return;
+    V1fm(true);
+    try {
+      const { items: V1ga, skipped: V1gb, issues: V1gc } = await V4e8(file, V1es);
+      if (V1ga.length === 0) {
+        const V1gd = V4di(V1gc);
+        window.alert(
+          V1gd
+            ? `S2jDtG5nIMSR4buNYyDEkcaw4bujYyB2xINuIGLhuqNuIGjhu6NwIGzhu4cgbsOgby4KCg==${V1gd}`
+            : "S2jDtG5nIMSR4buNYyDEkcaw4bujYyB2xINuIGLhuqNuIGjhu6NwIGzhu4cgbsOgbyAoY+G6p24geMOhYyDEkeG7i25oIMSRxrDhu6NjIGjhu5Mgc8ahIHThu6sgJ0jhu5Mgc8ahIGlkJyBob+G6t2MgJ03Doy9I4buTIHPGoSBz4buRJywgdsOgIGPDsyB0csOtY2ggeeG6v3Uvc+G7kSBrw70gaGnhu4d1IGhv4bq3YyB0acOqdSDEkeG7gSBo4buTIHPGoSku",
+        );
+        return;
+      }
+      const n = await V4cg(V1ga);
+      window.alert(
+        `xJDDoyBuaOG6rXAg${n}IHbEg24gYuG6o24=${V1gb ? `IChi4buPIHF1YSA=${V1gb}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
+      );
+      V1fa(null);
+      V1fr();
+    } catch (V1ge) {
+      window.alert(V1g6(V1ge));
+    } finally {
+      V1fm(false);
+    }
+  };
+
+  const V1gf = async () => {
+    if (V1fs.length === 0) {
+      window.alert("S2jDtG5nIGPDsyBo4buTIHPGoSBuw6BvIMSR4buDIHh14bqldC4=");
+      return;
+    }
+    const data = V1fs.map((r) => ({
+      TcOjIGjhu5Mgc8ah: r.maHoSo ?? "",
+      "SOG7mXAgc+G7kQ==": r.hopSo ?? "",
+      "SFMgc+G7kQ==": r.soTam,
+      "VGnDqnUgxJHhu4E=": r.tieuDe,
+      THBQ: V4co(V1ed, r.thbq),
+      "U+G7kSB04bud": V4dt(r.soTo),
+      TmfDoHkgYuG6r3QgxJHhuqd1: V4dr(r.ngayBatDau),
+      "TmfDoHkga+G6v3QgdGjDumM=": V4dr(r.ngayKetThuc),
+      "VHLhuqFuZyB0aMOhaQ==": V4du(r, V1ed).label,
+      "U+G7kSB2xINuIGLhuqNu": r.soVanBan,
+      "RmlsZSDEkcOtbmgga8OobQ==": r.soFileScan,
+    }));
+    try {
+      await V4e3(data, "SoHoa", "xuat-csdl-so-hoa.xlsx");
+    } catch (V1gg) {
+      window.alert(V1g6(V1gg));
+    }
+  };
+
+  const V1gh = async () => {
+    V1fa("tinhchinh");
+    V1fe(new Set());
+    try {
+      V1fc(await V4c7(V1fq()));
+    } catch (V1gi) {
+      window.alert(V1g6(V1gi));
+    }
+  };
+  const V1gj = async () => {
+    try {
+      V1fc(await V4c7(V1fq()));
+    } catch (V1gk) {
+      window.alert(V1g6(V1gk));
+    }
+  };
+  const V1gl = async () => {
+    if (V1fd.size === 0) {
+      window.alert("Q2jGsGEgY2jhu41uIHbEg24gYuG6o24gbsOgby4=");
+      return;
+    }
+    if (
+      !window.confirm(
+        "ROG7ryBsaeG7h3UgYuG7iyB4w7NhIGzDoCBjw6FjIHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbiwgY2jGsGEgY8OzIGZpbGUgxJHDrW5oIGvDqG0sIHNhdSBraGkgeMOzYSBz4bq9IGLhu4sgbeG6pXQsIGLhuqFuIGPDsyBjaOG6r2MgY2jhuq9uIGtow7RuZz8=",
+      )
+    )
+      return;
+    V1fm(true);
+    try {
+      await Promise.all([...V1fd].map((V1gm) => V4c1(V1gm)));
+      V1fe(new Set());
+      await V1gj();
+      V1fr();
+    } catch (V1gn) {
+      window.alert(V1g6(V1gn));
+    } finally {
+      V1fm(false);
+    }
+  };
+  const V1go = async () => {
+    if (
+      !window.confirm(
+        "WG/DoSBUT8OATiBC4buYIHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbiB0aGVvIGLhu5kgbOG7jWMgaGnhu4duIHThuqFpPyBE4buvIGxp4buHdSBz4bq9IGLhu4sgbeG6pXQu",
+      )
+    )
+      return;
+    V1fm(true);
+    try {
+      const n = await V4c8(V1fq());
+      window.alert(`xJDDoyB4b8OhIA==${n}IHbEg24gYuG6o24gY2jGsGEgaG/DoG4gdGhp4buHbi4=`);
+      V1fe(new Set());
+      await V1gj();
+      V1fr();
+    } catch (V1gp) {
+      window.alert(V1g6(V1gp));
+    } finally {
+      V1fm(false);
+    }
+  };
+
+  const V1gq = async () => {
+    const V1gr = V1eu.size ? [...V1eu] : V1fs.map((r) => r.id);
+    if (V1gr.length === 0) {
+      window.alert(
+        "S2jDtG5nIGPDsyBo4buTIHPGoSBuw6BvIMSR4buDIGtp4buDbSB0cmEuIEjDo3kgY2jhu41uIHBow7RuZyBob+G6t2MgdMOtY2ggY2jhu41uIGjhu5Mgc8ahLg==",
+      );
+      return;
+    }
+    V1fm(true);
+    try {
+      const files = await V4c9(V1gr);
+      V1fg(files);
+      V1fi(true);
+      V1fa("dpi");
+    } catch (V1gs) {
+      window.alert(V1g6(V1gs));
+    } finally {
+      V1fm(false);
+    }
+  };
+  const V1gt = V1fh ? V1ff.filter((f) => !f.isPass) : V1ff;
+
+  const V1gu = () => {
+    if (V1eu.size === 0) {
+      window.alert(
+        "VnVpIGzDsm5nIGNo4buNbiDDrXQgbmjhuqV0IG3hu5l0IGjhu5Mgc8ahIMSR4buDIMSRw7NuZyBnw7NpIQ==",
+      );
+      return;
+    }
+    V1fa("inpack");
+  };
+
+  const V1gv = (V1gw: number) =>
+    V1fe((s) => {
+      const n = new Set(s);
+      n.has(V1gw) ? n.delete(V1gw) : n.add(V1gw);
+      return n;
+    });
+
+  const V1gx = (V1gy: V4dk) => {
+    V1f8((V1gz) =>
+      V1gz.key === V1gy
+        ? { key: V1gy, dir: V1gz.dir === "asc" ? "desc" : "asc" }
+        : { key: V1gy, dir: "asc" },
+    );
+  };
+
+  const V1h0 = (V1h1: V4dk) => {
+    if (V1f7.key !== V1h1) return "sapXep";
+    return V1f7.dir === "asc" ? "tangDan" : "giamDan";
+  };
+
+  const V1h2 = ({
+    label: V1h3,
+    sortKey: V1h4,
+    className,
+  }: {
+    label: string;
+    sortKey: V4dk;
+    className?: string;
+  }) => (
+    <th className={`sortable-th${className ? ` ${className}` : ""}`} onClick={() => V1gx(V1h4)}>
+      <span className="sort-label">{V1h3}</span>
+      <Icon name={V1h0(V1h4)} size={12} />
+    </th>
+  );
+
+  if (V1ew) {
+    return (
+      <V4dy
+        dossier={V1ew}
+        onBack={() => {
+          V1ex(null);
+          V1fr();
+        }}
+      />
+    );
+  }
+
+  if (V1ey) {
+    return <V4h8 dossier={V1ey} onBack={() => V1ez(null)} />;
+  }
+
+  const V1h5 = 8 + Number(cols.thbq) + Number(cols.soTo) + Number(cols.nbd) + Number(cols.nkt);
+
+  return (
+    <div className="lhs">
+      <div className="content-panel">
+        <div className="center">
+          <h4>
+            <b>SỐ HÓA TÀI LIỆU</b>
+          </h4>
+        </div>
+        <hr />
+
+        {}
+        <div className="row">
+          <div className="col-4">
+            <div className="input-group">
+              <label className="input-group-addon w-1/4">Phông</label>
+              <select
+                className="form-control"
+                value={maDa}
+                onChange={(V1h6) => V1fw(V1h6.target.value)}
+              >
+                <option value="">-- CHỌN PHÔNG LƯU TRỮ --</option>
+                {V1e7.map((p) => (
+                  <option key={p.maDuAn} value={p.maDuAn}>
+                    {p.tenDuAn}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="col-4">
+            <div className="input-group">
+              <label className="input-group-addon w-1/4">Phòng ban</label>
+              <select
+                className="form-control"
+                value={V1eg}
+                disabled={!maDa}
+                onChange={(V1h7) => V1fx(V1h7.target.value)}
+              >
+                <option value="">-- CHỌN PHÒNG BAN --</option>
+                {V1fu.map((V1h8) => (
+                  <option key={V1h8.maDv} value={V1h8.maDv}>
+                    {V1h8.tenDonVi}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="col-4">
+            <div className="input-group">
+              <label className="input-group-addon w-1/4">Mảng CV</label>
+              <select
+                className="form-control"
+                value={V1ei}
+                disabled={!V1eg}
+                onChange={(V1h9) => V1ej(V1h9.target.value)}
+              >
+                <option value="">-- CHỌN MẢNG CÔNG VIỆC --</option>
+                {V1fv.map((m) => (
+                  <option key={m.mangCvid} value={m.mangCvid}>
+                    {m.tenMang}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {}
+        <div className="row items-center">
+          <div className="col-4">
+            <div className="input-group">
+              <label className="input-group-addon w-1/4">THBQ</label>
+              <select
+                className="form-control h-8.5"
+                multiple
+                value={V1ek}
+                onChange={(V1ha) => V1el([...V1ha.target.selectedOptions].map((o) => o.value))}
+              >
+                <option value="-1">Tất cả THBQ</option>
+                {V1ed.map((t) => (
+                  <option key={t.thbqid} value={t.thbqid}>
+                    {t.tenThbq}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="col-2">
+            <input
+              className="form-control solo searchInput"
+              value={V1em}
+              placeholder="Tmjhuq1wIGvDvSB04buxIHTDrG0ga2nhur9t"
+              onChange={(V1hb) => V1en(V1hb.target.value)}
+              onKeyDown={(V1hc) => V1hc.key === "Enter" && V1fr()}
+            />
+          </div>
+          <div className="col-2">
+            <label className="labelEx">
+              <input
+                type="checkbox"
+                className="inputEx"
+                checked={V1eo}
+                onChange={(V1hd) => V1ep(V1hd.target.checked)}
+              />{" "}
+              Hết THBQ
+            </label>
+            <label className="labelEx ml-3">
+              <input
+                type="checkbox"
+                className="inputEx"
+                checked={V1eq}
+                onChange={(V1he) => V1er(V1he.target.checked)}
+              />{" "}
+              Giữ lại
+            </label>
+          </div>
+          <div className="col-4 text-right">
+            <button className="btn btn-outline-success btn-round" onClick={() => V1fr()}>
+              <Icon name="tim" /> Tìm kiếm
+            </button>{" "}
+            <button className="btn btn-outline-success btn-round" onClick={() => V1fa("import")}>
+              <Icon name="tepPdf" /> Nhập tài liệu
+            </button>{" "}
+            <button className="btn btn-outline-secondary btn-round" onClick={() => void V1gf()}>
+              <Icon name="tepExcel" /> Xuất CSDL
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {}
+      <div className="actionbar">
+        <div className="grp">
+          <input
+            ref={V1fo}
+            type="file"
+            className="form-control max-w-65"
+            accept=".xlsx,.xls,.csv"
+            onChange={(V1hf) => {
+              void V1g9(V1hf.target.files?.[0]);
+              V1hf.target.value = "";
+            }}
+          />
+          <button
+            className="btn btn-outline-primary btn-round"
+            onClick={() => V1fo.current?.click()}
+          >
+            <Icon name="taiLen" /> Import file PDF
+          </button>
+        </div>
+        <div className="grp">
+          <button className="btn btn-warning btn-round" onClick={() => void V1gh()}>
+            <Icon name="tuDong" /> Tinh chỉnh
+          </button>
+          <button className="btn btn-warning btn-round" onClick={() => void V1gq()}>
+            <Icon name="tim" /> Kiểm tra DPI
+          </button>
+          <button className="btn btn-warning btn-round" onClick={() => V1fa("pdfa")}>
+            <Icon name="kiemTraPdfa" /> Kiểm tra PDF/A
+          </button>
+          <button className="btn btn-success btn-round" onClick={V1gu}>
+            <Icon name="goi" /> Đóng gói
+          </button>
+        </div>
+      </div>
+
+      {}
+      <div className="content-panel pt-3">
+        <div className="tbl-scroll">
+          <table className="dataTable">
+            <thead>
+              <tr>
+                <th className="w-2.5">
+                  <input type="checkbox" checked={V1g4} onChange={V1g5} />
+                </th>
+                <V1h2 label="TcOjIGjhu5Mgc8ah" sortKey="maHoSo" className="w-32.5" />
+                <V1h2 label="SOG7mXAgc+G7kQ==" sortKey="hopSo" className="w-15" />
+                <V1h2 label="SFMgc+G7kQ==" sortKey="soTam" className="w-15" />
+                <V1h2 label="VGnDqnUgxJHhu4E=" sortKey="tieuDe" />
+                {cols.thbq && <V1h2 label="THBQ" sortKey="thbq" className="w-25" />}
+                {cols.soTo && <V1h2 label="U+G7kSB04bud" sortKey="soTo" className="w-12.5" />}
+                {cols.nbd && (
+                  <V1h2 label="Ti4gQuG6r3QgxJHhuqd1" sortKey="ngayBatDau" className="w-20" />
+                )}
+                {cols.nkt && (
+                  <V1h2 label="Ti4gS+G6v3QgdGjDumM=" sortKey="ngayKetThuc" className="w-20" />
+                )}
+                <V1h2 label="VHLhuqFuZyB0aMOhaQ==" sortKey="trangThai" className="w-30" />
+                <V1h2 label="VMOgaSBsaeG7h3U=" sortKey="soTaiLieuScan" className="w-22.5" />
+                <V1h2 label="RmlsZSDEkMOtbmgga8OobQ==" sortKey="soFileScan" className="w-22.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {V1g1.length === 0 ? (
+                <tr>
+                  <td className="dt-empty" colSpan={V1h5}>
+                    {bangTrongText(maDa)}
+                  </td>
+                </tr>
+              ) : (
+                V1g1.map((r, i) => {
+                  const V1hg = V4du(r, V1ed);
+                  return (
+                    <tr key={r.id} className={i % 2 === 0 ? "odd" : "even"}>
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          checked={V1eu.has(r.id)}
+                          onChange={() => V1g2(r.id)}
+                        />
+                      </td>
+                      <td className="text-left">{r.maHoSo}</td>
+                      <td className="text-center">{r.hopSo}</td>
+                      <td className="text-center">{r.soTam}</td>
+                      <td className="text-justify">{r.tieuDe}</td>
+                      {cols.thbq && <td className="text-center">{V4co(V1ed, r.thbq)}</td>}
+                      {cols.soTo && <td className="text-center">{V4dt(r.soTo)}</td>}
+                      {cols.nbd && <td className="text-center">{V4dr(r.ngayBatDau)}</td>}
+                      {cols.nkt && <td className="text-center">{V4dr(r.ngayKetThuc)}</td>}
+                      <td className="text-center">
+                        <span className={`badge-thbq ${V1hg.cls}`}>{V1hg.label}</span>
+                      </td>
+                      <td className="text-center">
+                        <a
+                          className="ic-word"
+                          onClick={() => V1ez(r)}
+                          title="WGVtIGRhbmggc8OhY2ggZmlsZSBQREYgdHJvbmcgaOG7kyBzxqE="
+                        >
+                          <Icon name="tepPdf" />
+                        </a>
+                        <b
+                          className="cnt-red"
+                          title="U+G7kSBmaWxlIFBERiDEkcOjIHF1w6l0IHRyb25nIGjhu5Mgc8ah"
+                        >
+                          {" "}
+                          ({r.soTaiLieuScan})
+                        </b>
+                      </td>
+                      <td className="text-center">
+                        {r.soFileScan}{" "}
+                        <a
+                          className="ic-word"
+                          onClick={() => V1g8(r)}
+                          title="UXXDqXQgdsOgbyBo4buTIHPGoQ=="
+                        >
+                          <Icon name="quet" />
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td className="footer-restore" colSpan={V1h5}>
+                  <a
+                    className="toggle-vis"
+                    title="SGnhu4NuIHRo4buLIHRvw6BuIGLhu5kgY+G7mXQ="
+                    onClick={() => V1f0({ thbq: true, soTo: true, nbd: true, nkt: true })}
+                  >
+                    <Icon name="luoi" />
+                  </a>{" "}
+                  <a
+                    className={`toggle-vis ${cols.thbq ? "on" : "off"}`}
+                    onClick={() => V1f0((c) => ({ ...c, thbq: !c.thbq }))}
+                  >
+                    THBQ
+                  </a>{" "}
+                  <a
+                    className={`toggle-vis ${cols.soTo ? "on" : "off"}`}
+                    onClick={() => V1f0((c) => ({ ...c, soTo: !c.soTo }))}
+                  >
+                    Số tờ
+                  </a>{" "}
+                  <a
+                    className={`toggle-vis ${cols.nbd ? "on" : "off"}`}
+                    onClick={() => V1f0((c) => ({ ...c, nbd: !c.nbd }))}
+                  >
+                    N. Bắt đầu
+                  </a>{" "}
+                  <a
+                    className={`toggle-vis ${cols.nkt ? "on" : "off"}`}
+                    onClick={() => V1f0((c) => ({ ...c, nkt: !c.nkt }))}
+                  >
+                    N. Kết thúc
+                  </a>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {}
+        <div className="dt-bottom">
+          <div className="dt-length">
+            <label>
+              Hiển thị{" "}
+              <select
+                value={V1f1}
+                onChange={(V1hh) => {
+                  V1f2(Number(V1hh.target.value));
+                  V1f4(1);
+                }}
+              >
+                {V4h9.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>{" "}
+              bản ghi.
+            </label>
+          </div>
+          <div className="pagination">
+            <button className="pbtn" disabled={V1g0 <= 1} onClick={() => V1f4(V1g0 - 1)}>
+              <Icon name="truoc" />
+            </button>
+            <button className="pbtn current">{V1g0}</button>
+            <button className="pbtn" disabled={V1g0 >= V1fz} onClick={() => V1f4(V1g0 + 1)}>
+              <Icon name="sau" />
+            </button>
+          </div>
+          <div className="dt-goto">
+            <label>Tới trang</label>
+            <input
+              type="number"
+              min={1}
+              value={V1f5}
+              onChange={(V1hi) => V1f6(V1hi.target.value)}
+            />
+            <button
+              className="pbtn"
+              onClick={() => {
+                const p = Number(V1f5);
+                if (p >= 1 && p <= V1fz) V1f4(p);
+              }}
+            >
+              Đi
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {}
+      {V1f9 === "import" && (
+        <Modal title="Tmjhuq1wIFTDoGkgTGnhu4d1IHbDoG8gVsSDbiBC4bqjbg==" onClose={() => V1fa(null)}>
+          <p className="muted">
+            Chọn tệp Excel văn bản (có cột "Hồ sơ id") để nhập hàng loạt vào các hồ sơ.
+          </p>
+          <input ref={V1fn} type="file" className="form-control" accept=".xlsx,.xls,.csv" />
+          <div className="text-right mt-3">
+            <button
+              className="btn btn-outline-primary btn-round"
+              disabled={V1fl}
+              onClick={() => void V1g9(V1fn.current?.files?.[0])}
+            >
+              <Icon name="taiLen" /> Nhập
+            </button>{" "}
+            <button className="btn btn-outline-danger btn-round" onClick={() => V1fa(null)}>
+              Đóng
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {}
+      {V1f9 === "tinhchinh" && (
+        <Modal
+          title="VEjDlE5HIFRJTiBWxIJOIELhuqJOIENIxq9BIEhPw4BOIFRISeG7hk4="
+          onClose={() => V1fa(null)}
+        >
+          <div className="text-right mb-2">
+            <button
+              className="btn btn-outline-danger btn-round"
+              disabled={V1fl}
+              onClick={() => void V1gl()}
+            >
+              <Icon name="tepZip" /> Hủy dữ liệu
+            </button>{" "}
+            <button
+              className="btn btn-outline-danger btn-round"
+              disabled={V1fl}
+              onClick={() => void V1go()}
+            >
+              <Icon name="dong" /> Hủy toàn bộ
+            </button>
+          </div>
+          <div className="tbl-scroll">
+            <table className="dataTable">
+              <thead>
+                <tr>
+                  <th className="w-2.5">
+                    <input
+                      type="checkbox"
+                      checked={V1fb.length > 0 && V1fb.every((v) => V1fd.has(v.vanBanId))}
+                      onChange={(V1hj) =>
+                        V1fe(V1hj.target.checked ? new Set(V1fb.map((v) => v.vanBanId)) : new Set())
+                      }
+                    />
+                  </th>
+                  <th className="w-22.5">Hồ sơ</th>
+                  <th className="w-15">STT</th>
+                  <th className="w-30">Ký hiệu</th>
+                  <th>Trích yếu</th>
+                  <th className="w-22.5">Ngày tháng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {V1fb.length === 0 ? (
+                  <tr>
+                    <td className="dt-empty" colSpan={6}>
+                      {bangTrongText(maDa)}
+                    </td>
+                  </tr>
+                ) : (
+                  V1fb.map((v, i) => (
+                    <tr key={v.vanBanId} className={i % 2 === 0 ? "odd" : "even"}>
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          checked={V1fd.has(v.vanBanId)}
+                          onChange={() => V1gv(v.vanBanId)}
+                        />
+                      </td>
+                      <td className="text-center">{v.hoSo}</td>
+                      <td className="text-center">{v.thuTu}</td>
+                      <td className="text-left">{v.soKyHieu}</td>
+                      <td className="text-justify">{v.trichYeu}</td>
+                      <td className="text-center">{v.ngayThang}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      )}
+
+      {}
+      {V1f9 === "dpi" && (
+        <Modal title="RGFuaCBzw6FjaCBmaWxlIGtp4buDbSB0cmEgRFBJ" onClose={() => V1fa(null)}>
+          <label className="labelEx">
+            <input
+              type="checkbox"
+              className="inputEx"
+              checked={V1fh}
+              onChange={(V1hk) => V1fi(V1hk.target.checked)}
+            />{" "}
+            Chỉ hiển thị file không đạt
+          </label>
+          <p className="muted">Ngưỡng đạt: DPI ≥ 200 (Thông tư 02/2019/TT-BNV).</p>
+          <div className="tbl-scroll">
+            <table className="dataTable">
+              <thead>
+                <tr>
+                  <th>Tên file</th>
+                  <th>Đường dẫn</th>
+                  <th className="w-17.5">Số DPI</th>
+                  <th className="w-27.5">Đạt/Không đạt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {V1gt.length === 0 ? (
+                  <tr>
+                    <td className="dt-empty" colSpan={4}>
+                      {V1ff.length === 0
+                        ? "Q2jGsGEgc+G7kSBob8OhIOKAlCBraMO0bmcgY8OzIGZpbGUgc2NhbiDEkeG7gyBraeG7g20gdHJhLg=="
+                        : "VOG6pXQgY+G6oyBmaWxlIMSR4buBdSDEkeG6oXQu"}
+                    </td>
+                  </tr>
+                ) : (
+                  V1gt.map((f, i) => (
+                    <tr key={f.filePath + i} className={i % 2 === 0 ? "odd" : "even"}>
+                      <td className="text-left">{f.fileName}</td>
+                      <td className="text-left">{f.filePath}</td>
+                      <td className="text-center">{f.dpi}</td>
+                      <td
+                        className={`text-center ${f.isPass ? "text-success-700" : "text-danger-700"}`}
+                      >
+                        {f.isPass ? "xJDhuqF0" : "S2jDtG5nIMSR4bqhdA=="}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      )}
+
+      {}
+      {V1f9 === "pdfa" && (
+        <Modal title="S2nhu4NtIHRyYSBQREYgMiBs4bubcCAoUERGL0Ep" onClose={() => V1fa(null)}>
+          <p className="muted">
+            Chức năng kiểm tra PDF 2 lớp (ảnh + lớp văn bản OCR) đang được phát triển cho bản
+            desktop. Ở đợt tới sẽ đọc lớp text của PDF bằng lopdf để đối chiếu.
+          </p>
+          <div className="text-right mt-3">
+            <button className="btn btn-outline-danger btn-round" onClick={() => V1fa(null)}>
+              Đóng
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {}
+      {V1f9 === "inpack" && (
+        <Modal
+          title="Q2jhu41uIGxv4bqhaSBnw7NpIHRpbiDEkeG7gyDEkcOzbmcgZ8OzaQ=="
+          onClose={() => V1fa(null)}
+        >
+          <div className="input-group">
+            <label className="input-group-addon">Loại gói</label>
+            <select
+              className="form-control"
+              value={V1fj}
+              onChange={(V1hl) => V1fk(V1hl.target.value)}
+            >
+              {V4ha.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="muted mt-2.5">
+            Đã chọn {V1eu.size} hồ sơ. Đóng gói {V4ha.find((p) => p.value === V1fj)?.label} (zip +
+            bundle + checksum SHA-256) đang được phát triển cho bản desktop và sẽ hoàn thiện ở đợt
+            tới.
+          </p>
+          <div className="text-right mt-3">
+            <button className="btn btn-outline-danger btn-round" onClick={() => V1fa(null)}>
+              Đóng
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Modal({
+  title: V1hm,
+  onClose: V1hn,
+  children: V1ho,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="lhs-overlay" onClick={V1hn}>
+      <div className="lhs-modal" onClick={(V1hp) => V1hp.stopPropagation()}>
+        <div className="m-head">
+          <h4>{V1hm}</h4>
+          <button className="m-close" onClick={V1hn}>
+            ×
+          </button>
+        </div>
+        <div className="m-body">{V1ho}</div>
+      </div>
+    </div>
+  );
+}

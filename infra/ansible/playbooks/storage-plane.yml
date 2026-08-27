@@ -1,0 +1,5 @@
+---
+- hosts: storage_plane
+  become: true
+  roles:
+    - common,minio,backup_dr

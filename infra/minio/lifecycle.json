@@ -1,0 +1,7 @@
+{
+  "Rules": [
+    { "ID": "to-cold-after-archive", "Status": "Enabled",
+      "Filter": { "Tag": { "Key": "status", "Value": "archived" } },
+      "Transition": { "Days": 30, "StorageClass": "COLD" } }
+  ]
+}

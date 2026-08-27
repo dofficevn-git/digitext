@@ -1,0 +1,21 @@
+---
+deploy_user: digitext
+digitext_config_dir: /etc/digitext
+
+vault_addr: "https://vault.control.internal:8200"
+vault_approle_name: "digitext-api"
+vault_agent_version: "1.17.6"
+
+vault_role_id: "ĐẶT_role_id_trong_group_vars"
+
+vault_wrapped_secret_id: ""
+
+postgres_host: "postgres.control.internal"
+postgres_port: 5432
+postgres_db: "digitext"
+digitext_api_bind: "127.0.0.1:8080"
+digitext_api_jwt_key_path: "/etc/digitext/jwt-ed25519.pem"
+digitext_api_data_dir: "/var/lib/digitext"
+digitext_api_log: "info"
+digitext_api_behind_proxy: true
+digitext_api_sign_trust_roots: "{{ digitext_config_dir }}/trust/ica-sign-trust-roots.pem"
