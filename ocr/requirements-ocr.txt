@@ -15,5 +15,14 @@ numpy==1.26.4               # PHẢI <2 — PaddleOCR build với numpy 1.x
 opencv-python-headless==4.10.0.84   # bản headless: không kéo theo GUI/X11
 Pillow==10.4.0
 
+# PHAT HIEN vung chu (DBNet). Chi dung phan det — phan rec cua PaddleOCR voi
+# lang='vi' that ra nap model Latin chung, doc mat sach dau tieng Viet (do duoc
+# 17,8% tren 20 van ban that).
 paddlepaddle==2.6.2
 paddleocr==2.9.1
+
+# vietocr KHONG khai o day — no ghim albumentations==1.4.2 con paddleocr ghim
+# ==1.4.10, pip khong hoa giai duoc. albumentations chi dung de tang cuong du
+# lieu LUC HUAN LUYEN, khong dung khi suy luan, nen Dockerfile cai vietocr bang
+# --no-deps kem cac phu thuoc chay that. Xem infra/compose/ocr/Dockerfile.
+gdown==5.2.0                # vietocr dung de tai trong so lan chay dau

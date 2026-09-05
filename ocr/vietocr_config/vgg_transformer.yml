@@ -1,0 +1,92 @@
+# Cấu hình VietOCR vgg_transformer — bản GỘP, dùng CỤC BỘ.
+#
+# Vì sao phải gộp và giữ ở đây thay vì gọi Cfg.load_config_from_name():
+# hàm đó tải cả base.yml lẫn vgg-transformer.yml từ https://vocr.vn, mà chứng
+# chỉ TLS của máy chủ đó ĐÃ HẾT HẠN (SEC_E_CERT_EXPIRED) nên container không
+# lấy được, dịch vụ không khởi động nổi.
+#
+# Nguồn: github.com/pbcquoc/vietocr — config/base.yml + config/vgg-transformer.yml
+# Chỉ sửa ba chỗ so với bản gốc, ghi rõ bên dưới.
+#
+# Nạp bằng Cfg.load_config_from_file() — hàm này KHÔNG gọi mạng.
+
+# Bảng ký tự tiếng Việt đầy đủ, có dấu. Đây chính là thứ PaddleOCR lang='vi'
+# không có (nó nạp model Latin chung) khiến đầu ra mất sạch dấu.
+vocab: 'aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆfFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrRsStTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ0123456789!"#$%&''()*+,-./:;<=>?@[\]^_`{|}~ '
+
+# SỬA 1/3: bản gốc là cuda:0. Mã trong ocr_fulltext.py ghi đè theo OCR_USE_GPU,
+# nhưng để cpu ở đây cho an toàn nếu ai nạp thẳng file này.
+device: cpu
+
+seq_modeling: transformer
+transformer:
+    d_model: 256
+    nhead: 8
+    num_encoder_layers: 6
+    num_decoder_layers: 6
+    dim_feedforward: 2048
+    max_seq_length: 1024
+    pos_dropout: 0.1
+    trans_dropout: 0.1
+
+backbone: vgg19_bn
+cnn:
+    # SỬA 2/3: bản gốc True. Bật lên thì torchvision đi tải trọng số ImageNet
+    # của vgg19_bn — thừa, vì ta nạp nguyên checkpoint đã huấn luyện ngay sau đó.
+    pretrained: False
+    ss:
+        - [2, 2]
+        - [2, 2]
+        - [2, 1]
+        - [2, 1]
+        - [1, 1]
+    ks:
+        - [2, 2]
+        - [2, 2]
+        - [2, 1]
+        - [2, 1]
+        - [1, 1]
+    hidden: 256
+
+# SỬA 3/3: bản gốc trỏ https://vocr.vn/data/vietocr/vgg_transformer.pth.
+# Nay là đường dẫn cục bộ — file được gắn vào container qua bind mount.
+#   sha256 151.815.373 byte:
+#   380512193a8b6cbf6fad80deacdc9b6939d10d473d199892fc6408d13775ea59
+weights: /models/vietocr/vgg_transformer.pth
+
+# Ba khoá dưới đây TRÌNH SUY LUẬN CÓ DÙNG để chuẩn hoá kích thước ảnh dòng chữ
+# trước khi đưa vào model — không phải cấu hình huấn luyện, đừng gỡ.
+dataset:
+    name: data
+    data_root: ./img/
+    train_annotation: annotation_train.txt
+    valid_annotation: annotation_val_small.txt
+    image_height: 32
+    image_min_width: 32
+    image_max_width: 512
+
+predictor:
+    # beamsearch chính xác hơn chút nhưng chậm hơn nhiều. Mã cũng ghi đè khoá này.
+    beamsearch: False
+
+quiet: True
+
+# Phần còn lại chỉ dùng khi HUẤN LUYỆN, giữ cho đủ hình dạng cấu hình.
+optimizer:
+    max_lr: 0.0003
+    pct_start: 0.1
+trainer:
+    batch_size: 32
+    print_every: 200
+    valid_every: 4000
+    iters: 100000
+    export: ./weights/transformerocr.pth
+    checkpoint: ./checkpoint/transformerocr_checkpoint.pth
+    log: ./train.log
+    metrics: null
+dataloader:
+    num_workers: 3
+    pin_memory: True
+aug:
+    image_aug: true
+    masked_language_model: true

@@ -28,6 +28,9 @@ services:
       # Trọng số PaddleOCR (~100MB) tải ở lần chạy đầu. Không có volume này thì
       # mỗi lần dựng lại container là tải lại.
       - paddlecache:/models
+      # Trọng số VietOCR (145MB) — artifact, cấp phát khi triển khai, không
+      # commit. Tải một lần: xem ocr/vietocr_config/vgg_transformer.yml.
+      - ../../../ocr/models/vietocr:/models/vietocr:ro
 
 volumes:
   paddlecache:
