@@ -1,0 +1,33 @@
+# Dịch vụ OCR toàn văn — TIẾN TRÌNH RIÊNG, không thuộc workspace Rust.
+# DigiText chỉ biết tới nó qua DIGITEXT_OCR_HTTP_ENDPOINT, đúng như từng chỉ
+# biết Triton qua DIGITEXT_TRITON_ENDPOINT.
+#
+#   docker compose -f infra/compose/ocr/docker-compose.yml --env-file infra/compose/ocr/.env up -d --build
+
+name: digitext-ocr-fulltext
+
+services:
+  ocr:
+    build:
+      # Nguồn nằm ở ocr/ gốc repo; Dockerfile ở đây.
+      context: ../../../ocr
+      dockerfile: ../infra/compose/ocr/Dockerfile
+    restart: unless-stopped
+    ports:
+      # Loopback: DigiText gọi từ cùng máy. Đổi sang 0.0.0.0 nếu khác máy,
+      # và khi đó BẮT BUỘC đặt OCR_API_KEY.
+      - "127.0.0.1:${OCR_PORT:-5002}:5002"
+    environment:
+      OCR_HOST: "0.0.0.0"
+      OCR_PORT: "5002"
+      OCR_THREADS: "${OCR_THREADS:-4}"
+      OCR_LANG: "${OCR_LANG:-vi}"
+      OCR_USE_GPU: "${OCR_USE_GPU:-false}"
+      OCR_API_KEY: "${OCR_API_KEY:?dat OCR_API_KEY trong infra/compose/ocr/.env}"
+    volumes:
+      # Trọng số PaddleOCR (~100MB) tải ở lần chạy đầu. Không có volume này thì
+      # mỗi lần dựng lại container là tải lại.
+      - paddlecache:/models
+
+volumes:
+  paddlecache:
