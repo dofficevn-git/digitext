@@ -66,3 +66,19 @@ impl<P: Tol> Readiness<P> {
         HealthReport::aggregate(r_3d4)
     }
 }
+/// Bọc các probe để `/readyz` dùng chung một kiểu bất kể engine nào đang chạy.
+///
+/// `Tol` cũng là RPITIT nên không object-safe — lại phải dùng enum, y như
+/// `OcrInferSource` ở infer.rs.
+pub enum OcrProbe {
+    Triton(crate::grpc::GrpcTritonProbe),
+    Http(crate::http_ocr::HttpOcrProbe),
+}
+impl Tol for OcrProbe {
+    async fn probe(&self, required_models: &[String]) -> Result<Toj, Thj> {
+        match self {
+            OcrProbe::Triton(p) => p.probe(required_models).await,
+            OcrProbe::Http(p) => p.probe(required_models).await,
+        }
+    }
+}

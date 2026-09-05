@@ -35,6 +35,10 @@ pub const ENV_VLM_MODEL: &str = "DIGITEXT_VLM_MODEL";
 pub const C_6H: &str = "DIGITEXT_VLM_TIMEOUT_MS";
 pub const C_6G: &str = "DIGITEXT_VLM_MAX_IMAGE_SIDE";
 pub const ENV_FIELDS_ENGINE: &str = "DIGITEXT_FIELDS_ENGINE";
+pub const ENV_OCR_ENGINE: &str = "DIGITEXT_OCR_ENGINE";
+pub const ENV_OCR_HTTP_ENDPOINT: &str = "DIGITEXT_OCR_HTTP_ENDPOINT";
+pub const ENV_OCR_HTTP_API_KEY: &str = "DIGITEXT_OCR_HTTP_API_KEY";
+pub const ENV_OCR_HTTP_TIMEOUT_MS: &str = "DIGITEXT_OCR_HTTP_TIMEOUT_MS";
 pub const C_5H: &str = "DIGITEXT_FIELDS_V2_MAX_PAGES";
 pub const C_64: &str = "DIGITEXT_PDF_DPI";
 pub const C_65: &str = "DIGITEXT_PDF_RASTER_DPI";
@@ -65,6 +69,14 @@ pub enum PageMode {
     Pdf,
     Images,
 }
+/// Engine NHẬN DẠNG CHỮ (khác FieldsEngine — cái đó là engine BÓC TRƯỜNG).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OcrEngine {
+    /// Triton gRPC — mặc định, giữ tương thích ngược.
+    Triton,
+    /// Dịch vụ HTTP ở ocr/ (PaddleOCR toàn văn).
+    Http,
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FieldsEngine {
     V1,
@@ -73,7 +85,12 @@ pub enum FieldsEngine {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkerConfig {
     pub database_url: String,
+    pub ocr_engine: OcrEngine,
+    /// Rỗng khi ocr_engine = Http — lúc đó Triton không được dùng tới.
     pub triton_endpoint: String,
+    pub ocr_http_endpoint: String,
+    pub ocr_http_api_key: String,
+    pub ocr_http_timeout_ms: u64,
     pub triton_http_endpoint: String,
     pub metrics_addr: String,
     pub worker_concurrency: usize,
@@ -106,7 +123,7 @@ pub struct WorkerConfig {
     pub auto_make_pdf2: bool,
 }
 impl WorkerConfig {
-    pub const ENV_KEYS: [&'static str; 36] = [
+    pub const ENV_KEYS: [&'static str; 40] = [
         C_5G,
         C_6D,
         C_6E,
@@ -130,6 +147,10 @@ impl WorkerConfig {
         C_5O,
         C_6F,
         ENV_FIELDS_ENGINE,
+        ENV_OCR_ENGINE,
+        ENV_OCR_HTTP_ENDPOINT,
+        ENV_OCR_HTTP_API_KEY,
+        ENV_OCR_HTTP_TIMEOUT_MS,
         C_5H,
         C_64,
         C_65,
@@ -162,13 +183,56 @@ impl WorkerConfig {
                     .to_owned(),
             });
         }
-        let triton_endpoint = require(r_30y, C_6D)?.to_owned();
+        let ocr_engine = match r_30y
+            .get(ENV_OCR_ENGINE)
+            .map(|s| s.to_ascii_lowercase())
+            .as_deref()
+        {
+            None | Some("triton") => OcrEngine::Triton,
+            Some("http") => OcrEngine::Http,
+            Some(other) => {
+                return Err(ConfigError::Invalid {
+                    field: ENV_OCR_ENGINE,
+                    reason: format!(
+                        "chỉ nhận 'triton' hoặc 'http', nhận {other:?}"
+                    ),
+                });
+            }
+        };
+        // Chỉ bắt buộc khi thực sự dùng Triton. Bắt buộc vô điều kiện sẽ khiến
+        // worker không khởi động nổi ở deployment không còn Triton.
+        let triton_endpoint = match ocr_engine {
+            OcrEngine::Triton => require(r_30y, C_6D)?.to_owned(),
+            OcrEngine::Http => r_30y.get(C_6D).cloned().unwrap_or_default(),
+        };
         if triton_endpoint.chars().any(char::is_whitespace) {
             return Err(ConfigError::Invalid {
                 field: C_6D,
                 reason: "không được chứa khoảng trắng".to_owned(),
             });
         }
+        let ocr_http_endpoint = match ocr_engine {
+            OcrEngine::Http => {
+                let v = require(r_30y, ENV_OCR_HTTP_ENDPOINT)?.to_owned();
+                if !(v.starts_with("http://") || v.starts_with("https://")) {
+                    return Err(ConfigError::Invalid {
+                        field: ENV_OCR_HTTP_ENDPOINT,
+                        reason: "phải bắt đầu bằng http:// hoặc https://".to_owned(),
+                    });
+                }
+                v
+            }
+            OcrEngine::Triton => r_30y
+                .get(ENV_OCR_HTTP_ENDPOINT)
+                .cloned()
+                .unwrap_or_default(),
+        };
+        let ocr_http_api_key = r_30y
+            .get(ENV_OCR_HTTP_API_KEY)
+            .cloned()
+            .unwrap_or_default();
+        let ocr_http_timeout_ms =
+            f_1eu::<u64>(r_30y, ENV_OCR_HTTP_TIMEOUT_MS, 120_000, 1_000, 600_000)?;
         let triton_http_endpoint = r_30y
             .get(C_6E)
             .map(String::as_str)
@@ -344,6 +408,10 @@ impl WorkerConfig {
             corrector_max_edit,
             corrector_min_conf,
             vlm_fallback_enabled,
+            ocr_engine,
+            ocr_http_endpoint,
+            ocr_http_api_key,
+            ocr_http_timeout_ms,
             fields_engine,
             fields_v2_max_pages,
             pdf_dpi,
