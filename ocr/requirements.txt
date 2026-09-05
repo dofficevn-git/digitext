@@ -1,50 +1,49 @@
 # Web Framework
-Flask
-Werkzeug
+Flask==3.0.3
+Werkzeug==3.0.4
+flask-cors==4.0.1          # app.py:17 dùng nhưng bản gốc thiếu khai
 
-# Database
-pyodbc
+# Database (chỉ nhánh web/KIE cũ cần — nhánh OCR toàn văn KHÔNG đụng DB)
+pyodbc==5.1.0
 
 # Computer Vision & Image Processing
-opencv-python
-Pillow
-numpy
+opencv-python==4.10.0.84
+Pillow==10.4.0
+numpy==1.26.4              # PHẢI <2: backend Python của Triton và PaddleOCR
+                           # đều build với numpy 1.x
 
-# OCR Libraries
-paddlepaddle
-paddleocr
-easyocr
+# OCR — engine nhận dạng toàn văn cho DigiText (ocr_fulltext.py)
+paddlepaddle==2.6.2
+paddleocr==2.9.1
+# easyocr: bản gốc khai nhưng KHÔNG file .py nào import. Bỏ để khỏi kéo theo
+# một bộ trọng số thứ hai. Thêm lại nếu thực sự dùng.
 
 # PDF Processing
-PyMuPDF
+PyMuPDF==1.24.10
+pdf2image==1.17.0          # main.py:471-524 dùng nhưng bản gốc thiếu khai.
+                           # CẦN KÈM binary `poppler` trên PATH.
 
-# Machine Learning
-ultralytics
-torch
-torchvision
-
-# Google AI
-google-genai
+# Machine Learning (YOLO cắt vùng header/chữ ký cho nhánh KIE)
+ultralytics==8.3.0
+torch==2.4.1
+torchvision==0.19.1
 
 # Production WSGI Server
-waitress
+waitress==3.0.0
 
 # Environment & Configuration
-python-dotenv
+python-dotenv==1.0.1
 
-# Utility Libraries
-uuid
-zipfile36
+# Xuất Excel
+openpyxl==3.1.5            # app.py:7-9 dùng nhưng bản gốc thiếu khai
 
-# Threading & Async (built-in, no install needed)
-# threading
-# time
-# datetime
-# json
-# os
-# shutil
+# HTTP client (external_api.py)
+requests==2.32.3
 
-# Optional: GPU acceleration for PyTorch (uncomment if you have CUDA)
-# torch==2.0.1+cu118
-# torchvision==0.15.2+cu118
-# --extra-index-url https://download.pytorch.org/whl/cu118
+# ĐÃ BỎ so với bản gốc:
+#   google-genai  — main.py:9 import nhưng không dùng (nhánh Gemini đã gỡ)
+#   uuid          — là stdlib, gói trên PyPI là gói rác
+#   zipfile36     — stdlib zipfile đã đủ
+
+# Tuỳ chọn: GPU cho PyTorch (bỏ ghi chú nếu có CUDA)
+# --extra-index-url https://download.pytorch.org/whl/cu121

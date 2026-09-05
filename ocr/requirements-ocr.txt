@@ -1,0 +1,19 @@
+# Phụ thuộc cho RIÊNG dịch vụ OCR toàn văn (serve_ocr.py).
+#
+# Cố ý tối giản: không pyodbc, không torch, không ultralytics, không PyMuPDF.
+# Nhánh OCR chỉ cần Flask + PaddleOCR + OpenCV. Ảnh vào đã được DigiText raster
+# hoá sẵn nên cũng không cần xử lý PDF.
+#
+# Dùng requirements.txt (bản đầy đủ) nếu chạy app.py — giao diện web/KIE cũ.
+
+Flask==3.0.3
+Werkzeug==3.0.4
+waitress==3.0.0
+python-dotenv==1.0.1
+
+numpy==1.26.4               # PHẢI <2 — PaddleOCR build với numpy 1.x
+opencv-python-headless==4.10.0.84   # bản headless: không kéo theo GUI/X11
+Pillow==10.4.0
+
+paddlepaddle==2.6.2
+paddleocr==2.9.1

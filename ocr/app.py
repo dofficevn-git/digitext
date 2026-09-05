@@ -33,6 +33,7 @@ from main import DocumentKIE
 from work_package_routes import work_package_bp
 from parallel_routes import parallel_bp
 from external_routes import external_bp
+from ocr_routes import ocr_bp
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
@@ -179,6 +180,8 @@ app.config['db_manager'] = db_manager
 app.register_blueprint(work_package_bp)
 app.register_blueprint(parallel_bp)
 app.register_blueprint(external_bp)
+# OCR toan van — giao dien MAY GOI MAY cho DigiText, xac thuc bang API key
+app.register_blueprint(ocr_bp)
 # Tạo thư mục cần thiết
 create_directories()
 
@@ -226,7 +229,12 @@ def index():
 def require_login():
     # Các endpoint không cần authentication
     allowed_endpoints = ['login_page', 'login', 'static']
-    
+
+    # Blueprint `ocr` la giao dien may-goi-may (DigiText goi vao), khong co phien
+    # dang nhap — no tu xac thuc bang header X-API-Key trong ocr_routes.py.
+    if (request.endpoint or '').startswith('ocr.'):
+        return None
+
     if request.endpoint not in allowed_endpoints:
         if 'user_id' not in session:
             return redirect('/login')
