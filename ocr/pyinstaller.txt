@@ -1,0 +1,1 @@
+pyinstaller --onedir --name=doc_extract_pla --add-data="./templates;templates" --add-data="./static;static" --add-data=".env;." --add-data="best.pt;." --hidden-import=flask --hidden-import=pyodbc ./app.py

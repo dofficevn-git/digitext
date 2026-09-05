@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "data": [
+    {
+      "idDuAn": "PLA",
+      "idVanBan": 46186,
+      "idFile": "61fe7ca3-3fd7-4784-b6f8-9415fa29d246",
+      "duongDanFile": "\\\\14.225.16.175\\UploadFileData\\PLA101\\CN101\\CNM01\\1\\2\\1.pdf",
+      "tenFile": "1.pdf"
+    },
+    {
+      "idDuAn": "PLA",
+      "idVanBan": 46187,
+      "idFile": "d75a39b2-f9e2-4691-b773-ed8ed0243070",
+      "duongDanFile": "\\\\14.225.16.175\\UploadFileData\\PLA101\\CN101\\CNM01\\1\\2\\2.pdf",
+      "tenFile": "2.pdf"
+    }
+  ]
+}

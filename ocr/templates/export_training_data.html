@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Training Data for Vintern Fine-tuning</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .export-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .batch-card {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative; /* ✅ THÊM */
+}
+
+.batch-card:hover {
+    border-color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.batch-card.selected {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+/* ✅ THÊM CSS ĐỂ CHECKBOX DỄ CLICK */
+.batch-card .form-check-input {
+    position: relative;
+    z-index: 10;
+    cursor: pointer;
+    transform: scale(1.2);
+}
+        
+        .batch-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-badge {
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+        }
+        
+        .export-section {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 1rem;
+        }
+        
+        .export-results {
+            display: none;
+            margin-top: 2rem;
+        }
+        
+        .btn-export {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-export:hover:not(:disabled) {
+            background: linear-gradient(45deg, #218838, #1fa085);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-export:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .format-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .custom-section {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+
+        .template-btn {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="export-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="fas fa-download me-2"></i>Export Training Data</h1>
+                    <p class="mb-0">Export header KIE data cho Vintern fine-tuning</p>
+                </div>
+                <a href="/admin" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Quay lại Admin
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Batch Selection -->
+        <div class="export-section">
+            <h3><i class="fas fa-database me-2"></i>Chọn Batch để Export</h3>
+            <p class="text-muted">Chọn một hoặc nhiều batch có dữ liệu header KIE hợp lệ</p>
+            
+            <div id="batchList" class="row">
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Đang tải danh sách batch...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Configuration -->
+        <div class="export-section">
+            <h3><i class="fas fa-cog me-2"></i>Cấu hình Export</h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Tên export:</label>
+                        <input type="text" class="form-control" id="exportName" 
+                               placeholder="Nhập tên export...">
+                        <div class="form-text">Để trống để tự động tạo tên theo thời gian</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Thống kê:</label>
+                        <div id="exportStats" class="mt-2">
+                            <span class="badge bg-secondary">Chưa chọn batch nào</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ✅ CUSTOM PROMPT & FIELDS SECTION -->
+            <div class="custom-section">
+                <h5><i class="fas fa-edit me-2"></i>Custom Prompt & Fields</h5>
+                
+                <!-- Quick Templates -->
+                <div class="mb-3">
+                    <label class="form-label">Quick Templates:</label>
+                    <div>
+                        <button type="button" class="btn btn-outline-primary btn-sm template-btn" onclick="loadTemplate('simple')">
+                            Simple Prompt
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm template-btn" onclick="loadTemplate('detailed')">
+                            Detailed Prompt
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm template-btn" onclick="loadTemplate('vintern')">
+                            Vintern Style
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Prompt -->
+                <div class="mb-3">
+                    <label class="form-label">Training Prompt:</label>
+                    <textarea class="form-control" id="customPrompt" rows="6" 
+                        placeholder="Nhập prompt để training...">Bạn là chuyên gia trích xuất thông tin từ tài liệu hành chính Việt Nam. Hãy phân tích ảnh này và trích xuất thông tin theo định dạng JSON yêu cầu.</textarea>
+                    <div class="form-text">Prompt này sẽ được dùng trong phần "human" của conversation</div>
+                </div>
+
+                <!-- Fields Selection -->
+                <div class="mb-3">
+                    <label class="form-label">Chọn fields để export:</label>
+                    <div class="field-grid" id="fieldsSelection">
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="document_type" id="field_document_type" checked>
+                            <label class="form-check-label" for="field_document_type">
+                                Loại văn bản
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="document_number_and_symbol" id="field_document_number_and_symbol" checked>
+                            <label class="form-check-label" for="field_document_number_and_symbol">
+                                Số và ký hiệu VB
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="document_number" id="field_document_number">
+                            <label class="form-check-label" for="field_document_number">
+                                Số văn bản
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="document_symbol" id="field_document_symbol">
+                            <label class="form-check-label" for="field_document_symbol">
+                                Ký hiệu văn bản
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="handwritten_number" id="field_handwritten_number" checked>
+                            <label class="form-check-label" for="field_handwritten_number">
+                                Số viết tay
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="issue_date" id="field_issue_date" checked>
+                            <label class="form-check-label" for="field_issue_date">
+                                Ngày ban hành
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="supervising_authority" id="field_supervising_authority" checked>
+                            <label class="form-check-label" for="field_supervising_authority">
+                                Cơ quan chủ quản
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="issuing_authority" id="field_issuing_authority" checked>
+                            <label class="form-check-label" for="field_issuing_authority">
+                                Cơ quan ban hành
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="signer_name" id="field_signer_name" checked>
+                            <label class="form-check-label" for="field_signer_name">
+                                Người ký
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input field-checkbox" type="checkbox" 
+                                   value="summary" id="field_summary" checked>
+                            <label class="form-check-label" for="field_summary">
+                                Trích yếu
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-text">Chọn các trường muốn đưa vào JSON output cho training</div>
+                </div>
+
+                <!-- JSON Preview -->
+                <div class="mb-3">
+                    <label class="form-label">Preview JSON output structure:</label>
+                    <div class="format-preview" id="jsonPreview"></div>
+                </div>
+            </div>
+
+            <button class="btn btn-export" id="exportBtn" disabled>
+                <i class="fas fa-download me-2"></i>Bắt đầu Export
+            </button>
+
+            <!-- Progress -->
+            <div class="progress-container" id="progressContainer">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Đang export...</span>
+                    <span id="progressText">0%</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="export-results" id="exportResults">
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle me-2"></i>Export thành công!</h5>
+                    <div id="exportSummary"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Format Preview -->
+        <div class="export-section">
+            <h3><i class="fas fa-eye me-2"></i>Preview định dạng JSONL</h3>
+            <p class="text-muted">Định dạng dữ liệu sẽ được export cho Vintern fine-tuning</p>
+            
+            <div class="format-preview" id="conversationPreview">
+{
+  "id": "batch_name_doc_id",
+  "image": "images/doc_id_header.png",
+  "conversations": [
+    {
+      "from": "human",
+      "value": "<image>\n[Custom Prompt của bạn]\n\nTrả về JSON theo cấu trúc:\n{\n  [Các fields bạn chọn]\n}"
+    },
+    {
+      "from": "gpt",
+      "value": "{\n  [JSON output với các fields đã chọn]\n}"
+    }
+  ]
+}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedBatches = new Set();
+        let batches = [];
+
+        // ✅ TEMPLATE PROMPTS
+        const promptTemplates = {
+            simple: "Hãy trích xuất thông tin từ tài liệu hành chính này theo định dạng JSON.",
+            detailed: "Bạn là chuyên gia trích xuất thông tin từ tài liệu hành chính Việt Nam. Hãy phân tích ảnh này và trích xuất thông tin chính xác theo định dạng JSON yêu cầu. Nếu không tìm thấy thông tin nào, để trống chuỗi.",
+            vintern: "Bạn là chuyên gia trích xuất thông tin từ tài liệu hành chính Việt Nam. Hãy phân tích ảnh header này và trích xuất thông tin chính xác.\n\nYêu cầu:\n1. Trích xuất các trường trong văn bản như được yêu cầu\n2. Không bịa; để giá trị rỗng nếu không thấy\n3. Chuẩn hóa ngày dạng DD/MM/YYYY\n4. Trả về JSON đơn giản theo cấu trúc yêu cầu"
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBatches();
+            updateExportButton();
+            
+            // Update JSON preview when fields change
+            document.querySelectorAll('.field-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateJsonPreview);
+            });
+            const promptTextarea = document.getElementById('customPrompt');
+    if (promptTextarea) {
+        promptTextarea.addEventListener('input', updateConversationPreview);
+        promptTextarea.addEventListener('change', updateConversationPreview);
+        promptTextarea.addEventListener('keyup', updateConversationPreview);
+        promptTextarea.addEventListener('paste', function() {
+            setTimeout(updateConversationPreview, 50); // Delay để paste hoàn tất
+        });
+    }
+            // Initial preview update
+            updateJsonPreview();
+            updateConversationPreview();
+        });
+
+        // ✅ LOAD TEMPLATE
+        function loadTemplate(templateName) {
+            const promptTextarea = document.getElementById('customPrompt');
+            promptTextarea.value = promptTemplates[templateName];
+            updateConversationPreview();
+        }
+
+        // ✅ UPDATE JSON PREVIEW
+        function updateJsonPreview() {
+            const selectedFields = [];
+            document.querySelectorAll('.field-checkbox:checked').forEach(checkbox => {
+                selectedFields.push(checkbox.value);
+            });
+
+            const jsonStructure = {};
+            selectedFields.forEach(field => {
+                jsonStructure[field] = "";
+            });
+
+            document.getElementById('jsonPreview').textContent = JSON.stringify(jsonStructure, null, 2);
+            updateConversationPreview();
+        }
+
+        // ✅ UPDATE CONVERSATION PREVIEW
+        function updateConversationPreview() {
+            const customPrompt = document.getElementById('customPrompt').value.trim();
+            const selectedFields = [];
+            document.querySelectorAll('.field-checkbox:checked').forEach(checkbox => {
+                selectedFields.push(checkbox.value);
+            });
+
+            const jsonStructure = {};
+            selectedFields.forEach(field => {
+                jsonStructure[field] = "";
+            });
+
+            const finalPrompt = `<image>\n${customPrompt}\n\nTrả về JSON theo cấu trúc:\n${JSON.stringify(jsonStructure, null, 2)}`;
+
+            const conversationExample = {
+                "id": "batch_name_doc_id",
+                "image": "images/doc_id_header.png",
+                "conversations": [
+                    {
+                        "from": "human",
+                        "value": finalPrompt
+                    },
+                    {
+                        "from": "gpt",
+                        "value": JSON.stringify(jsonStructure, null, 2)
+                    }
+                ]
+            };
+
+            document.getElementById('conversationPreview').textContent = JSON.stringify(conversationExample, null, 2);
+        }
+
+        async function loadBatches() {
+            try {
+                const response = await fetch('/api/export/batches');
+                const data = await response.json();
+
+                if (response.ok) {
+                    batches = data;
+                    renderBatches(data);
+                } else {
+                    showError('Lỗi tải danh sách batch: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        function renderBatches(batches) {
+    const container = document.getElementById('batchList');
+    
+    if (batches.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5>Không có batch nào</h5>
+                <p class="text-muted">Chưa có batch nào có dữ liệu header KIE hợp lệ</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = batches.map(batch => `
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="batch-card p-3 h-100" onclick="toggleBatchFromCard('${batch.id}', event)">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">${batch.name}</h6>
+                    <input type="checkbox" class="form-check-input" 
+                           id="batch-${batch.id}" onclick="toggleBatchFromCheckbox('${batch.id}', event)">
+                </div>
+                <p class="text-muted small mb-2">
+                    ${formatDate(batch.created_at)}
+                </p>
+                <div class="batch-stats">
+                    <span class="small text-muted">
+                        ${batch.total_docs} docs
+                    </span>
+                    <span class="stat-badge">
+                        ${batch.valid_headers} headers
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+        function toggleBatchFromCard(batchId, event) {
+    // Nếu click vào checkbox thì không xử lý
+    if (event.target.type === 'checkbox') {
+        return;
+    }
+    
+    toggleBatch(batchId);
+}
+
+function toggleBatchFromCheckbox(batchId, event) {
+    // Ngăn event bubble lên card
+    event.stopPropagation();
+    toggleBatch(batchId);
+}
+
+function toggleBatch(batchId) {
+    const checkbox = document.getElementById(`batch-${batchId}`);
+    const card = checkbox.closest('.batch-card');
+    
+    if (selectedBatches.has(batchId)) {
+        selectedBatches.delete(batchId);
+        card.classList.remove('selected');
+        checkbox.checked = false;
+    } else {
+        selectedBatches.add(batchId);
+        card.classList.add('selected');
+        checkbox.checked = true;
+    }
+    
+    updateExportStats();
+    updateExportButton();
+}
+        function updateExportStats() {
+            const statsContainer = document.getElementById('exportStats');
+            
+            if (selectedBatches.size === 0) {
+                statsContainer.innerHTML = '<span class="badge bg-secondary">Chưa chọn batch nào</span>';
+                return;
+            }
+
+            const selectedBatchData = batches.filter(b => selectedBatches.has(b.id));
+            const totalDocs = selectedBatchData.reduce((sum, b) => sum + b.total_docs, 0);
+            const totalHeaders = selectedBatchData.reduce((sum, b) => sum + b.valid_headers, 0);
+
+            statsContainer.innerHTML = `
+                <span class="badge bg-primary me-2">${selectedBatches.size} batch</span>
+                <span class="badge bg-info me-2">${totalDocs} docs</span>
+                <span class="badge bg-success">${totalHeaders} headers</span>
+            `;
+        }
+
+        function updateExportButton() {
+            const exportBtn = document.getElementById('exportBtn');
+            exportBtn.disabled = selectedBatches.size === 0;
+        }
+
+        async function startExport() {
+            if (selectedBatches.size === 0) {
+                showError('Vui lòng chọn ít nhất 1 batch');
+                return;
+            }
+
+            const exportName = document.getElementById('exportName').value.trim();
+            const customPrompt = document.getElementById('customPrompt').value.trim();
+            
+            // Get selected fields
+            const selectedFields = [];
+            document.querySelectorAll('.field-checkbox:checked').forEach(checkbox => {
+                selectedFields.push(checkbox.value);
+            });
+
+            if (selectedFields.length === 0) {
+                showError('Vui lòng chọn ít nhất 1 field để export');
+                return;
+            }
+
+            if (!customPrompt) {
+                showError('Vui lòng nhập prompt cho training');
+                return;
+            }
+
+            const exportBtn = document.getElementById('exportBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const exportResults = document.getElementById('exportResults');
+
+            // Show progress
+            exportBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            exportResults.style.display = 'none';
+            
+            updateProgress(10, 'Chuẩn bị export...');
+
+            try {
+                const response = await fetch('/api/export/training-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        batch_ids: Array.from(selectedBatches),
+                        export_name: exportName,
+                        custom_prompt: customPrompt,        // ✅ THÊM CUSTOM PROMPT
+                        selected_fields: selectedFields    // ✅ THÊM SELECTED FIELDS
+                    })
+                });
+
+                updateProgress(90, 'Đang xử lý dữ liệu...');
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    updateProgress(100, 'Hoàn thành!');
+                    
+                    setTimeout(() => {
+                        showExportResults(result);
+                        progressContainer.style.display = 'none';
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Export failed');
+                }
+
+            } catch (error) {
+                showError('Lỗi export: ' + error.message);
+                progressContainer.style.display = 'none';
+            } finally {
+                exportBtn.disabled = false;
+            }
+        }
+
+        function updateProgress(percent, text) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressBar.style.width = percent + '%';
+            progressText.textContent = percent + '% - ' + text;
+        }
+
+        function showExportResults(result) {
+            const resultsContainer = document.getElementById('exportResults');
+            const summaryContainer = document.getElementById('exportSummary');
+            
+            const metadata = result.metadata;
+            
+            summaryContainer.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Export name:</strong> ${metadata.export_name}<br>
+                        <strong>Training samples:</strong> ${metadata.train_samples}<br>
+                        <strong>Validation samples:</strong> ${metadata.val_samples}<br>
+                        <strong>Failed samples:</strong> ${metadata.failed_samples || 0}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Export path:</strong> <code>${result.export_path}</code><br>
+                        <strong>Exported by:</strong> ${metadata.exported_by}<br>
+                        <strong>Export date:</strong> ${formatDateTime(metadata.export_date)}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6>Files created:</h6>
+                    <ul class="mb-0">
+                        <li><code>train.jsonl</code> - ${metadata.train_samples} training samples</li>
+                        <li><code>val.jsonl</code> - ${metadata.val_samples} validation samples</li>
+                        <li><code>images/</code> - ${metadata.train_samples + metadata.val_samples} header images</li>
+                        <li><code>metadata.json</code> - Export metadata</li>
+                    </ul>
+                </div>
+                <div class="mt-3">
+                    <h6>Configuration used:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Prompt:</strong> ${metadata.custom_prompt.substring(0, 100)}...</li>
+                        <li><strong>Fields:</strong> ${metadata.selected_fields.join(', ')}</li>
+                    </ul>
+                </div>
+            `;
+            
+            resultsContainer.style.display = 'block';
+        }
+
+        function showError(message) {
+            alert('❌ ' + message);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleDateString('vi-VN');
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleString('vi-VN');
+        }
+
+        // Event listeners
+        document.getElementById('exportBtn').addEventListener('click', startExport);
+    </script>
+</body>
+</html>

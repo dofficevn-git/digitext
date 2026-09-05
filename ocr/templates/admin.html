@@ -1,0 +1,1942 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KIE Admin Panel</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== RESET & BASE ===== */
+      * {
+        margin: 0;
+        padding: 0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        font-size: 12.5px;
+        color: #333;
+        background: #e9e9e9;
+      }
+
+      /* ===== SIDEBAR ===== */
+      .sidebar {
+        min-height: 100vh;
+        background: #ffffff;
+        box-shadow: 6px 12px #e2e2e2;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 210px;
+        z-index: 1001;
+        overflow-y: auto;
+      }
+
+      .sidebar h5 {
+        color: #156c3e;
+        font-weight: 900;
+        text-transform: uppercase;
+        padding: 20px 15px;
+        margin: 0;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-bottom: 2px solid #48bcb4;
+        font-size: 14px;
+      }
+
+      .sidebar h5 i {
+        color: #48bcb4;
+      }
+
+      .sidebar .nav-link {
+        color: #000;
+        border-radius: 10px;
+        margin: 5px 10px;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+        font-size: 12.5px;
+      }
+
+      .sidebar .nav-link i {
+        margin-right: 8px;
+        font-size: 14px;
+      }
+
+      .sidebar .nav-link:hover,
+      .sidebar .nav-link.active {
+        background: #51a478;
+        color: #007bff;
+      }
+
+      .sidebar hr {
+        border-color: rgba(255, 255, 255, 0.2);
+        margin: 10px 15px;
+      }
+
+      /* ===== MAIN CONTENT ===== */
+      .main-content {
+        background: #e9e9e9;
+        min-height: 100vh;
+        margin-left: 210px;
+        padding: 20px;
+      }
+
+      /* ===== HEADER ===== */
+      .main-content h2 {
+        color: #156c3e;
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+
+      .main-content .text-muted {
+        font-size: 12px;
+        color: #6c757d !important;
+      }
+
+      /* ===== STATS CARDS ===== */
+      .card-stats {
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd;
+        border: none;
+        border-left: 4px solid #48bcb4;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+      }
+
+      .card-stats:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(72, 188, 180, 0.3);
+      }
+
+      .card-stats .card-body {
+        padding: 20px;
+      }
+
+      .card-stats .card-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #156c3e;
+        margin-bottom: 10px;
+      }
+
+      .card-stats .card-title i {
+        font-size: 16px;
+        margin-right: 8px;
+      }
+
+      .card-stats h3 {
+        font-size: 28px;
+        font-weight: 900;
+        color: #48cfad;
+        margin: 0;
+      }
+
+      /* ===== CONTENT SECTIONS ===== */
+      .content-section {
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .content-section h4 {
+        color: #156c3e;
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 15px;
+      }
+
+      /* ===== BUTTONS ===== */
+      .btn {
+        font-size: 12.5px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #48cfad, #37bc9b);
+        border: none;
+        color: white;
+        box-shadow: 0 2px 4px rgba(72, 207, 173, 0.3);
+      }
+
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #37bc9b, #2aa88a);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(72, 207, 173, 0.4);
+      }
+
+      .btn-success {
+        background: linear-gradient(135deg, #a9d86e, #8fc450);
+        border: none;
+        color: white;
+      }
+
+      .btn-success:hover {
+        background: linear-gradient(135deg, #8fc450, #7ab03d);
+        transform: translateY(-1px);
+      }
+
+      .btn-warning {
+        background: linear-gradient(135deg, #fcb322, #f59c00);
+        border: none;
+        color: white;
+      }
+
+      .btn-warning:hover {
+        background: linear-gradient(135deg, #f59c00, #e08600);
+        transform: translateY(-1px);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #ff6c60, #ed5565);
+        border: none;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: linear-gradient(135deg, #ed5565, #da4453);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        border: none;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+      }
+
+      /* ===== TABLE ===== */
+      .table {
+        font-size: 12.5px;
+        margin-bottom: 0;
+      }
+
+      .table thead th {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-bottom: 2px solid #48bcb4;
+        font-weight: 600;
+        color: #156c3e;
+        padding: 12px 15px;
+        vertical-align: middle;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .table tbody td {
+        padding: 12px 15px;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #f9f9f9;
+      }
+
+      .table-striped tbody tr:hover {
+        background-color: #f0f8ff;
+      }
+
+      .table-responsive {
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      /* ===== BADGES ===== */
+      .role-badge {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+
+      .badge.bg-danger {
+        background: #ff6c60 !important;
+      }
+
+      .badge.bg-success {
+        background: #a9d86e !important;
+      }
+
+      .badge.bg-info {
+        background: #68dff0 !important;
+        color: #333 !important;
+      }
+
+      .badge.bg-warning {
+        background: #fcb322 !important;
+        color: white !important;
+      }
+
+      /* ===== MODAL ===== */
+      .modal-header {
+        background: linear-gradient(
+          -120deg,
+          #27bb4d,
+          #b2e7cb,
+          #156c3e,
+          #3d6a52
+        );
+        border-bottom: 2px solid #48bcb4;
+        padding: 15px 20px;
+      }
+
+      .modal-title {
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      .modal-footer {
+        border-top: 1px solid #e0e0e0;
+        padding: 15px 20px;
+      }
+
+      /* ===== FORM CONTROLS ===== */
+      .form-label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #495057;
+        font-size: 12px;
+      }
+
+      .form-control,
+      .form-select {
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 12.5px;
+        transition: all 0.3s ease;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: #48bcb4;
+        box-shadow: 0 0 0 0.2rem rgba(72, 188, 180, 0.25);
+        outline: none;
+      }
+
+      .form-control[readonly] {
+        background-color: #e9ecef;
+        opacity: 1;
+      }
+
+      /* ===== ACTION BUTTONS IN TABLE ===== */
+      .btn-sm {
+        padding: 4px 10px;
+        font-size: 11px;
+        border-radius: 15px;
+      }
+
+      .btn-sm i {
+        font-size: 12px;
+      }
+
+      /* ===== CARD ===== */
+      .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd;
+        margin-bottom: 20px;
+      }
+
+      .card-body {
+        padding: 20px;
+      }
+
+      /* ===== SCROLLBAR ===== */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #48bcb4;
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #37bc9b;
+      }
+
+      /* ===== ANIMATIONS ===== */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .content-section,
+      .card-stats {
+        animation: fadeIn 0.3s ease;
+      }
+
+      /* ===== RESPONSIVE ===== */
+      @media (max-width: 768px) {
+        .sidebar {
+          margin-left: -210px;
+        }
+
+        .main-content {
+          margin-left: 0;
+        }
+
+        .card-stats h3 {
+          font-size: 24px;
+        }
+      }
+
+      /* ===== TOAST (nếu cần) ===== */
+      .alert {
+        border-radius: 8px;
+        padding: 12px 15px;
+        font-size: 12.5px;
+        border-left: 4px solid;
+      }
+
+      .alert-success {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border-left-color: #48cfad;
+        color: #155724;
+      }
+
+      .alert-danger {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border-left-color: #dc3545;
+        color: #721c24;
+      }
+
+      .alert-info {
+        background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+        border-left-color: #68dff0;
+        color: #0c5460;
+      }
+
+      .alert-warning {
+        background: linear-gradient(135deg, #fff3cd, #ffeeba);
+        border-left-color: #fcb322;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 p-0">
+          <div class="sidebar p-3">
+            <h5 class="text-white mb-4">
+              <i class="fas fa-shield-alt"></i> Admin Panel
+            </h5>
+
+            <nav class="nav flex-column">
+              <a
+                class="nav-link active"
+                href="#"
+                onclick="showSection('dashboard')"
+              >
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+              </a>
+              <a class="nav-link" href="#" onclick="showSection('users')">
+                <i class="fas fa-users"></i> Quản lý Users
+              </a>
+              <a
+                class="nav-link"
+                href="#"
+                onclick="showSection('relationships')"
+              >
+                <i class="fas fa-sitemap"></i> Phân quyền
+              </a>
+              <a class="nav-link" href="#" onclick="showSection('batches')">
+                <i class="fas fa-folder"></i> Quản lý Batch
+              </a>
+              <a class="nav-link" href="#" onclick="showSection('statistics')">
+                <i class="fas fa-chart-bar"></i> Thống kê
+              </a>
+              <hr class="text-white" />
+              <a class="nav-link" href="/logout">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+              </a>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-10 main-content p-4">
+          <!-- Header -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <h2>Quản trị hệ thống KIE</h2>
+              <p class="text-muted">
+                Chào mừng, <span id="currentUser"></span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Dashboard Section -->
+          <div id="dashboard" class="content-section">
+            <div class="row">
+              <div class="col-md-3">
+                <div class="card card-stats">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="fas fa-users text-primary"></i> Tổng Users
+                    </h5>
+                    <h3 id="totalUsers">0</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-stats">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="fas fa-user-tie text-success"></i> Customers
+                    </h5>
+                    <h3 id="totalCustomers">0</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-stats">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="fas fa-user-friends text-info"></i> Cooperators
+                    </h5>
+                    <h3 id="totalCooperators">0</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card card-stats">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="fas fa-folder text-warning"></i> Batches
+                    </h5>
+                    <h3 id="totalBatches">0</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Users Management Section -->
+          <div id="users" class="content-section" style="display: none">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h4>Quản lý Users</h4>
+              </div>
+              <div class="col-md-6 text-end">
+                <button class="btn btn-primary" onclick="showCreateUserModal()">
+                  <i class="fas fa-plus"></i> Tạo User
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th>Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Relationships Section -->
+          <div id="relationships" class="content-section" style="display: none">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h4>Phân quyền Customer - Cooperator</h4>
+              </div>
+              <div class="col-md-6 text-end">
+                <button class="btn btn-primary" onclick="showAssignModal()">
+                  <i class="fas fa-plus"></i> Gán quyền
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Customer</th>
+                        <th>Cooperator</th>
+                        <th>Ngày gán</th>
+                        <th>Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody id="relationshipsTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistics Section -->
+          <div id="statistics" class="content-section" style="display: none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h4 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>Thống kê sản lượng & tiến
+                độ
+              </h4>
+              <button
+                class="btn btn-sm btn-primary"
+                onclick="loadAdminStatistics()"
+              >
+                <i class="fas fa-sync-alt me-1"></i>Làm mới
+              </button>
+            </div>
+
+            <!-- Filter -->
+            <div class="d-flex gap-3 mb-3 flex-wrap">
+              <div style="min-width: 220px">
+                <select
+                  class="form-select form-select-sm"
+                  id="adminCustomerFilter"
+                  onchange="loadAdminStatistics()"
+                >
+                  <option value="">Tất cả Khách hàng</option>
+                </select>
+              </div>
+              <div style="min-width: 220px">
+                <select
+                  class="form-select form-select-sm"
+                  id="adminCooperatorFilter"
+                  onchange="loadAdminStatistics()"
+                >
+                  <option value="">Tất cả CTV</option>
+                </select>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label
+                  class="form-label mb-0"
+                  style="font-size: 0.82rem; white-space: nowrap"
+                  >Từ:</label
+                >
+                <input
+                  type="date"
+                  class="form-control form-control-sm"
+                  id="adminDateFrom"
+                  onchange="loadAdminStatistics()"
+                  style="width: 150px"
+                />
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label
+                  class="form-label mb-0"
+                  style="font-size: 0.82rem; white-space: nowrap"
+                  >Đến:</label
+                >
+                <input
+                  type="date"
+                  class="form-control form-control-sm"
+                  id="adminDateTo"
+                  onchange="loadAdminStatistics()"
+                  style="width: 150px"
+                />
+              </div>
+            </div>
+
+            <!-- Overview Cards -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-4 col-lg-2">
+                <div class="card-stats">
+                  <div class="card-body text-center">
+                    <div class="card-title">
+                      <i class="fas fa-cloud-upload-alt"></i> File đã đẩy
+                    </div>
+                    <h3 id="adminStatTotalFiles">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="card-stats">
+                  <div class="card-body text-center">
+                    <div class="card-title">
+                      <i class="fas fa-cogs"></i> File đã OCR
+                    </div>
+                    <h3 id="adminStatProcessedFiles">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="card-stats">
+                  <div class="card-body text-center">
+                    <div class="card-title">
+                      <i class="fas fa-check-double"></i> Đã duyệt
+                    </div>
+                    <h3 id="adminStatApproved">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="card-stats">
+                  <div class="card-body text-center">
+                    <div class="card-title">
+                      <i class="fas fa-user-check"></i> CTV xác nhận
+                    </div>
+                    <h3 id="adminStatCompleted">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="card-stats">
+                  <div class="card-body text-center">
+                    <div class="card-title">
+                      <i class="fas fa-times-circle"></i> Từ chối
+                    </div>
+                    <h3 id="adminStatRejected">-</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="card-stats">
+                  <div class="card-body text-center">
+                    <div class="card-title">
+                      <i class="fas fa-hourglass-half"></i> Chờ xử lý
+                    </div>
+                    <h3 id="adminStatPending">-</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress -->
+            <div class="row g-3 mb-3">
+              <div class="col-lg-8">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="mb-3">
+                      <i class="fas fa-tasks me-2"></i>Tiến độ tổng thể
+                    </h6>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="fw-bold" id="adminProgressLabel"
+                        >0 / 0 mảnh</span
+                      >
+                      <span
+                        class="fw-bold"
+                        style="color: #48cfad"
+                        id="adminProgressPercent"
+                        >0%</span
+                      >
+                    </div>
+                    <div
+                      class="progress mb-3"
+                      style="height: 18px; border-radius: 10px"
+                    >
+                      <div
+                        class="progress-bar"
+                        id="adminProgressBar"
+                        style="width: 0%; background: #48cfad"
+                      ></div>
+                    </div>
+                    <div
+                      style="
+                        display: flex;
+                        height: 26px;
+                        border-radius: 6px;
+                        overflow: hidden;
+                      "
+                      id="adminStatusBar"
+                    ></div>
+                    <div
+                      id="adminStatusLegend"
+                      class="mt-2"
+                      style="font-size: 0.82rem"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="mb-3">
+                      <i class="fas fa-box me-2"></i>Gói công việc
+                    </h6>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span>Tổng gói</span
+                      ><span class="fw-bold" id="adminPkgTotal">0</span>
+                    </div>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span
+                        ><span class="badge bg-primary"
+                          >Đang thực hiện</span
+                        ></span
+                      ><span class="fw-bold" id="adminPkgInProgress">0</span>
+                    </div>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span
+                        ><span class="badge bg-warning text-dark"
+                          >Chờ duyệt</span
+                        ></span
+                      ><span class="fw-bold" id="adminPkgReviewPending">0</span>
+                    </div>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span
+                        ><span class="badge bg-danger">Có từ chối</span></span
+                      ><span class="fw-bold" id="adminPkgHasRejected">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                      <span><span class="badge bg-success">Đã duyệt</span></span
+                      ><span class="fw-bold" id="adminPkgApproved">0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Table -->
+            <div class="card mb-3">
+              <div class="card-body">
+                <h6 class="mb-3">
+                  <i class="fas fa-building me-2"></i>Thống kê theo Khách hàng
+                </h6>
+                <div class="table-responsive">
+                  <table class="table table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th style="width: 5%">#</th>
+                        <th style="width: 20%">Khách hàng</th>
+                        <th class="text-center" style="width: 8%">Gói</th>
+                        <th class="text-center" style="width: 8%">Tổng mảnh</th>
+                        <th class="text-center" style="width: 8%">Đã nhập</th>
+                        <th class="text-center" style="width: 8%">Nhập lại</th>
+                        <th class="text-center" style="width: 8%">Từ chối</th>
+                        <th class="text-center" style="width: 8%">Đã duyệt</th>
+                        <th style="width: 20%">Tiến độ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminCustomerTableBody">
+                      <tr>
+                        <td colspan="9" class="text-center py-3 text-muted">
+                          Đang tải...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cooperator Table -->
+            <div class="card mb-3">
+              <div class="card-body">
+                <h6 class="mb-3">
+                  <i class="fas fa-users me-2"></i>Thống kê theo Cộng tác viên
+                </h6>
+                <div class="table-responsive">
+                  <table class="table table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th style="width: 5%">#</th>
+                        <th style="width: 22%">Cộng tác viên</th>
+                        <th class="text-center" style="width: 10%">
+                          Tổng mảnh
+                        </th>
+                        <th class="text-center" style="width: 10%">Đã nhập</th>
+                        <th class="text-center" style="width: 10%">Nhập lại</th>
+                        <th class="text-center" style="width: 10%">Từ chối</th>
+                        <th class="text-center" style="width: 10%">Đã duyệt</th>
+                        <th style="width: 23%">Tiến độ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminCooperatorTableBody">
+                      <tr>
+                        <td colspan="8" class="text-center py-3 text-muted">
+                          Đang tải...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Batches Section -->
+          <div id="batches" class="content-section" style="display: none">
+            <h4>Quản lý Batch</h4>
+            <div class="card">
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Tên Batch</th>
+                        <th>Người tạo</th>
+                        <th>Ngày tạo</th>
+                        <th>Files</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody id="batchesTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Tạo User mới</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="createUserForm">
+              <div class="mb-3">
+                <label class="form-label">Username *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="username"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Password *</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  name="password"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Họ tên *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="full_name"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="email" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Role *</label>
+                <select class="form-select" name="role" required>
+                  <option value="cooperator">Cooperator</option>
+                  <option value="customer">Customer</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="createUser()"
+            >
+              Tạo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Chỉnh sửa User</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="editUserForm">
+              <input type="hidden" name="user_id" id="editUserId" />
+
+              <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="editUsername"
+                  readonly
+                  style="background-color: #f8f9fa"
+                />
+                <small class="text-muted">Username không thể thay đổi</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Họ tên *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="full_name"
+                  id="editFullName"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  name="email"
+                  id="editEmail"
+                />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Role *</label>
+                <select class="form-select" name="role" id="editRole" required>
+                  <option value="cooperator">Cooperator</option>
+                  <option value="customer">Customer</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Trạng thái *</label>
+                <select
+                  class="form-select"
+                  name="status"
+                  id="editStatus"
+                  required
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Password mới</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  name="password"
+                  id="editPassword"
+                  placeholder="Để trống nếu không đổi password"
+                />
+                <small class="text-muted"
+                  >Chỉ nhập nếu muốn thay đổi password</small
+                >
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="updateUser()"
+            >
+              Cập nhật
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Assign Relationship Modal -->
+    <div class="modal fade" id="assignModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Gán Cooperator cho Customer</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="assignForm">
+              <div class="mb-3">
+                <label class="form-label">Customer *</label>
+                <select
+                  class="form-select"
+                  name="customer_id"
+                  required
+                  id="customerSelect"
+                ></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label"
+                  >Cooperator *
+                  <span class="badge bg-primary ms-2" id="assignCoopCountBadge"
+                    >0 đã chọn</span
+                  >
+                </label>
+                <div class="d-flex align-items-center mb-2 gap-2">
+                  <label
+                    class="flex-shrink-0 m-0 px-2 py-1"
+                    style="
+                      background: #e8f4fd;
+                      border: 1px solid #bee5eb;
+                      border-radius: 6px;
+                      cursor: pointer;
+                    "
+                  >
+                    <input
+                      type="checkbox"
+                      id="assignSelectAll"
+                      onchange="toggleAllAssignCoops(this)"
+                      style="margin-right: 4px"
+                    />
+                    <span style="font-size: 0.85em; font-weight: 600"
+                      >Chọn tất cả</span
+                    >
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    placeholder="Tìm cooperator..."
+                    oninput="filterAssignCoops(this.value)"
+                  />
+                </div>
+                <div
+                  id="assignCoopCheckboxList"
+                  style="
+                    max-height: 200px;
+                    overflow-y: auto;
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    padding: 4px;
+                  "
+                ></div>
+                <div
+                  class="mt-1 text-muted"
+                  style="font-size: 0.82em"
+                  id="assignCoopSummary"
+                >
+                  Chưa chọn cooperator nào
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="assignCooperator()"
+            >
+              Gán
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      let currentUser = null;
+
+      document.addEventListener("DOMContentLoaded", function () {
+        loadCurrentUser();
+        loadDashboard();
+      });
+
+      async function loadCurrentUser() {
+        try {
+          const response = await fetch("/api/auth/me");
+          currentUser = await response.json();
+          document.getElementById("currentUser").textContent =
+            currentUser.full_name;
+        } catch (error) {
+          console.error("Error loading current user:", error);
+        }
+      }
+
+      function showSection(sectionName) {
+        // Hide all sections
+        document.querySelectorAll(".content-section").forEach((section) => {
+          section.style.display = "none";
+        });
+
+        // Remove active class from all nav links
+        document.querySelectorAll(".nav-link").forEach((link) => {
+          link.classList.remove("active");
+        });
+
+        // Show selected section
+        document.getElementById(sectionName).style.display = "block";
+
+        // Add active class to clicked nav link
+        event.target.classList.add("active");
+
+        // Load data for section
+        switch (sectionName) {
+          case "dashboard":
+            loadDashboard();
+            break;
+          case "users":
+            loadUsers();
+            break;
+          case "relationships":
+            loadRelationships();
+            break;
+          case "batches":
+            loadBatches();
+            break;
+          case "statistics":
+            loadAdminStatistics();
+            break;
+        }
+      }
+
+      async function loadDashboard() {
+        try {
+          const response = await fetch("/api/admin/dashboard");
+          const data = await response.json();
+
+          document.getElementById("totalUsers").textContent = data.total_users;
+          document.getElementById("totalCustomers").textContent =
+            data.total_customers;
+          document.getElementById("totalCooperators").textContent =
+            data.total_cooperators;
+          document.getElementById("totalBatches").textContent =
+            data.total_batches;
+        } catch (error) {
+          console.error("Error loading dashboard:", error);
+        }
+      }
+
+      async function loadUsers() {
+        try {
+          const response = await fetch("/api/admin/users");
+          const users = await response.json();
+
+          const tbody = document.getElementById("usersTableBody");
+          tbody.innerHTML = "";
+
+          users.forEach((user) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td>${user.full_name}</td>
+                        <td>${user.email || "-"}</td>
+                        <td><span class="badge bg-${getRoleBadgeColor(
+                          user.role,
+                        )} role-badge">${getRoleText(user.role)}</span></td>
+                        <td><span class="badge bg-${getStatusBadgeColor(
+                          user.status,
+                        )}">${user.status}</span></td>
+                        <td>${new Date(user.created_at).toLocaleDateString(
+                          "vi-VN",
+                        )}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editUser('${
+                              user.id
+                            }')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser('${
+                              user.id
+                            }')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error loading users:", error);
+        }
+      }
+
+      async function loadRelationships() {
+        try {
+          const response = await fetch("/api/admin/relationships");
+          const relationships = await response.json();
+
+          const tbody = document.getElementById("relationshipsTableBody");
+          tbody.innerHTML = "";
+
+          relationships.forEach((rel) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                        <td>${rel.customer_name}</td>
+                        <td>${rel.cooperator_name}</td>
+                        <td>${new Date(rel.created_at).toLocaleDateString(
+                          "vi-VN",
+                        )}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="removeRelationship('${
+                              rel.customer_id
+                            }', '${rel.cooperator_id}')">
+                                <i class="fas fa-unlink"></i> Hủy
+                            </button>
+                        </td>
+                    `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error loading relationships:", error);
+        }
+      }
+
+      async function loadBatches() {
+        try {
+          const response = await fetch("/api/admin/batches");
+          const batches = await response.json();
+
+          const tbody = document.getElementById("batchesTableBody");
+          tbody.innerHTML = "";
+
+          batches.forEach((batch) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                        <td>${batch.name}</td>
+                        <td>${batch.created_by_name || "-"}</td>
+                        <td>${new Date(batch.created_at).toLocaleDateString(
+                          "vi-VN",
+                        )}</td>
+                        <td>${batch.processed_files}/${batch.total_files}</td>
+                        <td><span class="badge bg-${getStatusBadgeColor(
+                          batch.status,
+                        )}">${batch.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewBatch('${
+                              batch.id
+                            }')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteBatch('${
+                              batch.id
+                            }')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error loading batches:", error);
+        }
+      }
+
+      function viewBatch(batchId) {
+        window.location.href = `/batch/${batchId}/documents`;
+      }
+
+      async function deleteBatch(batchId) {
+        if (!confirm("Bạn có chắc chắn muốn xóa batch này?")) return;
+        try {
+          const response = await fetch(`/api/batch/${batchId}`, {
+            method: "DELETE",
+          });
+          if (response.ok) {
+            loadBatches();
+          } else {
+            const data = await response.json();
+            alert(data.error || "Lỗi khi xóa batch");
+          }
+        } catch (error) {
+          console.error("Error deleting batch:", error);
+          alert("Lỗi khi xóa batch");
+        }
+      }
+
+      // ===== ADMIN STATISTICS =====
+      let adminFiltersLoaded = false;
+
+      async function loadAdminStatistics() {
+        const customerId = document.getElementById("adminCustomerFilter").value;
+        const cooperatorId = document.getElementById(
+          "adminCooperatorFilter",
+        ).value;
+        const dateFrom = document.getElementById("adminDateFrom").value;
+        const dateTo = document.getElementById("adminDateTo").value;
+        const params = new URLSearchParams();
+        if (customerId) params.set("customer_id", customerId);
+        if (cooperatorId) params.set("cooperator_id", cooperatorId);
+        if (dateFrom) params.set("date_from", dateFrom);
+        if (dateTo) params.set("date_to", dateTo);
+        const url =
+          "/api/admin-statistics" +
+          (params.toString() ? "?" + params.toString() : "");
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error);
+
+          const ov = data.overview;
+          const wi = data.work_items;
+
+          // Overview cards
+          document.getElementById("adminStatTotalFiles").textContent =
+            ov.total_files_uploaded.toLocaleString();
+          document.getElementById("adminStatProcessedFiles").textContent =
+            ov.total_files_processed.toLocaleString();
+          document.getElementById("adminStatApproved").textContent =
+            wi.approved.toLocaleString();
+          document.getElementById("adminStatCompleted").textContent = (
+            wi.completed + wi.recompleted
+          ).toLocaleString();
+          document.getElementById("adminStatRejected").textContent =
+            wi.rejected.toLocaleString();
+          document.getElementById("adminStatPending").textContent =
+            wi.pending.toLocaleString();
+
+          // Progress bar
+          const done = wi.completed + wi.recompleted + wi.approved;
+          document.getElementById("adminProgressLabel").textContent =
+            `${done} / ${wi.total} mảnh hoàn thành`;
+          document.getElementById("adminProgressPercent").textContent =
+            `${wi.progress}%`;
+          document.getElementById("adminProgressBar").style.width =
+            `${wi.progress}%`;
+
+          // Status bar
+          const statusColors = {
+            pending: { color: "#6c757d", label: "Chờ xử lý" },
+            completed: { color: "#0d6efd", label: "Đã nhập" },
+            recompleted: { color: "#0dcaf0", label: "Nhập lại" },
+            rejected: { color: "#dc3545", label: "Từ chối" },
+            approved: { color: "#198754", label: "Đã duyệt" },
+          };
+          const total = wi.total || 1;
+          let barHtml = "",
+            legendHtml = "";
+          for (const [key, cfg] of Object.entries(statusColors)) {
+            const val = wi[key];
+            const pct = (val / total) * 100;
+            if (val > 0)
+              barHtml += `<div style="width:${pct}%;background:${cfg.color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;color:#fff;min-width:2%;" title="${cfg.label}: ${val}">${val}</div>`;
+            legendHtml += `<span style="display:inline-flex;align-items:center;margin-right:15px"><span style="width:10px;height:10px;border-radius:50%;background:${cfg.color};margin-right:5px;display:inline-block"></span>${cfg.label}: ${val}</span>`;
+          }
+          document.getElementById("adminStatusBar").innerHTML = barHtml;
+          document.getElementById("adminStatusLegend").innerHTML = legendHtml;
+
+          // Package summary
+          document.getElementById("adminPkgTotal").textContent =
+            ov.total_packages;
+          document.getElementById("adminPkgInProgress").textContent =
+            ov.packages_in_progress;
+          document.getElementById("adminPkgReviewPending").textContent =
+            ov.packages_review_pending;
+          document.getElementById("adminPkgHasRejected").textContent =
+            ov.packages_has_rejected;
+          document.getElementById("adminPkgApproved").textContent =
+            ov.packages_approved;
+
+          // Load filter dropdowns once
+          if (!adminFiltersLoaded) {
+            if (data.customer_stats && data.customer_stats.length > 0) {
+              const custSelect = document.getElementById("adminCustomerFilter");
+              data.customer_stats.forEach((c) => {
+                const opt = document.createElement("option");
+                opt.value = c.id;
+                opt.textContent = `${c.full_name} (${c.username})`;
+                custSelect.appendChild(opt);
+              });
+            }
+            if (data.cooperator_stats && data.cooperator_stats.length > 0) {
+              const coopSelect = document.getElementById(
+                "adminCooperatorFilter",
+              );
+              data.cooperator_stats.forEach((c) => {
+                const opt = document.createElement("option");
+                opt.value = c.id;
+                opt.textContent = `${c.full_name} (${c.username})`;
+                coopSelect.appendChild(opt);
+              });
+            }
+            adminFiltersLoaded = true;
+          }
+
+          // Customer table
+          const custTbody = document.getElementById("adminCustomerTableBody");
+          if (data.customer_stats.length === 0) {
+            custTbody.innerHTML =
+              '<tr><td colspan="9" class="text-center py-3 text-muted">Chưa có dữ liệu</td></tr>';
+          } else {
+            custTbody.innerHTML = data.customer_stats
+              .map(
+                (c, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td><div class="fw-bold">${c.full_name}</div><small class="text-muted">${c.username}</small></td>
+                <td class="text-center fw-bold">${c.total_packages}</td>
+                <td class="text-center fw-bold">${c.total_items}</td>
+                <td class="text-center"><span class="badge bg-primary">${c.completed}</span></td>
+                <td class="text-center"><span class="badge bg-info">${c.recompleted}</span></td>
+                <td class="text-center"><span class="badge bg-danger">${c.rejected}</span></td>
+                <td class="text-center"><span class="badge bg-success">${c.approved}</span></td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1" style="height:8px;border-radius:4px"><div class="progress-bar bg-success" style="width:${c.progress}%"></div></div>
+                    <span class="fw-bold" style="min-width:45px;font-size:0.82rem">${c.progress}%</span>
+                  </div>
+                </td>
+              </tr>
+            `,
+              )
+              .join("");
+          }
+
+          // Cooperator table
+          const coopTbody = document.getElementById("adminCooperatorTableBody");
+          if (data.cooperator_stats.length === 0) {
+            coopTbody.innerHTML =
+              '<tr><td colspan="8" class="text-center py-3 text-muted">Chưa có dữ liệu</td></tr>';
+          } else {
+            coopTbody.innerHTML = data.cooperator_stats
+              .map(
+                (c, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td><div class="fw-bold">${c.full_name}</div><small class="text-muted">${c.username}</small></td>
+                <td class="text-center fw-bold">${c.total_items}</td>
+                <td class="text-center"><span class="badge bg-primary">${c.completed}</span></td>
+                <td class="text-center"><span class="badge bg-info">${c.recompleted}</span></td>
+                <td class="text-center"><span class="badge bg-danger">${c.rejected}</span></td>
+                <td class="text-center"><span class="badge bg-success">${c.approved}</span></td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1" style="height:8px;border-radius:4px"><div class="progress-bar bg-success" style="width:${c.progress}%"></div></div>
+                    <span class="fw-bold" style="min-width:45px;font-size:0.82rem">${c.progress}%</span>
+                  </div>
+                </td>
+              </tr>
+            `,
+              )
+              .join("");
+          }
+        } catch (err) {
+          console.error("Admin statistics error:", err);
+        }
+      }
+
+      function showCreateUserModal() {
+        const modal = new bootstrap.Modal(
+          document.getElementById("createUserModal"),
+        );
+        modal.show();
+      }
+
+      async function editUser(userId) {
+        try {
+          // Load user data
+          const response = await fetch(`/api/admin/users/${userId}`);
+          if (!response.ok) {
+            throw new Error("Cannot load user data");
+          }
+
+          const user = await response.json();
+
+          // Fill form
+          document.getElementById("editUserId").value = user.id;
+          document.getElementById("editUsername").value = user.username;
+          document.getElementById("editFullName").value = user.full_name;
+          document.getElementById("editEmail").value = user.email || "";
+          document.getElementById("editRole").value = user.role;
+          document.getElementById("editStatus").value = user.status;
+          document.getElementById("editPassword").value = ""; // Clear password field
+
+          // Show modal
+          const modal = new bootstrap.Modal(
+            document.getElementById("editUserModal"),
+          );
+          modal.show();
+        } catch (error) {
+          showToast("Lỗi khi load thông tin user: " + error.message, "danger");
+        }
+      }
+
+      // ✅ THÊM FUNCTION UPDATE USER
+      async function updateUser() {
+        const form = document.getElementById("editUserForm");
+        const formData = new FormData(form);
+        const userId = document.getElementById("editUserId").value;
+
+        try {
+          const response = await fetch(`/api/admin/users/${userId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(Object.fromEntries(formData)),
+          });
+
+          if (response.ok) {
+            bootstrap.Modal.getInstance(
+              document.getElementById("editUserModal"),
+            ).hide();
+            loadUsers();
+            showToast("Cập nhật user thành công", "success");
+          } else {
+            const error = await response.json();
+            showToast(error.error, "danger");
+          }
+        } catch (error) {
+          showToast("Lỗi khi cập nhật user: " + error.message, "danger");
+        }
+      }
+
+      // ✅ SỬA FUNCTION createUser() ĐỂ XỬ LÝ LỖI TỐT HƠN
+      async function createUser() {
+        const form = document.getElementById("createUserForm");
+        const formData = new FormData(form);
+
+        // Validate required fields
+        const requiredFields = ["username", "password", "full_name", "role"];
+        for (const field of requiredFields) {
+          if (!formData.get(field)?.trim()) {
+            showToast(`Trường ${field} là bắt buộc`, "danger");
+            return;
+          }
+        }
+
+        try {
+          const requestData = Object.fromEntries(formData);
+          console.log("Creating user with data:", requestData); // Debug log
+
+          const response = await fetch("/api/admin/users", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          const responseData = await response.json();
+
+          if (response.ok) {
+            bootstrap.Modal.getInstance(
+              document.getElementById("createUserModal"),
+            ).hide();
+            loadUsers();
+            form.reset();
+            showToast("Tạo user thành công", "success");
+          } else {
+            console.error("Create user error:", responseData); // Debug log
+            showToast(responseData.error || "Lỗi khi tạo user", "danger");
+          }
+        } catch (error) {
+          console.error("Network error:", error); // Debug log
+          showToast("Lỗi kết nối khi tạo user: " + error.message, "danger");
+        }
+      }
+
+      let allAssignCoops = [];
+      let selectedAssignCoopIds = [];
+
+      async function showAssignModal() {
+        try {
+          const [customersResponse, cooperatorsResponse] = await Promise.all([
+            fetch("/api/admin/users?role=customer"),
+            fetch("/api/admin/users?role=cooperator"),
+          ]);
+
+          const customers = await customersResponse.json();
+          allAssignCoops = await cooperatorsResponse.json();
+          selectedAssignCoopIds = [];
+
+          const customerSelect = document.getElementById("customerSelect");
+          customerSelect.innerHTML = '<option value="">Chọn Customer</option>';
+          customers.forEach((customer) => {
+            customerSelect.innerHTML += `<option value="${customer.id}">${customer.full_name}</option>`;
+          });
+
+          renderAssignCoopCheckboxes();
+          updateAssignCoopSummary();
+
+          const modal = new bootstrap.Modal(
+            document.getElementById("assignModal"),
+          );
+          modal.show();
+        } catch (error) {
+          showToast("Lỗi khi load dữ liệu", "danger");
+        }
+      }
+
+      function renderAssignCoopCheckboxes(filter = "") {
+        const container = document.getElementById("assignCoopCheckboxList");
+        if (!container) return;
+        const filtered = allAssignCoops.filter(
+          (c) =>
+            !filter ||
+            c.full_name.toLowerCase().includes(filter.toLowerCase()) ||
+            (c.username &&
+              c.username.toLowerCase().includes(filter.toLowerCase())),
+        );
+        container.innerHTML =
+          filtered.length === 0
+            ? '<div class="text-muted text-center py-2" style="font-size:0.85em;">Không tìm thấy</div>'
+            : filtered
+                .map(
+                  (c) => `
+            <label class="d-flex align-items-center px-2 py-1 gap-2" style="cursor:pointer;border-radius:4px;${selectedAssignCoopIds.includes(c.id) ? "background:#e8f4fd;" : ""}">
+              <input type="checkbox" value="${c.id}" ${selectedAssignCoopIds.includes(c.id) ? "checked" : ""} onchange="handleAssignCoopCb(this)" style="margin:0;" />
+              <span style="font-size:0.85em;">${c.full_name}${c.username ? " <span class=text-muted>(" + c.username + ")</span>" : ""}</span>
+            </label>
+          `,
+                )
+                .join("");
+        const selectAllCb = document.getElementById("assignSelectAll");
+        if (selectAllCb)
+          selectAllCb.checked =
+            selectedAssignCoopIds.length === allAssignCoops.length &&
+            allAssignCoops.length > 0;
+      }
+
+      function handleAssignCoopCb(cb) {
+        const id = cb.value;
+        if (cb.checked) {
+          if (!selectedAssignCoopIds.includes(id))
+            selectedAssignCoopIds.push(id);
+        } else {
+          selectedAssignCoopIds = selectedAssignCoopIds.filter((x) => x !== id);
+        }
+        renderAssignCoopCheckboxes(
+          document.querySelector("#assignModal input[placeholder]")?.value ||
+            "",
+        );
+        updateAssignCoopSummary();
+      }
+
+      function toggleAllAssignCoops(masterCb) {
+        selectedAssignCoopIds = masterCb.checked
+          ? allAssignCoops.map((c) => c.id)
+          : [];
+        renderAssignCoopCheckboxes(
+          document.querySelector("#assignModal input[placeholder]")?.value ||
+            "",
+        );
+        updateAssignCoopSummary();
+      }
+
+      function filterAssignCoops(text) {
+        renderAssignCoopCheckboxes(text);
+      }
+
+      function updateAssignCoopSummary() {
+        const badge = document.getElementById("assignCoopCountBadge");
+        const summary = document.getElementById("assignCoopSummary");
+        if (badge)
+          badge.textContent = `${selectedAssignCoopIds.length} đã chọn`;
+        if (summary) {
+          summary.textContent =
+            selectedAssignCoopIds.length === 0
+              ? "Chưa chọn cooperator nào"
+              : allAssignCoops
+                  .filter((c) => selectedAssignCoopIds.includes(c.id))
+                  .map((c) => c.full_name)
+                  .join(", ");
+        }
+      }
+
+      async function assignCooperator() {
+        const customerId = document.getElementById("customerSelect").value;
+        if (!customerId) {
+          showToast("Vui lòng chọn Customer", "danger");
+          return;
+        }
+        if (selectedAssignCoopIds.length === 0) {
+          showToast("Vui lòng chọn ít nhất 1 Cooperator", "danger");
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/admin/relationships", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customer_id: customerId,
+              cooperator_ids: selectedAssignCoopIds,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            bootstrap.Modal.getInstance(
+              document.getElementById("assignModal"),
+            ).hide();
+            loadRelationships();
+            document.getElementById("assignForm").reset();
+            selectedAssignCoopIds = [];
+            showToast(result.message || "Gán quyền thành công", "success");
+          } else {
+            const error = await response.json();
+            showToast(error.error, "danger");
+          }
+        } catch (error) {
+          showToast("Lỗi khi gán quyền", "danger");
+        }
+      }
+
+      async function removeRelationship(customerId, cooperatorId) {
+        if (!confirm("Bạn có chắc muốn hủy quan hệ này?")) return;
+
+        try {
+          const response = await fetch(
+            `/api/admin/relationships/${customerId}/${cooperatorId}`,
+            {
+              method: "DELETE",
+            },
+          );
+
+          if (response.ok) {
+            loadRelationships();
+            showToast("Đã hủy quan hệ", "success");
+          } else {
+            showToast("Lỗi khi hủy quan hệ", "danger");
+          }
+        } catch (error) {
+          showToast("Lỗi khi hủy quan hệ", "danger");
+        }
+      }
+
+      async function deleteUser(userId) {
+        if (!confirm("Bạn có chắc muốn xóa user này?")) return;
+
+        try {
+          const response = await fetch(`/api/admin/users/${userId}`, {
+            method: "DELETE",
+          });
+
+          if (response.ok) {
+            loadUsers();
+            showToast("Đã xóa user", "success");
+          } else {
+            showToast("Lỗi khi xóa user", "danger");
+          }
+        } catch (error) {
+          showToast("Lỗi khi xóa user", "danger");
+        }
+      }
+
+      function getRoleBadgeColor(role) {
+        const colors = {
+          admin: "danger",
+          customer: "success",
+          cooperator: "info",
+        };
+        return colors[role] || "secondary";
+      }
+
+      function getRoleText(role) {
+        const texts = {
+          admin: "Admin",
+          customer: "Customer",
+          cooperator: "Cooperator",
+        };
+        return texts[role] || role;
+      }
+
+      function getStatusBadgeColor(status) {
+        const colors = {
+          active: "success",
+          inactive: "warning",
+          deleted: "danger",
+          pending: "info",
+          processing: "warning",
+          completed: "success",
+          error: "danger",
+        };
+        return colors[status] || "secondary";
+      }
+
+      function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.top = "20px";
+        toast.style.right = "20px";
+        toast.style.zIndex = "1050";
+        toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+      }
+    </script>
+  </body>
+</html>

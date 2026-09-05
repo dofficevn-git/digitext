@@ -124,3 +124,14 @@ digitext-rescue.tar.gz
 
 # Ghi đè compose riêng từng máy (cổng, mount cục bộ) — không commit.
 docker-compose.override.yml
+
+# ── ocr/ — dịch vụ OCR (Python, chạy tiến trình RIÊNG, không thuộc workspace Rust) ──
+# Trọng số model là ARTIFACT, cấp phát khi triển khai — cùng quy ước với triton/.
+ocr/best.pt
+ocr/models/
+# Dữ liệu chạy: chứa ảnh tài liệu THẬT.
+ocr/uploads/
+ocr/output/
+ocr/exports/
+ocr/temp_processing/
+ocr/static/processed_images/

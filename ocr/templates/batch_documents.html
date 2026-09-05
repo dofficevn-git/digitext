@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Documents - {{ batch_name }}</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main.css') }}"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="sidebar-toggle-box">
+        <div class="fa fa-bars" onclick="toggleSidebar()"></div>
+      </div>
+      <a href="/" class="logo"><b>PHẦN MỀM SỐ HÓA TÀI LIỆU</b></a>
+
+      <div class="top-menu">
+        <ul class="nav pull-right">
+          <li id="userInfo" style="display: none">
+            <span class="logout" id="userName"></span>
+          </li>
+          <li>
+            <a
+              href="/logout"
+              class="logout"
+              id="logoutBtn"
+              style="display: none"
+            >
+              <i class="fa fa-sign-out"></i> Đăng xuất
+            </a>
+          </li>
+        </ul>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside>
+      <div id="sidebar">
+        <ul class="sidebar-menu" id="sidebarMenu">
+          <li class="mt">
+            <a href="/">
+              <i class="fa fa-home"></i>
+              <span>Trang chủ</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    <section id="main-content">
+      <section class="wrapper">
+        <div class="content-panel">
+          <div class="container-fluid mt-4">
+            <!-- Header with back button -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <a href="/" class="btn btn-outline-secondary btn-sm">
+                      <i class="fas fa-arrow-left me-1"></i>Quay lại
+                    </a>
+                    <h4 class="d-inline-block ms-3 mb-0">
+                      <i class="fas fa-list me-2"></i>{{ batch_name }}
+                      <small class="text-muted" id="totalCountDisplay"></small>
+                    </h4>
+                  </div>
+                  <button
+                    class="btn btn-outline-primary btn-sm"
+                    onclick="refreshDocumentsList()"
+                  >
+                    <i class="fas fa-sync-alt me-1"></i>Làm mới
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="input-group">
+                  <span class="input-group-text"
+                    ><i class="fas fa-search"></i
+                  ></span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="searchDocuments"
+                    placeholder="Tìm kiếm tài liệu..."
+                  />
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="statusFilter">
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="pending">Chờ xử lý</option>
+                  <option value="processing">Đang xử lý</option>
+                  <option value="completed">Hoàn thành</option>
+                  <option value="error">Lỗi</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="pageSizeSelect">
+                  <option value="10">10 documents/trang</option>
+                  <option value="20">20 documents/trang</option>
+                  <option value="50">50 documents/trang</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Documents Table -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                          <tr>
+                            <th style="width: 35%">Tên file</th>
+                            <th style="width: 12%">Loại</th>
+                            <th style="width: 10%">Số trang</th>
+                            <th style="width: 13%">Trạng thái</th>
+                            <th style="width: 30%">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody id="documentsTableBody">
+                          <!-- Will be populated by JavaScript -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Pagination -->
+                  <div class="card-footer bg-light">
+                    <div
+                      class="d-flex justify-content-between align-items-center"
+                    >
+                      <small class="text-muted" id="showingInfo"></small>
+                      <nav>
+                        <ul
+                          class="pagination pagination-sm mb-0"
+                          id="pagination"
+                        ></ul>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- Document Editor Modal với cut point controls đơn giản hơn -->
+    <div class="modal fade" id="editorModal" tabindex="-1">
+      <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+          <div class="modal-header">
+            <!-- ✅ NAVIGATION CONTROLS -->
+            <div class="d-flex align-items-center w-100">
+              <div class="me-auto">
+                <h5 class="modal-title">
+                  <i class="fas fa-edit me-2"></i>Chỉnh sửa tài liệu KIE
+                </h5>
+                <!-- ✅ THÊM ĐƯỜNG DẪN FILE -->
+                <div class="text-muted small" id="currentFilePath">
+                  <i class="fas fa-folder-open me-1"></i>
+                  <span id="filePathText">Đang tải...</span>
+                </div>
+              </div>
+
+              <!-- Navigation buttons -->
+              <div
+                class="d-flex align-items-center me-3"
+                id="documentNavigation"
+                style="display: none"
+              >
+                <button
+                  class="btn btn-outline-secondary btn-sm me-2"
+                  id="prevDocBtn"
+                  onclick="navigateToPreviousDocument()"
+                >
+                  <i class="fas fa-chevron-left me-1"></i>Trước
+                </button>
+
+                <span class="text-muted mx-2">
+                  <span id="currentDocPosition">1</span> /
+                  <span id="totalDocsInBatch">1</span>
+                </span>
+
+                <button
+                  class="btn btn-outline-secondary btn-sm ms-2"
+                  id="nextDocBtn"
+                  onclick="navigateToNextDocument()"
+                >
+                  Tiếp<i class="fas fa-chevron-right ms-1"></i>
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="row h-100">
+              <!-- ✅ IMAGE PANEL -->
+              <div class="col-md-8">
+                <div class="card h-100">
+                  <div class="card-header">
+                    <h6 class="mb-0">Tài liệu và vùng xử lý</h6>
+                  </div>
+                  <div class="card-body p-2">
+                    <!-- View tabs -->
+                    <div class="view-tabs">
+                      <ul class="nav nav-pills" id="viewTabs">
+                        <li class="nav-item">
+                          <button
+                            class="nav-link active"
+                            id="fullViewTab"
+                            onclick="switchView('full')"
+                          >
+                            <i class="fas fa-file-alt me-1"></i>Toàn bộ file
+                          </button>
+                        </li>
+                        <li class="nav-item">
+                          <button
+                            class="nav-link"
+                            id="headerViewTab"
+                            onclick="switchView('header')"
+                          >
+                            <i class="fas fa-header me-1"></i>Phần Header
+                          </button>
+                        </li>
+                        <li class="nav-item">
+                          <button
+                            class="nav-link"
+                            id="contentViewTab"
+                            onclick="switchView('content')"
+                            style="display: none"
+                          >
+                            <i class="fas fa-align-left me-1"></i>Phần Nội dung
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <!-- Image container -->
+                    <div class="image-container" id="imageContainer">
+                      <div
+                        class="processing-indicator"
+                        id="processingIndicator"
+                      >
+                        <i class="fas fa-spinner fa-spin me-2"></i>Đang xử lý...
+                      </div>
+
+                      <!-- Full View -->
+                      <div class="image-view active" id="fullView"></div>
+
+                      <!-- Header View -->
+                      <div class="image-view" id="headerView"></div>
+
+                      <!-- Content View -->
+                      <div class="image-view" id="contentView"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ✅ FIELDS PANEL -->
+              <div class="col-md-4">
+                <div class="card h-100">
+                  <div class="card-header">
+                    <h6 class="mb-0">Thông tin trích xuất</h6>
+                  </div>
+                  <div
+                    class="card-body"
+                    id="fieldsScrollContainer"
+                    style="overflow-y: auto"
+                  >
+                    <div id="fieldsContainer"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Pass batch_id from Flask to JavaScript
+      const BATCH_ID = "{{ batch_id }}";
+      const BATCH_NAME = "{{ batch_name }}";
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/batch_documents.js') }}"></script>
+  </body>
+</html>
