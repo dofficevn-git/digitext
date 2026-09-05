@@ -177,3 +177,20 @@ pub fn f_1si(r_3ap: &[(u32, u32, To6)]) -> Tgi {
         confidences,
     }
 }
+/// Bọc các engine nhận dạng để chọn được lúc chạy.
+///
+/// `Tok` dùng RPITIT nên KHÔNG object-safe — không thể `Box<dyn Tok>`. Cách
+/// giải quyết trong repo này là enum bọc, y như `PageBytesSource` ở
+/// render.rs:277-290 đã làm với `Tgd`.
+pub enum OcrInferSource {
+    Triton(crate::grpc::GrpcTritonInfer),
+    Http(crate::http_ocr::HttpOcrInfer),
+}
+impl Tok for OcrInferSource {
+    async fn infer_tile(&self, tile: &Tile, batch: usize) -> Result<To6, WorkerError> {
+        match self {
+            OcrInferSource::Triton(e) => e.infer_tile(tile, batch).await,
+            OcrInferSource::Http(e) => e.infer_tile(tile, batch).await,
+        }
+    }
+}

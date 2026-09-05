@@ -2,15 +2,17 @@
 use crate::{
     cli,
     config::{
-        FieldsEngine, PageMode, WorkerConfig, C_5K, C_5M, C_5P, C_5R, C_6G, C_6H,
-        ENV_FIELDS_ENGINE, ENV_VLM_ENDPOINT, ENV_VLM_MODEL,
+        FieldsEngine, OcrEngine, PageMode, WorkerConfig, C_5K, C_5M, C_5P, C_5R, C_6G,
+        C_6H, ENV_FIELDS_ENGINE, ENV_VLM_ENDPOINT, ENV_VLM_MODEL,
     },
     corrector::Lexicon,
     grpc::{GrpcTritonInfer, GrpcTritonProbe},
     health,
+    http_ocr::{HttpOcrInfer, HttpOcrProbe},
+    infer::OcrInferSource,
     metrics::Metrics,
     package_worker,
-    readiness::Readiness,
+    readiness::{OcrProbe, Readiness},
     render::{
         ImagePageSource, LocalDirPageBytes, MinioPageBytes, PageBytesSource, PdfMinioPageBytes,
     },
@@ -112,21 +114,40 @@ fn f_2bh() -> ExitCode {
                 );
                 None
             };
-            let r_33m = match GrpcTritonProbe::connect_lazy(&cfg.triton_endpoint) {
-                Ok(r_33l) => r_33l,
-                Err(e) => {
-                    tracing::error!(
-                        error = % e,
-                        "endpoint gRPC Triton không hợp lệ"
-                    );
-                    return ExitCode::FAILURE;
+            // Danh sách model bắt buộc chỉ có nghĩa với Triton. Để nguyên khi
+            // chạy engine HTTP thì /readyz sẽ LUÔN fail vì không dịch vụ nào
+            // khai báo 5 model đó.
+            let (r_33m, r_33n) = match cfg.ocr_engine {
+                OcrEngine::Triton => match GrpcTritonProbe::connect_lazy(&cfg.triton_endpoint) {
+                    Ok(p) => (
+                        OcrProbe::Triton(p),
+                        Readiness::<OcrProbe>::default_models(),
+                    ),
+                    Err(e) => {
+                        tracing::error!(
+                            error = % e,
+                            "endpoint gRPC Triton không hợp lệ"
+                        );
+                        return ExitCode::FAILURE;
+                    }
+                },
+                OcrEngine::Http => {
+                    let r_33q = Duration::from_millis(cfg.ocr_http_timeout_ms);
+                    match HttpOcrProbe::new(&cfg.ocr_http_endpoint, r_33q) {
+                        Ok(p) => (OcrProbe::Http(p), Vec::new()),
+                        Err(e) => {
+                            tracing::error!(
+                                error = % e,
+                                "endpoint dịch vụ OCR HTTP không hợp lệ"
+                            );
+                            return ExitCode::FAILURE;
+                        }
+                    }
                 }
             };
             let r_33p = AppState {
                 metrics: Arc::new(Metrics::new()),
-                readiness: Arc::new(
-                    Readiness::new(r_33m, Readiness::<GrpcTritonProbe>::default_models()),
-                ),
+                readiness: Arc::new(Readiness::new(r_33m, r_33n)),
             };
             tracing::info!(
                 % r_33k, triton = % cfg.triton_endpoint, worker = cfg.worker_enabled,
@@ -183,7 +204,7 @@ async fn f_2gu(
         if ep.is_empty() || model.is_empty() {
             return Err(
                 format!(
-                    "{ENV_FIELDS_ENGINE}=v2 đòi {ENV_VLM_ENDPOINT}IHbDoCA={ENV_VLM_MODEL} (engine chính không được no-op âm thầm)"
+                    "{ENV_FIELDS_ENGINE}=v2 đòi {ENV_VLM_ENDPOINT} và {ENV_VLM_MODEL} (engine chính không được no-op âm thầm)"
                 ),
             );
         }
@@ -339,11 +360,26 @@ async fn f_2gu(
     };
     let cfg = cfg.clone();
     let r_347 = tokio::spawn(async move {
-        let infer = match GrpcTritonInfer::connect_lazy(&cfg.triton_endpoint, "ocr_pipeline") {
-            Ok(r_345) => r_345,
-            Err(e) => {
-                tracing::error!(error = % e, "dựng gRPC infer client");
-                return;
+        let infer = match cfg.ocr_engine {
+            OcrEngine::Triton => {
+                match GrpcTritonInfer::connect_lazy(&cfg.triton_endpoint, "ocr_pipeline") {
+                    Ok(r_345) => OcrInferSource::Triton(r_345),
+                    Err(e) => {
+                        tracing::error!(error = % e, "dựng gRPC infer client");
+                        return;
+                    }
+                }
+            }
+            OcrEngine::Http => {
+                let r_346 = Duration::from_millis(cfg.ocr_http_timeout_ms);
+                let r_348 = Some(cfg.ocr_http_api_key.clone()).filter(|k| !k.is_empty());
+                match HttpOcrInfer::new(&cfg.ocr_http_endpoint, r_348, r_346) {
+                    Ok(r_345) => OcrInferSource::Http(r_345),
+                    Err(e) => {
+                        tracing::error!(error = % e, "dựng HTTP infer client");
+                        return;
+                    }
+                }
             }
         };
         let r_34e = match &cfg.minio {

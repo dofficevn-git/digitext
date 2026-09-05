@@ -12,6 +12,7 @@ pub mod fields;
 pub mod fields_v2;
 pub mod grpc;
 pub mod health;
+pub mod http_ocr;
 pub mod infer;
 pub mod metrics;
 pub mod package_worker;
