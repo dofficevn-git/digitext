@@ -231,7 +231,7 @@ export default function LapHoSoView() {
       window.alert("Chưa chọn hồ sơ nào để xóa.");
       return;
     }
-    if (!window.confirm(`WMOzYSA=${V11q.size} hồ sơ đã chọn?`)) return;
+    if (!window.confirm(`Xóa ${V11q.size} hồ sơ đã chọn?`)) return;
     try {
       await Promise.all([...V11q].map((V12q) => V4bx(V12q)));
       V11r(new Set());
@@ -297,7 +297,7 @@ export default function LapHoSoView() {
       }
       const n = await V4cg(V131);
       window.alert(
-        `Đã nhập ${n} văn bản${V132 ? `IChi4buPIHF1YSA=${V132}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
+        `Đã nhập ${n} văn bản${V132 ? ` (bỏ qua ${V132} dòng thiếu dữ liệu)` : ""}.`,
       );
       V128();
     } catch (V13b) {

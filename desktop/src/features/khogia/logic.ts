@@ -46,20 +46,20 @@ export function V4m4(): Partial<V4ld> {
 export function V4m5(V1uw: V4le[]): Record<string, unknown>[] {
   return V1uw.map((r, i) => ({
     STT: i + 1,
-    TcOjIGjhu5Mgc8ah: r.maHoSo ?? "",
+    "Mã hồ sơ": r.maHoSo ?? "",
     "Hộp số": r.hopTaiLieuSo ?? "",
     "Số tạm": r.hososo,
     "Tiêu đề hồ sơ": r.tieuDeHs,
     THBQ: r.thoiHanBaoQuanStr ?? "",
     "Số tờ": r.soTo ?? "",
     "Số lượng trang": r.soLuongTrang ?? "",
-    TmfDoHkgYuG6r3QgxJHhuqd1: V4dr(r.thoiGianBatDau),
+    "Ngày bắt đầu": V4dr(r.thoiGianBatDau),
     "Ngày kết thúc": V4dr(r.thoiGianKetThuc),
     "Trùng thừa": r.trungThua ? "x" : "",
     "Số văn bản": r.soVanBan,
     "Trạng thái": V4m0(r.status).label,
     Kho: r.tenKho ?? "",
-    R2nDoS9r4buH: r.tenGia ?? "",
+    "Giá/kệ": r.tenGia ?? "",
     "Ghi chú": r.ghiChu ?? "",
   }));
 }

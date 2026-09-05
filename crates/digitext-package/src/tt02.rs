@@ -122,7 +122,7 @@ fn f_1qw(v: Option<&str>, notes: &mut Vec<String>) -> String {
         | "hạn chế" => {
             return "02".into();
         }
-        "beG6rXQ=" => return "03".into(),
+        "mật" => return "03".into(),
         _ => {}
     }
     notes
@@ -146,7 +146,7 @@ fn f_1qu(r_41z: &[String], notes: &mut Vec<String>) -> Vec<String> {
                 | "11" => r_41y,
                 "tiếng việt" | "việt" => "01".into(),
                 "tiếng anh" | "anh" => "02".into(),
-                "tiếng pháp" | "cGjDoXA=" => "03".into(),
+                "tiếng pháp" | "pháp" => "03".into(),
                 "tiếng nga" | "nga" => "04".into(),
                 "tiếng trung" | "tiếng trung quốc" | "trung" => {
                     "05".into()

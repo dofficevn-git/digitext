@@ -17,15 +17,31 @@ Bo quet literal duoc viet tay (khong dung regex) vi regex khong phan biet noi
 raw string `r#"..."#` voi chuoi thuong — nham lan o day dan toi bo qua buoc
 escape va sinh ra ma khong bien dich duoc.
 
-    python decode_strings.py            # thu, khong ghi
-    python decode_strings.py --apply    # ghi de
+    python decode_strings.py                     # thu, doc tu commit goc
+    python decode_strings.py --apply             # ghi de
+    python decode_strings.py --from-worktree     # doc tu cay lam viec (luy dang)
+
+GIOI HAN DA BIET: scan_python khong theo doi do sau `{}` cua f-string, nen
+f-string co chuoi long CUNG LOAI dau nhay (Python 3.12+) se bi dut sai cho:
+
+    print(f"  {"<base64>":12} {n}")
+
+Chi gap DUNG MOT lan trong cay nguon (ml/bench/harness/golden.py) va da sua
+tay. Neu ve sau gap them, hoac sua tay, hoac bo sung dem do sau nhu da lam cho
+template long trong scan_clike.
 """
-import re, sys, glob, base64, os, subprocess
+import io
+import re, sys, glob, base64, os, subprocess, unicodedata
 from collections import Counter
 
 ROOT = "D:/DigiText"
 REF = "8b5e0e2"          # commit anh chup nguon obfuscate ban dau
 APPLY = '--apply' in sys.argv
+# Mac dinh doc nguon tu commit goc => chay lai bao nhieu lan cung ra cung ket qua.
+# NHUNG neu cay lam viec da co thay doi khac chua commit, doc tu commit se GHI DE
+# mat chung. Luc do dung --from-worktree: giai ma la phep luy dang (chuoi da giai
+# khong con doan base64 nao) nen chay tren cay lam viec van an toan.
+FROM_WORKTREE = '--from-worktree' in sys.argv
 
 TARGETS = [
     'crates/*/src/**/*.rs',
@@ -36,8 +52,21 @@ TARGETS = [
     'triton/**/*.py',
 ]
 
-VIET = re.compile('[\u00c0-\u024f\u1e00-\u1eff\u0110\u0111]')
-B64_RUN = re.compile(r'[A-Za-z0-9+/]{8,}={0,2}')
+# Tap chu tieng Viet CHINH XAC. Dai Latin Extended rong sinh duong tinh gia:
+# "User" giai base64 ra 'Rǫ', ma ǫ khong phai chu Viet. Tieu chi dung:
+# co it nhat MOT chu Viet co dau, VA moi ky tu phi-ASCII deu thuoc tap nay.
+_VN = ('àáảãạăằắẳẵặ'
+       'âầấẩẫậèéẻẽẹ'
+       'êềếểễệìíỉĩị'
+       'òóỏõọôồốổỗộ'
+       'ơờớởỡợùúủũụ'
+       'ưừứửữựỳýỷỹỵ'
+       'đ')
+VIET = re.compile('[' + re.escape(_VN + _VN.upper()) + ']')
+_VN_OK = set(_VN + _VN.upper()) | {chr(c) for c in range(0x300, 0x324)}
+# Toi thieu 6: manh ngan nhu "IHbDoCA=" (' va ') nam giua hai placeholder
+# cua format string. Nguong 8 truoc day bo sot 72 cho nhu vay.
+B64_RUN = re.compile(r'[A-Za-z0-9+/]{6,}={0,2}')
 IDENT = re.compile(r'[A-Za-z0-9_]')
 
 # ---------------------------------------------------------------- bo quet
@@ -100,7 +129,27 @@ def scan_clike(s):
             i = s.find('\n', i);  i = n if i < 0 else i + 1;  continue
         if c == '/' and i + 1 < n and s[i + 1] == '*':
             j = s.find('*/', i + 2);  i = n if j < 0 else j + 2;  continue
-        if c in '"\'`':
+        if c == '`':
+            # Template literal: backtick chi la dau DONG khi dang o ngoai moi
+            # ${...}. Bo qua dieu nay se dut o backtick MO cua template long
+            # ben trong, vd:
+            #   `${a} x${b > 0 ? ` · ${c}<base64>` : ""}`
+            j, depth = i + 1, 0
+            while j < n:
+                ch = s[j]
+                if ch == '\\':
+                    j += 2;  continue
+                if ch == '$' and j + 1 < n and s[j + 1] == '{':
+                    depth += 1;  j += 2;  continue
+                if depth > 0 and ch == '}':
+                    depth -= 1;  j += 1;  continue
+                if depth == 0 and ch == '`':
+                    break
+                j += 1
+            if j < n:
+                yield (i, j + 1, i + 1, j, False)
+                i = j + 1;  continue
+        if c in '"\'':
             j = i + 1
             while j < n:
                 if s[j] == '\\':
@@ -143,7 +192,7 @@ SCANNERS = {'.rs': scan_rust, '.ts': scan_clike, '.tsx': scan_clike,
 
 
 def try_decode(tok):
-    if len(tok) < 8:
+    if len(tok) < 6:
         return None
     try:
         raw = base64.b64decode(tok + '=' * (-len(tok) % 4), validate=True)
@@ -154,7 +203,42 @@ def try_decode(tok):
         return None
     if any(ord(c) < 9 or 13 < ord(c) < 32 for c in s):
         return None
+    # Chi CHU CAI phi-ASCII moi phai la chu Viet. Dau cau va ky hieu
+    # (em dash, ellipsis, mui ten, emoji) deu hop le trong van ban that —
+    # loai chung se bo sot hang tram chuoi dung.
+    for c in s:
+        if ord(c) < 128 or c in _VN_OK:
+            continue
+        if unicodedata.category(c).startswith('L'):
+            return None
     return s
+
+
+# Khoa object TS dang base64 TRAN (khong dau nhay). Bo ma hoa thay
+# `"Ma Ho So":` bang `TcOjIEjhu5MgU8ah:` — base64 khong co dau '=' la mot dinh
+# danh JS hop le nen no bo luon dau nhay. Khoa nay KHONG nam trong chuoi nen bo
+# quet literal khong voi toi. Chi xay ra o TS/TSX.
+BARE_KEY = re.compile(r"""(?<![A-Za-z0-9_$."'])([A-Za-z][A-Za-z0-9]{5,})(\s*:)""")
+
+
+def decode_bare_keys(src):
+    """-> (src_moi, so_cho_thay).
+
+    Van ban giai ra co dau cach nen PHAI dat lai trong dau nhay — khong the giu
+    dang khoa tran.
+    """
+    n = 0
+
+    def sub(m):
+        nonlocal n
+        dec = try_decode(m.group(1))
+        if dec is None:
+            return m.group(0)
+        n += 1
+        quoted = dec.replace('\\', '\\\\').replace('"', '\\"')
+        return '"' + quoted + '"' + m.group(2)
+
+    return BARE_KEY.sub(sub, src), n
 
 
 def esc(s, quote):
@@ -170,7 +254,9 @@ def raw_wrap(text):
     return 'r' + '#' * h + '"' + text + '"' + '#' * h
 
 
-def git_show(rel):
+def read_source(path, rel):
+    if FROM_WORKTREE:
+        return io.open(path, encoding='utf-8', errors='strict').read()
     return subprocess.run(['git', 'show', f'{REF}:{rel}'], cwd=ROOT,
                           capture_output=True).stdout.decode('utf-8')
 
@@ -184,7 +270,7 @@ for pat in TARGETS:
         scan = SCANNERS.get(ext)
         if not scan:
             continue
-        src = git_show(rel)
+        src = read_source(path, rel)
         if not src:
             continue
 
@@ -221,14 +307,20 @@ for pat in TARGETS:
 
             out.append(src[last:ls]);  out.append(new_lit);  last = le
 
+        out.append(src[last:])
+        new_src = ''.join(out)
+        # Luot 2, chi TS/TSX: khoa object dang base64 tran.
+        if ext in ('.ts', '.tsx'):
+            new_src, k = decode_bare_keys(new_src)
+            hits += k
         if hits:
-            out.append(src[last:])
             stats['chuoi'] += hits;  stats['file'] += 1
             changed.append((rel, hits))
             if APPLY:
-                open(path, 'w', encoding='utf-8', newline='').write(''.join(out))
+                open(path, 'w', encoding='utf-8', newline='').write(new_src)
 
-print(f"{'GHI DE' if APPLY else 'THU (them --apply de ghi)'}   nguon doc tu commit {REF}")
+_src = 'cay lam viec' if FROM_WORKTREE else f'commit {REF}'
+print(f"{'GHI DE' if APPLY else 'THU (them --apply de ghi)'}   nguon doc tu {_src}")
 print(f"chuoi giai ma : {stats['chuoi']}")
 print(f"file thay doi : {stats['file']}\n")
 for rel, n in sorted(changed, key=lambda x: -x[1])[:10]:

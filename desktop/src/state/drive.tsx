@@ -98,7 +98,7 @@ export function V42d({ children: V54 }: { children: ReactNode }) {
             id: V5u,
             type: "folder",
             name: name || "Dự án mới",
-            owner: "VMO0aQ==",
+            owner: "Tôi",
             members: [],
             kids: [],
           },

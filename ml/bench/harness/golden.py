@@ -198,7 +198,7 @@ def q_c7(args) -> int:
     counts = stratum_counts(rows)
     for p_da, n in sorted(counts.items()):
         print(f"  {p_da:12} {n}")
-    print(f"  {"VOG7lE5H":12} {len(rows)}")
+    print(f"  {"TỔNG":12} {len(rows)}")
     return 0
 
 def q_c6(args) -> int:

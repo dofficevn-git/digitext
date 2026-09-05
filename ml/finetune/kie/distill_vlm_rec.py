@@ -44,7 +44,7 @@ def q_11c(text: str) -> bool:
     if not p_2d5:
         return True
     p_2d4 = p_2d5.lower()
-    if p_2d4.startswith("c+G7kQ==") or "c+G7kTo=" in p_2d4[:8]:
+    if p_2d4.startswith("số") or "số:" in p_2d4[:8]:
         return True
     if _DATE.search(p_2d4):
         return True

@@ -50,7 +50,7 @@ export function V4pt(r: V439): string {
   if (r.manifestFailed > 0) {
     const V2c5 = r.notes.length ? ` (${r.notes.join("; ")})` : "";
     const V2c6 = r.notes.some((n) => n.includes("bản cũ"));
-    m += `IEPDsyA=${r.manifestFailed} máy không lấy được danh sách tài liệu${V2c5} — `;
+    m += ` Có ${r.manifestFailed} máy không lấy được danh sách tài liệu${V2c5} — `;
     m += V2c6
       ? "máy nhân viên đang chạy BẢN CŨ. Kênh LAN không mã hoá đã bị gỡ vì nó gửi mã site dạng trần; hãy cập nhật DigiText trên MỌI máy trong site rồi thu thập lại."
       : "thường do MÃ SITE LAN trên máy nhân viên KHÁC mã trên máy quản trị, hoặc máy nhân viên chưa cập nhật. Hãy phát lại cây thư mục để máy nhân viên nhận đúng mã, và kiểm tra hai máy cùng phiên bản.";

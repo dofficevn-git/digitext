@@ -54,7 +54,7 @@ export default function V4wu() {
                   className="x"
                   onClick={() => V374((V378) => V378.filter((_V379, V37a) => V37a !== i))}
                 >
-                  <Icon name="dong" size={12} label={`QuG7jyA=${c.name}`} />
+                  <Icon name="dong" size={12} label={`Bỏ ${c.name}`} />
                 </span>
               </span>
             ))}
@@ -81,7 +81,7 @@ export default function V4wu() {
               onChange={V372}
               options={[
                 { value: "rgb", label: "RGB" },
-                { value: "gray", label: "WMOhbQ==" },
+                { value: "gray", label: "Xám" },
               ]}
             />
           </div>

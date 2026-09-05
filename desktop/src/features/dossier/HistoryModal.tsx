@@ -51,7 +51,7 @@ export default function V4e9({
     const data = V10j.map((r) => {
       const { ngay, gio: V10q } = V4da(r.createdAt);
       return {
-        VGhhbyB0w6Fj: V4d9(r.action),
+        "Thao tác": V4d9(r.action),
         Ngày: ngay,
         Giờ: V10q,
         "Người tạo": r.nguoi ?? "",
@@ -59,7 +59,7 @@ export default function V4e9({
         "Nội dung": r.content ?? "",
       };
     });
-    await V4e3(data.length ? data : [{ VGhhbyB0w6Fj: "" }], "LichSu", `lich-su-${V10b}.xlsx`);
+    await V4e3(data.length ? data : [{ "Thao tác": "" }], "LichSu", `lich-su-${V10b}.xlsx`);
   };
 
   return (

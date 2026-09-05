@@ -240,7 +240,7 @@ fn remove_contents(r_5sj: &Path, r_5so: &mut Report) {
         };
         match r_5sm {
             Ok(()) => r_5so.removed += r_5sl,
-            Err(e) => r_5so.errors.push(format!("eG/DoSA={}: {e}", p.display())),
+            Err(e) => r_5so.errors.push(format!("xoá {}: {e}", p.display())),
         }
     }
 }

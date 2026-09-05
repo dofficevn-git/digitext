@@ -346,7 +346,7 @@ function V4rc({
                             className="x"
 
                             disabled={V2jc !== null}
-                            title={V2jc ?? `R+G7oSA=${V2j7(V2jb)} khỏi dự án`}
+                            title={V2jc ?? `Gỡ ${V2j7(V2jb)} khỏi dự án`}
                             onClick={() => V2j2(p.id, V2jb)}
                           >
                             ×
@@ -771,7 +771,7 @@ function V4rm({
               ? "Đang lưu…"
               : V2jy === "create"
                 ? "Tạo tài khoản"
-                : "TMawdQ=="}
+                : "Lưu"}
           </button>
         </div>
       </div>

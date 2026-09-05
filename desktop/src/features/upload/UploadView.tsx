@@ -791,7 +791,7 @@ function V4qo() {
                 value={V2fw.notForwarded}
                 label="Chưa đồng bộ lên máy chủ"
                 tone="warn"
-                title={`Đang chờ đẩy ${fmtN(V2fp)}${V2fq > 0 ? `IMK3IG3DoXkgY2jhu6cgdOG7qyBjaOG7kWkg${fmtN(V2fq)}` : ""}`}
+                title={`Đang chờ đẩy ${fmtN(V2fp)}${V2fq > 0 ? ` · máy chủ từ chối ${fmtN(V2fq)}` : ""}`}
               />
               <V4qi
                 value={V2fx.length}

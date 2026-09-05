@@ -194,7 +194,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
       }
       const n = await V4cg(V1ga);
       window.alert(
-        `Đã nhập ${n} văn bản${V1gb ? `IChi4buPIHF1YSA=${V1gb}IGTDsm5nIHRoaeG6v3UgZOG7ryBsaeG7h3Up` : ""}.`,
+        `Đã nhập ${n} văn bản${V1gb ? ` (bỏ qua ${V1gb} dòng thiếu dữ liệu)` : ""}.`,
       );
       V1fa(null);
       V1fr();
@@ -211,13 +211,13 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
       return;
     }
     const data = V1fs.map((r) => ({
-      TcOjIGjhu5Mgc8ah: r.maHoSo ?? "",
+      "Mã hồ sơ": r.maHoSo ?? "",
       "Hộp số": r.hopSo ?? "",
       "HS số": r.soTam,
       "Tiêu đề": r.tieuDe,
       THBQ: V4co(V1ed, r.thbq),
       "Số tờ": V4dt(r.soTo),
-      TmfDoHkgYuG6r3QgxJHhuqd1: V4dr(r.ngayBatDau),
+      "Ngày bắt đầu": V4dr(r.ngayBatDau),
       "Ngày kết thúc": V4dr(r.ngayKetThuc),
       "Trạng thái": V4du(r, V1ed).label,
       "Số văn bản": r.soVanBan,

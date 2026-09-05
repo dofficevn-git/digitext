@@ -44,7 +44,7 @@ NUMERIC_FIELDS: frozenset[str] = frozenset({"thuTu", "toSo", "soTrang", "trangSo
 
 CONSTANT_FIELDS: frozenset[str] = frozenset({"ngonNgu"})
 
-REFERENCE_PREFIXES: tuple[str, ...] = ("căn cứ", "eMOpdCA=", "xét đề nghị", "theo ", "điều ")
+REFERENCE_PREFIXES: tuple[str, ...] = ("căn cứ", "xét ", "xét đề nghị", "theo ", "điều ")
 
 TRICHYEU_MIN_SUSPECT = 200
 TRICHYEU_HARD_MAX = 800

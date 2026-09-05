@@ -97,7 +97,7 @@ export default function DriveView() {
   const Vjo = async () => {
     try {
       const Vjp = await confirm(
-        `WMOzYSA=${Vj1.size} mục đã chọn? Không thể hoàn tác.`,
+        `Xóa ${Vj1.size} mục đã chọn? Không thể hoàn tác.`,
         {
           title: "Xác nhận xóa",
           kind: "warning",

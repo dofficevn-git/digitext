@@ -114,7 +114,7 @@ export const V3z0: V3yz[] = [
   },
   {
     key: "scan",
-    label: "UXXDqXQ=",
+    label: "Quét",
     perms: [
       { perm: "scan.view", label: "Mở màn quét" },
       { perm: "scan.execute", label: "Thực hiện quét" },

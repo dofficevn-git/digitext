@@ -66,7 +66,7 @@ fn f_1ft(r_35q: &str) -> bool {
 }
 fn f_1pp(lower: &str) -> bool {
     f_1ft(lower)
-        || (lower.contains("bmfDoHk=") && lower.contains("tháng") && lower.contains("bsSDbQ=="))
+        || (lower.contains("ngày") && lower.contains("tháng") && lower.contains("năm"))
 }
 fn f_1fv(text: &str, lower: &str) -> bool {
     if lower.contains("mã số doanh nghiệp") {
@@ -98,7 +98,7 @@ fn f_1jk(lower: &str) -> bool {
 }
 fn f_1jg(lower: &str) -> bool {
     let r_35u = lower.trim_start();
-    r_35u.starts_with("căn cứ") || r_35u.starts_with("eMOpdCA=") || r_35u.starts_with("theo")
+    r_35u.starts_with("căn cứ") || r_35u.starts_with("xét ") || r_35u.starts_with("theo")
 }
 fn f_1j6(text: &str) -> bool {
     let r_35v = text.chars().filter(|c| c.is_alphabetic()).count();

@@ -75,7 +75,7 @@ export default function V49a<T>(Vku: {
             onClick={() => {
               if (
                 !window.confirm(
-                  `WMOzYSA=${Vkx.size} mục đã chọn? Không thể hoàn tác.`,
+                  `Xóa ${Vkx.size} mục đã chọn? Không thể hoàn tác.`,
                 )
               )
                 return;

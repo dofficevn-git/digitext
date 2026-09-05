@@ -47,7 +47,7 @@ function V47o(i: V47l): V47n {
     return {
       ...base,
       dot: "ok",
-      value: i.scanners === 1 ? "Đã kết nối" : `${i.scanners}IG3DoXk=`,
+      value: i.scanners === 1 ? "Đã kết nối" : `${i.scanners} máy`,
       title: `Dò thấy ${i.scanners} máy quét.`,
     };
   return {

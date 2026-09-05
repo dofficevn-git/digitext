@@ -223,7 +223,7 @@ export function V45b(s: V44w, Vb1: boolean): V45a {
   const Vb3 = Vb1
     ? Vb2
       ? `${t.done} tệp đã vào Kho`
-      : `${t.done} tệp đã về${s.peers > 0 ? ` · ${s.peers}IG3DoXk=` : ""}`
+      : `${t.done} tệp đã về${s.peers > 0 ? ` · ${s.peers} máy` : ""}`
     : [
         Vb2 ? `${t.done} tệp thêm mới` : `${t.done} tệp gom mới`,
         t.skipped > 0 ? `${t.skipped} đã có sẵn` : "",
@@ -267,7 +267,7 @@ export function V45d(Vb5: V44v, Vb6: number): string {
   if (Vb6 - Vb5.updatedAt > 30_000) return "";
   const left = Vb5.sizeBytes - Vb5.receivedBytes;
   if (left <= 0) return "";
-  return `Y8OybiA=${V449(Math.ceil(left / Vb5.bps))}`;
+  return `còn ${V449(Math.ceil(left / Vb5.bps))}`;
 }
 
 export function V45e(Vb7: V44v): boolean {

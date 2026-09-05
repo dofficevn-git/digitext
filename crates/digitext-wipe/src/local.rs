@@ -303,7 +303,7 @@ pub fn build_plan(r_5q6: &Tba) -> Thd {
         r_5q7
             .push(
                 format!(
-                    "Q8OTIA=={DB_FILE} nhưng KHÔNG đọc được `settings.storage_root` từ đó — đang ĐOÁN kho là {}. Nếu người dùng từng chọn kho ở ổ ngoài/ổ mạng thì lệnh này nhắm SAI chỗ và hồ sơ thật vẫn còn nguyên; kiểm tra rồi chỉ định --storage-root.",
+                    "CÓ {DB_FILE} nhưng KHÔNG đọc được `settings.storage_root` từ đó — đang ĐOÁN kho là {}. Nếu người dùng từng chọn kho ở ổ ngoài/ổ mạng thì lệnh này nhắm SAI chỗ và hồ sơ thật vẫn còn nguyên; kiểm tra rồi chỉ định --storage-root.",
                     r_5q6.storage_root.display()
                 ),
             );
@@ -340,7 +340,7 @@ fn remove_contents(r_5q8: &Path, rep: &mut Report) {
         };
         match r_5qb {
             Ok(()) => rep.removed += n,
-            Err(e) => rep.errors.push(format!("eG/DoSA={}: {e}", r_5qa.display())),
+            Err(e) => rep.errors.push(format!("xoá {}: {e}", r_5qa.display())),
         }
     }
 }
@@ -353,7 +353,7 @@ pub fn execute(r_5qh: &Tba) -> Report {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => rep
             .errors
-            .push(format!("eG/DoSA={}: {e}", r_5qh.page_cache.display())),
+            .push(format!("xoá {}: {e}", r_5qh.page_cache.display())),
     }
     for r_5qf in f_2jk(&r_5qh.temp_dir) {
         let r_5qg = if r_5qf.is_dir() {
@@ -363,7 +363,7 @@ pub fn execute(r_5qh: &Tba) -> Report {
         };
         match r_5qg {
             Ok(()) => rep.removed += 1,
-            Err(e) => rep.errors.push(format!("eG/DoSA={}: {e}", r_5qf.display())),
+            Err(e) => rep.errors.push(format!("xoá {}: {e}", r_5qf.display())),
         }
     }
     if let Some(r_5qe) = &r_5qh.log_dir {

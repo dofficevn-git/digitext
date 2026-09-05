@@ -162,7 +162,7 @@ function V4l9({ rows: V1so, onClose: V1sp }: { rows: V4f9[]; onClose: () => void
                               : "Ghép bởi bản cũ — bấm “Ghép lại PDF/A” để đạt Điều 8.2.a"
                           }
                         >
-                          {r.pdfa2b ? "2b" : "Y2jGsGE="}
+                          {r.pdfa2b ? "2b" : "chưa"}
                         </span>
                       ) : (
                         "—"
@@ -416,10 +416,10 @@ export default function OcrPane() {
             label="File đã OCR"
             value={totals?.ocrDone ?? 0}
             title={`Tài liệu đã có kết quả OCR đủ số trang (nút ① PDF 2 lớp)${
-              totals?.ocrPages ? ` · ${V4l7(totals.ocrPages)}IHRyYW5nIMSRw6MgT0NS` : ""
+              totals?.ocrPages ? ` · ${V4l7(totals.ocrPages)} trang đã OCR` : ""
             }${
               totals?.fieldDocs
-                ? ` · ${V4l7(totals.fieldDocs)}IHTDoGkgbGnhu4d1IMSRw6MgYsOzYyAxNiB0csaw4budbmcgKOKRoSk=`
+                ? ` · ${V4l7(totals.fieldDocs)} tài liệu đã bóc 16 trường (②)`
                 : ""
             }`}
           />

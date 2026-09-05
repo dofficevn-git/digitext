@@ -86,7 +86,7 @@ export default function V4ur() {
       if (V2zi === undefined) return;
       await V4ue(doc.id, V2zi ? `${V2zi}T00:00:00+07:00` : null);
       V2za(
-        `xJDDoyA=${V2zi ? `xJHhurd0IGjhuqFuIA==${V2zi}` : "bỏ hạn"} cho ${doc.filename}.`,
+        `Đã ${V2zi ? `đặt hạn ${V2zi}` : "bỏ hạn"} cho ${doc.filename}.`,
       );
     });
 

@@ -277,11 +277,11 @@ export interface V4d8 {
 export function V4d9(Vxi: string): string {
   switch (Vxi) {
     case "create":
-      return "VGjDqm0=";
+      return "Thêm";
     case "update":
-      return "U+G7rWE=";
+      return "Sửa";
     case "delete":
-      return "WG/DoQ==";
+      return "Xoá";
     default:
       return Vxi;
   }
@@ -497,17 +497,17 @@ export function V4dj(r: V4bm, Vyf: V3yo[], Vyg: V3ym[]): Record<string, string |
   return {
     Mảng: V4cn(Vyg, r.mangCvid),
     "ID Hồ Sơ": r.id,
-    TcOjIEjhu5MgU8ah: r.maHoSo ?? "",
+    "Mã Hồ Sơ": r.maHoSo ?? "",
     "Số Tạm": r.soTam,
     "Tiêu Đề": r.tieuDe,
     THBQ: V4co(Vyf, r.thbq),
     "Số Tờ": V4dt(r.soTo),
-    TmfDoHkgQsSQ: V4dr(r.ngayBatDau),
+    "Ngày BĐ": V4dr(r.ngayBatDau),
     "Ngày KT": V4dr(r.ngayKetThuc),
     "T.Thừa": r.trungThua ? "x" : "",
     "T.Thái": V4du(r, Vyf).label,
     "Tài Liệu": V4cv(r),
-    Q2jhu6ljIE7Eg25n: "",
+    "Chức Năng": "",
   };
 }
 
