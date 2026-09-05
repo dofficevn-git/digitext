@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review gói công việc</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 2rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .breadcrumb {
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+
+      .breadcrumb a {
+        color: white;
+        text-decoration: none;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+
+      .review-summary {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+      }
+
+      .summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+
+      .package-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .review-actions {
+        display: flex;
+        gap: 1rem;
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+
+      .btn-success:hover:not(:disabled) {
+        background: #1e7e34;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+      }
+
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+
+      .btn-danger:hover:not(:disabled) {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+      }
+
+      .btn-outline {
+        background: white;
+        border: 2px solid #667eea;
+        color: #667eea;
+      }
+
+      .btn-outline:hover {
+        background: #667eea;
+        color: white;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .stat-card {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+      }
+
+      .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      .items-section {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .section-header {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e1e5e9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .filter-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .filter-select {
+        padding: 0.5rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 4px;
+        background: white;
+        font-size: 0.875rem;
+      }
+
+      .search-box {
+        position: relative;
+        min-width: 250px;
+      }
+
+      .search-box input {
+        width: 100%;
+        padding: 0.5rem 2rem 0.5rem 1rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: border-color 0.3s;
+      }
+
+      .search-box input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .search-btn {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+      }
+
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .items-table th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 1px solid #e1e5e9;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .items-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: top;
+      }
+
+      .items-table tr:hover {
+        background-color: #f8f9fa;
+      }
+
+      .item-row.selected {
+        background-color: #e3f2fd;
+      }
+
+      .item-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .item-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.25rem;
+      }
+
+      .item-info {
+        color: #666;
+        font-size: 0.875rem;
+      }
+
+      .section-type-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .section-header-type {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .section-content-type {
+        background: #f3e5f5;
+        color: #7b1fa2;
+      }
+
+      .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .status-completed {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .status-recompleted {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .status-approved {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-rejected {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .kie-preview {
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 0.875rem;
+      }
+
+      .kie-field {
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .kie-field:last-child {
+        border-bottom: none;
+      }
+
+      .kie-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+      }
+
+      .kie-value {
+        color: #333;
+        margin-top: 0.25rem;
+      }
+
+      .bulk-actions {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e1e5e9;
+        display: none;
+      }
+
+      .bulk-actions.show {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .selected-info {
+        color: #666;
+        font-size: 0.875rem;
+      }
+
+      .bulk-buttons {
+        display: flex;
+        gap: 1rem;
+      }
+
+      .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+      }
+
+      .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 2rem;
+      }
+
+      .page-btn {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dee2e6;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.3s;
+      }
+
+      .page-btn:hover:not(.disabled) {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+
+      .page-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+
+      .page-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+      }
+
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+      }
+
+      .empty-state h3 {
+        margin-bottom: 1rem;
+        color: #333;
+      }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 2rem;
+        border-radius: 8px;
+        width: 600px;
+        max-width: 90%;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        margin-bottom: 1rem;
+      }
+
+      .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      .modal-body {
+        margin-bottom: 2rem;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 4px;
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 100px;
+        font-family: inherit;
+      }
+
+      .form-textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+      }
+
+      /* Toast notification */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 6px;
+        color: white;
+        z-index: 1001;
+        transform: translateX(400px);
+        transition: transform 0.3s;
+      }
+
+      .toast.show {
+        transform: translateX(0);
+      }
+
+      .toast.success {
+        background: #28a745;
+      }
+
+      .toast.error {
+        background: #dc3545;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .summary-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 1rem;
+        }
+
+        .review-actions {
+          justify-content: stretch;
+        }
+
+        .btn {
+          flex: 1;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .section-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .filter-controls {
+          justify-content: stretch;
+        }
+
+        .search-box {
+          min-width: auto;
+        }
+
+        .items-table {
+          font-size: 0.875rem;
+        }
+
+        .items-table th,
+        .items-table td {
+          padding: 0.5rem;
+        }
+
+        .bulk-actions.show {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .bulk-buttons {
+          justify-content: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Review gói công việc</h1>
+      <div class="breadcrumb">
+        <a href="/">Trang chủ</a> >
+        <a href="/manage-packages-page">Quản lý gói</a> >
+        <a href="#" id="packageLink">Gói</a> > Review
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Review Summary -->
+      <div class="review-summary">
+        <div class="summary-header">
+          <div>
+            <div class="package-title" id="packageTitle">Đang tải...</div>
+            <div class="item-info" id="packageInfo">
+              Cooperator: <span id="cooperatorName">-</span> | Ngày tạo:
+              <span id="createdDate">-</span>
+            </div>
+          </div>
+          <div class="review-actions">
+            <button
+              class="btn btn-success"
+              id="approveAllBtn"
+              onclick="approveAllItems()"
+              disabled
+            >
+              ✅ Duyệt tất cả
+            </button>
+            <a href="#" class="btn btn-outline" id="backBtn"> ← Quay lại </a>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalItems">0</div>
+            <div class="stat-label">Tổng mảnh</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="reviewingItems">0</div>
+            <div class="stat-label">Chờ duyệt</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="approvedItems">0</div>
+            <div class="stat-label">Đã duyệt</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="rejectedItems">0</div>
+            <div class="stat-label">Đã từ chối</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items Section -->
+      <div class="items-section">
+        <div class="section-header">
+          <div class="section-title">Danh sách mảnh cần review</div>
+          <div class="filter-controls">
+            <select
+              class="filter-select"
+              id="statusFilter"
+              onchange="filterItems()"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="completed">Chờ duyệt lần đầu</option>
+              <option value="recompleted">Đã sửa lại</option>
+              <option value="approved">Đã duyệt</option>
+              <option value="rejected">Đã từ chối</option>
+            </select>
+            <select
+              class="filter-select"
+              id="sectionFilter"
+              onchange="filterItems()"
+            >
+              <option value="">Tất cả loại</option>
+              <option value="header">Header</option>
+              <option value="content">Content</option>
+            </select>
+            <div class="search-box">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Tìm kiếm theo tên file..."
+              />
+              <button class="search-btn" onclick="searchItems()">🔍</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="itemsContainer">
+          <div class="loading">Đang tải...</div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions" id="bulkActions">
+          <div class="selected-info">
+            Đã chọn <span id="selectedCount">0</span> mảnh
+          </div>
+          <div class="bulk-buttons">
+            <button class="btn btn-success btn-sm" onclick="bulkApprove()">
+              ✅ Duyệt đã chọn
+            </button>
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="showBulkRejectModal()"
+            >
+              ❌ Từ chối đã chọn
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modalTitle">Review mảnh</h3>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Tên file:</label>
+            <div id="modalFileName">-</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dữ liệu KIE:</label>
+            <div id="modalKieData" class="kie-preview">-</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reviewComment"
+              >Nhận xét (bắt buộc khi từ chối):</label
+            >
+            <textarea
+              id="reviewComment"
+              class="form-textarea"
+              placeholder="Nhập nhận xét..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeReviewModal()">
+            Hủy
+          </button>
+          <button class="btn btn-success" onclick="approveItem()">
+            ✅ Duyệt
+          </button>
+          <button class="btn btn-danger" onclick="rejectItem()">
+            ❌ Từ chối
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Reject Modal -->
+    <div id="bulkRejectModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Từ chối nhiều mảnh</h3>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="bulkRejectComment"
+              >Lý do từ chối (áp dụng cho tất cả):</label
+            >
+            <textarea
+              id="bulkRejectComment"
+              class="form-textarea"
+              placeholder="Nhập lý do từ chối..."
+              required
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeBulkRejectModal()">
+            Hủy
+          </button>
+          <button class="btn btn-danger" onclick="confirmBulkReject()">
+            ❌ Từ chối tất cả
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let packageId = "";
+      let packageData = null;
+      let currentPage = 1;
+      let currentSearch = "";
+      let statusFilter = "";
+      let sectionFilter = "";
+      let selectedItems = new Set();
+      let currentReviewItem = null;
+
+      // Initialize page
+      document.addEventListener("DOMContentLoaded", function () {
+        // Get package ID from URL
+        const pathParts = window.location.pathname.split("/");
+        packageId = pathParts[pathParts.indexOf("package") + 1];
+
+        if (packageId) {
+          loadPackageDetail();
+          loadReviewItems();
+        } else {
+          showError("Không tìm thấy ID gói");
+        }
+
+        // Search on Enter key
+        document
+          .getElementById("searchInput")
+          .addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+              searchItems();
+            }
+          });
+      });
+
+      // Load package detail
+      async function loadPackageDetail() {
+        try {
+          const response = await fetch(`/api/packages/${packageId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            packageData = data.package;
+            renderPackageInfo();
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi tải thông tin gói: " + error.message);
+        }
+      }
+
+      // Render package info
+      function renderPackageInfo() {
+        document.getElementById("packageTitle").textContent = packageData.name;
+        document.getElementById("cooperatorName").textContent =
+          packageData.cooperator_name;
+        document.getElementById("createdDate").textContent = new Date(
+          packageData.created_at
+        ).toLocaleDateString("vi-VN");
+
+        // Update links
+        document.getElementById(
+          "packageLink"
+        ).href = `/package/${packageId}/detail-page`;
+        document.getElementById("packageLink").textContent = packageData.name;
+        document.getElementById(
+          "backBtn"
+        ).href = `/package/${packageId}/detail-page`;
+      }
+
+      // Load review items
+      async function loadReviewItems(page = 1) {
+        try {
+          currentPage = page;
+          const params = new URLSearchParams({
+            page: page,
+            search: currentSearch,
+            status_filter: statusFilter,
+            section_filter: sectionFilter,
+          });
+
+          const response = await fetch(
+            `/api/packages/${packageId}/review-items?${params}`
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            renderItems(data.items);
+            renderPagination(data);
+            updateStats(data);
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi tải danh sách mảnh: " + error.message);
+        }
+      }
+
+      // Render items
+      function renderItems(items) {
+        const container = document.getElementById("itemsContainer");
+
+        if (items.length === 0) {
+          container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Không có mảnh nào</h3>
+                        <p>Không có mảnh nào cần review với bộ lọc hiện tại</p>
+                    </div>
+                `;
+          return;
+        }
+
+        container.innerHTML = `
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="item-checkbox">
+                            </th>
+                            <th>Tên file</th>
+                            <th>Loại</th>
+                            <th>Trạng thái</th>
+                            <th>Dữ liệu KIE</th>
+                            <th style="width: 120px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items
+                          .map(
+                            (item) => `
+                            <tr class="item-row" id="row-${item.id}">
+                                <td>
+                                    <input type="checkbox" 
+                                           class="item-checkbox item-select" 
+                                           value="${item.id}" 
+                                           onchange="toggleItemSelection('${
+                                             item.id
+                                           }')">
+                                </td>
+                                <td>
+                                    <div class="item-name">${
+                                      item.filename
+                                    }</div>
+                                    <div class="item-info">ID: ${item.id}</div>
+                                    ${
+                                      item.completed_at
+                                        ? `
+                                        <div class="item-info">Hoàn thành: ${new Date(
+                                          item.completed_at
+                                        ).toLocaleDateString("vi-VN")}</div>
+                                    `
+                                        : ""
+                                    }
+                                </td>
+                                <td>
+                                    <span class="section-type-badge section-${
+                                      item.section_type
+                                    }-type">
+                                        ${
+                                          item.section_type === "header"
+                                            ? "Header"
+                                            : "Content"
+                                        }
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-${
+                                      item.status
+                                    }">
+                                        ${getStatusText(item.status)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="kie-preview">
+                                        ${renderKiePreview(item.kie_data)}
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm" onclick="showReviewModal('${
+                                      item.id
+                                    }')">
+                                        👁️ Review
+                                    </button>
+                                </td>
+                            </tr>
+                        `
+                          )
+                          .join("")}
+                    </tbody>
+                </table>
+            `;
+      }
+
+      // Render KIE preview
+      function renderKiePreview(kieData) {
+        if (!kieData) return "<em>Chưa có dữ liệu</em>";
+
+        const fields = [
+          { key: "document_number", label: "Số VB" },
+          { key: "document_date", label: "Ngày VB" },
+          { key: "subject", label: "Trích yếu" },
+          { key: "issuer", label: "Cơ quan" },
+        ];
+
+        return fields
+          .map((field) => {
+            const value = kieData[field.key];
+            if (value) {
+              return `
+                        <div class="kie-field">
+                            <div class="kie-label">${field.label}</div>
+                            <div class="kie-value">${value}</div>
+                        </div>
+                    `;
+            }
+            return "";
+          })
+          .join("");
+      }
+
+      // Render pagination
+      function renderPagination(data) {
+        const container = document.getElementById("pagination");
+        const { current_page, total_pages } = data;
+
+        if (total_pages <= 1) {
+          container.innerHTML = "";
+          return;
+        }
+
+        let pagination = `
+                <button class="page-btn ${
+                  current_page === 1 ? "disabled" : ""
+                }" 
+                        onclick="loadReviewItems(${current_page - 1})" 
+                        ${current_page === 1 ? "disabled" : ""}>
+                    ‹ Trước
+                </button>
+            `;
+
+        for (let i = 1; i <= total_pages; i++) {
+          pagination += `
+                    <button class="page-btn ${
+                      i === current_page ? "active" : ""
+                    }" 
+                            onclick="loadReviewItems(${i})">
+                        ${i}
+                    </button>
+                `;
+        }
+
+        pagination += `
+                <button class="page-btn ${
+                  current_page === total_pages ? "disabled" : ""
+                }" 
+                        onclick="loadReviewItems(${current_page + 1})" 
+                        ${current_page === total_pages ? "disabled" : ""}>
+                    Sau ›
+                </button>
+            `;
+
+        container.innerHTML = pagination;
+      }
+
+      // Update stats
+      function updateStats(data) {
+        const { stats } = data;
+
+        document.getElementById("totalItems").textContent = stats.total || 0;
+        document.getElementById("reviewingItems").textContent =
+          (stats.completed || 0) + (stats.recompleted || 0);
+        document.getElementById("approvedItems").textContent =
+          stats.approved || 0;
+        document.getElementById("rejectedItems").textContent =
+          stats.rejected || 0;
+
+        // Enable approve all button if there are items to review
+        const hasReviewItems =
+          (stats.completed || 0) + (stats.recompleted || 0) > 0;
+        document.getElementById("approveAllBtn").disabled = !hasReviewItems;
+      }
+
+      // Selection functions
+      function toggleSelectAll() {
+        const selectAll = document.getElementById("selectAll");
+        const itemSelects = document.querySelectorAll(".item-select");
+
+        itemSelects.forEach((checkbox) => {
+          checkbox.checked = selectAll.checked;
+          toggleItemSelection(checkbox.value, checkbox.checked);
+        });
+      }
+
+      function toggleItemSelection(itemId, forceState = null) {
+        const checkbox = document.querySelector(`input[value="${itemId}"]`);
+        const isSelected = forceState !== null ? forceState : checkbox.checked;
+
+        if (isSelected) {
+          selectedItems.add(itemId);
+          document.getElementById(`row-${itemId}`).classList.add("selected");
+        } else {
+          selectedItems.delete(itemId);
+          document.getElementById(`row-${itemId}`).classList.remove("selected");
+        }
+
+        updateBulkActions();
+      }
+
+      function updateBulkActions() {
+        const bulkActions = document.getElementById("bulkActions");
+        const selectedCount = selectedItems.size;
+
+        if (selectedCount > 0) {
+          bulkActions.classList.add("show");
+          document.getElementById("selectedCount").textContent = selectedCount;
+        } else {
+          bulkActions.classList.remove("show");
+        }
+
+        // Update select all checkbox
+        const totalCheckboxes =
+          document.querySelectorAll(".item-select").length;
+        const selectAllCheckbox = document.getElementById("selectAll");
+
+        if (selectedCount === 0) {
+          selectAllCheckbox.indeterminate = false;
+          selectAllCheckbox.checked = false;
+        } else if (selectedCount === totalCheckboxes) {
+          selectAllCheckbox.indeterminate = false;
+          selectAllCheckbox.checked = true;
+        } else {
+          selectAllCheckbox.indeterminate = true;
+          selectAllCheckbox.checked = false;
+        }
+      }
+
+      // Filter and search functions
+      function filterItems() {
+        statusFilter = document.getElementById("statusFilter").value;
+        sectionFilter = document.getElementById("sectionFilter").value;
+        selectedItems.clear();
+        loadReviewItems(1);
+      }
+
+      function searchItems() {
+        currentSearch = document.getElementById("searchInput").value.trim();
+        selectedItems.clear();
+        loadReviewItems(1);
+      }
+
+      // Review modal functions
+      async function showReviewModal(itemId) {
+        try {
+          const response = await fetch(`/api/work-items/${itemId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            currentReviewItem = data.item;
+
+            document.getElementById("modalFileName").textContent =
+              currentReviewItem.filename;
+            document.getElementById("modalKieData").innerHTML =
+              renderFullKieData(currentReviewItem.kie_data);
+            document.getElementById("reviewComment").value = "";
+
+            document.getElementById("reviewModal").style.display = "block";
+          } else {
+            showToast("Lỗi khi tải thông tin mảnh: " + data.error, "error");
+          }
+        } catch (error) {
+          showToast("Lỗi khi tải thông tin mảnh: " + error.message, "error");
+        }
+      }
+
+      function renderFullKieData(kieData) {
+        if (!kieData) return "<em>Chưa có dữ liệu</em>";
+
+        const allFields = [
+          { key: "document_number", label: "Số văn bản" },
+          { key: "document_date", label: "Ngày văn bản" },
+          { key: "document_type", label: "Loại văn bản" },
+          { key: "issuer", label: "Cơ quan ban hành" },
+          { key: "subject", label: "Trích yếu" },
+          { key: "content", label: "Nội dung" },
+          { key: "signer", label: "Người ký" },
+          { key: "signer_position", label: "Chức vụ người ký" },
+        ];
+
+        return (
+          allFields
+            .map((field) => {
+              const value = kieData[field.key];
+              if (value) {
+                return `
+                        <div class="kie-field">
+                            <div class="kie-label">${field.label}</div>
+                            <div class="kie-value">${value}</div>
+                        </div>
+                    `;
+              }
+              return "";
+            })
+            .join("") || "<em>Chưa có dữ liệu</em>"
+        );
+      }
+
+      function closeReviewModal() {
+        document.getElementById("reviewModal").style.display = "none";
+        currentReviewItem = null;
+      }
+
+      async function approveItem() {
+        if (!currentReviewItem) return;
+
+        try {
+          const response = await fetch(
+            `/api/work-items/${currentReviewItem.id}/review`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                action: "approve",
+                comment: document.getElementById("reviewComment").value.trim(),
+              }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            closeReviewModal();
+            showToast("Đã duyệt mảnh thành công", "success");
+            loadReviewItems(currentPage);
+          } else {
+            showToast("Lỗi khi duyệt: " + data.error, "error");
+          }
+        } catch (error) {
+          showToast("Lỗi khi duyệt: " + error.message, "error");
+        }
+      }
+
+      async function rejectItem() {
+        if (!currentReviewItem) return;
+
+        const comment = document.getElementById("reviewComment").value.trim();
+        if (!comment) {
+          showToast("Vui lòng nhập lý do từ chối", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `/api/work-items/${currentReviewItem.id}/review`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                action: "reject",
+                comment: comment,
+              }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            closeReviewModal();
+            showToast("Đã từ chối mảnh", "success");
+            loadReviewItems(currentPage);
+          } else {
+            showToast("Lỗi khi từ chối: " + data.error, "error");
+          }
+        } catch (error) {
+          showToast("Lỗi khi từ chối: " + error.message, "error");
+        }
+      }
+
+      // Bulk actions
+      async function bulkApprove() {
+        if (selectedItems.size === 0) return;
+
+        if (
+          !confirm(
+            `Bạn có chắc chắn muốn duyệt ${selectedItems.size} mảnh đã chọn?`
+          )
+        ) {
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `/api/packages/${packageId}/bulk-review`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                action: "approve",
+                item_ids: Array.from(selectedItems),
+              }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            selectedItems.clear();
+            showToast(
+              `Đã duyệt ${data.affected_count} mảnh thành công`,
+              "success"
+            );
+            loadReviewItems(currentPage);
+          } else {
+            showToast("Lỗi khi duyệt: " + data.error, "error");
+          }
+        } catch (error) {
+          showToast("Lỗi khi duyệt: " + error.message, "error");
+        }
+      }
+
+      function showBulkRejectModal() {
+        if (selectedItems.size === 0) return;
+
+        document.getElementById("bulkRejectComment").value = "";
+        document.getElementById("bulkRejectModal").style.display = "block";
+      }
+
+      function closeBulkRejectModal() {
+        document.getElementById("bulkRejectModal").style.display = "none";
+      }
+
+      async function confirmBulkReject() {
+        const comment = document
+          .getElementById("bulkRejectComment")
+          .value.trim();
+        if (!comment) {
+          showToast("Vui lòng nhập lý do từ chối", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `/api/packages/${packageId}/bulk-review`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                action: "reject",
+                item_ids: Array.from(selectedItems),
+                comment: comment,
+              }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            selectedItems.clear();
+            closeBulkRejectModal();
+            showToast(`Đã từ chối ${data.affected_count} mảnh`, "success");
+            loadReviewItems(currentPage);
+          } else {
+            showToast("Lỗi khi từ chối: " + data.error, "error");
+          }
+        } catch (error) {
+          showToast("Lỗi khi từ chối: " + error.message, "error");
+        }
+      }
+
+      async function approveAllItems() {
+        if (
+          !confirm("Bạn có chắc chắn muốn duyệt tất cả mảnh đã hoàn thành?")
+        ) {
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `/api/packages/${packageId}/approve-all`,
+            {
+              method: "POST",
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            showToast(
+              `Đã duyệt ${data.affected_count} mảnh thành công`,
+              "success"
+            );
+            loadReviewItems(currentPage);
+          } else {
+            showToast("Lỗi khi duyệt tất cả: " + data.error, "error");
+          }
+        } catch (error) {
+          showToast("Lỗi khi duyệt tất cả: " + error.message, "error");
+        }
+      }
+
+      // Utility functions
+      function getStatusText(status) {
+        const statusMap = {
+          completed: "Chờ duyệt",
+          recompleted: "Đã sửa lại",
+          approved: "Đã duyệt",
+          rejected: "Đã từ chối",
+        };
+        return statusMap[status] || status;
+      }
+
+      function showError(message) {
+        const container = document.getElementById("itemsContainer");
+        container.innerHTML = `<div class="error">${message}</div>`;
+      }
+
+      function showToast(message, type = "success") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.add("show");
+        }, 100);
+
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 300);
+        }, 3000);
+      }
+
+      // Close modals when clicking outside
+      window.onclick = function (event) {
+        const reviewModal = document.getElementById("reviewModal");
+        const bulkRejectModal = document.getElementById("bulkRejectModal");
+
+        if (event.target === reviewModal) {
+          closeReviewModal();
+        }
+        if (event.target === bulkRejectModal) {
+          closeBulkRejectModal();
+        }
+      };
+    </script>
+  </body>
+</html>

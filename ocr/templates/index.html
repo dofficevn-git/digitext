@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KIE Document Processing System</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main.css') }}"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="sidebar-toggle-box">
+        <div class="fa fa-bars" onclick="toggleSidebar()"></div>
+      </div>
+      <a href="/" class="logo"><b>PHẦN MỀM SỐ HÓA TÀI LIỆU</b></a>
+
+      <div class="top-menu">
+        <ul class="nav pull-right">
+          <li id="userInfo" style="display: none">
+            <span class="logout" id="userName"></span>
+          </li>
+          <li>
+            <a
+              href="/logout"
+              class="logout"
+              id="logoutBtn"
+              style="display: none"
+            >
+              <i class="fa fa-sign-out"></i> Đăng xuất
+            </a>
+          </li>
+        </ul>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside>
+      <div id="sidebar">
+        <ul class="sidebar-menu">
+          <li class="mt">
+            <a href="/" class="active">
+              <i class="fa fa-home"></i>
+              <span>Trang chủ</span>
+            </a>
+          </li>
+          <li>
+            <a href="/customer-statistics-page">
+              <i class="fa fa-chart-bar"></i>
+              <span>Thống kê</span>
+            </a>
+          </li>
+          <li>
+            <a href="/manage-packages-page">
+              <i class="fa fa-archive"></i>
+              <span>Quản lý gói</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </aside>
+    <section id="main-content">
+      <section class="wrapper">
+        <div class="content-panel">
+          <div class="container-fluid mt-4">
+            <!-- Main Content -->
+            <!-- ✅ THÊM VÀO PHẦN BUTTONS TRONG index.html -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div
+                    class="card-header d-flex justify-content-between align-items-center"
+                  >
+                    <h5 class="mb-0">📁 Quản lý Batch</h5>
+                    <div class="btn-group">
+                      <button
+                        class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#uploadModal"
+                      >
+                        <i class="fas fa-upload"></i> Upload Local Files
+                      </button>
+                      <!-- ✅ NÚT MỚI: TẠO BATCH TỪ EXTERNAL -->
+                      <button
+                        class="btn btn-info"
+                        onclick="showExternalProjectsModal()"
+                      >
+                        <i class="fas fa-cloud"></i> Tạo Batch từ External
+                        Project
+                      </button>
+                      <button class="btn btn-secondary" onclick="loadBatches()">
+                        <i class="fas fa-sync"></i> Refresh
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Batch table content remains same -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Batch List -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h5 class="mb-0">Danh sách Batch</h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-responsive">
+                      <table class="table table-striped" id="batchTable">
+                        <thead>
+                          <tr>
+                            <th>Tên Batch</th>
+                            <th>Ngày tạo</th>
+                            <th>Số file</th>
+                            <th>Đã xử lý</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- Upload Modal -->
+    <div class="modal fade" id="uploadModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Upload Folder Tài liệu</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+              <div class="mb-3">
+                <label for="batchName" class="form-label">Tên Batch</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="batchName"
+                  name="batch_name"
+                  placeholder="Nhập tên batch hoặc để trống tự động tạo"
+                />
+              </div>
+              <div class="mb-3">
+                <label for="fileInput" class="form-label">Chọn files</label>
+                <input
+                  type="file"
+                  class="form-control"
+                  id="fileInput"
+                  name="files"
+                  multiple
+                  webkitdirectory
+                  directory
+                  accept=".pdf"
+                />
+                <div class="form-text">Chọn folder chứa tài liệu PDF</div>
+              </div>
+              <div id="fileList" class="mt-3"></div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Hủy
+            </button>
+            <button type="button" class="btn btn-primary" id="uploadBtn">
+              Upload
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="progressModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="fas fa-upload me-2"></i>Đang upload tài liệu
+            </h5>
+            <!-- ✅ CHỈ CHO PHÉP ĐÓNG KHI HOÀN THÀNH -->
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              id="progressCloseBtn"
+              style="display: none"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <!-- ✅ OVERALL PROGRESS -->
+            <div class="mb-3">
+              <div
+                class="d-flex justify-content-between align-items-center mb-1"
+              >
+                <span class="text-muted">Tổng tiến độ:</span>
+                <span class="fw-bold" id="overallProgress">0/0 files</span>
+              </div>
+              <div class="progress mb-2">
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  id="overallProgressBar"
+                  role="progressbar"
+                  style="width: 0%"
+                >
+                  0%
+                </div>
+              </div>
+            </div>
+
+            <!-- ✅ CURRENT FILE PROGRESS -->
+            <div class="mb-3">
+              <div
+                class="d-flex justify-content-between align-items-center mb-1"
+              >
+                <span class="text-muted">File hiện tại:</span>
+                <span class="small text-muted" id="currentFileSize"></span>
+              </div>
+              <div
+                class="text-truncate mb-1"
+                id="currentFileName"
+                style="max-width: 100%"
+              >
+                Đang chuẩn bị...
+              </div>
+              <div class="progress">
+                <div
+                  class="progress-bar bg-info"
+                  id="currentFileProgressBar"
+                  role="progressbar"
+                  style="width: 0%"
+                >
+                  0%
+                </div>
+              </div>
+            </div>
+
+            <!-- ✅ UPLOAD STATS -->
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="text-success fw-bold" id="successCount">0</div>
+                <small class="text-muted">Thành công</small>
+              </div>
+              <div class="col-4">
+                <div class="text-danger fw-bold" id="failCount">0</div>
+                <small class="text-muted">Thất bại</small>
+              </div>
+              <div class="col-4">
+                <div class="text-primary fw-bold" id="totalSize">0 MB</div>
+                <small class="text-muted">Tổng dung lượng</small>
+              </div>
+            </div>
+
+            <!-- ✅ DETAILED PROGRESS LOG -->
+            <div class="mt-3">
+              <div
+                class="d-flex justify-content-between align-items-center mb-2"
+              >
+                <h6 class="mb-0">Chi tiết upload:</h6>
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  id="toggleLogBtn"
+                  onclick="toggleUploadLog()"
+                >
+                  <i class="fas fa-chevron-down"></i> Xem chi tiết
+                </button>
+              </div>
+              <div
+                id="uploadLog"
+                class="border rounded p-2 bg-light"
+                style="max-height: 200px; overflow-y: auto; display: none"
+              >
+                <div class="small text-muted">Sẵn sàng upload...</div>
+              </div>
+            </div>
+
+            <!-- ✅ ERROR LIST (if any) -->
+            <div id="errorSection" style="display: none">
+              <h6 class="text-danger mt-3">Các file lỗi:</h6>
+              <div
+                id="errorList"
+                class="list-group"
+                style="max-height: 150px; overflow-y: auto"
+              >
+                <!-- Will be populated with failed files -->
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <div id="uploadingFooter">
+              <button
+                type="button"
+                class="btn btn-outline-warning"
+                onclick="cancelUpload()"
+                id="cancelUploadBtn"
+              >
+                <i class="fas fa-times me-1"></i>Hủy upload
+              </button>
+            </div>
+            <div id="completedFooter" style="display: none">
+              <button
+                type="button"
+                class="btn btn-primary"
+                data-bs-dismiss="modal"
+              >
+                <i class="fas fa-check me-1"></i>Hoàn thành
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tìm và thay thế modal createPackageFromBatchModal -->
+    <div class="modal fade" id="createPackageFromBatchModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="fas fa-box me-2"></i>Tạo gói từ batch
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div
+              class="alert alert-success d-none"
+              id="packageSuccessMessage"
+            ></div>
+            <div
+              class="alert alert-danger d-none"
+              id="packageErrorMessage"
+            ></div>
+
+            <form id="createPackageFromBatchForm">
+              <div class="mb-3">
+                <label class="form-label">Batch nguồn</label>
+                <div class="p-2 bg-light border rounded">
+                  <strong id="selectedBatchName">-</strong>
+                  <br />
+                  <small class="text-muted" id="selectedBatchInfo">-</small>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="packageNameFromBatch" class="form-label">
+                  Tên gói <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="packageNameFromBatch"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">
+                  Cooperator <span class="text-danger">*</span>
+                  <span class="badge bg-primary ms-2" id="cooperatorCountBadge"
+                    >0 đã chọn</span
+                  >
+                </label>
+                <div class="cooperator-select-box" id="cooperatorSelectBox">
+                  <div class="d-flex align-items-center mb-2 gap-2">
+                    <label
+                      class="cooperator-checkbox-item flex-shrink-0 m-0 px-2 py-1"
+                      style="
+                        background: #e8f4fd;
+                        border: 1px solid #bee5eb;
+                        border-radius: 6px;
+                        cursor: pointer;
+                      "
+                    >
+                      <input
+                        type="checkbox"
+                        id="selectAllCooperators"
+                        onchange="toggleAllCooperatorsModal(this)"
+                        style="margin-right: 4px"
+                      />
+                      <span style="font-size: 0.85em; font-weight: 600"
+                        >Chọn tất cả</span
+                      >
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="cooperatorSearchInput"
+                      placeholder="Tìm cooperator..."
+                      oninput="filterCooperatorsModal(this.value)"
+                    />
+                  </div>
+                  <div
+                    id="cooperatorCheckboxList"
+                    style="
+                      max-height: 180px;
+                      overflow-y: auto;
+                      border: 1px solid #dee2e6;
+                      border-radius: 6px;
+                      padding: 4px;
+                    "
+                  ></div>
+                  <div
+                    class="mt-1 text-muted"
+                    style="font-size: 0.82em"
+                    id="selectedCooperatorsSummaryModal"
+                  >
+                    Chưa chọn cooperator nào
+                  </div>
+                </div>
+              </div>
+
+              <!-- ✅ THÊM CHẾ ĐỘ PHÂN MẢNH -->
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-cut me-1"></i>Chế độ phân mảnh
+                  <span class="text-danger">*</span>
+                </label>
+                <div class="btn-group w-100" role="group">
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="fragmentationModeFromBatch"
+                    id="fragmentedModeFromBatch"
+                    value="true"
+                    checked
+                    onchange="handleFragmentationModeChangeFromBatch()"
+                  />
+                  <label
+                    class="btn btn-outline-primary"
+                    for="fragmentedModeFromBatch"
+                  >
+                    <i class="fas fa-scissors me-1"></i>Phân mảnh
+                  </label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="fragmentationModeFromBatch"
+                    id="nonFragmentedModeFromBatch"
+                    value="false"
+                    onchange="handleFragmentationModeChangeFromBatch()"
+                  />
+                  <label
+                    class="btn btn-outline-success"
+                    for="nonFragmentedModeFromBatch"
+                  >
+                    <i class="fas fa-file-pdf me-1"></i>Không phân mảnh
+                  </label>
+                </div>
+                <div class="form-text" id="fragmentationHelpFromBatch">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Phân mảnh: Mỗi tài liệu chia thành 2 mảnh (Header + Content)
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="itemCountFromBatch" class="form-label">
+                  <i class="fas fa-calculator me-1"></i>Số lượng mảnh
+                  <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="itemCountFromBatch"
+                  min="1"
+                  max="999"
+                  required
+                  placeholder="Nhập số mảnh muốn gán..."
+                />
+                <!-- ✅ THÊM HELPER TEXT -->
+                <div class="form-text">
+                  <i class="fas fa-info-circle me-1"></i>
+                  <span id="itemCountHelper"
+                    >Nhập số lượng mảnh muốn gán cho cooperator (tối đa:
+                    <span id="maxItemCount">-</span> mảnh)</span
+                  >
+                </div>
+              </div>
+              <input type="hidden" id="selectedBatchIdForPackage" />
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="createPackageFromBatchBtn"
+            >
+              <i class="fas fa-plus me-1"></i>Tạo gói
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="externalProjectsModal" tabindex="-1">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">
+              <i class="fas fa-cloud me-2"></i>Tạo Batch từ External Project
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Project Selection -->
+            <div id="projectsListSection">
+              <div class="row mb-3">
+                <div class="col-md-8">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-project-diagram me-1"></i>Chọn Dự án:
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text"
+                      ><i class="fas fa-search"></i
+                    ></span>
+                    <input
+                      type="text"
+                      id="projectSearchInput"
+                      class="form-control"
+                      placeholder="Tìm kiếm dự án theo tên hoặc mã..."
+                      onkeyup="filterProjects()"
+                    />
+                    <button
+                      class="btn btn-outline-secondary"
+                      onclick="loadExternalProjects()"
+                      title="Làm mới"
+                    >
+                      <i class="fas fa-sync"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <div class="alert alert-info mb-0 w-100">
+                    <small class="mb-0">
+                      <i class="fas fa-info-circle me-1"></i>
+                      Chọn dự án để duyệt thư mục và tạo batch
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-body p-2">
+                  <div
+                    id="projectsListContainer"
+                    style="max-height: 400px; overflow-y: auto"
+                  >
+                    <div class="text-center py-4">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <div class="mt-2">Đang tải danh sách dự án...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Folder Browser -->
+            <div id="folderBrowserSection" style="display: none">
+              <!-- Header với breadcrumb -->
+              <div class="card mb-3">
+                <div class="card-header bg-light">
+                  <div
+                    class="d-flex justify-content-between align-items-center"
+                  >
+                    <div>
+                      <h6 class="mb-1">
+                        <i class="fas fa-folder-open text-primary me-1"></i>
+                        Duyệt thư mục:
+                        <span
+                          id="currentProjectName"
+                          class="text-primary"
+                        ></span>
+                      </h6>
+                      <nav>
+                        <ol class="breadcrumb mb-0 small" id="folderBreadcrumb">
+                          <li class="breadcrumb-item active">Root</li>
+                        </ol>
+                      </nav>
+                    </div>
+                    <button
+                      class="btn btn-outline-secondary btn-sm"
+                      onclick="backToProjectsList()"
+                    >
+                      <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Folder Contents -->
+              <div class="card">
+                <div class="card-body p-0">
+                  <div
+                    id="folderContentsContainer"
+                    style="max-height: 500px; overflow-y: auto"
+                  >
+                    <div class="text-center py-4">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <div class="mt-2">Đang tải nội dung thư mục...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer với action buttons -->
+          <div class="modal-footer bg-light">
+            <div class="d-flex justify-content-between w-100">
+              <div class="text-muted small">
+                <i class="fas fa-lightbulb me-1"></i>
+                Chọn dự án → Duyệt thư mục → Tạo batch từ thư mục
+              </div>
+              <div>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  <i class="fas fa-times me-1"></i>Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

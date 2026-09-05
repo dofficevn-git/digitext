@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thống kê cá nhân - KIE Document Processing</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/main.css" />
+    <style>
+      .stat-card {
+        border-radius: 12px;
+        padding: 20px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s;
+      }
+      .stat-card:hover {
+        transform: translateY(-3px);
+      }
+      .stat-card .stat-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 2.5rem;
+        opacity: 0.2;
+      }
+      .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .stat-card .stat-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+      }
+      .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+      }
+      .bg-gradient-success {
+        background: linear-gradient(135deg, #11998e, #38ef7d);
+      }
+      .bg-gradient-warning {
+        background: linear-gradient(135deg, #f093fb, #f5576c);
+      }
+      .bg-gradient-info {
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+      }
+      .bg-gradient-orange {
+        background: linear-gradient(135deg, #f7971e, #ffd200);
+      }
+      .bg-gradient-dark {
+        background: linear-gradient(135deg, #434343, #000000);
+      }
+
+      .package-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+      }
+      .package-table td {
+        vertical-align: middle;
+      }
+      .package-table .progress {
+        height: 8px;
+        border-radius: 4px;
+      }
+      .package-row:hover {
+        background: #f8f9fa;
+      }
+
+      .status-bar {
+        display: flex;
+        height: 30px;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .status-bar > div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #fff;
+        min-width: 2%;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 15px;
+        font-size: 0.82rem;
+      }
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+      }
+
+      .filter-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="sidebar-toggle-box">
+        <div class="fa fa-bars" onclick="toggleSidebar()"></div>
+      </div>
+      <a href="/" class="logo"><b>PHẦN MỀM SỐ HÓA TÀI LIỆU</b></a>
+      <div class="top-menu">
+        <ul class="nav pull-right">
+          <li id="userInfo" style="display: none">
+            <span class="logout" id="userName"></span>
+            <a href="#" onclick="logout()"
+              ><i class="fa fa-sign-out-alt"></i> Đăng xuất</a
+            >
+          </li>
+        </ul>
+      </div>
+    </header>
+
+    <aside>
+      <div id="sidebar">
+        <ul class="sidebar-menu">
+          <li class="mt">
+            <a href="/"><i class="fa fa-home"></i><span>Trang chủ</span></a>
+          </li>
+          <li>
+            <a href="/cooperator-statistics-page" class="active"
+              ><i class="fa fa-chart-bar"></i><span>Thống kê</span></a
+            >
+          </li>
+          <li>
+            <a href="/work-packages-page"
+              ><i class="fa fa-archive"></i><span>Gói công việc</span></a
+            >
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    <section id="main-content">
+      <section class="wrapper">
+        <div class="content-panel">
+          <div class="container-fluid mt-4">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <div>
+                <h4 class="mb-0">
+                  <i class="fas fa-chart-line me-2 text-primary"></i>Thống kê cá
+                  nhân
+                </h4>
+                <small class="text-muted"
+                  >Tổng hợp sản lượng công việc của bạn</small
+                >
+              </div>
+              <button
+                class="btn btn-outline-primary btn-sm"
+                onclick="loadStatistics()"
+              >
+                <i class="fas fa-sync-alt me-1"></i>Làm mới
+              </button>
+            </div>
+
+            <!-- Overview Cards -->
+            <div class="row g-3 mb-4" id="overviewCards">
+              <div class="col-md-4 col-lg-2">
+                <div class="stat-card bg-gradient-primary">
+                  <div class="stat-value" id="statTotal">-</div>
+                  <div class="stat-label">Tổng mảnh đã xử lý</div>
+                  <i class="fas fa-layer-group stat-icon"></i>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="stat-card bg-gradient-info">
+                  <div class="stat-value" id="statCompleted">-</div>
+                  <div class="stat-label">Đã nhập</div>
+                  <i class="fas fa-edit stat-icon"></i>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="stat-card bg-gradient-orange">
+                  <div class="stat-value" id="statRecompleted">-</div>
+                  <div class="stat-label">Nhập lại</div>
+                  <i class="fas fa-redo stat-icon"></i>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="stat-card bg-gradient-success">
+                  <div class="stat-value" id="statApproved">-</div>
+                  <div class="stat-label">Đã duyệt</div>
+                  <i class="fas fa-check-double stat-icon"></i>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="stat-card bg-gradient-warning">
+                  <div class="stat-value" id="statRejected">-</div>
+                  <div class="stat-label">Bị từ chối</div>
+                  <i class="fas fa-times-circle stat-icon"></i>
+                </div>
+              </div>
+              <div class="col-md-4 col-lg-2">
+                <div class="stat-card bg-gradient-dark">
+                  <div class="stat-value" id="statPackages">-</div>
+                  <div class="stat-label">Gói được giao</div>
+                  <i class="fas fa-box stat-icon"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Overview -->
+            <div class="row g-3 mb-4">
+              <div class="col-lg-8">
+                <div class="card h-100">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-tasks me-2"></i>Tiến độ tổng thể
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="fw-bold" id="progressLabel">0 / 0 mảnh</span>
+                      <span class="fw-bold text-primary" id="progressPercent"
+                        >0%</span
+                      >
+                    </div>
+                    <div
+                      class="progress mb-3"
+                      style="height: 20px; border-radius: 10px"
+                    >
+                      <div
+                        class="progress-bar bg-success"
+                        id="progressBar"
+                        style="width: 0%"
+                      ></div>
+                    </div>
+                    <div class="status-bar mb-3" id="statusBar"></div>
+                    <div id="statusLegend" class="mt-2"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="card h-100">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-box me-2"></i>Gói công việc
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span>Tổng gói</span
+                      ><span class="fw-bold" id="pkgTotal">0</span>
+                    </div>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span
+                        ><span class="badge bg-primary"
+                          >Đang thực hiện</span
+                        ></span
+                      >
+                      <span class="fw-bold" id="pkgInProgress">0</span>
+                    </div>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span
+                        ><span class="badge bg-warning text-dark"
+                          >Chờ duyệt</span
+                        ></span
+                      >
+                      <span class="fw-bold" id="pkgReviewPending">0</span>
+                    </div>
+                    <div
+                      class="d-flex justify-content-between py-2 border-bottom"
+                    >
+                      <span
+                        ><span class="badge bg-danger">Có từ chối</span></span
+                      >
+                      <span class="fw-bold" id="pkgHasRejected">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                      <span
+                        ><span class="badge bg-success">Đã duyệt</span></span
+                      >
+                      <span class="fw-bold" id="pkgApproved">0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Package Filter & Table -->
+            <div class="card mb-4">
+              <div
+                class="card-header d-flex justify-content-between align-items-center"
+              >
+                <h6 class="mb-0">
+                  <i class="fas fa-archive me-2"></i>Thống kê theo Gói công việc
+                </h6>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                  <div class="d-flex align-items-center gap-1">
+                    <label style="font-size: 0.82rem; white-space: nowrap"
+                      >Từ:</label
+                    >
+                    <input
+                      type="date"
+                      class="form-control form-control-sm"
+                      id="dateFrom"
+                      onchange="loadStatistics()"
+                      style="width: 145px"
+                    />
+                  </div>
+                  <div class="d-flex align-items-center gap-1">
+                    <label style="font-size: 0.82rem; white-space: nowrap"
+                      >Đến:</label
+                    >
+                    <input
+                      type="date"
+                      class="form-control form-control-sm"
+                      id="dateTo"
+                      onchange="loadStatistics()"
+                      style="width: 145px"
+                    />
+                  </div>
+                  <div style="min-width: 250px">
+                    <select
+                      class="form-select form-select-sm"
+                      id="packageFilter"
+                      onchange="loadStatistics()"
+                    >
+                      <option value="">Tất cả các gói</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover package-table mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="width: 5%">#</th>
+                        <th style="width: 22%">Gói công việc</th>
+                        <th class="text-center" style="width: 10%">Tổng gói</th>
+                        <th class="text-center" style="width: 10%">
+                          Tôi đã xử lý
+                        </th>
+                        <th class="text-center" style="width: 8%">Đã nhập</th>
+                        <th class="text-center" style="width: 8%">Nhập lại</th>
+                        <th class="text-center" style="width: 8%">Từ chối</th>
+                        <th class="text-center" style="width: 8%">Đã duyệt</th>
+                        <th style="width: 21%">Tiến độ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="packageTableBody">
+                      <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                          Đang tải...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function toggleSidebar() {
+        document.body.classList.toggle("sidebar-closed");
+      }
+
+      async function checkAuth() {
+        try {
+          const res = await fetch("/api/auth/me");
+          if (!res.ok) {
+            window.location.href = "/login";
+            return;
+          }
+          const data = await res.json();
+          if (data.role !== "cooperator") {
+            window.location.href = "/";
+            return;
+          }
+          document.getElementById("userName").textContent = data.full_name;
+          document.getElementById("userInfo").style.display = "";
+        } catch {
+          window.location.href = "/login";
+        }
+      }
+
+      async function logout() {
+        await fetch("/api/auth/logout", { method: "POST" });
+        window.location.href = "/login";
+      }
+
+      let packageFilterLoaded = false;
+
+      async function loadStatistics() {
+        const packageId = document.getElementById("packageFilter").value;
+        const dateFrom = document.getElementById("dateFrom").value;
+        const dateTo = document.getElementById("dateTo").value;
+        const params = new URLSearchParams();
+        if (packageId) params.set("package_id", packageId);
+        if (dateFrom) params.set("date_from", dateFrom);
+        if (dateTo) params.set("date_to", dateTo);
+        const url =
+          "/api/cooperator-statistics" +
+          (params.toString() ? "?" + params.toString() : "");
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error);
+
+          const ov = data.overview;
+          const wi = data.work_items;
+
+          // Overview cards
+          document.getElementById("statTotal").textContent =
+            wi.total.toLocaleString();
+          document.getElementById("statCompleted").textContent =
+            wi.completed.toLocaleString();
+          document.getElementById("statRecompleted").textContent =
+            wi.recompleted.toLocaleString();
+          document.getElementById("statApproved").textContent =
+            wi.approved.toLocaleString();
+          document.getElementById("statRejected").textContent =
+            wi.rejected.toLocaleString();
+          document.getElementById("statPackages").textContent =
+            ov.total_packages.toLocaleString();
+
+          // Progress bar
+          const done = wi.completed + wi.recompleted + wi.approved;
+          document.getElementById("progressLabel").textContent =
+            `${done} / ${wi.total} mảnh hoàn thành`;
+          document.getElementById("progressPercent").textContent =
+            `${wi.progress}%`;
+          document.getElementById("progressBar").style.width =
+            `${wi.progress}%`;
+
+          // Status bar
+          const statusColors = {
+            completed: { color: "#0d6efd", label: "Đã nhập" },
+            recompleted: { color: "#0dcaf0", label: "Nhập lại" },
+            rejected: { color: "#dc3545", label: "Từ chối" },
+            approved: { color: "#198754", label: "Đã duyệt" },
+          };
+          const total = wi.total || 1;
+          let barHtml = "";
+          let legendHtml = "";
+          for (const [key, cfg] of Object.entries(statusColors)) {
+            const val = wi[key];
+            const pct = (val / total) * 100;
+            if (val > 0) {
+              barHtml += `<div style="width:${pct}%;background:${cfg.color}" title="${cfg.label}: ${val}">${val}</div>`;
+            }
+            legendHtml += `<span class="legend-item"><span class="legend-dot" style="background:${cfg.color}"></span>${cfg.label}: ${val}</span>`;
+          }
+          document.getElementById("statusBar").innerHTML = barHtml;
+          document.getElementById("statusLegend").innerHTML = legendHtml;
+
+          // Package summary
+          document.getElementById("pkgTotal").textContent = ov.total_packages;
+          document.getElementById("pkgInProgress").textContent =
+            ov.packages_in_progress;
+          document.getElementById("pkgReviewPending").textContent =
+            ov.packages_review_pending;
+          document.getElementById("pkgHasRejected").textContent =
+            ov.packages_has_rejected;
+          document.getElementById("pkgApproved").textContent =
+            ov.packages_approved;
+
+          // Package filter dropdown (load once)
+          if (!packageFilterLoaded && data.package_stats.length > 0) {
+            const select = document.getElementById("packageFilter");
+            data.package_stats.forEach((p) => {
+              const opt = document.createElement("option");
+              opt.value = p.id;
+              opt.textContent = p.name;
+              select.appendChild(opt);
+            });
+            packageFilterLoaded = true;
+          }
+
+          // Package table
+          const tbody = document.getElementById("packageTableBody");
+          const stats = data.package_stats;
+          if (stats.length === 0) {
+            tbody.innerHTML =
+              '<tr><td colspan="9" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>';
+          } else {
+            const statusBadge = (s) => {
+              const map = {
+                in_progress:
+                  '<span class="badge bg-primary">Đang thực hiện</span>',
+                has_rejected: '<span class="badge bg-danger">Có từ chối</span>',
+                review_pending:
+                  '<span class="badge bg-warning text-dark">Chờ duyệt</span>',
+                approved: '<span class="badge bg-success">Đã duyệt</span>',
+              };
+              return map[s] || `<span class="badge bg-secondary">${s}</span>`;
+            };
+            tbody.innerHTML = stats
+              .map(
+                (p, i) => `
+            <tr class="package-row">
+              <td>${i + 1}</td>
+              <td>
+                <div class="fw-bold">${p.name}</div>
+                <small class="text-muted">${statusBadge(p.status)}</small>
+              </td>
+              <td class="text-center">${p.total_in_package}</td>
+              <td class="text-center fw-bold">${p.my_items}</td>
+              <td class="text-center"><span class="badge bg-primary">${p.completed}</span></td>
+              <td class="text-center"><span class="badge bg-info">${p.recompleted}</span></td>
+              <td class="text-center"><span class="badge bg-danger">${p.rejected}</span></td>
+              <td class="text-center"><span class="badge bg-success">${p.approved}</span></td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1">
+                    <div class="progress-bar bg-success" style="width:${p.progress}%"></div>
+                  </div>
+                  <span class="fw-bold" style="min-width:45px;font-size:0.82rem;">${p.progress}%</span>
+                </div>
+              </td>
+            </tr>
+          `,
+              )
+              .join("");
+          }
+        } catch (err) {
+          console.error("Statistics error:", err);
+          document.getElementById("packageTableBody").innerHTML =
+            `<tr><td colspan="9" class="text-center py-4 text-danger">Lỗi: ${err.message}</td></tr>`;
+        }
+      }
+
+      // Init
+      checkAuth().then(() => loadStatistics());
+    </script>
+  </body>
+</html>

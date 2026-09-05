@@ -1,0 +1,3111 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chi tiết gói công việc</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        font-size: 12.5px;
+        color: #333;
+        background: #e9e9e9; /* ✅ SỬA: Từ #f5f5f5 sang #e9e9e9 */
+        margin: 0;
+        padding: 0;
+      }
+
+      /* ===== HEADER/NAVBAR ===== */
+      .header {
+        background: linear-gradient(
+          -120deg,
+          #27bb4d,
+          #b2e7cb,
+          #156c3e,
+          #3d6a52
+        );
+        min-height: 60px;
+        padding: 0 15px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 1002;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 100%;
+        margin: 0;
+        min-height: 60px;
+      }
+
+      .header-left {
+        flex: 1;
+      }
+
+      .header-left h1 {
+        font-size: 20px;
+        color: #ffffff;
+        margin: 0 0 5px 0;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .breadcrumb {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.9);
+        margin: 0;
+      }
+
+      .breadcrumb a {
+        color: white;
+        text-decoration: none;
+        transition: opacity 0.3s;
+      }
+
+      .breadcrumb a:hover {
+        opacity: 0.8;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .user-info {
+        color: #f2f2f2;
+        font-size: 12px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .logout-btn {
+        color: #f2f2f2;
+        font-size: 12px;
+        border-radius: 4px;
+        border: 1px solid #64c3c2;
+        padding: 5px 15px;
+        background: #68dff0;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .logout-btn:hover {
+        background: #48bcb4;
+        text-decoration: none;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 75px 15px 15px 15px; /* ✅ TOP PADDING CHO FIXED HEADER */
+        background: transparent;
+      }
+
+      .package-info {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd; /* ✅ SHADOW THEO DIGITEXT */
+        margin-bottom: 15px;
+      }
+
+      .package-header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 15px;
+        align-items: start;
+        margin-bottom: 15px;
+      }
+
+      .package-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #156c3e; /* ✅ MÀU XANH LÁ */
+        margin-bottom: 10px;
+      }
+
+      .package-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+      }
+
+      .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .meta-label {
+        font-size: 11px;
+        color: #666;
+        font-weight: 500;
+      }
+
+      .meta-value {
+        font-size: 13px;
+        color: #333;
+        font-weight: 600;
+      }
+
+      .package-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px; /* ✅ ROUNDED */
+        font-size: 12.5px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        justify-content: center;
+        font-weight: 500;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #48cfad, #37bc9b);
+        color: white;
+        border: 2px solid #37bc9b;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #37bc9b, #2aa88a);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(72, 207, 173, 0.3);
+      }
+
+      .btn-primary:disabled {
+        background: #6c757d;
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        border-color: #6c757d;
+      }
+
+      .btn-outline {
+        background: white;
+        border: 2px solid #48cfad;
+        color: #22582b;
+      }
+
+      .btn-outline:hover {
+        background: #48cfad;
+        color: white;
+        transform: translateY(-1px);
+      }
+
+      .btn-danger {
+        background: #ed5565;
+        color: white;
+        border: 2px solid #da4453;
+      }
+
+      .btn-danger:hover {
+        background: #da4453;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(237, 85, 101, 0.3);
+      }
+
+      .btn-success {
+        background: linear-gradient(135deg, #48cfad, #37bc9b);
+        color: white;
+        border: 2px solid #37bc9b;
+      }
+
+      .btn-success:hover {
+        background: linear-gradient(135deg, #37bc9b, #2aa88a);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(72, 207, 173, 0.3);
+      }
+
+      .btn-sm {
+        padding: 5px 12px;
+        font-size: 11px;
+      }
+
+      .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        display: inline-block;
+      }
+
+      .status-in-progress,
+      .status-has-rejected {
+        background: #fcb322;
+        color: white;
+      }
+
+      .status-under-review {
+        background: #41cac0;
+        color: white;
+      }
+
+      .status-completed {
+        background: #a9d86e;
+        color: white;
+      }
+
+      .progress-section {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e9ecef;
+      }
+
+      .progress-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #156c3e;
+      }
+
+      .progress-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .stat-item {
+        text-align: center;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+      }
+
+      .stat-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(72, 188, 180, 0.3);
+        border-color: #48bcb4;
+      }
+
+      .stat-item.active {
+        background: linear-gradient(135deg, #48cfad, #37bc9b);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(72, 207, 173, 0.4);
+        border-color: #37bc9b;
+      }
+
+      .stat-item.active .stat-number {
+        color: white;
+      }
+
+      .stat-item.active .stat-label {
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #156c3e;
+        margin-bottom: 4px;
+        transition: all 0.3s;
+      }
+
+      .stat-number:hover {
+        transform: scale(1.05);
+      }
+
+      .stat-label {
+        color: #666;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #48cfad, #37bc9b);
+        transition: width 0.3s;
+      }
+
+      .progress-text {
+        text-align: center;
+        font-size: 11px;
+        color: #666;
+      }
+      .items-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd;
+        overflow: hidden;
+      }
+
+      .section-header {
+        background: #f8f9fa;
+        padding: 15px;
+        border-bottom: 2px solid #48bcb4;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #156c3e;
+      }
+
+      .search-box {
+        flex: 1;
+        min-width: 250px;
+        max-width: 350px;
+        position: relative;
+      }
+
+      .search-box input {
+        width: 100%;
+        padding: 8px 35px 8px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 20px;
+        font-size: 12.5px;
+        transition: all 0.3s;
+      }
+
+      .search-box input:focus {
+        outline: none;
+        border-color: #48bcb4;
+        box-shadow: 0 0 0 0.2rem rgba(72, 188, 180, 0.25);
+      }
+
+      .search-btn {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 5px 10px;
+        color: #156c3e;
+      }
+
+      /* ✅ BULK ACTIONS CHO CUSTOMER */
+      .bulk-actions {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e1e5e9;
+        display: none;
+      }
+
+      .bulk-actions.show {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .bulk-select {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .bulk-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      /* ✅ SỬA LAYOUT - TĂNG SIZE ẢNH VÀ KIE */
+      .item-container {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 1rem;
+        transition: background-color 0.3s;
+      }
+
+      .item-container:hover {
+        background-color: #f8f9fa;
+      }
+
+      .item-container:last-child {
+        border-bottom: none;
+      }
+
+      .item-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      .item-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .item-title {
+        font-weight: 600;
+        color: #333;
+        flex: 1;
+      }
+
+      .item-badges {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .section-type-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .section-header-type {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .section-content-type {
+        background: #f3e5f5;
+        color: #7b1fa2;
+      }
+
+      .section-full-type {
+        background: #fff3cd;
+        color: #856404;
+        font-weight: 700;
+      }
+
+      .item-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .status-pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .status-completed {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .status-recompleted {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .status-rejected {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .status-approved {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      /* ✅ LAYOUT IMAGE + KIE CẢI THIỆN */
+      .item-content {
+        display: grid;
+        grid-template-columns: 700px 1fr;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .item-image {
+        background: #f8f9fa;
+        border: 1px solid #e1e5e9;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .image-header {
+        background: #f0f0f0;
+        padding: 0.5rem;
+        border-bottom: 1px solid #e1e5e9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .image-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .zoom-controls {
+        display: flex;
+        gap: 0.25rem;
+        align-items: center;
+      }
+
+      .zoom-btn {
+        padding: 0.25rem 0.5rem;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.75rem;
+      }
+
+      .zoom-btn:hover {
+        background: #f8f9fa;
+      }
+
+      .zoom-level {
+        font-size: 0.75rem;
+        color: #666;
+        min-width: 40px;
+        text-align: center;
+      }
+
+      .image-container {
+        height: 500px;
+        overflow: auto;
+        padding: 0.5rem;
+        text-align: center;
+        background: white;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }
+
+      .document-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        transition: transform 0.3s;
+        cursor: zoom-in;
+      }
+
+      .item-kie {
+        padding: 0.5rem 0;
+        min-height: 500px;
+      }
+
+      .kie-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #333;
+      }
+
+      .kie-fields {
+        display: grid;
+        gap: 0.05rem;
+        margin-bottom: 1rem;
+      }
+
+      .kie-field {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 0.25rem;
+        align-items: center;
+        padding: 0.1rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+        border-left: 3px solid #667eea;
+        min-height: 32; /* ✅ THÊM MIN HEIGHT */
+      }
+
+      .kie-label {
+        font-size: 0.875rem;
+        color: #495057;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .kie-value {
+        font-size: 0.875rem;
+        color: #212529;
+        word-break: break-word;
+        line-height: 1.3; /* ✅ GIẢM TỪ 1.4 */
+        max-height: 100px; /* ✅ GIẢM TỪ 120px */
+        overflow-y: auto;
+        padding: 0.25rem; /* ✅ GIẢM PADDING */
+        border: 1px solid #e9ecef;
+        border-radius: 3px;
+        background: white;
+      }
+
+      .kie-value.empty {
+        color: #6c757d;
+        font-style: italic;
+        max-height: none;
+        overflow: visible;
+        border: none;
+        background: transparent;
+        padding: 0.25rem; /* ✅ GIỮ PADDING NHỎ CHO EMPTY */
+      }
+
+      .kie-field.subject {
+        min-height: 50px; /* ✅ GIẢM TỪ 80px */
+      }
+      .kie-field.subject .kie-value {
+        max-height: 120px; /* ✅ GIẢM TỪ 150px */
+        min-height: 30px; /* ✅ THÊM MIN-HEIGHT */
+      }
+
+      /* ✅ SCROLLBAR STYLING */
+      .kie-value::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .kie-value::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      .kie-value::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+      }
+
+      .kie-value::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+      }
+      .kie-field .kie-label:contains("Số viết tay") {
+        color: #dc3545; /* Màu đỏ để nổi bật */
+        font-weight: 700;
+      }
+
+      /* Highlight handwritten number field */
+      .kie-field:has(.kie-label:contains("Số viết tay")) {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+      }
+
+      .kie-field:has(.kie-label:contains("Số viết tay")) .kie-value.empty {
+        color: #dc3545;
+        font-weight: 600;
+      }
+      .item-actions {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e9ecef;
+        text-align: right;
+      }
+
+      .item-actions .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+      }
+
+      .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 2rem;
+      }
+
+      .page-btn {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dee2e6;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.3s;
+      }
+
+      .page-btn:hover:not(.disabled) {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+
+      .page-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+
+      .page-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+      }
+
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+      }
+
+      .empty-state h3 {
+        margin-bottom: 1rem;
+        color: #333;
+      }
+
+      /* ✅ MODAL STYLES */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content {
+        background-color: white;
+        margin: 10% auto;
+        padding: 0;
+        border-radius: 10px;
+        width: 450px;
+        max-width: 90%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .modal-header {
+        background: linear-gradient(
+          -120deg,
+          #27bb4d,
+          #b2e7cb,
+          #156c3e,
+          #3d6a52
+        );
+        padding: 15px 20px;
+        border-bottom: none;
+      }
+
+      .modal-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        margin: 0;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 15px 20px;
+        background: #f5f5f5;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .reject-modal-content {
+        width: 500px;
+        max-width: 90%;
+      }
+
+      .reject-modal textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 0.75rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 4px;
+        font-family: inherit;
+        resize: vertical;
+        margin-top: 0.5rem;
+      }
+
+      .reject-modal textarea:focus {
+        outline: none;
+        border-color: #dc3545;
+      }
+
+      @media (max-width: 768px) {
+        .header-content {
+          flex-direction: row; /* ✅ GIỮ NGANG TRÊN MOBILE */
+          flex-wrap: wrap;
+          min-height: auto;
+          padding: 10px 0;
+        }
+
+        .header-left h1 {
+          font-size: 16px;
+        }
+
+        .breadcrumb {
+          font-size: 10px;
+        }
+
+        .header-right {
+          width: 100%;
+          justify-content: flex-end;
+          margin-top: 8px;
+        }
+
+        .user-info {
+          font-size: 11px;
+          padding: 4px 8px;
+        }
+
+        .logout-btn {
+          font-size: 11px;
+          padding: 4px 12px;
+        }
+
+        .container {
+          padding: 80px 10px 10px 10px;
+        }
+
+        .package-header {
+          grid-template-columns: 1fr;
+        }
+
+        .package-actions {
+          justify-content: stretch;
+        }
+
+        .btn {
+          flex: 1;
+        }
+      }
+      .item-container.editing {
+        border: 2px solid #667eea;
+        background-color: #f8f9ff;
+      }
+
+      .editing-badge {
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .kie-edit-input {
+        width: 100%;
+        padding: 0.375rem 0.5rem; /* ✅ GIẢM PADDING */
+        border: 2px solid #e1e5e9;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-family: inherit;
+        transition: border-color 0.3s;
+        line-height: 1.2; /* ✅ THÊM */
+      }
+
+      .kie-edit-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .kie-edit-textarea {
+        min-height: 60px; /* ✅ GIẢM TỪ 80px */
+        resize: vertical;
+        line-height: 1.3;
+      }
+
+      .kie-value-container {
+        min-height: 30px; /* ✅ GIẢM TỪ 40px */
+        display: flex;
+        align-items: center;
+      }
+      .kie-value.clickable {
+        cursor: pointer;
+        transition: background-color 0.2s;
+        padding: 0.5rem;
+        border-radius: 4px;
+        border: 1px dashed transparent;
+      }
+
+      .kie-value.clickable:hover {
+        background-color: #f0f8ff;
+        border-color: #667eea;
+      }
+
+      .kie-value.clickable.empty:hover {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+      }
+
+      .editing-notice {
+        font-size: 0.875rem;
+        color: #667eea;
+        font-style: italic;
+        text-align: center;
+        padding: 0.5rem;
+        background: #f0f8ff;
+        border-radius: 4px;
+        border: 1px solid #667eea;
+      }
+
+      /* Style cho field đang edit */
+      .kie-field.editing {
+        background-color: #f0f8ff;
+        border-left-color: #667eea;
+        border-left-width: 4px;
+      }
+      /* Disable selection while editing */
+      .item-container.editing .item-checkbox {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .item-action-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .item-action-row:last-child {
+        margin-bottom: 0;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        border: none;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+      }
+
+      .btn-primary:disabled {
+        background: #6c757d;
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+      .stat-number {
+        cursor: pointer !important;
+        transition: all 0.3s ease;
+        border-radius: 4px;
+        padding: 0.2rem 0.4rem;
+      }
+
+      .stat-number:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .active-filter {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 12px;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .result-count {
+        font-size: 0.9rem;
+        font-weight: normal;
+      }
+
+      /* Highlight active statistic */
+      .stat-item.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: scale(1.02);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+
+      .stat-item.active .stat-number {
+        color: white;
+      }
+
+      .stat-item.active .stat-label {
+        color: rgba(255, 255, 255, 0.9);
+      }
+      /* Responsive cho mobile */
+      @media (max-width: 768px) {
+        .item-action-row {
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ✅ HEADER MỚI VỚI LOGOUT -->
+    <div class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>Chi tiết gói công việc</h1>
+          <div class="breadcrumb">
+            <a href="/">Trang chủ</a> >
+            <a href="/manage-packages-page">Quản lý gói</a> > Chi tiết gói
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="user-info" id="userInfo">👤 User</span>
+          <button class="logout-btn" onclick="logout()">🚪 Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Package Info -->
+      <div class="package-info">
+        <div class="package-header">
+          <div>
+            <div class="package-title" id="packageTitle">Đang tải...</div>
+            <div class="package-meta" id="packageMeta">
+              <div class="meta-item">
+                <span class="meta-label">Cooperator</span>
+                <span class="meta-value" id="cooperatorName">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Ngày tạo</span>
+                <span class="meta-value" id="createdDate">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Tổng mảnh</span>
+                <span class="meta-value" id="totalItems">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Chế độ</span>
+                <span class="meta-value">
+                  <span
+                    class="status-badge"
+                    id="fragmentationMode"
+                    style="background: #e3f2fd; color: #1976d2"
+                    >-</span
+                  >
+                </span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Trạng thái</span>
+                <span class="meta-value">
+                  <span class="status-badge" id="packageStatus">-</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <!-- ✅ BỎ NÚT REVIEW GỘI, CHỈ GIỮ NÚT XÓA VÀ QUAY LẠI -->
+          <div class="package-actions">
+            <button
+              class="btn btn-danger btn-sm"
+              id="deleteBtn"
+              style="display: none"
+            >
+              🗑️ Xóa gói
+            </button>
+            <a
+              href="/manage-packages-page"
+              class="btn btn-outline"
+              id="backBtn"
+            >
+              ← Quay lại
+            </a>
+          </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-section">
+          <div class="progress-title">Tiến độ thực hiện</div>
+          <div class="progress-stats">
+            <div class="stat-item">
+              <div class="stat-number" id="approvedCount">0</div>
+              <div class="stat-label">Đã duyệt</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" id="pendingCount">0</div>
+              <div class="stat-label">Chờ xử lý</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" id="reviewCount">0</div>
+              <div class="stat-label">Chờ duyệt</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" id="rejectedCount">0</div>
+              <div class="stat-label">Từ chối</div>
+            </div>
+          </div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              id="progressFill"
+              style="width: 0%"
+            ></div>
+          </div>
+          <div class="progress-text" id="progressText">0% hoàn thành</div>
+        </div>
+      </div>
+
+      <!-- Items Section -->
+      <div class="items-section">
+        <div class="section-header">
+          <div class="section-title">Danh sách mảnh</div>
+          <div class="search-box">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Tìm kiếm mảnh..."
+            />
+            <button class="search-btn" onclick="searchItems()">🔍</button>
+          </div>
+        </div>
+
+        <!-- ✅ BULK ACTIONS CHO CUSTOMER -->
+        <div class="bulk-actions" id="bulkActions">
+          <div class="bulk-select">
+            <input
+              type="checkbox"
+              id="selectAll"
+              onchange="toggleSelectAll()"
+            />
+            <label for="selectAll">Chọn tất cả</label>
+            <span id="selectedCount">(0 mảnh được chọn)</span>
+          </div>
+          <div class="bulk-buttons">
+            <button
+              class="btn btn-success btn-sm"
+              onclick="approveAllItems()"
+              id="approveAllBtn"
+              title="Phê duyệt tất cả mảnh đã hoàn thành trong gói"
+            >
+              ✅ Phê duyệt tất cả
+            </button>
+            <button
+              class="btn btn-success btn-sm"
+              onclick="bulkApprove()"
+              id="bulkApproveBtn"
+              disabled
+            >
+              ✅ Phê duyệt đã chọn
+            </button>
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="bulkReject()"
+              id="bulkRejectBtn"
+              disabled
+            >
+              ❌ Từ chối đã chọn
+            </button>
+          </div>
+        </div>
+
+        <div id="itemsContainer">
+          <div class="loading">Đang tải...</div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Xác nhận xóa gói</h3>
+        </div>
+        <div class="modal-body">
+          <p>
+            Bạn có chắc chắn muốn xóa gói "<span id="deletePackageName"></span
+            >"?
+          </p>
+          <p>
+            <strong>Lưu ý:</strong> Thao tác này sẽ xóa tất cả mảnh trong gói và
+            không thể hoàn tác.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeDeleteModal()">
+            Hủy
+          </button>
+          <button class="btn btn-danger" onclick="confirmDelete()">
+            Xóa gói
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ BULK REJECT MODAL -->
+    <div id="rejectModal" class="modal">
+      <div class="modal-content reject-modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">❌ Từ chối các mảnh đã chọn</h3>
+        </div>
+        <div class="modal-body">
+          <p>Bạn đang từ chối <span id="rejectCount">0</span> mảnh.</p>
+          <p>Vui lòng nhập lý do từ chối:</p>
+          <textarea
+            id="rejectComment"
+            placeholder="Nhập lý do từ chối... (bắt buộc)"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeRejectModal()">
+            Hủy
+          </button>
+          <button class="btn btn-danger" onclick="confirmBulkReject()">
+            Xác nhận từ chối
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let currentPage = 1;
+      let currentSearch = "";
+      let packageId = "";
+      let packageData = null;
+      let userRole = null;
+      let selectedItems = new Set();
+      let editingItems = new Set();
+      let currentStatusFilter = "";
+
+      // Image zoom và pan state
+      let imageStates = {};
+
+      const documentTypes = [
+        "Nghị quyết",
+        "Quyết định",
+        "Chỉ thị",
+        "Quy chế",
+        "Quy định",
+        "Thông cáo",
+        "Thông báo",
+        "Hướng dẫn",
+        "Chương trình",
+        "Kế hoạch",
+        "Phương án",
+        "Đề án",
+        "Dự án",
+        "Báo cáo",
+        "Tờ trình",
+        "Giấy ủy quyền",
+        "Phiếu gửi",
+        "Phiếu chuyển",
+        "Phiếu báo",
+        "Biên bản",
+        "Hợp đồng",
+        "Công văn",
+        "Công điện",
+        "Bản ghi nhớ",
+        "Bản thỏa thuận",
+        "Giấy mời",
+        "Giấy giới thiệu",
+        "Giấy nghỉ phép",
+        "Thư công",
+        "Bản đồ",
+        "Bản vẽ kỹ thuật",
+        "Phiếu chi",
+        "Thông tri",
+        "Bảng tổng hợp",
+        "Ủy nhiệm chi",
+        "Bản kiểm điểm",
+        "Nội quy",
+        "Phiếu giới thiệu",
+        "Phiếu",
+        "Kết luận",
+        "Nghị định",
+        "Thông tư",
+        "Đề nghị",
+        "Khác",
+      ];
+
+      // ===== IMAGE ZOOM & PAN FUNCTIONS =====
+      function initializeImageState(itemId) {
+        if (!imageStates[itemId]) {
+          imageStates[itemId] = {
+            zoom: 1,
+            panX: 0,
+            panY: 0,
+            isDragging: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+          };
+        }
+      }
+
+      function setupImageInteractions(itemId) {
+        const image = document.getElementById(`img-${itemId}`);
+        const container = image?.parentElement;
+
+        if (!image || !container) return;
+
+        initializeImageState(itemId);
+
+        // Mouse wheel zoom
+        container.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          handleZoomAtPoint(itemId, e);
+        });
+
+        // Mouse down - start dragging
+        image.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          const state = imageStates[itemId];
+          state.isDragging = true;
+          state.lastMouseX = e.clientX;
+          state.lastMouseY = e.clientY;
+          image.style.cursor = "grabbing";
+        });
+
+        // Mouse move - pan image
+        container.addEventListener("mousemove", (e) => {
+          const state = imageStates[itemId];
+          if (!state.isDragging) return;
+
+          e.preventDefault();
+          const deltaX = e.clientX - state.lastMouseX;
+          const deltaY = e.clientY - state.lastMouseY;
+
+          state.panX += deltaX;
+          state.panY += deltaY;
+          state.lastMouseX = e.clientX;
+          state.lastMouseY = e.clientY;
+
+          updateImageTransform(itemId);
+        });
+
+        // Mouse up - stop dragging
+        document.addEventListener("mouseup", () => {
+          const state = imageStates[itemId];
+          if (state.isDragging) {
+            state.isDragging = false;
+            image.style.cursor = state.zoom > 1 ? "grab" : "zoom-in";
+          }
+        });
+
+        // Set initial cursor
+        image.style.cursor = "zoom-in";
+
+        // Double click to reset
+        image.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          resetZoom(itemId);
+        });
+      }
+
+      function handleZoomAtPoint(itemId, e) {
+        const image = document.getElementById(`img-${itemId}`);
+        const container = e.currentTarget;
+        const state = imageStates[itemId];
+
+        // Get mouse position relative to container
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Get image position relative to container
+        const imageRect = image.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const imageX = imageRect.left - containerRect.left;
+        const imageY = imageRect.top - containerRect.top;
+
+        // Calculate mouse position relative to image
+        const relativeX = (mouseX - imageX - state.panX) / state.zoom;
+        const relativeY = (mouseY - imageY - state.panY) / state.zoom;
+
+        // Determine zoom direction
+        const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
+        const newZoom = Math.max(0.2, Math.min(5, state.zoom * zoomFactor)); // ✅ GIẢM MIN TỪ 0.5 → 0.2
+
+        if (newZoom !== state.zoom) {
+          // Calculate new pan to keep mouse point fixed
+          state.panX = mouseX - relativeX * newZoom - imageX;
+          state.panY = mouseY - relativeY * newZoom - imageY;
+          state.zoom = newZoom;
+
+          updateImageTransform(itemId);
+          updateZoomControls(itemId);
+        }
+      }
+
+      function updateImageTransform(itemId) {
+        const image = document.getElementById(`img-${itemId}`);
+        const state = imageStates[itemId];
+
+        if (image) {
+          image.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+          image.style.transformOrigin = "0 0";
+
+          // Update cursor based on zoom level
+          if (state.zoom > 1) {
+            image.style.cursor = state.isDragging ? "grabbing" : "grab";
+          } else {
+            image.style.cursor = "zoom-in";
+          }
+        }
+      }
+
+      function updateZoomControls(itemId) {
+        const zoomLevel = document.getElementById(`zoom-${itemId}`);
+        const state = imageStates[itemId];
+
+        if (zoomLevel && state) {
+          zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+        }
+      }
+
+      function zoomImage(itemId, direction) {
+        initializeImageState(itemId);
+        const state = imageStates[itemId];
+        const image = document.getElementById(`img-${itemId}`);
+
+        if (!image) return;
+
+        const rect = image.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        const zoomFactor = direction === "in" ? 1.2 : 0.8;
+        const newZoom = Math.max(0.2, Math.min(5, state.zoom * zoomFactor)); // ✅ GIẢM MIN TỪ 0.5 → 0.2
+
+        if (newZoom !== state.zoom) {
+          // Zoom from center
+          const relativeX = (centerX - state.panX) / state.zoom;
+          const relativeY = (centerY - state.panY) / state.zoom;
+
+          state.panX = centerX - relativeX * newZoom;
+          state.panY = centerY - relativeY * newZoom;
+          state.zoom = newZoom;
+
+          updateImageTransform(itemId);
+          updateZoomControls(itemId);
+        }
+      }
+
+      function resetZoom(itemId) {
+        initializeImageState(itemId);
+        const state = imageStates[itemId];
+
+        state.zoom = 1;
+        state.panX = 0;
+        state.panY = 0;
+        state.isDragging = false;
+
+        updateImageTransform(itemId);
+        updateZoomControls(itemId);
+      }
+
+      // ===== INITIALIZATION =====
+      document.addEventListener("DOMContentLoaded", function () {
+        const pathParts = window.location.pathname.split("/");
+        packageId = pathParts[pathParts.indexOf("package") + 1];
+
+        if (packageId) {
+          updateUIForRole();
+          loadPackageDetail();
+          loadPackageItems();
+          setTimeout(() => {
+            setupStatisticsClickHandlers();
+
+            // ✅ HIỂN THỊ FILTER NẾU CÓ TRONG URL
+            if (currentStatusFilter) {
+              showActiveFilter(currentStatusFilter);
+            }
+          }, 1000);
+        } else {
+          showError("Không tìm thấy ID gói");
+        }
+
+        document
+          .getElementById("searchInput")
+          .addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+              searchItems();
+            }
+          });
+      });
+
+      // ===== UI UPDATE FOR ROLE =====
+      async function updateUIForRole() {
+        try {
+          const response = await fetch("/api/auth/me");
+          const userData = await response.json();
+
+          userRole = userData.role;
+          document.getElementById("userInfo").textContent = `👤 ${
+            userData.username || "User"
+          }`;
+
+          const breadcrumbElement = document.querySelector(".breadcrumb");
+          const backBtn = document.getElementById("backBtn");
+
+          if (userData.role === "cooperator") {
+            breadcrumbElement.innerHTML = `
+        <a href="/">Trang chủ</a> >
+        <a href="/work-packages-page">Gói công việc</a> >
+        Chi tiết gói
+      `;
+            backBtn.href = "/work-packages-page";
+            backBtn.textContent = "← Quay lại gói công việc";
+            hideCustomerFeatures();
+          } else {
+            breadcrumbElement.innerHTML = `
+        <a href="/">Trang chủ</a> >
+        <a href="/manage-packages-page">Quản lý gói</a> >
+        Chi tiết gói
+      `;
+            backBtn.href = "/manage-packages-page";
+            backBtn.textContent = "← Quay lại";
+            showCustomerFeatures();
+          }
+        } catch (error) {
+          console.error("Error updating UI for role:", error);
+        }
+      }
+
+      function hideCustomerFeatures() {
+        document.getElementById("bulkActions").classList.remove("show");
+        document.getElementById("deleteBtn").style.display = "none";
+      }
+
+      function showCustomerFeatures() {
+        document.getElementById("bulkActions").classList.add("show");
+        document.getElementById("deleteBtn").style.display = "inline-flex";
+        document.getElementById("deleteBtn").onclick = () =>
+          showDeleteModal(packageId, packageData?.name);
+      }
+
+      // ===== LOAD DATA =====
+      async function loadPackageDetail() {
+        try {
+          const response = await fetch(`/api/packages/${packageId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            packageData = data.package;
+            renderPackageInfo(packageData);
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi tải thông tin gói: " + error.message);
+        }
+      }
+
+      function renderPackageInfo(pkg) {
+        document.getElementById("packageTitle").textContent = pkg.name;
+        document.getElementById("cooperatorName").textContent =
+          pkg.cooperator_name;
+        document.getElementById("createdDate").textContent = new Date(
+          pkg.created_at,
+        ).toLocaleDateString("vi-VN");
+        document.getElementById("totalItems").textContent = pkg.total_items;
+
+        // ✅ HIỂN THỊ CHẾ ĐỘ PHÂN MẢNH
+        const fragmentationBadge = document.getElementById("fragmentationMode");
+        if (pkg.is_fragmented === false) {
+          fragmentationBadge.textContent = "Không phân mảnh";
+          fragmentationBadge.style.background = "#fff3cd";
+          fragmentationBadge.style.color = "#856404";
+        } else {
+          fragmentationBadge.textContent = "Phân mảnh";
+          fragmentationBadge.style.background = "#e3f2fd";
+          fragmentationBadge.style.color = "#1976d2";
+        }
+
+        const statusBadge = document.getElementById("packageStatus");
+        statusBadge.textContent = getStatusText(pkg.status);
+        statusBadge.className = `status-badge status-${pkg.status}`;
+
+        const counts = pkg.status_counts;
+        document.getElementById("approvedCount").textContent = counts.approved;
+        document.getElementById("pendingCount").textContent = counts.pending;
+        document.getElementById("reviewCount").textContent =
+          counts.completed + counts.recompleted;
+        document.getElementById("rejectedCount").textContent = counts.rejected;
+
+        const progress =
+          pkg.total_items > 0
+            ? Math.round((counts.approved / pkg.total_items) * 100)
+            : 0;
+        document.getElementById("progressFill").style.width = progress + "%";
+        document.getElementById("progressText").textContent =
+          `${progress}% hoàn thành`;
+      }
+      async function loadPackageItems(page = 1) {
+        try {
+          currentPage = page;
+          const params = new URLSearchParams({
+            page: page,
+            per_page: 5,
+            search: currentSearch,
+          });
+
+          // ✅ THÊM STATUS FILTER NẾU CÓ
+          if (currentStatusFilter) {
+            params.append("status_filter", currentStatusFilter);
+          }
+
+          const response = await fetch(
+            `/api/packages/${packageId}/items?${params}`,
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            window.allPackageItems = data.items;
+            renderItems(data.items);
+            renderPagination(data);
+
+            // ✅ CẬP NHẬT ITEM COUNT HIỂN THỊ
+            updateItemCountDisplay(data);
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi tải danh sách mảnh: " + error.message);
+        }
+      }
+      function updateItemCountDisplay(data) {
+        // ✅ HIỂN THỊ SỐ LƯỢNG KẾT QUẢ
+        const sectionTitle = document.querySelector(".section-title");
+        const existingCount = sectionTitle.querySelector(".result-count");
+
+        if (existingCount) {
+          existingCount.remove();
+        }
+
+        if (data.remaining_count !== undefined) {
+          // CTV mode: hiển thị số mảnh còn lại
+          const countSpan = document.createElement("span");
+          countSpan.className = "result-count text-muted ms-2";
+          countSpan.textContent = `(Còn ${data.remaining_count} mảnh cần xử lý)`;
+          sectionTitle.appendChild(countSpan);
+        } else if (currentStatusFilter) {
+          const countSpan = document.createElement("span");
+          countSpan.className = "result-count text-muted ms-2";
+          countSpan.textContent = `(${data.total_count} mảnh)`;
+          sectionTitle.appendChild(countSpan);
+        }
+      }
+      function renderItems(items) {
+        const container = document.getElementById("itemsContainer");
+
+        if (items.length === 0) {
+          const emptyMessage =
+            userRole === "cooperator"
+              ? "Không có mảnh nào cần xử lý"
+              : "Không có mảnh nào";
+
+          container.innerHTML = `
+      <div class="empty-state">
+        <h3>${emptyMessage}</h3>
+        <p>${
+          userRole === "cooperator"
+            ? "Tất cả mảnh đã được xác nhận hoàn thành"
+            : "Gói này chưa có mảnh hoặc không tìm thấy mảnh phù hợp"
+        }</p>
+      </div>
+    `;
+          return;
+        }
+
+        // ✅ SỬA LOGIC FILTER CHO COOPERATOR
+        let filteredItems = items;
+
+        if (userRole === "cooperator") {
+          // ✅ NẾU CÓ STATUS FILTER → HIỂN THỊ THEO FILTER (BỎ QUA RULE PENDING/REJECTED)
+          if (currentStatusFilter) {
+            filteredItems = items; // ✅ HIỂN THỊ TẤT CẢ ITEMS TỪ API (ĐÃ ĐƯỢC FILTER SERVER-SIDE)
+          } else {
+            // ✅ NẾU KHÔNG CÓ FILTER → CHỈ HIỂN THỊ pending, rejected (DEFAULT VIEW)
+            filteredItems = items.filter(
+              (item) => item.status === "pending" || item.status === "rejected",
+            );
+
+            console.log(
+              `🔍 Cooperator default filter: ${items.length} total → ${filteredItems.length} visible (pending/rejected only)`,
+            );
+
+            // Nếu sau filter không còn gì
+            if (filteredItems.length === 0) {
+              container.innerHTML = `
+          <div class="empty-state">
+            <h3>🎉 Hoàn thành!</h3>
+            <p>Tất cả mảnh đã được xác nhận hoàn thành.<br>
+               Tổng cộng: ${items.length} mảnh đã xử lý.</p>
+          </div>
+        `;
+              return;
+            }
+          }
+        }
+
+        // ✅ RENDER FILTERED ITEMS
+        container.innerHTML = filteredItems
+          .map((item) => {
+            const kieData = item.kie_data || {};
+            const isEditing = editingItems.has(item.id);
+
+            const getValue = (key) => {
+              if (!kieData[key]) return "";
+              const value = kieData[key];
+              if (typeof value === "string" || typeof value === "number") {
+                return String(value).trim();
+              }
+              if (typeof value === "object" && value.value !== undefined) {
+                return String(value.value).trim();
+              }
+              return "";
+            };
+
+            let kieFieldsHtml = "";
+
+            if (item.section_type === "header") {
+              const fields = [
+                { key: "document_type", label: "Loại văn bản", type: "select" },
+                { key: "document_number", label: "Số văn bản", type: "text" },
+                {
+                  key: "document_symbol",
+                  label: "Ký hiệu văn bản",
+                  type: "text",
+                },
+                { key: "handwritten_number", label: "Tờ số", type: "text" },
+                { key: "issue_date", label: "Ngày văn bản", type: "date" },
+                {
+                  key: "issuing_authority",
+                  label: "Cơ quan ban hành",
+                  type: "text",
+                },
+                { key: "signer_name", label: "Người ký", type: "text" },
+                {
+                  key: "summary",
+                  label: "Trích yếu",
+                  type: "textarea",
+                  class: "subject",
+                },
+              ];
+
+              kieFieldsHtml = fields
+                .map((field) => {
+                  const currentValue = getValue(field.key);
+                  return `
+              <div class="kie-field ${field.class || ""}">
+                <div class="kie-label">${field.label}:</div>
+                <div class="kie-value-container">
+                  ${renderKieFieldValue(
+                    item.id,
+                    field,
+                    currentValue,
+                    isEditing,
+                  )}
+                </div>
+              </div>
+            `;
+                })
+                .join("");
+
+              // ✅ THÊM 2 TRƯỜNG MỚI - LOẠI HÌNH VÀ GHI CHÚ (SAU CÁC FIELDS KIE)
+              kieFieldsHtml += `
+          <div class="kie-field" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+            <div class="kie-label">
+              <i class="fas fa-certificate" style="color: #007bff; margin-right: 5px;"></i>Loại hình:
+            </div>
+            <div class="kie-value-container">
+              ${renderDocumentMetadataField(
+                item.id,
+                "document_original_type",
+                item.document_original_type || "Bản chính",
+                "select", // ← ĐÃ THAY ĐỔI
+                isEditing,
+              )}
+            </div>
+          </div>
+          <div class="kie-field">
+            <div class="kie-label">
+              <i class="fas fa-sticky-note" style="color: #ffc107; margin-right: 5px;"></i>Ghi chú:
+            </div>
+            <div class="kie-value-container">
+              ${renderDocumentMetadataField(
+                item.id,
+                "document_note",
+                item.document_note || "",
+                "textarea",
+                isEditing,
+              )}
+            </div>
+          </div>
+        `;
+            } else if (item.section_type === "full") {
+              // ✅ FULL PDF MODE - HIỂN THỊ TẤT CẢ FIELDS GIỐNG HEADER
+              const fields = [
+                { key: "document_type", label: "Loại văn bản", type: "select" },
+                { key: "document_number", label: "Số văn bản", type: "text" },
+                {
+                  key: "document_symbol",
+                  label: "Ký hiệu văn bản",
+                  type: "text",
+                },
+                { key: "handwritten_number", label: "Tờ số", type: "text" },
+                { key: "issue_date", label: "Ngày văn bản", type: "date" },
+                {
+                  key: "issuing_authority",
+                  label: "Cơ quan ban hành",
+                  type: "text",
+                },
+                { key: "signer_name", label: "Người ký", type: "text" },
+                {
+                  key: "summary",
+                  label: "Trích yếu",
+                  type: "textarea",
+                  class: "subject",
+                },
+              ];
+
+              kieFieldsHtml = fields
+                .map((field) => {
+                  const currentValue = getValue(field.key);
+                  return `
+              <div class="kie-field ${field.class || ""}">
+                <div class="kie-label">${field.label}:</div>
+                <div class="kie-value-container">
+                  ${renderKieFieldValue(
+                    item.id,
+                    field,
+                    currentValue,
+                    isEditing,
+                  )}
+                </div>
+              </div>
+            `;
+                })
+                .join("");
+
+              // ✅ THÊM LOẠI HÌNH VÀ GHI CHÚ
+              kieFieldsHtml += `
+          <div class="kie-field" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+            <div class="kie-label">
+              <i class="fas fa-certificate" style="color: #007bff; margin-right: 5px;"></i>Loại hình:
+            </div>
+            <div class="kie-value-container">
+              ${renderDocumentMetadataField(
+                item.id,
+                "document_original_type",
+                item.document_original_type || "Bản chính",
+                "select",
+                isEditing,
+              )}
+            </div>
+          </div>
+          <div class="kie-field">
+            <div class="kie-label">
+              <i class="fas fa-sticky-note" style="color: #ffc107; margin-right: 5px;"></i>Ghi chú:
+            </div>
+            <div class="kie-value-container">
+              ${renderDocumentMetadataField(
+                item.id,
+                "document_note",
+                item.document_note || "",
+                "textarea",
+                isEditing,
+              )}
+            </div>
+          </div>
+        `;
+            } else {
+              // CONTENT MODE - CHỈ HIỂN THỊ TRÍCH YẾU
+              const summaryValue = getValue("summary");
+              kieFieldsHtml = `
+          <div class="kie-field subject">
+            <div class="kie-label">Trích yếu:</div>
+            <div class="kie-value-container">
+              ${renderKieFieldValue(
+                item.id,
+                { key: "summary", type: "textarea" },
+                summaryValue,
+                isEditing,
+              )}
+            </div>
+          </div>
+        `;
+            }
+
+            let actionButton = "";
+            if (isEditing) {
+              actionButton = `
+          <div class="item-action-row">
+            <button class="btn btn-success btn-sm" onclick="saveKieChanges('${item.id}')">
+              💾 Lưu thay đổi
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="cancelKieEdit('${item.id}')">
+              ❌ Hủy
+            </button>
+          </div>
+        `;
+            } else {
+              if (userRole === "customer") {
+                actionButton = `
+            <div class="item-action-row">
+              <button class="btn btn-outline btn-sm" onclick="enableKieEdit('${
+                item.id
+              }')" title="Chỉnh sửa thông tin KIE">
+                ✏️ Chỉnh sửa
+              </button>
+            </div>
+            <div class="item-action-row">
+              <button class="btn btn-success btn-sm" onclick="approveItem('${
+                item.id
+              }')" ${item.status === "approved" ? "disabled" : ""}>
+                ✅ ${item.status === "approved" ? "Đã duyệt" : "Phê duyệt"}
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="rejectItem('${
+                item.id
+              }')" ${item.status === "rejected" ? "disabled" : ""}>
+                ❌ Từ chối
+              </button>
+            </div>
+          `;
+              } else {
+                // ✅ COOPERATOR ACTIONS - ĐỘNG DỰA TRÊN STATUS
+                if (item.status === "pending" || item.status === "rejected") {
+                  // ✅ CHỈ CHO PHÉP ACTION NẾU LÀ pending/rejected
+                  actionButton = `
+              <div class="item-action-row">
+                <button class="btn btn-outline btn-sm" onclick="enableKieEdit('${item.id}')" title="Chỉnh sửa thông tin KIE">
+                  ✏️ Chỉnh sửa
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="completeItem('${item.id}')" 
+                        title="Xác nhận hoàn thành công việc">
+                  ✅ Xác nhận hoàn thành
+                </button>
+              </div>
+              <div class="item-action-row mt-2">
+                <button class="btn btn-outline-secondary btn-sm" onclick="navigateItem('${item.id}', 'prev')" title="Mảnh trước">
+                  ◀ Trước
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="navigateItem('${item.id}', 'next')" title="Mảnh tiếp theo">
+                  Tiếp ▶
+                </button>
+              </div>
+            `;
+                } else {
+                  // ✅ COMPLETED/APPROVED → CHỈ HIỂN THỊ, KHÔNG CHO EDIT
+                  actionButton = `
+              <div class="item-action-row">
+                <button class="btn btn-outline btn-sm" disabled title="Mảnh này đã hoàn thành/được duyệt">
+                  ✅ ${
+                    item.status === "approved"
+                      ? "Đã được duyệt"
+                      : "Đã hoàn thành"
+                  }
+                </button>
+              </div>
+            `;
+                }
+              }
+            }
+
+            const checkbox =
+              userRole === "customer"
+                ? `<input type="checkbox" class="item-checkbox" value="${
+                    item.id
+                  }" onchange="updateSelection()" ${
+                    isEditing ? "disabled" : ""
+                  }>`
+                : "";
+
+            // ✅ XỬ LÝ ĐƯỜNG DẪN THEO SECTION TYPE
+            let imageSrc = item.image_path || "";
+            let isPDF = item.section_type === "full";
+
+            if (isPDF) {
+              // Full PDF mode - dùng file_path
+              let filePath = item.file_path || "";
+              if (filePath.includes("uploads")) {
+                const uploadsIndex = filePath.indexOf("uploads");
+                filePath = filePath.substring(uploadsIndex);
+              }
+              imageSrc = `/${filePath.replace(/\\/g, "/")}`;
+            } else {
+              // Fragment mode - dùng image_path
+              if (imageSrc) {
+                imageSrc = imageSrc.replace(/\\/g, "/");
+                if (imageSrc.startsWith("static/")) {
+                  imageSrc = `/${imageSrc}`;
+                } else if (!imageSrc.startsWith("/static/")) {
+                  imageSrc = `/static/processed_images/${imageSrc}`;
+                }
+              }
+            }
+
+            return `
+        <div class="item-container ${isEditing ? "editing" : ""}">
+          <div class="item-header">
+            ${checkbox}
+            <div class="item-title">${item.filename}</div>
+            <div class="item-badges">
+              <span class="section-type-badge section-${
+                item.section_type
+              }-type">
+                ${
+                  item.section_type === "header"
+                    ? "Header"
+                    : item.section_type === "full"
+                      ? "Full PDF"
+                      : "Content"
+                }
+              </span>
+              <span class="item-status status-${item.status}">
+                ${getItemStatusText(item.status)}
+              </span>
+              ${item.viewing_by ? `<span class="editing-badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;">👁️ ${item.viewer_name || "CTV khác"} đang xem</span>` : ""}
+              ${
+                isEditing
+                  ? '<span class="editing-badge">✏️ Đang chỉnh sửa</span>'
+                  : ""
+              }
+            </div>
+          </div>
+
+          <div class="item-content">
+            <div class="item-image">
+              <div class="image-header">
+                <div class="image-title">${
+                  isPDF
+                    ? "PDF Viewer"
+                    : "Preview - Cuộn chuột để zoom, kéo để di chuyển"
+                }</div>
+                ${
+                  !isPDF
+                    ? `
+                <div class="zoom-controls">
+                  <button class="zoom-btn" onclick="zoomImage('${item.id}', 'out')">-</button>
+                  <div class="zoom-level" id="zoom-${item.id}">100%</div>
+                  <button class="zoom-btn" onclick="zoomImage('${item.id}', 'in')">+</button>
+                  <button class="zoom-btn" onclick="resetZoom('${item.id}')">Reset</button>
+                </div>
+                `
+                    : ""
+                }
+              </div>
+              <div class="image-container" style="overflow: hidden; position: relative; ${
+                isPDF ? "cursor: default;" : "cursor: grab;"
+              }">
+                ${
+                  isPDF
+                    ? imageSrc
+                      ? `<embed src="${imageSrc}" type="application/pdf" width="100%" height="600px" style="border: none; border-radius: 4px;" />`
+                      : '<div class="error">Không có file PDF</div>'
+                    : imageSrc
+                      ? `<img src="${imageSrc}" alt="${item.filename}" class="document-image" id="img-${item.id}"
+                            style="transition: none; max-width: none; max-height: none; user-select: none; -webkit-user-drag: none;"
+                            onerror="handleImageError(this, '${item.image_path}')">`
+                      : '<div class="error">Không có ảnh</div>'
+                }
+              </div>
+            </div>
+
+            <div class="item-kie">
+              <div class="kie-title">📄 Thông tin KIE</div>
+              <div class="kie-fields" id="kie-fields-${item.id}">
+                ${kieFieldsHtml}
+              </div>
+              <div class="item-actions">
+                ${actionButton}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+          })
+          .join("");
+
+        // Setup interactions cho tất cả images (bỏ qua PDF)
+        filteredItems.forEach((item) => {
+          setTimeout(() => {
+            // ✅ CHỈ SETUP INTERACTIONS CHO IMAGES, BỎ QUA PDF
+            if (item.section_type !== "full") {
+              setupImageInteractions(item.id);
+              initializeImageState(item.id);
+            }
+          }, 100);
+        });
+      }
+
+      function renderKieFieldValue(itemId, field, currentValue, isEditing) {
+        if (!isEditing) {
+          return `
+      <div class="kie-value ${!currentValue ? "empty" : ""} clickable"
+           title="${currentValue || "Click để chỉnh sửa"}"
+           onclick="enableKieEdit('${itemId}')">
+        ${currentValue || "Chưa có dữ liệu"}
+      </div>
+    `;
+        }
+
+        const fieldId = `edit-${itemId}-${field.key}`;
+
+        switch (field.type) {
+          case "select":
+            return `
+        <select id="${fieldId}" class="kie-edit-input">
+          <option value="">-- Chọn loại --</option>
+          ${documentTypes
+            .map(
+              (type) =>
+                `<option value="${type}" ${
+                  type === currentValue ? "selected" : ""
+                }>${type}</option>`,
+            )
+            .join("")}
+        </select>
+      `;
+          case "date":
+            return `<input type="text" id="${fieldId}" class="kie-edit-input" value="${currentValue}" placeholder="DD/MM/YYYY">`;
+          case "textarea":
+            return `<textarea id="${fieldId}" class="kie-edit-input kie-edit-textarea">${currentValue}</textarea>`;
+          default:
+            return `<input type="text" id="${fieldId}" class="kie-edit-input" value="${currentValue}">`;
+        }
+      }
+
+      // ===== KIE EDITING =====
+      function enableKieEdit(itemId) {
+        editingItems.add(itemId);
+        const checkbox = document.querySelector(
+          `.item-checkbox[value="${itemId}"]`,
+        );
+        if (checkbox) checkbox.disabled = true;
+        loadPackageItems(currentPage);
+      }
+
+      function cancelKieEdit(itemId) {
+        editingItems.delete(itemId);
+        const checkbox = document.querySelector(
+          `.item-checkbox[value="${itemId}"]`,
+        );
+        if (checkbox) checkbox.disabled = false;
+        loadPackageItems(currentPage);
+      }
+
+      async function saveKieChanges(itemId) {
+        try {
+          const kieData = {};
+          const documentMetadata = {}; // ✅ TÁCH RIÊNG METADATA
+
+          const inputs = document.querySelectorAll(`[id^="edit-${itemId}-"]`);
+
+          inputs.forEach((input) => {
+            const fieldKey = input.id.replace(`edit-${itemId}-`, "");
+
+            // ✅ XỬ LÝ 2 TRƯỜNG MỚI
+            if (fieldKey === "document_original_type") {
+              documentMetadata[fieldKey] = input.value; // Lấy giá trị từ select
+            } else if (fieldKey === "document_note") {
+              documentMetadata[fieldKey] = input.value.trim();
+            } else {
+              // ✅ CÁC TRƯỜNG KIE THÔNG THƯỜNG
+              kieData[fieldKey] = input.value.trim();
+            }
+          });
+
+          console.log("💾 Saving KIE data:", kieData);
+          console.log("💾 Saving document metadata:", documentMetadata);
+
+          // ✅ GỌI 2 API RIÊNG BIỆT
+
+          // 1. Update KIE data (nếu có)
+          if (Object.keys(kieData).length > 0) {
+            const kieResponse = await fetch(
+              `/api/work-items/${itemId}/update-kie`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(kieData),
+              },
+            );
+
+            const kieResult = await kieResponse.json();
+            if (!kieResult.success) {
+              throw new Error(kieResult.error || "Lỗi khi lưu KIE data");
+            }
+          }
+
+          // 2. Update document metadata (nếu có thay đổi)
+          if (Object.keys(documentMetadata).length > 0) {
+            // ✅ LẤY work_item detail để có doc_id
+            const itemResponse = await fetch(`/api/work-items/${itemId}`);
+            if (!itemResponse.ok) {
+              throw new Error("Không thể lấy thông tin work item");
+            }
+
+            const itemData = await itemResponse.json();
+            if (!itemData.success) {
+              throw new Error("Không lấy được thông tin work item");
+            }
+
+            const docId = itemData.item.doc_id;
+
+            // ✅ CẬP NHẬT DOCUMENT METADATA
+            const metadataResponse = await fetch(`/api/document/${docId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(documentMetadata),
+            });
+
+            if (!metadataResponse.ok) {
+              const errorText = await metadataResponse.text();
+              throw new Error(`HTTP ${metadataResponse.status}: ${errorText}`);
+            }
+
+            const metadataResult = await metadataResponse.json();
+            if (!metadataResult.success) {
+              throw new Error(metadataResult.error || "Lỗi khi lưu metadata");
+            }
+          }
+
+          showSuccess("Đã lưu thay đổi thành công");
+          editingItems.delete(itemId);
+
+          const checkbox = document.querySelector(
+            `.item-checkbox[value="${itemId}"]`,
+          );
+          if (checkbox) checkbox.disabled = false;
+
+          loadPackageItems(currentPage);
+        } catch (error) {
+          console.error("Error saving changes:", error);
+          showError("Lỗi khi lưu: " + error.message);
+        }
+      }
+
+      function renderDocumentMetadataField(
+        itemId,
+        fieldKey,
+        currentValue,
+        fieldType,
+        isEditing,
+      ) {
+        if (!isEditing) {
+          if (fieldType === "select") {
+            // View mode: Hiển thị badge với màu khác nhau
+            const colorMap = {
+              "Bản chính": {
+                bg: "#d4edda",
+                color: "#155724",
+                border: "#c3e6cb",
+                icon: "✓",
+              },
+              "Bản sao": {
+                bg: "#fff3cd",
+                color: "#856404",
+                border: "#ffeeba",
+                icon: "○",
+              },
+              "Bản gốc": {
+                bg: "#d1ecf1",
+                color: "#0c5460",
+                border: "#bee5eb",
+                icon: "◆",
+              },
+              "Dự thảo": {
+                bg: "#f8d7da",
+                color: "#721c24",
+                border: "#f5c6cb",
+                icon: "◐",
+              },
+            };
+            const style = colorMap[currentValue] || colorMap["Bản chính"];
+
+            return `
+    <div class="kie-value clickable" 
+         style="display: inline-block;"
+         title="Click để chỉnh sửa"
+         onclick="enableKieEdit('${itemId}')">
+      <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 4px; 
+                   background: ${style.bg}; 
+                   color: ${style.color}; 
+                   border: 1px solid ${style.border};">
+        ${style.icon} ${currentValue || "Bản chính"}
+      </span>
+    </div>
+  `;
+          } else {
+            // Hiển thị text/textarea
+            return `
+        <div class="kie-value ${!currentValue ? "empty" : ""} clickable"
+             title="${currentValue || "Click để chỉnh sửa"}"
+             onclick="enableKieEdit('${itemId}')">
+          ${currentValue || "Chưa có ghi chú"}
+        </div>
+      `;
+          }
+        }
+
+        const fieldId = `edit-${itemId}-${fieldKey}`;
+
+        if (fieldType === "select") {
+          return `
+    <select id="${fieldId}" class="form-select form-select-sm" style="max-width: 200px;">
+      <option value="Bản chính" ${
+        currentValue === "Bản chính" ? "selected" : ""
+      }>Bản chính</option>
+      <option value="Bản sao" ${
+        currentValue === "Bản sao" ? "selected" : ""
+      }>Bản sao</option>
+      <option value="Bản gốc" ${
+        currentValue === "Bản gốc" ? "selected" : ""
+      }>Bản gốc</option>
+      <option value="Dự thảo" ${
+        currentValue === "Dự thảo" ? "selected" : ""
+      }>Dự thảo</option>
+    </select>
+  `;
+        } else {
+          // Edit mode: textarea cho ghi chú
+          return `
+      <textarea id="${fieldId}" 
+                class="kie-edit-input kie-edit-textarea" 
+                placeholder="Nhập ghi chú về tài liệu..."
+                style="min-height: 60px;">${currentValue}</textarea>
+    `;
+        }
+      }
+      // ===== ITEM ACTIONS =====
+      async function completeItem(itemId) {
+        if (userRole !== "cooperator") {
+          showError("Chỉ cooperator mới có thể xác nhận hoàn thành");
+          return;
+        }
+
+        try {
+          // Tìm item để xác định đúng status
+          const items = document.querySelectorAll(".item-container");
+          let currentItem = null;
+          // Lấy status từ API response trước đó (allItems)
+          if (window.allPackageItems) {
+            currentItem = window.allPackageItems.find((i) => i.id === itemId);
+          }
+          const newStatus =
+            currentItem && currentItem.status === "rejected"
+              ? "recompleted"
+              : "completed";
+
+          const response = await fetch(`/api/work-items/${itemId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: newStatus }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showSuccess("Đã xác nhận hoàn thành mảnh thành công");
+            loadPackageItems(currentPage);
+            loadPackageDetail();
+          } else if (response.status === 409 || data.already_done) {
+            showError(data.error || "Mảnh này đã được xử lý bởi người khác");
+            loadPackageItems(currentPage);
+          } else {
+            showError(data.error || "Lỗi khi xác nhận hoàn thành mảnh");
+          }
+        } catch (error) {
+          console.error("Error completing item:", error);
+          showError("Lỗi khi xác nhận hoàn thành: " + error.message);
+        }
+      }
+
+      async function navigateItem(itemId, direction) {
+        try {
+          const response = await fetch(`/api/work-items/${itemId}/navigate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ direction: direction }),
+          });
+          const data = await response.json();
+          if (data.success) {
+            loadPackageItems(currentPage);
+          } else {
+            showError(data.error || "Không có mảnh nào khác");
+          }
+        } catch (error) {
+          console.error("Error navigating item:", error);
+          showError("Lỗi khi chuyển mảnh: " + error.message);
+        }
+      }
+
+      async function approveItem(itemId) {
+        if (!confirm("Bạn có chắc chắn muốn phê duyệt mảnh này?")) {
+          return;
+        }
+
+        try {
+          // ✅ CHỈ GỬI STATUS APPROVAL - KHÔNG THU THẬP KIE
+          const response = await fetch(`/api/work-items/${itemId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              status: "approved",
+              // ✅ BỎ kie_data - KIE ĐÃ CÓ TRONG DATABASE
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            let message = "Đã phê duyệt mảnh thành công";
+
+            // ✅ THÔNG BÁO VỀ EXTERNAL SYNC
+            if (data.external_sync) {
+              message += " (Đang đồng bộ với external server)";
+            }
+
+            showSuccess(message);
+            loadPackageItems(currentPage);
+            loadPackageDetail();
+          } else {
+            showError(data.error || "Lỗi khi phê duyệt mảnh");
+          }
+        } catch (error) {
+          console.error("Error approving item:", error);
+          showError("Lỗi khi phê duyệt mảnh: " + error.message);
+        }
+      }
+
+      function rejectItem(itemId) {
+        const modal = document.createElement("div");
+        modal.className = "modal";
+        modal.id = "singleRejectModal";
+        modal.innerHTML = `
+    <div class="modal-content reject-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">❌ Từ chối mảnh</h3>
+      </div>
+      <div class="modal-body">
+        <p>Vui lòng nhập lý do từ chối:</p>
+        <textarea id="singleRejectComment" placeholder="Nhập lý do từ chối... (bắt buộc)"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeSingleRejectModal()">Hủy</button>
+        <button class="btn btn-danger" onclick="confirmSingleReject('${itemId}')">Xác nhận từ chối</button>
+      </div>
+    </div>
+  `;
+
+        document.body.appendChild(modal);
+        modal.style.display = "block";
+        document.getElementById("singleRejectComment").focus();
+
+        modal.onclick = function (event) {
+          if (event.target === modal) {
+            closeSingleRejectModal();
+          }
+        };
+      }
+
+      function closeSingleRejectModal() {
+        const modal = document.getElementById("singleRejectModal");
+        if (modal) {
+          document.body.removeChild(modal);
+        }
+      }
+
+      async function confirmSingleReject(itemId) {
+        const comment = document
+          .getElementById("singleRejectComment")
+          .value.trim();
+
+        if (!comment) {
+          alert("Vui lòng nhập lý do từ chối");
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/work-items/${itemId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              status: "rejected",
+              review_comment: comment,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showSuccess("Đã từ chối mảnh thành công");
+            closeSingleRejectModal();
+            loadPackageItems(currentPage);
+            loadPackageDetail();
+          } else {
+            showError(data.error || "Lỗi khi từ chối mảnh");
+          }
+        } catch (error) {
+          console.error("Error rejecting item:", error);
+          showError("Lỗi khi từ chối mảnh: " + error.message);
+        }
+      }
+
+      // ===== BULK ACTIONS =====
+      function toggleSelectAll() {
+        const selectAll = document.getElementById("selectAll");
+        const checkboxes = document.querySelectorAll(".item-checkbox");
+
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = selectAll.checked;
+        });
+
+        updateSelection();
+      }
+
+      function updateSelection() {
+        const checkboxes = document.querySelectorAll(".item-checkbox");
+        const selectedCheckboxes = document.querySelectorAll(
+          ".item-checkbox:checked",
+        );
+
+        selectedItems.clear();
+        selectedCheckboxes.forEach((checkbox) => {
+          selectedItems.add(checkbox.value);
+        });
+
+        const selectAll = document.getElementById("selectAll");
+        const selectedCount = document.getElementById("selectedCount");
+        const bulkApproveBtn = document.getElementById("bulkApproveBtn");
+        const bulkRejectBtn = document.getElementById("bulkRejectBtn");
+
+        selectAll.checked =
+          selectedCheckboxes.length === checkboxes.length &&
+          checkboxes.length > 0;
+        selectAll.indeterminate =
+          selectedCheckboxes.length > 0 &&
+          selectedCheckboxes.length < checkboxes.length;
+
+        selectedCount.textContent = `(${selectedItems.size} mảnh được chọn)`;
+
+        bulkApproveBtn.disabled = selectedItems.size === 0;
+        bulkRejectBtn.disabled = selectedItems.size === 0;
+      }
+
+      async function bulkApprove() {
+        if (selectedItems.size === 0) return;
+
+        try {
+          const response = await fetch(
+            `/api/packages/${packageId}/bulk-action`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "approve",
+                item_ids: Array.from(selectedItems),
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            showSuccess(`Đã phê duyệt ${selectedItems.size} mảnh`);
+            selectedItems.clear();
+            loadPackageItems(currentPage);
+            loadPackageDetail();
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi phê duyệt: " + error.message);
+        }
+      }
+
+      function bulkReject() {
+        if (selectedItems.size === 0) return;
+
+        document.getElementById("rejectCount").textContent = selectedItems.size;
+        document.getElementById("rejectModal").style.display = "block";
+        document.getElementById("rejectComment").focus();
+      }
+
+      function closeRejectModal() {
+        document.getElementById("rejectModal").style.display = "none";
+        document.getElementById("rejectComment").value = "";
+      }
+
+      async function confirmBulkReject() {
+        const comment = document.getElementById("rejectComment").value.trim();
+
+        if (!comment) {
+          alert("Vui lòng nhập lý do từ chối");
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `/api/packages/${packageId}/bulk-action`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "reject",
+                item_ids: Array.from(selectedItems),
+                review_comment: comment,
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            showSuccess(`Đã từ chối ${selectedItems.size} mảnh`);
+            selectedItems.clear();
+            closeRejectModal();
+            loadPackageItems(currentPage);
+            loadPackageDetail();
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi từ chối: " + error.message);
+        }
+      }
+
+      // ===== PAGINATION & SEARCH =====
+      function renderPagination(data) {
+        const container = document.getElementById("pagination");
+        const { current_page, total_pages } = data;
+
+        if (total_pages <= 1) {
+          container.innerHTML = "";
+          return;
+        }
+
+        let pagination = `
+    <button class="page-btn ${current_page === 1 ? "disabled" : ""}" 
+            onclick="loadPackageItems(${current_page - 1})" ${
+              current_page === 1 ? "disabled" : ""
+            }>
+      ‹ Trước
+    </button>
+  `;
+
+        const startPage = Math.max(1, current_page - 2);
+        const endPage = Math.min(total_pages, current_page + 2);
+
+        if (startPage > 1) {
+          pagination += `<button class="page-btn" onclick="loadPackageItems(1)">1</button>`;
+          if (startPage > 2) {
+            pagination += `<span>...</span>`;
+          }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          pagination += `
+      <button class="page-btn ${
+        i === current_page ? "active" : ""
+      }" onclick="loadPackageItems(${i})">
+        ${i}
+      </button>
+    `;
+        }
+
+        if (endPage < total_pages) {
+          if (endPage < total_pages - 1) {
+            pagination += `<span>...</span>`;
+          }
+          pagination += `<button class="page-btn" onclick="loadPackageItems(${total_pages})">${total_pages}</button>`;
+        }
+
+        pagination += `
+    <button class="page-btn ${current_page === total_pages ? "disabled" : ""}" 
+            onclick="loadPackageItems(${current_page + 1})" ${
+              current_page === total_pages ? "disabled" : ""
+            }>
+      Sau ›
+    </button>
+  `;
+
+        container.innerHTML = pagination;
+      }
+
+      function searchItems() {
+        currentSearch = document.getElementById("searchInput").value.trim();
+        loadPackageItems(1);
+      }
+
+      // ===== MODAL FUNCTIONS =====
+      function showDeleteModal(packageId, packageName) {
+        if (userRole !== "customer") {
+          showError("Bạn không có quyền xóa gói");
+          return;
+        }
+
+        document.getElementById("deletePackageName").textContent = packageName;
+        document.getElementById("deleteModal").style.display = "block";
+      }
+
+      function closeDeleteModal() {
+        document.getElementById("deleteModal").style.display = "none";
+      }
+
+      async function confirmDelete() {
+        if (userRole !== "customer") {
+          showError("Bạn không có quyền xóa gói");
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/packages/${packageId}`, {
+            method: "DELETE",
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            closeDeleteModal();
+            showSuccess("Đã xóa gói thành công");
+
+            setTimeout(() => {
+              if (userRole === "customer") {
+                window.location.href = "/manage-packages-page";
+              } else {
+                window.location.href = "/work-packages-page";
+              }
+            }, 2000);
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi xóa gói: " + error.message);
+        }
+      }
+
+      // ===== UTILITY FUNCTIONS =====
+      async function logout() {
+        try {
+          const response = await fetch("/api/auth/logout", {
+            method: "POST",
+          });
+
+          if (response.ok) {
+            window.location.href = "/login";
+          } else {
+            showError("Lỗi đăng xuất");
+          }
+        } catch (error) {
+          console.error("Logout error:", error);
+          showError("Lỗi đăng xuất: " + error.message);
+        }
+      }
+
+      function handleImageError(img, originalPath) {
+        console.error("Failed to load image:", img.src);
+        console.log("Original image_path:", originalPath);
+
+        let newSrc = img.src;
+
+        if (
+          newSrc.includes("/static/processed_images/static/processed_images/")
+        ) {
+          newSrc = newSrc.replace(
+            "/static/processed_images/static/processed_images/",
+            "/static/processed_images/",
+          );
+          img.src = newSrc;
+          return;
+        }
+
+        if (newSrc.includes("/static/static/")) {
+          newSrc = newSrc.replace("/static/static/", "/static/");
+          img.src = newSrc;
+          return;
+        }
+
+        const filename = originalPath.split("\\").pop().split("/").pop();
+        newSrc = `/static/processed_images/${filename}`;
+        img.src = newSrc;
+
+        setTimeout(() => {
+          if (img.complete && img.naturalHeight === 0) {
+            img.parentElement.innerHTML = `
+        <div class="error">
+          <p>Không thể tải ảnh</p>
+          <p><small>${originalPath}</small></p>
+        </div>
+      `;
+          }
+        }, 1000);
+      }
+
+      function getStatusText(status) {
+        const statusMap = {
+          in_progress: "Đang xử lý",
+          under_review: "Chờ duyệt",
+          has_rejected: "Có từ chối",
+          completed: "Hoàn thành",
+        };
+        return statusMap[status] || status;
+      }
+
+      function getItemStatusText(status) {
+        const statusMap = {
+          pending: "Chờ xử lý",
+          completed: "Đã hoàn thành",
+          recompleted: "Đã sửa lại",
+          rejected: "Từ chối",
+          approved: "Đã duyệt",
+        };
+        return statusMap[status] || status;
+      }
+
+      function showError(message) {
+        const container = document.getElementById("itemsContainer");
+        container.innerHTML = `<div class="error">${message}</div>`;
+      }
+
+      function showSuccess(message) {
+        const notification = document.createElement("div");
+        notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 6px;
+    z-index: 1001;
+  `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      }
+      function setupStatisticsClickHandlers() {
+        // ✅ CLICK HANDLERS CHO CÁC Ô THỐNG KÊ
+        document.getElementById("approvedCount").onclick = () =>
+          filterItemsByStatus("approved");
+        document.getElementById("pendingCount").onclick = () =>
+          filterItemsByStatus("pending");
+        document.getElementById("reviewCount").onclick = () =>
+          filterItemsByStatus("completed,recompleted");
+        document.getElementById("rejectedCount").onclick = () =>
+          filterItemsByStatus("rejected");
+
+        // ✅ THÊM CURSOR POINTER STYLE
+        const statNumbers = document.querySelectorAll(".stat-number");
+        statNumbers.forEach((stat) => {
+          stat.style.cursor = "pointer";
+          stat.title = "Click để lọc danh sách mảnh";
+        });
+      }
+
+      function filterItemsByStatus(statusFilter) {
+        // ✅ CẬP NHẬT URL PARAMETERS
+        const url = new URL(window.location);
+        url.searchParams.set("status_filter", statusFilter);
+        url.searchParams.set("page", "1"); // Reset về trang 1
+
+        // ✅ CẬP NHẬT HISTORY
+        window.history.pushState({}, "", url);
+
+        // ✅ RELOAD ITEMS VỚI FILTER
+        currentStatusFilter = statusFilter;
+        currentPage = 1;
+
+        // ✅ HIỂN thị FILTER TAG
+        showActiveFilter(statusFilter);
+
+        // ✅ RELOAD DANH SÁCH
+        loadPackageItems(1);
+
+        // ✅ SCROLL TO ITEMS SECTION
+        document.querySelector(".items-section").scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+
+      function showActiveFilter(statusFilter) {
+        // ✅ TẠO FILTER TAG HIỂN THỊ
+        let filterText = "";
+        let filterClass = "";
+
+        switch (statusFilter) {
+          case "approved":
+            filterText = "🟢 Đã duyệt";
+            filterClass = "bg-success";
+            break;
+          case "pending":
+            filterText = "🟡 Chờ xử lý";
+            filterClass = "bg-warning";
+            break;
+          case "completed,recompleted":
+            filterText = "🔵 Chờ duyệt";
+            filterClass = "bg-info";
+            break;
+          case "rejected":
+            filterText = "🔴 Từ chối";
+            filterClass = "bg-danger";
+            break;
+          default:
+            filterText = "📋 Tất cả";
+            filterClass = "bg-secondary";
+        }
+
+        // ✅ HIỂN THỊ FILTER TAG
+        const sectionHeader = document.querySelector(".section-header");
+        const existingFilter = sectionHeader.querySelector(".active-filter");
+
+        if (existingFilter) {
+          existingFilter.remove();
+        }
+
+        const filterTag = document.createElement("div");
+        filterTag.className = `active-filter badge ${filterClass} ms-2`;
+        filterTag.innerHTML = `
+    ${filterText}
+    <button class="btn-close btn-close-white ms-2" onclick="clearStatusFilter()" style="font-size: 0.7em;"></button>
+  `;
+
+        sectionHeader.querySelector(".section-title").appendChild(filterTag);
+      }
+
+      function clearStatusFilter() {
+        // ✅ XÓA FILTER
+        const url = new URL(window.location);
+        url.searchParams.delete("status_filter");
+        url.searchParams.set("page", "1");
+        window.history.pushState({}, "", url);
+
+        // ✅ RESET VARIABLES
+        currentStatusFilter = "";
+        currentPage = 1;
+
+        // ✅ XÓA FILTER TAG
+        const existingFilter = document.querySelector(".active-filter");
+        if (existingFilter) {
+          existingFilter.remove();
+        }
+
+        // ✅ RELOAD ITEMS
+        loadPackageItems(1);
+      }
+      // Modal click handlers
+      window.onclick = function (event) {
+        const deleteModal = document.getElementById("deleteModal");
+        const rejectModal = document.getElementById("rejectModal");
+
+        if (event.target === deleteModal) {
+          closeDeleteModal();
+        }
+        if (event.target === rejectModal) {
+          closeRejectModal();
+        }
+      };
+      async function approveAllItems() {
+        if (
+          !confirm(
+            `Bạn có chắc chắn muốn phê duyệt TẤT CẢ các mảnh đã hoàn thành trong gói "${
+              packageData?.name || "này"
+            }"?\n\nLưu ý: Chỉ các mảnh có trạng thái "Đã hoàn thành" hoặc "Đã sửa lại" sẽ được phê duyệt.`,
+          )
+        ) {
+          return;
+        }
+
+        const approveAllBtn = document.getElementById("approveAllBtn");
+        const originalText = approveAllBtn.innerHTML;
+
+        try {
+          // Disable button
+          approveAllBtn.disabled = true;
+          approveAllBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin me-1"></i>Đang xử lý...';
+
+          const response = await fetch(
+            `/api/packages/${packageId}/approve-all`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            showSuccess(
+              `✅ ${data.message}\n\nĐã phê duyệt: ${data.approved_count} mảnh\nBỏ qua: ${data.skipped_count} mảnh (chưa hoàn thành hoặc đã phê duyệt)`,
+            );
+
+            // Reload page data
+            loadPackageItems(currentPage);
+            loadPackageDetail();
+          } else {
+            showError(data.error || "Lỗi khi phê duyệt tất cả");
+          }
+        } catch (error) {
+          console.error("Error approving all items:", error);
+          showError("Lỗi khi phê duyệt tất cả: " + error.message);
+        } finally {
+          // Re-enable button
+          approveAllBtn.disabled = false;
+          approveAllBtn.innerHTML = originalText;
+        }
+      }
+    </script>
+  </body>
+</html>

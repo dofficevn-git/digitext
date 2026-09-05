@@ -1,0 +1,1118 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chỉnh sửa mảnh</title>
+    <style>
+      /* ===== RESET & BASE ===== */
+      * {
+        margin: 0;
+        padding: 0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        font-size: 12.5px;
+        color: #333;
+        background: #e9e9e9;
+      }
+
+      /* ===== HEADER ===== */
+      .header {
+        background: linear-gradient(
+          -120deg,
+          #27bb4d,
+          #b2e7cb,
+          #156c3e,
+          #3d6a52
+        );
+        color: white;
+        padding: 15px 30px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .header-left h1 {
+        font-size: 20px;
+        margin: 0 0 5px 0;
+        font-weight: 900;
+        text-transform: uppercase;
+        color: white;
+      }
+
+      .breadcrumb {
+        font-size: 11px;
+        opacity: 0.9;
+        margin: 0;
+      }
+
+      .breadcrumb a {
+        color: white;
+        text-decoration: none;
+        transition: opacity 0.3s;
+      }
+
+      .breadcrumb a:hover {
+        opacity: 0.8;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .user-info {
+        font-size: 11px;
+        opacity: 0.9;
+      }
+
+      .logout-btn {
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 20px;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+
+      .logout-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+
+      /* ===== CONTAINER ===== */
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 15px;
+      }
+
+      /* ===== EDITOR LAYOUT ===== */
+      .editor-layout {
+        display: grid;
+        grid-template-columns: 500px 1fr;
+        gap: 15px;
+        min-height: 600px;
+      }
+
+      /* ===== IMAGE SECTION ===== */
+      .image-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd;
+        overflow: hidden;
+      }
+
+      .image-header {
+        background: #f5f5f5;
+        padding: 12px 15px;
+        border-bottom: 2px solid #48bcb4;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .image-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #156c3e;
+      }
+
+      .zoom-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .zoom-btn {
+        padding: 4px 10px;
+        border: 2px solid #e0e0e0;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.3s;
+        color: #333;
+      }
+
+      .zoom-btn:hover {
+        background: #48bcb4;
+        color: white;
+        border-color: #48bcb4;
+      }
+
+      .zoom-level {
+        font-size: 12px;
+        color: #666;
+        min-width: 50px;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .image-container {
+        height: 600px;
+        overflow: auto;
+        padding: 15px;
+        text-align: center;
+        background: white;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }
+
+      .document-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        transition: transform 0.3s;
+        cursor: zoom-in;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* ===== EDIT SECTION ===== */
+      .edit-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0px 3px 2px #aab2bd;
+        padding: 20px;
+      }
+
+      .edit-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #48bcb4;
+      }
+
+      .edit-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #156c3e;
+      }
+
+      .edit-info {
+        color: #666;
+        font-size: 12px;
+      }
+
+      /* ===== STATUS BADGE ===== */
+      .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 8px;
+      }
+
+      .status-rejected {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      /* ===== FORM ===== */
+      .form-section {
+        margin-bottom: 20px;
+      }
+
+      .form-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #156c3e;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #495057;
+        font-size: 12.5px;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 12.5px;
+        font-family: inherit;
+        transition: all 0.3s;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #48bcb4;
+        box-shadow: 0 0 0 0.2rem rgba(72, 188, 180, 0.25);
+      }
+
+      .form-control.textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+
+      .form-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 8px center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 40px;
+      }
+
+      /* ===== ACTIONS ===== */
+      .actions {
+        display: flex;
+        gap: 10px;
+        padding-top: 20px;
+        border-top: 2px solid #48bcb4;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px;
+        font-size: 12.5px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        justify-content: center;
+        font-weight: 500;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #48cfad, #37bc9b);
+        color: white;
+        border: 2px solid #37bc9b;
+      }
+
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #37bc9b, #2aa88a);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(72, 207, 173, 0.3);
+      }
+
+      .btn-success {
+        background: #a9d86e;
+        color: white;
+        border: 2px solid #8fc450;
+      }
+
+      .btn-success:hover {
+        background: #8fc450;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(169, 216, 110, 0.3);
+      }
+
+      .btn-outline {
+        background: white;
+        border: 2px solid #48cfad;
+        color: #22582b;
+      }
+
+      .btn-outline:hover {
+        background: #48cfad;
+        color: white;
+        transform: translateY(-1px);
+        text-decoration: none;
+      }
+
+      /* ===== NAVIGATION ===== */
+      .navigation {
+        background: linear-gradient(135deg, #e7f1ff, #d4edff);
+        padding: 12px 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0px 3px 2px #aab2bd;
+        border: 2px solid #48bcb4;
+      }
+
+      .nav-info {
+        color: #156c3e;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 8px;
+      }
+
+      .nav-btn {
+        padding: 6px 14px;
+        border: 2px solid #e0e0e0;
+        background: white;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        text-decoration: none;
+        color: #333;
+        transition: all 0.3s;
+        font-weight: 500;
+      }
+
+      .nav-btn:hover:not(.disabled) {
+        background: #48cfad;
+        color: white;
+        border-color: #48cfad;
+        transform: translateY(-1px);
+        text-decoration: none;
+      }
+
+      .nav-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #f5f5f5;
+      }
+
+      /* ===== ALERT ===== */
+      .alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-size: 12.5px;
+      }
+
+      .alert-danger {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border: 2px solid #dc3545;
+        border-left: 5px solid #dc3545;
+        color: #721c24;
+      }
+
+      .alert-danger strong {
+        font-weight: 600;
+      }
+
+      /* ===== LOADING & ERROR ===== */
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .error {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+        border-left: 4px solid #dc3545;
+      }
+
+      /* ===== SCROLLBAR ===== */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #48bcb4;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #37bc9b;
+      }
+
+      /* ===== RESPONSIVE ===== */
+      @media (max-width: 768px) {
+        .editor-layout {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .image-container {
+          height: 400px;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+
+        .navigation {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .nav-buttons {
+          justify-content: center;
+          width: 100%;
+        }
+
+        .nav-btn {
+          flex: 1;
+        }
+
+        .header-content {
+          flex-wrap: wrap;
+        }
+
+        .header h1 {
+          font-size: 16px;
+        }
+
+        .breadcrumb {
+          font-size: 10px;
+        }
+      }
+
+      /* ===== ANIMATIONS ===== */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .image-section,
+      .edit-section,
+      .navigation {
+        animation: fadeIn 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>Chỉnh sửa mảnh</h1>
+          <div class="breadcrumb">
+            <a href="/">Trang chủ</a> >
+            <a href="/work-packages-page">Gói công việc</a> > Chỉnh sửa mảnh
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="user-info" id="userInfo">👤 User</span>
+          <button class="logout-btn" onclick="logout()">🚪 Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Navigation -->
+      <div class="navigation" id="navigation" style="display: none">
+        <div class="nav-info">
+          <span id="navInfo">Mảnh 1 / 10 trong gói</span>
+        </div>
+        <div class="nav-buttons">
+          <a href="#" class="nav-btn" id="prevBtn">‹ Trước</a>
+          <a href="#" class="nav-btn" id="nextBtn">Sau ›</a>
+        </div>
+      </div>
+
+      <div class="editor-layout">
+        <!-- Image Section -->
+        <div class="image-section">
+          <div class="image-header">
+            <div class="image-title" id="imageTitle">Preview</div>
+            <div class="zoom-controls">
+              <button class="zoom-btn" onclick="zoomOut()">-</button>
+              <div class="zoom-level" id="zoomLevel">100%</div>
+              <button class="zoom-btn" onclick="zoomIn()">+</button>
+              <button class="zoom-btn" onclick="resetZoom()">Reset</button>
+            </div>
+          </div>
+          <div class="image-container">
+            <img
+              id="documentImage"
+              class="document-image"
+              alt="Document"
+              onclick="toggleZoom()"
+            />
+          </div>
+        </div>
+
+        <!-- Edit Section -->
+        <div class="edit-section">
+          <div class="edit-header">
+            <div class="edit-title" id="itemTitle">Đang tải...</div>
+            <div class="edit-info">
+              <span id="sectionType">-</span>
+              <span class="status-badge status-rejected" id="statusBadge"
+                >Bị từ chối</span
+              >
+            </div>
+            <div
+              id="rejectionReason"
+              class="alert alert-danger"
+              style="display: none; margin-top: 1rem"
+            >
+              <strong>Lý do từ chối:</strong> <span id="rejectionText"></span>
+            </div>
+          </div>
+
+          <!-- KIE Form -->
+          <div class="form-section">
+            <div class="form-title">📄 Thông tin KIE</div>
+            <div id="kieForm">
+              <div class="loading">Đang tải...</div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="actions">
+            <button
+              class="btn btn-success"
+              onclick="saveAndComplete()"
+              id="saveBtn"
+            >
+              💾 Lưu và hoàn thành
+            </button>
+            <a href="/work-packages-page" class="btn btn-outline">
+              ← Quay lại
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let itemId = "";
+      let itemData = null;
+      let currentZoom = 1;
+      const documentTypes = [
+        "Nghị quyết",
+        "Quyết định",
+        "Chỉ thị",
+        "Quy chế",
+        "Quy định",
+        "Thông cáo",
+        "Thông báo",
+        "Hướng dẫn",
+        "Chương trình",
+        "Kế hoạch",
+        "Phương án",
+        "Đề án",
+        "Dự án",
+        "Báo cáo",
+        "Tờ trình",
+        "Giấy ủy quyền",
+        "Phiếu gửi",
+        "Phiếu chuyển",
+        "Phiếu báo",
+        "Biên bản",
+        "Hợp đồng",
+        "Công văn",
+        "Công điện",
+        "Bản ghi nhớ",
+        "Bản thỏa thuận",
+        "Giấy mời",
+        "Giấy giới thiệu",
+        "Giấy nghỉ phép",
+        "Thư công",
+        "Bản đồ",
+        "Bản vẽ kỹ thuật",
+        "Phiếu chi",
+        "Thông tri",
+        "Bảng tổng hợp",
+        "Ủy nhiệm chi",
+        "Bản kiểm điểm",
+        "Nội quy",
+        "Phiếu giới thiệu",
+        "Phiếu",
+        "Kết luận",
+        "Nghị định",
+        "Thông tư",
+        "Đề nghị",
+        "Khác",
+      ];
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", function () {
+        // Get item ID from URL
+        const pathParts = window.location.pathname.split("/");
+        itemId = pathParts[pathParts.indexOf("work-item") + 1];
+
+        if (itemId) {
+          loadUserInfo();
+          loadItemDetail();
+          loadNavigation();
+        } else {
+          showError("Không tìm thấy ID mảnh");
+        }
+      });
+
+      // Load user info
+      async function loadUserInfo() {
+        try {
+          const response = await fetch("/api/auth/me");
+          const userData = await response.json();
+
+          if (userData.success !== false) {
+            document.getElementById("userInfo").textContent = `👤 ${
+              userData.username || "User"
+            }`;
+          }
+        } catch (error) {
+          console.error("Error loading user info:", error);
+        }
+      }
+
+      // Load item detail
+      async function loadItemDetail() {
+        try {
+          const response = await fetch(`/api/work-items/${itemId}`);
+          const data = await response.json();
+
+          if (data.success) {
+            itemData = data.item;
+            renderItemDetail(itemData);
+          } else {
+            showError(data.error);
+          }
+        } catch (error) {
+          showError("Lỗi khi tải thông tin mảnh: " + error.message);
+        }
+      }
+
+      // Load navigation
+      async function loadNavigation() {
+        try {
+          const response = await fetch(`/api/work-items/${itemId}/navigation`);
+          const data = await response.json();
+
+          if (data.success) {
+            renderNavigation(data.navigation);
+          }
+        } catch (error) {
+          console.error("Error loading navigation:", error);
+        }
+      }
+
+      // Render item detail
+      function renderItemDetail(item) {
+        // Basic info
+        document.getElementById("itemTitle").textContent = item.filename;
+
+        // ✅ CẬP NHẬT HIỂN THỊ SECTION TYPE
+        const sectionTypeMap = {
+          header: "Header",
+          content: "Content",
+          full: "Full PDF (Không phân mảnh)",
+        };
+        document.getElementById("sectionType").textContent =
+          sectionTypeMap[item.section_type] || item.section_type;
+
+        // Show rejection reason
+        if (item.review_comment) {
+          document.getElementById("rejectionReason").style.display = "block";
+          document.getElementById("rejectionText").textContent =
+            item.review_comment;
+        }
+
+        // ✅ LOAD ẢNH HOẶC PDF TÙY SECTION TYPE
+        if (item.section_type === "full") {
+          loadFullPDF(item.file_path);
+        } else {
+          loadImage(item.image_path);
+        }
+
+        // Render KIE form
+        renderKieForm(item);
+      }
+
+      // ✅ THÊM HÀM MỚI: Load PDF đầy đủ
+      function loadFullPDF(filePath) {
+        if (!filePath) {
+          document.getElementById("documentImage").style.display = "none";
+          return;
+        }
+
+        const container = document.getElementById("imageContainer");
+
+        // ✅ XỬ LÝ FILE PATH ĐÚNG CÁCH
+        let pdfUrl = filePath;
+        if (filePath.includes("uploads")) {
+          const uploadsIndex = filePath.indexOf("uploads");
+          pdfUrl = filePath.substring(uploadsIndex);
+        }
+        pdfUrl = `/${pdfUrl.replace(/\\/g, "/")}`;
+
+        // Tạo embed cho PDF
+        container.innerHTML = `
+          <embed 
+            src="${pdfUrl}" 
+            type="application/pdf" 
+            width="100%" 
+            height="100%" 
+            style="border: none; border-radius: 4px;"
+          />
+        `;
+
+        console.log(`📄 Loaded full PDF: ${pdfUrl}`);
+      }
+
+      // Load image
+      function loadImage(imagePath) {
+        if (!imagePath) {
+          document.getElementById("documentImage").style.display = "none";
+          return;
+        }
+
+        let src = imagePath.replace(/\\/g, "/");
+        if (src.startsWith("static/")) {
+          src = `/${src}`;
+        } else if (!src.startsWith("/static/")) {
+          src = `/static/processed_images/${src}`;
+        }
+
+        const img = document.getElementById("documentImage");
+        img.src = src;
+        img.onerror = function () {
+          console.error("Failed to load image:", src);
+          this.parentElement.innerHTML =
+            '<div class="error">Không thể tải ảnh</div>';
+        };
+      }
+      function renderKieForm(item) {
+        const kieData = item.kie_data || {};
+
+        const getValue = (key) => {
+          const value = kieData[key];
+          if (typeof value === "string" || typeof value === "number") {
+            return String(value).trim();
+          }
+          if (typeof value === "object" && value && value.value !== undefined) {
+            return String(value.value).trim();
+          }
+          return "";
+        };
+
+        let formHtml = "";
+
+        if (item.section_type === "header" || item.section_type === "full") {
+          // ✅ HEADER VÀ FULL - HIỂN THỊ ĐẦY ĐỦ FIELDS
+          const fields = [
+            { key: "document_type", label: "Loại văn bản", type: "select" },
+            { key: "document_number", label: "Số văn bản", type: "text" },
+            { key: "document_symbol", label: "Ký hiệu văn bản", type: "text" },
+            { key: "handwritten_number", label: "Số viết tay", type: "text" },
+            { key: "issue_date", label: "Ngày văn bản", type: "date" },
+            {
+              key: "issuing_authority",
+              label: "Cơ quan ban hành",
+              type: "text",
+            },
+            { key: "signer_name", label: "Họ tên người ký", type: "text" },
+            {
+              key: "summary",
+              label: "Trích yếu",
+              type: "textarea",
+              class: "subject",
+            },
+          ];
+
+          formHtml = fields
+            .map((field) => {
+              const currentValue = getValue(field.key);
+              return `
+          <div class="form-group">
+              <label class="form-label">${field.label}:</label>
+              ${renderFieldInput(field, currentValue)}
+          </div>
+        `;
+            })
+            .join("");
+        } else {
+          // Content fields - chỉ trích yếu
+          const summaryValue = getValue("summary");
+          formHtml = `
+      <div class="form-group">
+          <label class="form-label">Trích yếu:</label>
+          <textarea class="form-control textarea" id="summary">${summaryValue}</textarea>
+      </div>
+    `;
+        }
+        formHtml += `
+  <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+  
+  <div class="form-group">
+    <label class="form-label">
+      <i class="fas fa-certificate" style="color: #007bff; margin-right: 5px;"></i>Loại hình:
+    </label>
+    <select class="form-control form-select" id="document_original_type">
+      <option value="Bản chính" ${
+        (item.document_original_type || "Bản chính") === "Bản chính"
+          ? "selected"
+          : ""
+      }>Bản chính</option>
+      <option value="Bản sao" ${
+        item.document_original_type === "Bản sao" ? "selected" : ""
+      }>Bản sao</option>
+      <option value="Bản gốc" ${
+        item.document_original_type === "Bản gốc" ? "selected" : ""
+      }>Bản gốc</option>
+      <option value="Dự thảo" ${
+        item.document_original_type === "Dự thảo" ? "selected" : ""
+      }>Dự thảo</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label class="form-label">
+      <i class="fas fa-sticky-note" style="color: #ffc107; margin-right: 5px;"></i>Ghi chú:
+    </label>
+    <textarea class="form-control textarea" id="document_note" placeholder="Nhập ghi chú về tài liệu...">${
+      item.document_note || ""
+    }</textarea>
+  </div>
+`;
+        document.getElementById("kieForm").innerHTML = formHtml;
+      }
+      function renderFieldInput(field, value) {
+        const fieldId = field.key;
+
+        switch (field.type) {
+          case "select":
+            if (field.key === "document_type") {
+              const options = documentTypes
+                .map(
+                  (type) =>
+                    `<option value="${type}" ${
+                      type === value ? "selected" : ""
+                    }>${type}</option>`,
+                )
+                .join("");
+              return `
+          <select class="form-control form-select" id="${fieldId}">
+            <option value="">-- Chọn loại tài liệu --</option>
+            ${options}
+          </select>
+        `;
+            }
+            return `<input type="text" class="form-control" id="${fieldId}" value="${value}">`;
+
+          case "date":
+            // ✅ ĐƠN GIẢN: CHỈ DÙNG TEXT INPUT
+            return `<input type="text" class="form-control" id="${fieldId}" value="${value}" placeholder="DD/MM/YYYY">`;
+
+          case "textarea":
+            return `<textarea class="form-control textarea" id="${fieldId}">${value}</textarea>`;
+
+          default:
+            return `<input type="text" class="form-control" id="${fieldId}" value="${value}">`;
+        }
+      } // Render navigation
+      function renderNavigation(nav) {
+        if (!nav || nav.total_items <= 1) return;
+
+        document.getElementById("navigation").style.display = "flex";
+        document.getElementById("navInfo").textContent = `Mảnh ${
+          nav.current_index + 1
+        } / ${nav.total_items} trong gói ${itemData.package_name}`;
+
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+
+        if (nav.prev_item) {
+          prevBtn.href = `/work-item/${nav.prev_item.id}/edit-page`;
+          prevBtn.classList.remove("disabled");
+        } else {
+          prevBtn.classList.add("disabled");
+        }
+
+        if (nav.next_item) {
+          nextBtn.href = `/work-item/${nav.next_item.id}/edit-page`;
+          nextBtn.classList.remove("disabled");
+        } else {
+          nextBtn.classList.add("disabled");
+        }
+      }
+      async function saveAndComplete() {
+        try {
+          const kieData = {};
+          const documentMetadata = {};
+          // Collect form data
+          const inputs = document.querySelectorAll(
+            "#kieForm input, #kieForm select, #kieForm textarea",
+          );
+
+          inputs.forEach((input) => {
+            let value = input.value.trim();
+
+            // ✅ PHÂN LOẠI: Document metadata vs KIE data
+            if (
+              input.id === "document_original_type" ||
+              input.id === "document_note"
+            ) {
+              documentMetadata[input.id] = value;
+            } else {
+              kieData[input.id] = value;
+            }
+          });
+          // ✅ DEBUG LOG
+          console.log("🔍 DEBUG - Saving KIE data:", kieData);
+          console.log("🔍 DEBUG - Saving document metadata:", documentMetadata);
+
+          // ✅ VALIDATE REQUIRED FIELDS
+          if (itemData.section_type === "header" && !kieData.document_type) {
+            showError("Vui lòng chọn loại văn bản");
+            return;
+          }
+
+          // ✅ DISABLE BUTTON WHILE SAVING
+          const saveBtn = document.getElementById("saveBtn");
+          saveBtn.disabled = true;
+          saveBtn.textContent = "💾 Đang lưu...";
+
+          // Save
+          const response = await fetch(`/api/work-items/${itemId}/status`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              status: "recompleted",
+              kie_data: kieData,
+              document_metadata: documentMetadata,
+            }),
+          });
+
+          // ✅ DEBUG RESPONSE
+          console.log("🔍 DEBUG - Response status:", response.status);
+
+          const data = await response.json();
+          console.log("🔍 DEBUG - Response data:", data);
+
+          if (data.success) {
+            showSuccess("✅ Đã lưu và hoàn thành mảnh thành công");
+
+            // ✅ CẬP NHẬT UI
+            saveBtn.textContent = "✅ Đã lưu";
+            saveBtn.style.background = "#28a745";
+
+            setTimeout(() => {
+              window.location.href = "/work-packages-page";
+            }, 1500);
+          } else {
+            // ✅ HIỂN THỊ LỖI CỤ THỂ
+            showError(data.error || "Có lỗi xảy ra khi lưu");
+
+            // ✅ RE-ENABLE BUTTON
+            saveBtn.disabled = false;
+            saveBtn.textContent = "💾 Lưu và hoàn thành";
+          }
+        } catch (error) {
+          console.error("❌ ERROR:", error);
+          showError("Lỗi khi lưu: " + error.message);
+
+          // ✅ RE-ENABLE BUTTON
+          const saveBtn = document.getElementById("saveBtn");
+          saveBtn.disabled = false;
+          saveBtn.textContent = "💾 Lưu và hoàn thành";
+        }
+      }
+
+      // Zoom functions
+      function zoomIn() {
+        currentZoom = Math.min(currentZoom + 0.2, 3);
+        updateZoom();
+      }
+
+      function zoomOut() {
+        currentZoom = Math.max(currentZoom - 0.2, 0.5);
+        updateZoom();
+      }
+
+      function resetZoom() {
+        currentZoom = 1;
+        updateZoom();
+      }
+
+      function toggleZoom() {
+        currentZoom = currentZoom === 1 ? 1.5 : 1;
+        updateZoom();
+      }
+
+      function updateZoom() {
+        const img = document.getElementById("documentImage");
+        const zoomLevel = document.getElementById("zoomLevel");
+
+        img.style.transform = `scale(${currentZoom})`;
+        zoomLevel.textContent = `${Math.round(currentZoom * 100)}%`;
+      }
+
+      // Logout
+      async function logout() {
+        try {
+          const response = await fetch("/api/auth/logout", { method: "POST" });
+          if (response.ok) {
+            window.location.href = "/login";
+          }
+        } catch (error) {
+          console.error("Logout error:", error);
+        }
+      }
+
+      // Utility functions
+      function showError(message) {
+        const kieForm = document.getElementById("kieForm");
+        kieForm.innerHTML = `<div class="error">${message}</div>`;
+      }
+
+      function showSuccess(message) {
+        const notification = document.createElement("div");
+        notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 6px;
+                z-index: 1001;
+            `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>

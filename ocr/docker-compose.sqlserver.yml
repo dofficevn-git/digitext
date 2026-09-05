@@ -1,0 +1,74 @@
+# SQL Server cho doc_extract_pla
+#
+# .env.sqlserver phai khop .env app (DB_PASSWORD)
+# Neu volume da tao truoc do: password khong doi duoc, phai dung password cu
+# hoac: docker compose -f docker-compose.sqlserver.yml down -v (mat data)
+#
+# Chay:
+#   docker compose -f docker-compose.sqlserver.yml --env-file .env.sqlserver up -d
+
+configs:
+  mssql_conf:
+    content: |
+      [EULA]
+      accepteula = Y
+      accepteulaml = Y
+
+      [Network]
+      ipaddress = 0.0.0.0
+      tcpport = 1433
+      forceencryption = 0
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:${MSSQL_VERSION:-2022-latest}
+    container_name: kie-sqlserver
+    restart: unless-stopped
+
+    ports:
+      - "${DB_PORT:-1433}:1433"
+
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+    configs:
+      - source: mssql_conf
+        target: /var/opt/mssql/mssql.conf
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 90s
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:${MSSQL_VERSION:-2022-latest}
+    container_name: kie-sqlserver-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./docker/sqlserver/init:/init:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >
+        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1"
+        && /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -i /init/01-create-database.sql
+        || (/opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1"
+        && /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -i /init/01-create-database.sql)
+    restart: "no"
+
+volumes:
+  sqlserver-data:

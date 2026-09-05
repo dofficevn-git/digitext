@@ -1,0 +1,42 @@
+# vLLM + Vintern (vnkie)
+#
+# May dev:   copy .env.vllm.example -> .env.vllm
+# RTX 5070:  copy .env.vllm.rtx5070.example -> .env.vllm
+#
+# docker compose -f docker-compose.vllm.yml --env-file .env.vllm up -d --force-recreate
+
+services:
+  vllm-vnkie:
+    image: ${VLLM_IMAGE}
+    container_name: vllm-vnkie
+    restart: unless-stopped
+    ports:
+      - "3000:8000"
+    volumes:
+      - ./models/plakie:/models/plakie:ro
+    shm_size: 8gb
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      VLLM_USE_V1: "0"
+    command:
+      - --model
+      - /models/plakie
+      - --served-model-name
+      - vnkie
+      - --trust-remote-code
+      - --dtype
+      - bfloat16
+      - --max-model-len
+      - "4096"
+      - --gpu-memory-utilization
+      - "0.90"
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
