@@ -23,7 +23,7 @@ export const V4o3: V4o1<V4nt>[] = [
   { head: "A3", value: (r) => r.a3, num: true },
   { head: "A4", value: (r) => r.a4, num: true },
   { head: "A5", value: (r) => r.a5, num: true },
-  { head: "S2jDoWM=", value: (r) => r.khac, num: true },
+  { head: "Khác", value: (r) => r.khac, num: true },
   { head: "Tổng trang", value: (r) => r.tongTrang, num: true },
   { head: "Quy đổi A4", value: (r) => Math.round(r.quyDoi * 10) / 10, num: true },
 ];

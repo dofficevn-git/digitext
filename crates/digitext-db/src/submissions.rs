@@ -333,7 +333,7 @@ pub async fn reconcile(r_2dg: &PgPool, id: Uuid) -> sqlx::Result<Option<Tig>> {
     .await?;
     let enough = submitted >= registered && registered > 0;
     let r_2df = if enough {
-        "xJHhu6c=".to_string()
+        "đủ".to_string()
     } else {
         format!(
             "chưa đủ, còn thiếu {}",

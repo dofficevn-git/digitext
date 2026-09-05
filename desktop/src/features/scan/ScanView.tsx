@@ -576,7 +576,7 @@ export default function V4p9() {
                   onChange={V28g}
                   options={[
                     { value: "rgb", label: "RGB" },
-                    { value: "gray", label: "WMOhbQ==" },
+                    { value: "gray", label: "Xám" },
                   ]}
                 />
               </div>
@@ -587,7 +587,7 @@ export default function V4p9() {
                   onChange={V28i}
                   options={[
                     { value: "adf", label: "ADF (tự động)" },
-                    { value: "glass", label: "S8Otbmg=" },
+                    { value: "glass", label: "Kính" },
                   ]}
                 />
               </div>
@@ -614,8 +614,8 @@ export default function V4p9() {
                   value={V28l ? "on" : "off"}
                   onChange={(v) => V28m(v === "on")}
                   options={[
-                    { value: "on", label: "QuG6rXQ=" },
-                    { value: "off", label: "VOG6r3Q=" },
+                    { value: "on", label: "Bật" },
+                    { value: "off", label: "Tắt" },
                   ]}
                 />
               </div>

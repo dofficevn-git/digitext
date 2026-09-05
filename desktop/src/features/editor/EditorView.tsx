@@ -736,7 +736,7 @@ export default function V4p4({
                 <div className="cap">{i + 1}</div>
                 {V23n && (
                   <div className="ed-thumb-ops" onClick={(V275) => V275.stopPropagation()}>
-                    <button title="TMOqbg==" disabled={i === 0} onClick={() => V26g(p.index, -1)}>
+                    <button title="Lên" disabled={i === 0} onClick={() => V26g(p.index, -1)}>
                       <Icon name="len" size={14} />
                     </button>
                     <button
@@ -990,8 +990,8 @@ export default function V4p4({
               value={V247}
               onChange={V248}
               options={[
-                { value: "color", label: "TcOgdQ==" },
-                { value: "gray", label: "WMOhbQ==" },
+                { value: "color", label: "Màu" },
+                { value: "gray", label: "Xám" },
                 { value: "bw", label: "Đen trắng" },
               ]}
             />

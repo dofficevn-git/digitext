@@ -6,8 +6,8 @@ import unicodedata
 _ONSETS = ["", "b", "c", "ch", "d", "xJE=", "g", "gh", "gi", "h", "k", "kh", "l", "m",
            "n", "ng", "ngh", "nh", "p", "ph", "qu", "r", "s", "t", "th", "tr", "v", "x"]
 _NUCLEI = ["a", "xIM=", "w6I=", "e", "w6o=", "i", "o", "w7Q=", "xqE=", "u", "xrA=", "y",
-           "ia", "acOq", "oa", "b8SD", "oe", "dcO0", "dcah", "xrDGoQ==", "uy", "ai", "ao", "au", "ay",
-           "eo", "w6p1", "iu", "oi", "w7Rp", "xqFp", "ui", "xrBp", "xrB1", "oai", "dcO0aQ==", "xrDGoWk="]
+           "ia", "acOq", "oa", "b8SD", "oe", "dcO0", "dcah", "ươ", "uy", "ai", "ao", "au", "ay",
+           "eo", "w6p1", "iu", "oi", "w7Rp", "xqFp", "ui", "xrBp", "xrB1", "oai", "uôi", "ươi"]
 _CODAS = ["", "c", "ch", "m", "n", "ng", "nh", "p", "t"]
 _TONES = ["", "̀", "́", "̉", "̃", "̣"]
 
@@ -22,7 +22,7 @@ _ADMIN = [
     "khai thác chế biến khoáng sản", "cải tạo phục hồi môi trường", "ký quỹ",
     "có hiệu lực thi hành", "kể từ ngày ký", "chịu trách nhiệm thi hành", "Nơi nhận",
     "tổ chức", "cá nhân", "có liên quan", "kèm theo", "Điều", "Khoản", "điểm",
-    "tỉnh", "thành phố", "huyện", "eMOj", "phường", "thị trấn", "khu phố", "dGjDtG4=", "eMOzbQ==",
+    "tỉnh", "thành phố", "huyện", "eMOj", "phường", "thị trấn", "khu phố", "thôn", "xóm",
     "số tiền", "tổng dự toán", "kinh phí", "đồng", "hệ số trượt giá", "tạm tính",
 ]
 _GAZ = [

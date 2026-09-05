@@ -197,7 +197,7 @@ export function V448(V8r: V43p, V8s: number): string {
   if (V8s - V8r.updatedAt > 30_000) return "";
   const left = V8r.sizeBytes - V8r.sentBytes;
   if (left <= 0) return "";
-  return `Y8OybiA=${V449(Math.ceil(left / V8r.bps))}`;
+  return `còn ${V449(Math.ceil(left / V8r.bps))}`;
 }
 
 export function V449(V8t: number): string {

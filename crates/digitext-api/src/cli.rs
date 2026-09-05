@@ -69,7 +69,7 @@ async fn backfill_source_pdfs() -> anyhow::Result<()> {
     );
     if r_1v.errors > 0 {
         bail!(
-            "Y8OzIA=={} lỗi khi backfill — xem log",
+            "có {} lỗi khi backfill — xem log",
             r_1v.errors
         );
     }

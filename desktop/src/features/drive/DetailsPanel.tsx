@@ -196,7 +196,7 @@ export default function V48d() {
             <Icon name="thuMuc" size={32} />
           </div>
           <div className="dn">{n.name}</div>
-          <div className="muted text-sm">Thư mục · chủ sở hữu: {n.owner ?? "VMO0aQ=="}</div>
+          <div className="muted text-sm">Thư mục · chủ sở hữu: {n.owner ?? "Tôi"}</div>
         </div>
         <div className="drow">
           <span>Thành viên</span>

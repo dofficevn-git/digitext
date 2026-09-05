@@ -409,7 +409,7 @@ export default function V4h7({
                 onClick={() => void V1de()}
                 disabled={V1cc}
               >
-                <Icon name="luu" /> {V1cc ? "Đang lưu…" : "TMawdQ=="}
+                <Icon name="luu" /> {V1cc ? "Đang lưu…" : "Lưu"}
               </button>{" "}
               <button className="btn btn-outline-danger btn-round" onClick={V1c1} disabled={V1cc}>
                 <Icon name="dong" /> Đóng

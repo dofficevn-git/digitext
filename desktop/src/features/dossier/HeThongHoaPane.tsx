@@ -109,7 +109,7 @@ export default function HeThongHoaPane() {
       const V15v = await import("xlsx");
       const V15w = V4dw(V15n, V14r, V15u);
       const data = V15w.map((r) => ({
-        TcOjIEjhu5MgU8ah: r.maHoSo ?? "",
+        "Mã Hồ Sơ": r.maHoSo ?? "",
         "Hộp Số": r.hopSo ?? "",
         "HS Số": r.thuTuSapXep ?? "",
         "Bó Số": r.boSo ?? "",

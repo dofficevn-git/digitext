@@ -16,7 +16,7 @@ const V4sv: Record<string, string> = {
   queued: "Chờ dựng",
   building: "Đang dựng",
   built: "Hoàn tất",
-  failed: "TOG7l2k=",
+  failed: "Lỗi",
 };
 
 function V4sw(V2ov: number | null): string {

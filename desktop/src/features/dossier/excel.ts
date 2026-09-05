@@ -72,17 +72,17 @@ export async function V4e6(): Promise<void> {
   const V106: Record<string, unknown> = {
     Mảng: "",
     "ID Hồ Sơ": "",
-    TcOjIEjhu5MgU8ah: "",
+    "Mã Hồ Sơ": "",
     "Số Tạm": "",
     "Tiêu Đề": "",
     THBQ: "",
     "Số Tờ": "",
-    TmfDoHkgQsSQ: "",
+    "Ngày BĐ": "",
     "Ngày KT": "",
     "T.Thừa": "",
     "T.Thái": "",
     "Tài Liệu": "",
-    Q2jhu6ljIE7Eg25n: "",
+    "Chức Năng": "",
   };
   await V4e3([V106], "MauHoSo", "mau-lap-ho-so.xlsx");
 }

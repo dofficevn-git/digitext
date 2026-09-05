@@ -86,7 +86,7 @@ export default function V48b({ kids: Vgp, marked: Vgq, onToggleMark: Vgr, onMove
                   </span>
                   {Vh8 ? n.name : `${n.name}.pdf`}
                 </td>
-                <td>{n.owner ?? "VMO0aQ=="}</td>
+                <td>{n.owner ?? "Tôi"}</td>
                 <td className="num">{Vh8 ? `${(n.kids ?? []).length} mục` : V48a(n.size)}</td>
                 <td>
                   {Vh8 ? (

@@ -543,7 +543,7 @@ pub fn rename_path(
         None
     };
     let stem = storage::sanitize(&args.new_name, 90, false);
-    f_yd(&stem, "VMOqbg==")?;
+    f_yd(&stem, "Tên")?;
     let r_4s = match &ext {
         Some(e) => format!("{stem}.{e}"),
         None => stem,

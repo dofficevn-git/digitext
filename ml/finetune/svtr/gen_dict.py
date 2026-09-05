@@ -15,7 +15,7 @@ def vietnamese_charset() -> list[str]:
         for p_895 in _TONES:
             for p_893 in (p_896, p_896.upper()):
                 p_894.add(unicodedata.normalize("NFC", p_893 + p_895))
-    p_894.update("xJHEkA==")
+    p_894.update("đĐ")
     p_894.update("abcdefghijklmnopqrstuvwxyz")
     p_894.update("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     p_894.update("0123456789")

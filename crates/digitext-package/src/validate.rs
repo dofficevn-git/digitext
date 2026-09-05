@@ -266,7 +266,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
                 r_43h.push(Violation::error(
                     "S-PREMIS-MISSING",
                     format!(
-                        "Z8OzaSA={} bắt buộc PREMIS: thiếu {p}",
+                        "gói {} bắt buộc PREMIS: thiếu {p}",
                         r_43g.as_str()
                     ),
                 ));
@@ -292,7 +292,7 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         r_43h.push(Violation::error(
             "S-FETCH-FORBIDDEN",
             format!(
-                "Z8OzaSA={} không dùng tài liệu liên kết .fetch.txt",
+                "gói {} không dùng tài liệu liên kết .fetch.txt",
                 r_43g.as_str()
             ),
         ));

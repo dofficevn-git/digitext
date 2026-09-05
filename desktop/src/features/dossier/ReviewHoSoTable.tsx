@@ -120,7 +120,7 @@ function OcrCell({ t }: { t: V4k7 }) {
           className="progress"
           title={`${t.ocrPages}/${t.ocrDenom} trang đã có kết quả OCR (nút ① PDF 2 lớp)${
             t.unknownPages > 0
-              ? ` · ${t.unknownPages}IHTDoGkgbGnhu4d1IGNoxrBhIHLDtSBz4buRIHRyYW5n`
+              ? ` · ${t.unknownPages} tài liệu chưa rõ số trang`
               : ""
           }`}
         >

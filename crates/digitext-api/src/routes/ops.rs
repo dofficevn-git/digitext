@@ -113,7 +113,7 @@ pub async fn check_document(
             Ok(Some(b)) => (warm.clone(), b),
             Ok(None) => {
                 return Err(format!(
-                    "thiếu object trong kho ({signed}IHbDoCA={warm})"
+                    "thiếu object trong kho ({signed} và {warm})"
                 ));
             }
             Err(e) => return Err(format!("kho object lỗi: {e}")),

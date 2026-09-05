@@ -108,7 +108,7 @@ export default function V4hr({
           title={
             doc.reviewNote ??
             (doc.reviewedAt
-              ? `TMO6YyA=${doc.reviewedAt}`
+              ? `Lúc ${doc.reviewedAt}`
               : doc.reviewStatus === "pending"
                 ? "Chưa có quyết định"
                 : V1if.label)
