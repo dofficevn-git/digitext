@@ -53,6 +53,42 @@ def norm(s: str) -> str:
     return " ".join(s.lower().split())
 
 
+def match_field(field: str, gt: str, hay: str) -> bool:
+    """So khớp một trường. Ba trường hợp cần đối xử khác nhau.
+
+    Phiên bản đầu chỉ dùng "chuỗi con nguyên văn" cho mọi trường, cho ra 0% ở
+    issue_date và 0% ở summary. Cả hai đều là LỖI CỦA PHÉP ĐO chứ không phải
+    của OCR:
+
+      - issue_date: nhãn chuẩn hoá về 23/05/2011, còn tài liệu viết
+        "ngày 23 tháng 5 năm 2011". Không đời nào khớp nguyên văn.
+      - summary: trích yếu dài hàng chục từ; sai một ký tự là trượt cả trường,
+        nên nó đo "có hoàn hảo không" chứ không đo "đọc được bao nhiêu".
+    """
+    n = norm(gt)
+    if not n:
+        return False
+
+    if field == "issue_date":
+        # Đủ ngày + tháng + năm xuất hiện là tính đúng, bất kể định dạng.
+        parts = re.findall(r"\d+", gt)
+        if len(parts) >= 3:
+            d, m, y = parts[0].lstrip("0"), parts[1].lstrip("0"), parts[2]
+            toks = set(hay.split())
+            return all(t in toks for t in (d, m, y))
+        return n in hay
+
+    if field == "summary":
+        # Tỷ lệ TỪ của trích yếu tìm thấy trong toàn văn; ≥70% coi là đọc được.
+        want = [w for w in n.split() if len(w) > 1]
+        if not want:
+            return False
+        toks = set(hay.split())
+        return sum(w in toks for w in want) / len(want) >= 0.7
+
+    return n in hay
+
+
 def load_labels(data_dir: str, split: str) -> list[dict]:
     path = os.path.join(data_dir, f"{split}.jsonl")
     rows = []
@@ -146,7 +182,7 @@ def main() -> int:
             if len(val) < 3:
                 continue
             per_field[f][1] += 1
-            if norm(val) and norm(val) in hay:
+            if match_field(f, val, hay):
                 per_field[f][0] += 1
 
         if i % 10 == 0:
@@ -168,8 +204,9 @@ def main() -> int:
         print(f"{f:-<30} {hit:>8} {all_:>6} {pct:>7}")
     pct = f"{100*tot_hit/tot_all:.1f}%" if tot_all else "-"
     print(f"{'CỘNG':-<30} {tot_hit:>8} {tot_all:>6} {pct:>7}")
-    print("\nLưu ý: đây là cận DƯỚI. So khớp nguyên văn nên một ký tự sai là")
-    print("trượt cả trường; và đã bỏ dấu trước khi so, nên lỗi dấu không bị tính.")
+    print("\nLưu ý: vẫn là cận DƯỚI. Đã bỏ dấu trước khi so nên lỗi dấu KHÔNG bị")
+    print("tính — muốn đo cả dấu thì phải sửa norm(). Các trường thường (không")
+    print("phải date/summary) vẫn so khớp nguyên văn nên sai một ký tự là trượt.")
     return 0
 
 
