@@ -8,10 +8,14 @@
 
 FROM python:3.10-slim
 
-# libgomp1: PaddlePaddle cần OpenMP.
-# libglib2.0-0: opencv-python-headless vẫn cần, dù không kéo theo X11.
+# libgomp1:     PaddlePaddle cần OpenMP.
+# libglib2.0-0: OpenCV cần.
+# libgl1:       BẮT BUỘC dù ta đã ghim opencv-python-headless — paddleocr khai
+#               `opencv-python` (bản đầy đủ) làm phụ thuộc riêng, pip cài đè lên,
+#               và bản đó liên kết libGL. Thiếu nó container crash-loop với
+#               "ImportError: libGL.so.1".
 RUN apt-get update \
- && apt-get install -y --no-install-recommends libgomp1 libglib2.0-0 \
+ && apt-get install -y --no-install-recommends libgomp1 libglib2.0-0 libgl1 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
