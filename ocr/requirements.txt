@@ -40,8 +40,14 @@ openpyxl==3.1.5            # app.py:7-9 dùng nhưng bản gốc thiếu khai
 # HTTP client (external_api.py)
 requests==2.32.3
 
+# google-genai — CHỈ để `from google import genai` ở main.py:9 không nổ.
+# Không dòng nào gọi `genai.*`; nhánh Gemini đã bị gỡ. Nhưng import nằm ở CẤP
+# MODULE, nên thiếu gói là app.py sập ngay lúc khởi động với
+# ModuleNotFoundError. Muốn bỏ thật thì phải xoá hai dòng import ở main.py —
+# đó là sửa mã nguồn, không phải sửa danh sách phụ thuộc.
+google-genai==1.2.0
+
 # ĐÃ BỎ so với bản gốc:
-#   google-genai  — main.py:9 import nhưng không dùng (nhánh Gemini đã gỡ)
 #   uuid          — là stdlib, gói trên PyPI là gói rác
 #   zipfile36     — stdlib zipfile đã đủ
 
