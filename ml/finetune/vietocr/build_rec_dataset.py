@@ -97,6 +97,24 @@ def ocr_page(endpoint: str, api_key: str, img_bytes: bytes, timeout: int) -> dic
     )
 
 
+def shrink(png: bytes, max_side: int, max_px: int) -> bytes:
+    """Ép ảnh về kích thước an toàn TRƯỚC khi gửi VLM.
+
+    Không có bước này thì một ô cắt hỏng (ví dụ hộp bao trùm cả trang) sẽ thành
+    hàng chục nghìn token thị giác và có thể hạ cả máy chủ vLLM — đã xảy ra.
+    digitext-ocr cũng làm y vậy: vlm.rs giới hạn cạnh dài 1400px trước khi gọi.
+    """
+    im = Image.open(io.BytesIO(png))
+    w, h = im.size
+    scale = min(1.0, max_side / max(w, h), (max_px / max(1, w * h)) ** 0.5)
+    if scale < 1.0:
+        im = im.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
+        buf = io.BytesIO()
+        im.convert("RGB").save(buf, "PNG")
+        return buf.getvalue()
+    return png
+
+
 def vlm_read_line(endpoint: str, model: str, png: bytes, timeout: int) -> str:
     b64 = base64.b64encode(png).decode()
     body = {
@@ -127,6 +145,12 @@ def main() -> int:
     ap.add_argument("--pad", type=int, default=3, help="nới hộp vài pixel cho khỏi cụt nét")
     ap.add_argument("--min-h", type=int, default=10, help="bỏ dòng thấp hơn (nhiễu)")
     ap.add_argument("--min-chars", type=int, default=2)
+    ap.add_argument("--max-side", type=int, default=1400,
+                    help="ép cạnh dài ảnh gửi VLM về mức này — CHẶN ô hỏng làm sập vLLM")
+    ap.add_argument("--max-px", type=int, default=1_200_000,
+                    help="trần tổng số điểm ảnh gửi VLM")
+    ap.add_argument("--max-box-ratio", type=float, default=0.5,
+                    help="bỏ hộp cao hơn tỉ lệ này của trang — chắc chắn không phải một dòng")
     ap.add_argument("--max-cer", type=float, default=0.6,
                     help="bất đồng vượt ngưỡng thì bỏ — ô cắt hỏng")
     ap.add_argument("--val-ratio", type=float, default=0.1)
@@ -156,8 +180,8 @@ def main() -> int:
     crop_dir = os.path.join(a.out, "crops")
     os.makedirs(crop_dir, exist_ok=True)
     rows = {"train": [], "val": []}
-    stat = {"trang": 0, "dong_phat_hien": 0, "bo_thap": 0, "bo_ngan": 0,
-            "bo_bat_dong": 0, "loi_ocr": 0, "loi_vlm": 0, "giu": 0}
+    stat = {"trang": 0, "dong_phat_hien": 0, "bo_thap": 0, "bo_qua_to": 0,
+            "bo_ngan": 0, "bo_bat_dong": 0, "loi_ocr": 0, "loi_vlm": 0, "giu": 0}
     cer_sum = 0.0
 
     print(f"{len(imgs)} trang ({len(val_set)} cho val) -> {a.out}")
@@ -182,6 +206,11 @@ def main() -> int:
             if y2 - y1 < a.min_h:
                 stat["bo_thap"] += 1
                 continue
+            # Hộp cao gần bằng cả trang không thể là MỘT dòng chữ — đó là ô cắt
+            # hỏng. Gửi nó cho VLM vừa vô nghĩa vừa nguy hiểm về bộ nhớ.
+            if (y2 - y1) > H * a.max_box_ratio:
+                stat["bo_qua_to"] += 1
+                continue
             c = im.crop((max(0, int(x1) - a.pad), max(0, int(y1) - a.pad),
                          min(W, int(x2) + a.pad), min(H, int(y2) + a.pad)))
             buf = io.BytesIO()
@@ -193,11 +222,20 @@ def main() -> int:
                 continue
 
             try:
-                truth = vlm_read_line(a.vlm_endpoint, a.vlm_model, png, a.timeout)
+                small = shrink(png, a.max_side, a.max_px)
+                truth = vlm_read_line(a.vlm_endpoint, a.vlm_model, small, a.timeout)
             except Exception as e:  # noqa: BLE001
                 stat["loi_vlm"] += 1
+                # In NGUYÊN thân lỗi cho 3 lần đầu — nuốt lỗi khiến lần trước
+                # phải mò mẫm mới biết vLLM trả 500 vì cái gì.
                 if stat["loi_vlm"] <= 3:
-                    print(f"  VLM lỗi: {e}")
+                    detail = ""
+                    if isinstance(e, urllib.error.HTTPError):
+                        try:
+                            detail = " | " + e.read().decode(errors="replace")[:300]
+                        except Exception:  # noqa: BLE001
+                            pass
+                    print(f"  VLM lỗi: {e}{detail}")
                 continue
 
             if len(truth) < a.min_chars:
