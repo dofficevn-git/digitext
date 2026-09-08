@@ -1,0 +1,128 @@
+# Giao diện web + KIE của doc_extract_pla, kèm SQL Server và vLLM riêng.
+#
+# CHẠY SONG SONG, KHÔNG THAY THẾ dịch vụ OCR toàn văn ở infra/compose/ocr/.
+# Hai thứ khác cổng, khác vòng đời, khác mục đích:
+#   :5002  serve_ocr.py  máy gọi máy — DigiText gọi vào để nhận dạng chữ
+#   :5001  app.py        người dùng mở trình duyệt, quản lý lô và gói việc
+#
+#   docker compose -f infra/compose/ocr-web/docker-compose.yml --env-file .env up -d --build
+
+name: digitext-ocr-web
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:${MSSQL_VERSION:-2022-latest}
+    restart: unless-stopped
+    ports:
+      - "${DB_BIND:-127.0.0.1}:${DB_PORT:-1433}:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?dat DB_PASSWORD trong .env}
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 90s
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:${MSSQL_VERSION:-2022-latest}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ../../../ocr/docker/sqlserver/init:/init:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >
+        /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -i /init/01-create-database.sql
+        || /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -i /init/01-create-database.sql
+    restart: "no"
+
+  vllm-vnkie:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.8.5}
+    restart: unless-stopped
+    ports:
+      - "${VLLM_BIND:-127.0.0.1}:${VLLM_PORT:-3000}:8000"
+    volumes:
+      # Trọng số Vintern đã fine-tune. KHÔNG có trong repo (.gitignore:131) —
+      # cấp phát khi triển khai. Thiếu nó thì vLLM không khởi động nổi.
+      #
+      # Lưu ý cách hỏng: web VẪN lên bình thường, vì DocumentKIE.__init__
+      # (main.py:84-113) chỉ đọc biến môi trường chứ không kết nối. Lỗi chỉ
+      # lộ ra lúc xử lý tài liệu đầu tiên. Kiểm vLLM riêng, đừng chờ web báo.
+      - ../../../ocr/models/plakie:/models/plakie:ro
+    shm_size: 8gb
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+    environment:
+      VLLM_USE_V1: "0"
+    command:
+      - --model
+      - /models/plakie
+      - --served-model-name
+      - vnkie
+      - --trust-remote-code
+      - --dtype
+      - bfloat16
+      - --max-model-len
+      - "4096"
+      # BẢN GỐC ĐỂ 0.90 — trên máy này sẽ nổ. Card 16GB đã có vLLM khác giữ
+      # ~9,3GB cho Qwen2.5-VL của DigiText. 0.90 nghĩa là xin 90% TOÀN BỘ card,
+      # không phải 90% phần còn trống. Vintern-1B nhỏ nên 0.20 là đủ.
+      - --gpu-memory-utilization
+      - "${VLLM_GPU_FRACTION:-0.20}"
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+
+  web:
+    build:
+      context: ../../../ocr
+      dockerfile: ../infra/compose/ocr-web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    ports:
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-5001}:5001"
+    environment:
+      FLASK_HOST: "0.0.0.0"
+      FLASK_PORT: "5001"
+      # Trỏ vào tên dịch vụ trong mạng compose, không phải 127.0.0.1 —
+      # trong container thì loopback là chính nó.
+      DB_SERVER: "sqlserver,1433"
+      DB_DATABASE: "${DB_DATABASE:-kie_pla}"
+      DB_USERNAME: "sa"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_DRIVER: "{ODBC Driver 17 for SQL Server}"
+      API_PROVIDER: "vllm"
+      VLLM_ENABLED: "true"
+      VLLM_BASE_URL: "http://vllm-vnkie:8000"
+      VLLM_MODEL: "${VLLM_MODEL:-vnkie}"
+      VLLM_TIMEOUT: "${VLLM_TIMEOUT:-300}"
+      SECRET_KEY: "${SECRET_KEY:?dat SECRET_KEY trong .env}"
+      MAX_WORKERS: "${MAX_WORKERS:-1}"
+      WAITRESS_THREADS: "${WAITRESS_THREADS:-8}"
+    mem_limit: ${WEB_MEM_LIMIT:-6g}
+    volumes:
+      # Dữ liệu chạy — để ngoài container thì dựng lại image không mất.
+      - webdata-uploads:/app/uploads
+      - webdata-output:/app/output
+      - webdata-temp:/app/temp_processing
+      - webdata-static:/app/static/processed_images
+
+volumes:
+  sqlserver-data:
+  webdata-uploads:
+  webdata-output:
+  webdata-temp:
+  webdata-static:

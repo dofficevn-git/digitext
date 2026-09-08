@@ -1,0 +1,34 @@
+# Phụ thuộc cho giao diện web + KIE (app.py).
+#
+# Khác requirements.txt gốc ở hai điểm: đã ghim phiên bản, và BỎ những gói
+# không file .py nào import — chúng chỉ làm image phình lên.
+#
+# Đã bỏ, kèm lý do:
+#   paddlepaddle, paddleocr  không được import ở đâu trong nhánh web/KIE.
+#                            Nhánh OCR toàn văn dùng chúng, nhưng đó là dịch vụ
+#                            riêng — xem requirements-ocr.txt.
+#   easyocr                  khai mà không dùng, kéo theo bộ trọng số thứ hai.
+#   google-genai             main.py:9 import nhưng nhánh Gemini đã bị gỡ.
+#   uuid, zipfile36          gói rác — cả hai đã là thư viện chuẩn.
+
+Flask==3.0.3
+Werkzeug==3.0.4
+flask-cors==4.0.1           # app.py:17 dùng nhưng bản gốc quên khai
+waitress==3.0.0
+python-dotenv==1.0.1
+
+pyodbc==5.1.0               # cần msodbcsql17 + unixodbc ở tầng hệ điều hành
+
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+numpy==1.26.4               # PHẢI <2
+
+PyMuPDF==1.24.10
+pdf2image==1.17.0           # main.py:471 dùng nhưng bản gốc quên khai.
+                            # CẦN binary poppler — Dockerfile đã cài poppler-utils.
+
+ultralytics==8.3.0          # YOLO cắt vùng header/chữ ký (best.pt)
+# torch/torchvision cài riêng trong Dockerfile từ index CPU của PyTorch.
+
+openpyxl==3.1.5             # app.py:7-9 xuất Excel, bản gốc quên khai
+requests==2.32.3            # external_api.py
