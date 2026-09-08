@@ -245,20 +245,37 @@ def recognize(image_bgr: np.ndarray) -> dict:
     # quyết định trang nào phải đưa vào hàng soát của người
     # (crates/digitext-ocr/src/worker.rs:131-139). Gán cứng một giá trị đẹp sẽ
     # khiến KHÔNG trang nào bị đánh dấu — mất hẳn lưới an toàn đó.
+    # CHIA MẺ. Đẩy cả trang vào một lần gọi là nguồn gốc của hai sự cố thật:
+    # một trang 30 dòng nghĩa là 30 ảnh chạy qua VGG19 + transformer cùng lúc,
+    # fp32 trên CPU — đỉnh bộ nhớ vọt lên hàng GB. Không có trần thì nó ăn RAM
+    # máy chủ tới khi OOM killer nổ và kéo sập cả phiên; có trần thì container
+    # tự chết và bên gọi nhận "connection reset by peer".
+    #
+    # Số dòng mỗi trang là do TÀI LIỆU quyết định, không phải ta — nên không
+    # được để nó điều khiển lượng bộ nhớ dùng. Mẻ cố định thì đỉnh bộ nhớ có
+    # trần, bất kể trang dày bao nhiêu.
+    batch = max(1, int(os.getenv("OCR_REC_BATCH", "8")))
     try:
-        texts, probs = None, None
-        if hasattr(rec, "predict_batch"):
-            try:
-                texts, probs = rec.predict_batch(crops, return_prob=True)
-            except TypeError:
-                texts = rec.predict_batch(crops)
-                probs = [None] * len(texts)
-        if texts is None:
-            texts, probs = [], []
-            for c in crops:
-                t, p = rec.predict(c, return_prob=True)
-                texts.append(t)
-                probs.append(p)
+        texts, probs = [], []
+        for i in range(0, len(crops), batch):
+            chunk = crops[i:i + batch]
+            done = False
+            if hasattr(rec, "predict_batch"):
+                try:
+                    t, p = rec.predict_batch(chunk, return_prob=True)
+                    texts.extend(t)
+                    probs.extend(p)
+                    done = True
+                except TypeError:
+                    t = rec.predict_batch(chunk)
+                    texts.extend(t)
+                    probs.extend([None] * len(t))
+                    done = True
+            if not done:
+                for c in chunk:
+                    t, p = rec.predict(c, return_prob=True)
+                    texts.append(t)
+                    probs.append(p)
     except Exception as e:  # noqa: BLE001
         if _is_oom(e):
             raise OcrOutOfMemory(str(e)) from e

@@ -14,15 +14,18 @@ services:
       dockerfile: ../infra/compose/ocr/Dockerfile
     restart: unless-stopped
     ports:
-      # Loopback: DigiText gọi từ cùng máy. Đổi sang 0.0.0.0 nếu khác máy,
-      # và khi đó BẮT BUỘC đặt OCR_API_KEY.
-      - "127.0.0.1:${OCR_PORT:-5002}:5002"
+      # Mặc định loopback: DigiText gọi từ cùng máy.
+      # Khác máy thì đặt OCR_BIND=0.0.0.0 trong .env — KHÔNG sửa file này, để
+      # lần cập nhật sau không ghi đè mất lựa chọn của bạn.
+      # Mở ra LAN thì OCR_API_KEY là thứ DUY NHẤT chặn người khác dùng.
+      - "${OCR_BIND:-127.0.0.1}:${OCR_PORT:-5002}:5002"
     environment:
       OCR_HOST: "0.0.0.0"
       OCR_PORT: "5002"
       OCR_THREADS: "${OCR_THREADS:-4}"
       OCR_LANG: "${OCR_LANG:-vi}"
       OCR_USE_GPU: "${OCR_USE_GPU:-false}"
+      OCR_REC_BATCH: "${OCR_REC_BATCH:-8}"
       OCR_API_KEY: "${OCR_API_KEY:?dat OCR_API_KEY trong infra/compose/ocr/.env}"
     # Trần bộ nhớ. Không có nó thì một ảnh bất thường có thể đẩy container ăn
     # hết RAM máy chủ; trên máy KHÔNG CÓ SWAP, OOM killer sẽ kéo sập cả phiên
