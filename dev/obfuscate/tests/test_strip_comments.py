@@ -23,7 +23,7 @@ LIC = "// Copyright (c) 2026 DigiText. All rights reserved."
 
 class TestRust(unittest.TestCase):
     def test_url_in_string_survives(self):
-        src = 'let e = "https://github.com/dangdat1111/DigiText";'
+        src = 'let e = "https://example.com/DigiText";'
         self.assertEqual(strip_rust(src), src)
 
     def test_raw_string_with_comment_markers_survives(self):
