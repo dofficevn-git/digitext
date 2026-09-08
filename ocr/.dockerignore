@@ -1,0 +1,30 @@
+# Dùng CHUNG cho hai image lấy thư mục này làm build context:
+#   infra/compose/ocr/Dockerfile      → dịch vụ OCR toàn văn (:5002)
+#   infra/compose/ocr-web/Dockerfile  → giao diện web + KIE (:5001)
+# Nên chỉ loại những thứ KHÔNG image nào cần.
+
+# Trọng số 145MB. Cả hai image đều bind-mount lúc chạy chứ không copy vào —
+# không có file này thì mỗi lần build lại nhồi 145MB qua Docker daemon vô ích.
+models/
+
+# Dữ liệu chạy: có ảnh tài liệu thật, không được nằm trong image.
+uploads/
+output/
+exports/
+temp_processing/
+static/processed_images/
+
+# Bí mật. Container nhận cấu hình qua environment của compose.
+.env
+.env.*
+!.env*.example
+
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.spec
+
+# Sổ tay huấn luyện 1,5MB, chỉ dùng lúc phát triển.
+*.ipynb
+.ipynb_checkpoints/
