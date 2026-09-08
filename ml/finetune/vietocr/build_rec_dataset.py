@@ -97,22 +97,39 @@ def ocr_page(endpoint: str, api_key: str, img_bytes: bytes, timeout: int) -> dic
     )
 
 
-def shrink(png: bytes, max_side: int, max_px: int) -> bytes:
-    """Ép ảnh về kích thước an toàn TRƯỚC khi gửi VLM.
+def fit_for_vlm(png: bytes, max_side: int, max_px: int, min_side: int) -> bytes:
+    """Ép ảnh vào khoảng kích thước mà VLM xử lý được. CẢ HAI đầu đều quan trọng.
 
-    Không có bước này thì một ô cắt hỏng (ví dụ hộp bao trùm cả trang) sẽ thành
-    hàng chục nghìn token thị giác và có thể hạ cả máy chủ vLLM — đã xảy ra.
-    digitext-ocr cũng làm y vậy: vlm.rs giới hạn cạnh dài 1400px trước khi gọi.
+    QUÁ LỚN: một ô cắt hỏng bao trùm cả trang thành hàng chục nghìn token thị
+    giác, đủ để hạ máy chủ vLLM — đã xảy ra. digitext-ocr chặn đúng chỗ này:
+    vlm.rs ép cạnh dài về 1400px trước khi gọi.
+
+    QUÁ NHỎ: đây là chỗ tôi bỏ sót ban đầu, và nó gây hỏng 81/92 lời gọi. Ảnh
+    một DÒNG CHỮ rất dẹt — rộng vài trăm pixel nhưng cao chỉ 15-25. Qwen2.5-VL
+    chia ảnh thành ô 28×28; ảnh cao 20px không đủ MỘT ô theo chiều dọc và máy
+    chủ trả 500 không kèm thông báo. Dòng cao (tiêu đề) thì lọt, nên lỗi trông
+    như ngẫu nhiên.
+
+    Phóng to bằng LANCZOS chứ không đệm viền: model đọc chữ, thêm viền trắng
+    chỉ tổ làm loãng vùng có nội dung.
     """
-    im = Image.open(io.BytesIO(png))
+    im = Image.open(io.BytesIO(png)).convert("RGB")
     w, h = im.size
-    scale = min(1.0, max_side / max(w, h), (max_px / max(1, w * h)) ** 0.5)
-    if scale < 1.0:
-        im = im.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
-        buf = io.BytesIO()
-        im.convert("RGB").save(buf, "PNG")
-        return buf.getvalue()
-    return png
+
+    # Phóng lên trước, nếu cạnh ngắn chưa đủ vài ô patch.
+    up = max(1.0, min_side / max(1, min(w, h)))
+    w, h = int(w * up), int(h * up)
+
+    # Rồi mới thu về trong trần — thứ tự này quan trọng: thu trước thì bước
+    # phóng sẽ đẩy ngược ra ngoài trần.
+    down = min(1.0, max_side / max(w, h), (max_px / max(1, w * h)) ** 0.5)
+    w, h = max(min_side, int(w * down)), max(min_side, int(h * down))
+
+    if (w, h) == im.size:
+        return png
+    buf = io.BytesIO()
+    im.resize((w, h), Image.LANCZOS).save(buf, "PNG")
+    return buf.getvalue()
 
 
 def vlm_read_line(endpoint: str, model: str, png: bytes, timeout: int) -> str:
@@ -145,6 +162,9 @@ def main() -> int:
     ap.add_argument("--pad", type=int, default=3, help="nới hộp vài pixel cho khỏi cụt nét")
     ap.add_argument("--min-h", type=int, default=10, help="bỏ dòng thấp hơn (nhiễu)")
     ap.add_argument("--min-chars", type=int, default=2)
+    ap.add_argument("--min-side", type=int, default=64,
+                    help="phóng ảnh sao cho cạnh NGẮN đạt mức này. Qwen2.5-VL chia ô "
+                         "28px; ảnh dòng cao 15-25px không đủ một ô và máy chủ trả 500")
     ap.add_argument("--max-side", type=int, default=1400,
                     help="ép cạnh dài ảnh gửi VLM về mức này — CHẶN ô hỏng làm sập vLLM")
     ap.add_argument("--max-px", type=int, default=1_200_000,
@@ -222,7 +242,7 @@ def main() -> int:
                 continue
 
             try:
-                small = shrink(png, a.max_side, a.max_px)
+                small = fit_for_vlm(png, a.max_side, a.max_px, a.min_side)
                 truth = vlm_read_line(a.vlm_endpoint, a.vlm_model, small, a.timeout)
             except Exception as e:  # noqa: BLE001
                 stat["loi_vlm"] += 1
