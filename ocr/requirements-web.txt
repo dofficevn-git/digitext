@@ -8,7 +8,6 @@
 #                            Nhánh OCR toàn văn dùng chúng, nhưng đó là dịch vụ
 #                            riêng — xem requirements-ocr.txt.
 #   easyocr                  khai mà không dùng, kéo theo bộ trọng số thứ hai.
-#   google-genai             main.py:9 import nhưng nhánh Gemini đã bị gỡ.
 #   uuid, zipfile36          gói rác — cả hai đã là thư viện chuẩn.
 
 Flask==3.0.3
@@ -32,3 +31,10 @@ ultralytics==8.3.0          # YOLO cắt vùng header/chữ ký (best.pt)
 
 openpyxl==3.1.5             # app.py:7-9 xuất Excel, bản gốc quên khai
 requests==2.32.3            # external_api.py
+
+# google-genai — CHỈ để `from google import genai` ở main.py:9 không nổ.
+# Không dòng nào gọi `genai.*`; nhánh Gemini đã bị gỡ. Nhưng import nằm ở CẤP
+# MODULE, nên thiếu gói là app.py sập ngay lúc khởi động với
+# ModuleNotFoundError. Muốn bỏ thật thì phải xoá hai dòng import ở main.py —
+# đó là sửa mã nguồn, không phải sửa danh sách phụ thuộc.
+google-genai==1.2.0
