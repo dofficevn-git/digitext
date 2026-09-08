@@ -27,7 +27,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
     "windows": {
       "nsis": {
         "installerHooks": "./windows/hooks.nsh"
@@ -40,13 +39,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
-  },
-  "plugins": {
-    "updater": {
-      "endpoints": [
-        "https://github.com/dangdat1111/DigiText/releases/latest/download/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlFQjY1MDY0Qjk3RjA5NjQKUldSa0NYKzVaRkMybmlSWXBtbnRlamdBVUpmVzdEa1pnbmY5cFJtc0VkeFFjYy9VSUhMblppelAK"
-    }
   }
 }

@@ -36,7 +36,6 @@ use tauri::Manager;
 fn main() {
     scanner::f_2ib();
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(scanner::Tkx::default())
