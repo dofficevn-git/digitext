@@ -203,6 +203,8 @@ def main() -> int:
     stat = {"trang": 0, "dong_phat_hien": 0, "bo_thap": 0, "bo_qua_to": 0,
             "bo_ngan": 0, "bo_bat_dong": 0, "loi_ocr": 0, "loi_vlm": 0, "giu": 0}
     cer_sum = 0.0
+    cer_sum_all = 0.0   # ke ca dong bi loai vi bat dong
+    n_all = 0
 
     print(f"{len(imgs)} trang ({len(val_set)} cho val) -> {a.out}")
     for n, path in enumerate(imgs, 1):
@@ -262,6 +264,8 @@ def main() -> int:
                 stat["bo_ngan"] += 1
                 continue
             d = cer(norm(txt), truth)
+            cer_sum_all += d
+            n_all += 1
             if d > a.max_cer:
                 stat["bo_bat_dong"] += 1
                 continue
@@ -285,9 +289,15 @@ def main() -> int:
     print("\n=== thống kê ===")
     for k, v in stat.items():
         print(f"  {k:16s} {v}")
-    if stat["giu"] and not a.dry_run:
-        print(f"\nCER trung bình VietOCR-hiện-tại so với VLM: {cer_sum/stat['giu']:.3f}")
-        print("  (càng cao = VietOCR càng đọc sai nhiều = càng đáng fine-tune)")
+    if n_all and not a.dry_run:
+        print("\nCER giữa VietOCR hiện tại và VLM:")
+        print(f"  chỉ dòng GIỮ LẠI                : {cer_sum / max(1, stat['giu']):.3f}"
+              f"   ({stat['giu']} dòng)")
+        print(f"  TÍNH CẢ dòng bị loại vì bất đồng: {cer_sum_all / n_all:.3f}"
+              f"   ({n_all} dòng)  <- CON SỐ THẬT")
+        print("  Chỉ nhìn dòng giữ lại là tự lừa mình: bộ lọc đã bỏ đúng những")
+        print("  dòng VietOCR đọc sai NẶNG nhất, tức phần đáng học nhất.")
+        print("  Trên ~0,25 thì fine-tune đáng làm; dưới ~0,15 thì cải thiện ít.")
     return 0
 
 
