@@ -24,6 +24,12 @@ services:
       OCR_LANG: "${OCR_LANG:-vi}"
       OCR_USE_GPU: "${OCR_USE_GPU:-false}"
       OCR_API_KEY: "${OCR_API_KEY:?dat OCR_API_KEY trong infra/compose/ocr/.env}"
+    # Trần bộ nhớ. Không có nó thì một ảnh bất thường có thể đẩy container ăn
+    # hết RAM máy chủ; trên máy KHÔNG CÓ SWAP, OOM killer sẽ kéo sập cả phiên
+    # đồ hoạ chứ không chỉ giết container. Đã xảy ra trên node GPU.
+    # Chạm trần thì container tự chết và restart — thiệt hại gói gọn ở đây.
+    mem_limit: ${OCR_MEM_LIMIT:-6g}
+    cpus: ${OCR_CPUS:-4}
     volumes:
       # Trọng số PaddleOCR (~100MB) tải ở lần chạy đầu. Không có volume này thì
       # mỗi lần dựng lại container là tải lại.
