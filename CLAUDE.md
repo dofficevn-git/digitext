@@ -69,6 +69,12 @@ Toàn bộ mã trong repo là **output đã obfuscate** của [dev/obfuscate/](d
 Đừng "sửa" tên biến khó hiểu thành tên đẹp: chúng là output của công cụ, sửa tay
 sẽ lệch với lần obfuscate sau.
 
+## Đang làm dở
+
+Việc dở dang, hai máy, và những file phải mang tay sang máy mới:
+**[docs/HANDOFF.md](docs/HANDOFF.md)** — đọc trước khi làm tiếp bất cứ gì
+liên quan tới dịch vụ OCR, web KIE, hay fine-tune VietOCR.
+
 ## Bẫy đã biết
 
 - **Không có migrations Postgres trong repo** — clone về không dựng lại được CSDL.
