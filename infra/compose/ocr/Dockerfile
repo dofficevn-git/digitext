@@ -90,6 +90,17 @@ ENV OCR_HOST=0.0.0.0 \
     OCR_USE_GPU=${OCR_USE_GPU} \
     PYTHONUNBUFFERED=1
 
+# Paddle dlopen thư viện CUDA theo TÊN KHÔNG PHIÊN BẢN (libcudnn.so, …) còn image
+# runtime của NVIDIA chỉ có libcudnn.so.8 — lần chạy GPU đầu tiên (17/9/2026)
+# nạp model xong nhưng mọi request trả 500 "Cannot load cudnn shared library".
+# Tạo symlink cho những lib thiếu; trên image CPU (python:3.10-slim) vòng lặp
+# không thấy file nào nên vô hại. Đặt cuối để không phá cache các layer pip.
+RUN cd /usr/lib/x86_64-linux-gnu 2>/dev/null && for f in libcudnn.so.8 libcublas.so.12 \
+      libcublasLt.so.12 libcurand.so.10 libcusolver.so.11 libcusparse.so.12 \
+      libcufft.so.11 libnvrtc.so.12; do \
+      if [ -e "$f" ] && [ ! -e "${f%%.so.*}.so" ]; then ln -s "$f" "${f%%.so.*}.so"; fi; \
+    done; true
+
 EXPOSE 5002
 
 # python thay vì curl: image slim không có curl, thêm vào chỉ để healthcheck là thừa.
