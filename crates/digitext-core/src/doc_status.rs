@@ -73,6 +73,7 @@ impl DocStatus {
             (self, r_1yd),
             (Uploaded, OcrPending)
                 | (OcrPending, OcrDone)
+                | (OcrDone, OcrPending)
                 | (OcrDone, ToSign)
                 | (ToSign, Signing)
                 | (Signing, Signed)
@@ -104,5 +105,32 @@ impl TryFrom<String> for DocStatus {
     type Error = Tgl;
     fn try_from(r_1yg: String) -> Result<Self, Self::Error> {
         r_1yg.parse()
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::DocStatus::{self, *};
+    #[test]
+    fn ocr_edges() {
+        assert!(Uploaded.can_transition_to(OcrPending));
+        assert!(OcrPending.can_transition_to(OcrDone));
+        assert!(OcrDone.can_transition_to(OcrPending));
+        assert!(OcrDone.can_transition_to(ToSign));
+        assert!(!ToSign.can_transition_to(OcrPending));
+        assert!(!Signed.can_transition_to(OcrPending));
+        assert!(!OcrPending.can_transition_to(ToSign));
+    }
+    #[test]
+    fn disposed_is_sink() {
+        for s in DocStatus::ALL {
+            assert_eq!(s.can_transition_to(Disposed), s != Disposed);
+            assert!(!Disposed.can_transition_to(s));
+        }
+    }
+    #[test]
+    fn roundtrip_str() {
+        for s in DocStatus::ALL {
+            assert_eq!(s.as_str().parse::<DocStatus>().unwrap(), s);
+        }
     }
 }

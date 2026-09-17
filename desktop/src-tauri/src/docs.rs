@@ -286,6 +286,53 @@ pub async fn docs_make_pdf2_all(
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OcrRetryFailedArgs {
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub document_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub include_page_failed: bool,
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OcrRetryFailedResult {
+    pub documents: u64,
+    pub pages: u64,
+    pub skipped_signed: u64,
+}
+#[tauri::command]
+pub async fn docs_ocr_retry_failed(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+    args: OcrRetryFailedArgs,
+) -> Result<OcrRetryFailedResult, AppError> {
+    let (project_id, document_ids, include_page_failed) = (
+        args.project_id.clone(),
+        args.document_ids.clone(),
+        args.include_page_failed,
+    );
+    f_2r8(&db, &auth, Permission::DocumentList, move |r_1jj, r_1jl| {
+        let project_id = project_id.clone();
+        let document_ids = document_ids.clone();
+        async move {
+            let body = serde_json::json!(
+                { "projectId" : project_id, "documentIds" : document_ids,
+                "includePageFailed" : include_page_failed, }
+            );
+            client::f_23d::<OcrRetryFailedResult>(
+                &r_1jj,
+                &r_1jl,
+                "/documents/ocr-retry-failed",
+                &body,
+            )
+            .await
+        }
+    })
+    .await
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtractFieldsAllResult {
     pub documents: u32,
     pub skipped_no_page_count: i64,
@@ -344,6 +391,16 @@ pub struct ProgressDto {
     pub docs_fields_active: i64,
     #[serde(default)]
     pub docs_fields_failed: i64,
+    #[serde(default)]
+    pub pages_ocr_failed: i64,
+    #[serde(default)]
+    pub pages_ocr_transient_failed: i64,
+    #[serde(default)]
+    pub pages_ocr_queued: i64,
+    #[serde(default)]
+    pub pages_ocr_running: i64,
+    #[serde(default)]
+    pub docs_ocr_failed: i64,
     pub by_status: std::collections::HashMap<String, i64>,
 }
 #[tauri::command]

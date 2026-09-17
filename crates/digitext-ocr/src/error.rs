@@ -82,3 +82,40 @@ impl RetryPolicy {
         }
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn policy() -> RetryPolicy {
+        RetryPolicy::new(5, Duration::from_millis(200), Duration::from_secs(30))
+    }
+    #[test]
+    fn backoff_doubles_then_caps() {
+        let p = policy();
+        assert_eq!(p.backoff(0), Duration::from_millis(200));
+        assert_eq!(p.backoff(1), Duration::from_millis(400));
+        assert_eq!(p.backoff(3), Duration::from_millis(1600));
+        assert_eq!(p.backoff(10), Duration::from_secs(30));
+        assert_eq!(p.backoff(63), Duration::from_secs(30));
+        assert_eq!(p.backoff(200), Duration::from_secs(30));
+    }
+    #[test]
+    fn decide_gives_up_on_permanent_or_exhausted() {
+        let p = policy();
+        let transient = WorkerError::Timeout("x".into());
+        let permanent = WorkerError::CorruptInput("x".into());
+        assert_eq!(p.decide(&permanent, 0), RetryDecision::GiveUp);
+        assert_eq!(p.decide(&transient, 5), RetryDecision::GiveUp);
+        assert_eq!(
+            p.decide(&transient, 2),
+            RetryDecision::Retry {
+                after: Duration::from_millis(800)
+            }
+        );
+    }
+    #[test]
+    fn severity_partition() {
+        assert!(WorkerError::TritonUnavailable("x".into()).is_transient());
+        assert!(WorkerError::GpuOom("x".into()).is_oom());
+        assert!(WorkerError::ConfigInvalid("x".into()).is_permanent());
+    }
+}

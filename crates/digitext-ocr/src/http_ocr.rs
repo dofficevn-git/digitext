@@ -134,6 +134,9 @@ fn status_to_error(status: reqwest::StatusCode, body: &str) -> WorkerError {
 }
 
 impl Tok for HttpOcrInfer {
+    async fn probe_engine(&self) -> Result<(), WorkerError> {
+        HttpOcrInfer::probe(self).await
+    }
     async fn infer_tile(&self, tile: &Tile, _batch: usize) -> Result<To6, WorkerError> {
         let png = encode_png(tile)?;
         let b64 = base64::engine::general_purpose::STANDARD.encode(&png);

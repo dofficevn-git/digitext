@@ -23,6 +23,10 @@ pub struct Tf8 {
 }
 pub type ByteRange = (u64, Option<u64>);
 pub trait ObjectStore: Send + Sync {
+    /// Chuẩn bị kho trước khi dùng (tạo bucket nếu thiếu). Mặc định không làm gì.
+    fn ensure_ready<'a>(&'a self) -> Tm3<'a, ()> {
+        Box::pin(async { Ok(()) })
+    }
     fn put<'a>(&'a self, key: &'a str, bytes: &'a [u8]) -> Tm3<'a, ()>;
     fn get<'a>(&'a self, key: &'a str) -> Tm3<'a, Option<Vec<u8>>>;
     fn delete<'a>(&'a self, key: &'a str) -> Tm3<'a, ()>;
@@ -292,6 +296,30 @@ impl MinioObjectStore {
     }
 }
 impl ObjectStore for MinioObjectStore {
+    fn ensure_ready<'a>(&'a self) -> Tm3<'a, ()> {
+        Box::pin(async move {
+            use rusty_s3::S3Action;
+            let name = self.bucket.name().to_owned();
+            let signed = self.bucket.create_bucket(&self.creds).sign(self.sign_ttl);
+            let r = self
+                .http
+                .put(signed)
+                .send()
+                .await
+                .map_err(|e| StorageError::Io(format!("tạo bucket {name}: {e}")))?;
+            let st = r.status();
+            // 409 = bucket đã có (BucketAlreadyOwnedByYou) — mục tiêu đã đạt.
+            if st.is_success() || st == reqwest::StatusCode::CONFLICT {
+                Ok(())
+            } else {
+                let body = r.text().await.unwrap_or_default();
+                Err(StorageError::Io(format!(
+                    "tạo bucket {name}: HTTP {st} {}",
+                    body.chars().take(200).collect::<String>()
+                )))
+            }
+        })
+    }
     fn put<'a>(&'a self, key: &'a str, bytes: &'a [u8]) -> Tm3<'a, ()> {
         Box::pin(async move {
             f_2p4(key)?;
@@ -513,6 +541,9 @@ impl WormGuard {
     }
 }
 impl ObjectStore for WormGuard {
+    fn ensure_ready<'a>(&'a self) -> Tm3<'a, ()> {
+        self.inner.ensure_ready()
+    }
     fn put<'a>(&'a self, key: &'a str, bytes: &'a [u8]) -> Tm3<'a, ()> {
         self.inner.put(key, bytes)
     }

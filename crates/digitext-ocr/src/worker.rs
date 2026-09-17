@@ -1,13 +1,16 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 use crate::config::WorkerConfig;
-use crate::error::WorkerError;
+use crate::error::{RetryPolicy, WorkerError};
 use crate::infer::{f_1si, Tgi, Tile, To6, Tok};
 use digitext_core::{DocStatus, JobKind};
+use digitext_db::ocr_jobs::OcrPageCounts;
 use digitext_db::ocr_results::Tdx;
 use digitext_db::{documents, ocr_jobs, ocr_results, review_queue};
 use sqlx::PgPool;
 use std::future::Future;
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 pub const C_CD: u32 = 256;
@@ -168,6 +171,34 @@ pub enum RunOutcome {
     FailedTransient(Uuid),
     LeaseLost(Uuid),
 }
+/// Kết luận OCR của một tài liệu từ số trang theo trạng thái.
+///
+/// `page_failed` (lỗi vĩnh viễn, trang bị cô lập) KHÔNG chặn: tài liệu vẫn xong để
+/// người dùng thấy và xử lý trang đó. `failed_transient` (hết lượt thử vì dịch vụ
+/// chết) PHẢI chặn — trước đây bị bỏ qua nên tài liệu thiếu trang vẫn thành
+/// `ocr_done`, PDF 2 lớp dựng thiếu trang mà màn hình báo 100%.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OcrDocOutcome {
+    StillPending,
+    Finished,
+    BlockedByTransient(i64),
+}
+pub fn decide_ocr_outcome(c: &OcrPageCounts) -> OcrDocOutcome {
+    if c.pending > 0 {
+        OcrDocOutcome::StillPending
+    } else if c.failed_transient > 0 {
+        OcrDocOutcome::BlockedByTransient(c.failed_transient)
+    } else {
+        OcrDocOutcome::Finished
+    }
+}
+#[derive(Debug, Default)]
+struct HealthGate {
+    down_since: Option<Instant>,
+    probes: u32,
+}
+const C_HG_MIN: Duration = Duration::from_secs(1);
+const C_HG_MAX: Duration = Duration::from_secs(30);
 pub struct Worker<'a, S, I, C = crate::corrector::T4s> {
     pool: &'a PgPool,
     source: &'a S,
@@ -180,6 +211,8 @@ pub struct Worker<'a, S, I, C = crate::corrector::T4s> {
     vlm: Option<&'a dyn crate::vlm_fields::T5b>,
     fields_v2: Option<(&'a dyn crate::fields_v2::T80, Uuid)>,
     metrics: Option<&'a crate::metrics::Metrics>,
+    health: Mutex<HealthGate>,
+    probing: AtomicBool,
 }
 impl<'a, S: Tgj, I: Tok> Worker<'a, S, I, crate::corrector::T4s> {
     pub fn new(
@@ -202,6 +235,8 @@ impl<'a, S: Tgj, I: Tok> Worker<'a, S, I, crate::corrector::T4s> {
             vlm: None,
             fields_v2: None,
             metrics: None,
+            health: Mutex::new(HealthGate::default()),
+            probing: AtomicBool::new(false),
         }
     }
 }
@@ -229,6 +264,145 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             vlm: None,
             fields_v2: None,
             metrics: None,
+            health: Mutex::new(HealthGate::default()),
+            probing: AtomicBool::new(false),
+        }
+    }
+    fn retry_policy(&self) -> RetryPolicy {
+        RetryPolicy::new(
+            self.cfg.max_retries,
+            self.cfg.retry_base_delay,
+            self.cfg.retry_max_delay,
+        )
+    }
+    /// Ghi lỗi tạm thời cho job: lùi lịch theo backoff (không thử lại tức thì như
+    /// trước), log đủ để thấy trong journal, và trả outcome tương ứng.
+    async fn fail_transient(
+        &self,
+        job: &ocr_jobs::Ta2,
+        what: &str,
+        err: &str,
+        engine_down: bool,
+    ) -> sqlx::Result<RunOutcome> {
+        let delay = self
+            .retry_policy()
+            .backoff(job.attempts.max(0) as u32);
+        let out = ocr_jobs::f_1bn(
+            self.pool,
+            job.id,
+            self.worker_id,
+            err,
+            self.cfg.max_retries as i32,
+            delay.as_millis() as i64,
+        )
+        .await?;
+        if engine_down {
+            self.mark_engine_down(err);
+        }
+        Ok(match out {
+            Some(o) if o.requeued() => {
+                tracing::warn!(
+                    job = % job.id, doc = % job.document_id, page = job.page_no, kind = % job.kind,
+                    attempts = o.attempts, max = self.cfg.max_retries,
+                    delay_ms = delay.as_millis() as u64,
+                    "{what}: lỗi tạm thời — thử lại sau: {err}"
+                );
+                RunOutcome::Requeued(job.id)
+            }
+            Some(o) => {
+                tracing::error!(
+                    job = % job.id, doc = % job.document_id, page = job.page_no, kind = % job.kind,
+                    attempts = o.attempts,
+                    "{what}: lỗi tạm thời, HẾT lượt thử — giữ failed_transient, cần bấm chạy lại: {err}"
+                );
+                RunOutcome::FailedTransient(job.id)
+            }
+            None => {
+                tracing::warn!(
+                    job = % job.id,
+                    "{what}: mất lease trước khi ghi lỗi — chủ mới sẽ làm lại"
+                );
+                RunOutcome::LeaseLost(job.id)
+            }
+        })
+    }
+    fn mark_engine_down(&self, err: &str) {
+        let mut g = self.health.lock().unwrap_or_else(|p| p.into_inner());
+        if g.down_since.is_none() {
+            g.down_since = Some(Instant::now());
+            g.probes = 0;
+            tracing::warn!(
+                worker_id = self.worker_id,
+                "dịch vụ OCR không phản hồi — các lane ngừng nhận job, chờ health: {err}"
+            );
+            if let Some(m) = self.metrics {
+                m.engine_healthy.set(0);
+                m.engine_unavailable_total.inc();
+            }
+        }
+    }
+    /// Chặn lane khi dịch vụ OCR đang chết: một lane probe theo backoff 1→30 s, các
+    /// lane khác ngủ. Không tiêu `attempts` của job nào trong lúc chờ. Trả `None`
+    /// khi bị huỷ.
+    async fn wait_engine_healthy(&self, cancel: &CancellationToken) -> Option<()> {
+        loop {
+            let (down_since, probes) = {
+                let g = self.health.lock().unwrap_or_else(|p| p.into_inner());
+                match g.down_since {
+                    None => return Some(()),
+                    Some(t) => (t, g.probes),
+                }
+            };
+            let elected = self
+                .probing
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok();
+            if !elected {
+                tokio::select! {
+                    _ = cancel.cancelled() => return None,
+                    _ = tokio::time::sleep(C_HG_MIN) => {}
+                }
+                continue;
+            }
+            let wait = RetryPolicy::new(u32::MAX, C_HG_MIN, C_HG_MAX).backoff(probes);
+            let cancelled = tokio::select! {
+                _ = cancel.cancelled() => true,
+                _ = tokio::time::sleep(wait) => false,
+            };
+            if cancelled {
+                self.probing.store(false, Ordering::Release);
+                return None;
+            }
+            let r = self.infer.probe_engine().await;
+            {
+                let mut g = self.health.lock().unwrap_or_else(|p| p.into_inner());
+                match r {
+                    Ok(()) => {
+                        g.down_since = None;
+                        g.probes = 0;
+                        tracing::info!(
+                            worker_id = self.worker_id,
+                            down_secs = down_since.elapsed().as_secs(),
+                            "dịch vụ OCR đã trở lại — tiếp tục nhận job"
+                        );
+                        if let Some(m) = self.metrics {
+                            m.engine_healthy.set(1);
+                        }
+                    }
+                    Err(e) => {
+                        g.probes = g.probes.saturating_add(1);
+                        let next = RetryPolicy::new(u32::MAX, C_HG_MIN, C_HG_MAX).backoff(g.probes);
+                        if g.probes % 5 == 1 {
+                            tracing::warn!(
+                                probes = g.probes, next_wait_s = next.as_secs(),
+                                down_secs = down_since.elapsed().as_secs(),
+                                "dịch vụ OCR vẫn chưa sẵn sàng: {e}"
+                            );
+                        }
+                    }
+                }
+            }
+            self.probing.store(false, Ordering::Release);
         }
     }
     pub fn with_store(mut self, store: &'a dyn digitext_storage::ObjectStore) -> Self {
@@ -267,6 +441,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         if job.kind == JobKind::ExtractFields.as_str() {
             return self.run_extract_fields(&job, lease).await;
         }
+        let r_3t0 = Instant::now();
         let r_3m1 = self.cfg.infer_batch_size;
         let mut r_3m4 = 0u32;
         let r_3md = async {
@@ -465,6 +640,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 }
                 if let Some(m) = self.metrics {
                     m.pages_processed.inc("done");
+                    m.page_latency_seconds.observe(r_3t0.elapsed().as_secs_f64());
                 }
                 Ok(RunOutcome::Done(job.id))
             }
@@ -482,34 +658,45 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 Ok(RunOutcome::PageFailed(job.id))
             }
             Err(e) => {
-                let r_3mf = ocr_jobs::f_1bn(
-                    self.pool,
-                    job.id,
-                    self.worker_id,
-                    &e.to_string(),
-                    self.cfg.max_retries as i32,
-                )
-                .await?;
-                if r_3mf.as_deref() == Some("queued") {
-                    if let Some(m) = self.metrics {
-                        m.pages_processed.inc("queued");
-                    }
-                    Ok(RunOutcome::Requeued(job.id))
-                } else {
-                    self.maybe_enqueue_make_pdf2(job.document_id).await?;
-                    if let Some(m) = self.metrics {
-                        m.pages_processed.inc("failed_transient");
-                    }
-                    Ok(RunOutcome::FailedTransient(job.id))
+                let engine_down = matches!(
+                    e,
+                    WorkerError::TritonUnavailable(_) | WorkerError::Timeout(_)
+                );
+                let out = self
+                    .fail_transient(&job, "OCR trang", &e.to_string(), engine_down)
+                    .await?;
+                if let Some(m) = self.metrics {
+                    m.pages_processed.inc(match out {
+                        RunOutcome::Requeued(_) => "queued",
+                        RunOutcome::FailedTransient(_) => "failed_transient",
+                        _ => "lease_lost",
+                    });
                 }
+                Ok(out)
             }
         }
     }
     async fn maybe_enqueue_make_pdf2(&self, r_3mi: Uuid) -> sqlx::Result<()> {
-        if ocr_jobs::f_2na(self.pool, r_3mi).await? == 0 {
-            documents::transition(self.pool, r_3mi, DocStatus::OcrDone).await?;
-            if self.cfg.auto_make_pdf2 {
-                ocr_jobs::f_19r(self.pool, r_3mi).await?;
+        let counts = ocr_jobs::ocr_page_counts(self.pool, r_3mi).await?;
+        match decide_ocr_outcome(&counts) {
+            OcrDocOutcome::StillPending => {}
+            OcrDocOutcome::BlockedByTransient(n) => {
+                tracing::warn!(
+                    doc = % r_3mi, failed_transient = n, done = counts.done,
+                    page_failed = counts.page_failed,
+                    "OCR chưa xong: {n} trang lỗi tạm thời đã hết lượt thử — giữ ocr_pending, cần bấm chạy lại"
+                );
+            }
+            OcrDocOutcome::Finished => {
+                if !documents::transition(self.pool, r_3mi, DocStatus::OcrDone).await? {
+                    tracing::debug!(
+                        doc = % r_3mi,
+                        "không chuyển được sang ocr_done (đã ở bước sau hoặc bị huỷ)"
+                    );
+                }
+                if self.cfg.auto_make_pdf2 {
+                    ocr_jobs::f_19r(self.pool, r_3mi).await?;
+                }
             }
         }
         Ok(())
@@ -562,19 +749,8 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 Ok(RunOutcome::PageFailed(job.id))
             }
             Err(AssembleError::Source(e)) => {
-                let r_3mo = ocr_jobs::f_1bn(
-                    self.pool,
-                    job.id,
-                    self.worker_id,
-                    &e.to_string(),
-                    self.cfg.max_retries as i32,
-                )
-                .await?;
-                Ok(if r_3mo.as_deref() == Some("queued") {
-                    RunOutcome::Requeued(job.id)
-                } else {
-                    RunOutcome::FailedTransient(job.id)
-                })
+                self.fail_transient(job, "ghép PDF 2 lớp: nguồn ảnh", &e.to_string(), false)
+                    .await
             }
         }
     }
@@ -585,19 +761,14 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
     ) -> sqlx::Result<RunOutcome> {
         use crate::fields_v2::ExtractV2Error;
         let Some((extractor, r_3n0)) = self.fields_v2 else {
-            let status = ocr_jobs::f_1bn(
-                self.pool,
-                job.id,
-                self.worker_id,
-                "worker không có VLM extractor v2 (DIGITEXT_FIELDS_ENGINE)",
-                self.cfg.max_retries as i32,
-            )
-            .await?;
-            return Ok(if status.as_deref() == Some("queued") {
-                RunOutcome::Requeued(job.id)
-            } else {
-                RunOutcome::FailedTransient(job.id)
-            });
+            return self
+                .fail_transient(
+                    job,
+                    "bóc trường v2",
+                    "worker không có VLM extractor v2 (DIGITEXT_FIELDS_ENGINE)",
+                    false,
+                )
+                .await;
         };
         let Some(r_3mq) = documents::get(self.pool, job.document_id).await? else {
             tracing::warn!(
@@ -685,19 +856,8 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 Ok(RunOutcome::PageFailed(job.id))
             }
             Err(e) => {
-                let status = ocr_jobs::f_1bn(
-                    self.pool,
-                    job.id,
-                    self.worker_id,
-                    &e.to_string(),
-                    self.cfg.max_retries as i32,
-                )
-                .await?;
-                Ok(if status.as_deref() == Some("queued") {
-                    RunOutcome::Requeued(job.id)
-                } else {
-                    RunOutcome::FailedTransient(job.id)
-                })
+                self.fail_transient(job, "bóc trường v2", &e.to_string(), false)
+                    .await
             }
         }
     }
@@ -762,19 +922,8 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 Ok(RunOutcome::Done(job.id))
             }
             Err(e) => {
-                let r_3n5 = ocr_jobs::f_1bn(
-                    self.pool,
-                    job.id,
-                    self.worker_id,
-                    &format!("PUT PDF: {e}"),
-                    self.cfg.max_retries as i32,
-                )
-                .await?;
-                Ok(if r_3n5.as_deref() == Some("queued") {
-                    RunOutcome::Requeued(job.id)
-                } else {
-                    RunOutcome::FailedTransient(job.id)
-                })
+                self.fail_transient(job, "PUT PDF 2 lớp vào kho", &e.to_string(), false)
+                    .await
             }
         }
     }
@@ -835,6 +984,9 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
     async fn run_lane(&self, r_3nh: Duration, r_3nl: &CancellationToken) -> sqlx::Result<u64> {
         let mut r_3nj = 0u64;
         while !r_3nl.is_cancelled() {
+            if self.wait_engine_healthy(r_3nl).await.is_none() {
+                break;
+            }
             let Some(r_3nk) = f_1u9(self.run_once(), r_3nl).await else {
                 break;
             };
@@ -860,13 +1012,51 @@ pub async fn f_2b8(
     r_3no: Duration,
     r_3np: i32,
     r_3nq: &CancellationToken,
+    metrics: Option<Arc<crate::metrics::Metrics>>,
 ) -> sqlx::Result<()> {
     while !r_3nq.is_cancelled() {
         tokio::select! {
             _ = r_3nq.cancelled() => break, _ = tokio::time::sleep(r_3no) => { let n =
             ocr_jobs::requeue_expired(pool, r_3np). await ?; if n > 0 {
-            tracing::warn!(requeued = n, "requeue job hết hạn lease"); } }
+            tracing::warn!(requeued = n, "requeue job hết hạn lease"); }
+            if let Some(m) = metrics.as_ref() {
+                let queued = ocr_jobs::count_by_status(pool).await?
+                    .into_iter()
+                    .filter(|(s, _)| s == "queued")
+                    .map(|(_, n)| n)
+                    .sum::<i64>();
+                m.queue_depth.set(queued);
+            } }
         }
     }
     Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn counts(pending: i64, failed_transient: i64, page_failed: i64, done: i64) -> OcrPageCounts {
+        OcrPageCounts {
+            pending,
+            failed_transient,
+            page_failed,
+            done,
+        }
+    }
+    #[test]
+    fn pending_pages_keep_document_pending() {
+        assert_eq!(decide_ocr_outcome(&counts(1, 0, 0, 3)), OcrDocOutcome::StillPending);
+        assert_eq!(decide_ocr_outcome(&counts(2, 1, 0, 0)), OcrDocOutcome::StillPending);
+    }
+    #[test]
+    fn exhausted_transient_blocks_ocr_done() {
+        assert_eq!(
+            decide_ocr_outcome(&counts(0, 2, 0, 10)),
+            OcrDocOutcome::BlockedByTransient(2)
+        );
+    }
+    #[test]
+    fn page_failed_alone_still_finishes() {
+        assert_eq!(decide_ocr_outcome(&counts(0, 0, 1, 4)), OcrDocOutcome::Finished);
+        assert_eq!(decide_ocr_outcome(&counts(0, 0, 0, 0)), OcrDocOutcome::Finished);
+    }
 }

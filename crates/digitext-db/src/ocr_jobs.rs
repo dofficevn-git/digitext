@@ -19,6 +19,7 @@ pub struct Ta2 {
     pub seq: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub not_before: Option<DateTime<Utc>>,
 }
 impl Ta2 {
     pub fn status(&self) -> Result<JobStatus, Tgn> {
@@ -26,7 +27,7 @@ impl Ta2 {
     }
 }
 const COLS: &str = "id, document_id, page_no, kind, status, engine_version_id, attempts, \
-     last_error, locked_by, lease_until, priority, seq, created_at, updated_at";
+     last_error, locked_by, lease_until, priority, seq, created_at, updated_at, not_before";
 pub async fn f_19s(r_270: &PgPool, document_id: Uuid, page_no: i32) -> sqlx::Result<Ta2> {
     sqlx::query(
         "INSERT INTO ocr_jobs (id, document_id, page_no, kind) VALUES ($1, $2, $3, 'ocr') \
@@ -181,15 +182,152 @@ pub async fn f_19u(r_27j: &PgPool, document_id: Uuid) -> sqlx::Result<()> {
     .await?;
     Ok(())
 }
-pub async fn f_2na(r_27k: &PgPool, document_id: Uuid) -> sqlx::Result<i64> {
-    sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM ocr_jobs \
-         WHERE document_id = $1 AND kind IN ('ocr', 're_ocr') \
-           AND status IN ('queued', 'running')",
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct OcrPageCounts {
+    pub pending: i64,
+    pub failed_transient: i64,
+    pub page_failed: i64,
+    pub done: i64,
+}
+pub async fn ocr_page_counts(r_27k: &PgPool, document_id: Uuid) -> sqlx::Result<OcrPageCounts> {
+    let (pending, failed_transient, page_failed, done) =
+        sqlx::query_as::<_, (i64, i64, i64, i64)>(
+            "SELECT count(*) FILTER (WHERE status IN ('queued', 'running'))::bigint, \
+                    count(*) FILTER (WHERE status = 'failed_transient')::bigint, \
+                    count(*) FILTER (WHERE status = 'page_failed')::bigint, \
+                    count(*) FILTER (WHERE status = 'done')::bigint \
+             FROM ocr_jobs WHERE document_id = $1 AND kind IN ('ocr', 're_ocr')",
+        )
+        .bind(document_id)
+        .fetch_one(r_27k)
+        .await?;
+    Ok(OcrPageCounts {
+        pending,
+        failed_transient,
+        page_failed,
+        done,
+    })
+}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct OcrFailedCounts {
+    pub docs_failed: i64,
+    pub pages_failed_transient: i64,
+    pub pages_page_failed: i64,
+    pub pages_queued: i64,
+    pub pages_running: i64,
+}
+pub async fn ocr_failed_counts(
+    r_27k: &PgPool,
+    projects: Option<&[Uuid]>,
+) -> sqlx::Result<OcrFailedCounts> {
+    let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
+    let (docs_failed, pages_failed_transient, pages_page_failed, pages_queued, pages_running) =
+        sqlx::query_as::<_, (i64, i64, i64, i64, i64)>(
+            "SELECT count(DISTINCT j.document_id) \
+                        FILTER (WHERE j.status IN ('failed_transient', 'page_failed'))::bigint, \
+                    count(*) FILTER (WHERE j.status = 'failed_transient')::bigint, \
+                    count(*) FILTER (WHERE j.status = 'page_failed')::bigint, \
+                    count(*) FILTER (WHERE j.status = 'queued')::bigint, \
+                    count(*) FILTER (WHERE j.status = 'running')::bigint \
+             FROM ocr_jobs j JOIN documents d ON d.id = j.document_id \
+             WHERE j.kind IN ('ocr', 're_ocr') AND d.status <> 'disposed' \
+               AND ($1::uuid[] IS NULL OR d.project_id = ANY($1))",
+        )
+        .bind(projects)
+        .fetch_one(r_27k)
+        .await?;
+    Ok(OcrFailedCounts {
+        docs_failed,
+        pages_failed_transient,
+        pages_page_failed,
+        pages_queued,
+        pages_running,
+    })
+}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RequeueResult {
+    pub pages: u64,
+    pub documents: u64,
+    pub skipped_signed: u64,
+}
+pub async fn requeue_failed(
+    r_27k: &PgPool,
+    projects: Option<&[Uuid]>,
+    docs: Option<&[Uuid]>,
+    include_page_failed: bool,
+) -> sqlx::Result<RequeueResult> {
+    let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
+    let docs: Option<Vec<Uuid>> = docs.map(|d| d.to_vec());
+    let statuses: Vec<String> = if include_page_failed {
+        vec!["failed_transient".into(), "page_failed".into()]
+    } else {
+        vec!["failed_transient".into()]
+    };
+    let mut tx = r_27k.begin().await?;
+    let candidates = sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT d.id, d.status FROM documents d \
+         WHERE d.status <> 'disposed' \
+           AND ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
+           AND ($2::uuid[] IS NULL OR d.id = ANY($2)) \
+           AND EXISTS ( \
+               SELECT 1 FROM ocr_jobs j WHERE j.document_id = d.id \
+                 AND j.kind IN ('ocr', 're_ocr') AND j.status = ANY($3) \
+           ) \
+         FOR UPDATE OF d",
     )
-    .bind(document_id)
-    .fetch_one(r_27k)
-    .await
+    .bind(&projects)
+    .bind(&docs)
+    .bind(&statuses)
+    .fetch_all(&mut *tx)
+    .await?;
+    let mut eligible: Vec<Uuid> = Vec::new();
+    let mut skipped_signed = 0u64;
+    for (id, status) in candidates {
+        match status.as_str() {
+            "uploaded" | "ocr_pending" | "ocr_done" => eligible.push(id),
+            _ => skipped_signed += 1,
+        }
+    }
+    if eligible.is_empty() {
+        tx.commit().await?;
+        return Ok(RequeueResult {
+            pages: 0,
+            documents: 0,
+            skipped_signed,
+        });
+    }
+    let pages = sqlx::query(
+        "UPDATE ocr_jobs SET status = 'queued', attempts = 0, last_error = NULL, \
+             not_before = NULL, locked_by = NULL, lease_until = NULL, updated_at = now() \
+         WHERE kind IN ('ocr', 're_ocr') AND status = ANY($2) AND document_id = ANY($1)",
+    )
+    .bind(&eligible)
+    .bind(&statuses)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    sqlx::query(
+        "UPDATE documents SET status = 'ocr_pending' \
+         WHERE id = ANY($1) AND status IN ('uploaded', 'ocr_done')",
+    )
+    .bind(&eligible)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "UPDATE ocr_jobs SET status = 'cancelled', locked_by = NULL, lease_until = NULL, \
+             updated_at = now() \
+         WHERE kind IN ('make_pdf2', 'sign_wait') AND status = 'queued' \
+           AND document_id = ANY($1)",
+    )
+    .bind(&eligible)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(RequeueResult {
+        pages,
+        documents: eligible.len() as u64,
+        skipped_signed,
+    })
 }
 pub async fn claim_next(r_27m: &PgPool, r_27n: &str, r_27l: i64) -> sqlx::Result<Option<Ta2>> {
     f_zj(
@@ -213,6 +351,7 @@ pub async fn f_zj(
          WHERE id = ( \
              SELECT id FROM ocr_jobs \
              WHERE status = 'queued' AND kind = ANY($3) \
+               AND (not_before IS NULL OR not_before <= now()) \
              ORDER BY priority, seq FOR UPDATE SKIP LOCKED LIMIT 1 \
          ) RETURNING {COLS}"
     ))
@@ -236,7 +375,7 @@ pub async fn f_1gk(r_27u: &PgPool, r_27s: Uuid, r_27w: &str, r_27t: i64) -> sqlx
 }
 pub async fn requeue_expired(r_27y: &PgPool, r_27x: i32) -> sqlx::Result<u64> {
     let r_27z = sqlx::query(
-            "UPDATE ocr_jobs SET attempts = attempts + 1, last_error = COALESCE(last_error, 'lease hết hạn — worker không phản hồi'), status = CASE WHEN attempts + 1 > $1 THEN 'failed_transient' ELSE 'queued' END, locked_by = NULL, lease_until = NULL, updated_at = now() WHERE status = 'running' AND lease_until < now()",
+            "UPDATE ocr_jobs SET attempts = attempts + 1, last_error = COALESCE(last_error, 'lease hết hạn — worker không phản hồi'), status = CASE WHEN attempts + 1 > $1 THEN 'failed_transient' ELSE 'queued' END, not_before = CASE WHEN attempts + 1 > $1 THEN NULL ELSE now() + interval '5 seconds' END, locked_by = NULL, lease_until = NULL, updated_at = now() WHERE status = 'running' AND lease_until < now()",
         )
         .bind(r_27x)
         .execute(r_27y)
@@ -267,25 +406,41 @@ pub async fn f_1re(r_286: &PgPool, r_285: Uuid, r_288: &str, r_284: &str) -> sql
     .await?;
     Ok(r_287.rows_affected() > 0)
 }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransientOutcome {
+    pub status: String,
+    pub attempts: i32,
+}
+impl TransientOutcome {
+    pub fn requeued(&self) -> bool {
+        self.status == "queued"
+    }
+}
 pub async fn f_1bn(
     r_28c: &PgPool,
     r_28a: Uuid,
     r_28d: &str,
     r_289: &str,
     r_28b: i32,
-) -> sqlx::Result<Option<String>> {
-    sqlx::query_scalar::<_, String>(
+    delay_ms: i64,
+) -> sqlx::Result<Option<TransientOutcome>> {
+    let row = sqlx::query_as::<_, (String, i32)>(
         "UPDATE ocr_jobs SET attempts = attempts + 1, last_error = $3, \
              status = CASE WHEN attempts + 1 > $4 THEN 'failed_transient' ELSE 'queued' END, \
+             not_before = CASE WHEN attempts + 1 > $4 THEN NULL \
+                               ELSE now() + ($5 * interval '1 millisecond') END, \
              locked_by = NULL, lease_until = NULL, updated_at = now() \
-         WHERE id = $1 AND status = 'running' AND locked_by = $2 RETURNING status",
+         WHERE id = $1 AND status = 'running' AND locked_by = $2 \
+         RETURNING status, attempts",
     )
     .bind(r_28a)
     .bind(r_28d)
     .bind(r_289)
     .bind(r_28b)
+    .bind(delay_ms.max(0))
     .fetch_optional(r_28c)
-    .await
+    .await?;
+    Ok(row.map(|(status, attempts)| TransientOutcome { status, attempts }))
 }
 pub async fn cancel(r_28f: &PgPool, r_28e: Uuid) -> sqlx::Result<bool> {
     let r_28g = sqlx::query(
@@ -308,4 +463,104 @@ pub async fn count_by_status(r_28j: &PgPool) -> sqlx::Result<Vec<(String, i64)>>
     sqlx::query_as::<_, (String, i64)>("SELECT status, count(*) FROM ocr_jobs GROUP BY status")
         .fetch_all(r_28j)
         .await
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // Chạy khi có DIGITEXT_TEST_DATABASE_URL (CSDL đã áp migrations/). Không có thì bỏ qua
+    // lặng lẽ — repo không có CI, và test này tạo dữ liệu thật nên phải trỏ vào CSDL thử.
+    async fn pool() -> Option<PgPool> {
+        let url = std::env::var("DIGITEXT_TEST_DATABASE_URL").ok()?;
+        Some(crate::connect(&url).await.expect("kết nối CSDL thử"))
+    }
+    async fn fixture_document(pool: &PgPool, pages: i32) -> (Uuid, Uuid) {
+        let project = Uuid::now_v7();
+        let doc = Uuid::now_v7();
+        sqlx::query("INSERT INTO projects (id, code, name) VALUES ($1, $2, $3)")
+            .bind(project)
+            .bind(format!("T{}", &project.simple().to_string()[..8]))
+            .bind("test ocr_jobs")
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO documents (id, project_id, filename, size_bytes, blake3, storage_path, \
+                 page_count, status) VALUES ($1, $2, 'a.pdf', 1, $3, 'x', $4, 'uploaded')",
+        )
+        .bind(doc)
+        .bind(project)
+        .bind(doc.simple().to_string())
+        .bind(pages)
+        .execute(pool)
+        .await
+        .unwrap();
+        (project, doc)
+    }
+    async fn cleanup(pool: &PgPool, project: Uuid) {
+        sqlx::query("DELETE FROM ocr_jobs WHERE document_id IN (SELECT id FROM documents WHERE project_id = $1)")
+            .bind(project).execute(pool).await.unwrap();
+        sqlx::query("DELETE FROM documents WHERE project_id = $1")
+            .bind(project).execute(pool).await.unwrap();
+        sqlx::query("DELETE FROM projects WHERE id = $1")
+            .bind(project).execute(pool).await.unwrap();
+    }
+    async fn doc_status(pool: &PgPool, doc: Uuid) -> String {
+        sqlx::query_scalar("SELECT status FROM documents WHERE id = $1")
+            .bind(doc)
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
+    #[tokio::test]
+    async fn backoff_blocks_claim_then_requeue_failed_restores() {
+        let Some(pool) = pool().await else { return };
+        let (project, doc) = fixture_document(&pool, 2).await;
+        let worker = format!("t-{}", Uuid::now_v7());
+        let kinds = &["ocr"];
+        assert_eq!(f_19m(&pool, doc, 2).await.unwrap(), 2);
+        assert_eq!(doc_status(&pool, doc).await, "ocr_pending");
+
+        // Lượt 1: lỗi tạm thời với backoff 60 s → job về queued nhưng chưa claim được.
+        let job = f_zj(&pool, &worker, 60, kinds).await.unwrap().unwrap();
+        let out = f_1bn(&pool, job.id, &worker, "timeout", 5, 60_000).await.unwrap().unwrap();
+        assert!(out.requeued());
+        assert_eq!(out.attempts, 1);
+        // Job còn lại (trang 2) claim được; job vừa lỗi thì không.
+        let other = f_zj(&pool, &worker, 60, kinds).await.unwrap().unwrap();
+        assert_ne!(other.id, job.id);
+        assert!(f_zj(&pool, &worker, 60, kinds).await.unwrap().is_none());
+        f_1ra(&pool, other.id, &worker).await.unwrap();
+
+        // Hết số lần thử → failed_transient, không còn not_before.
+        sqlx::query("UPDATE ocr_jobs SET not_before = NULL, attempts = 5 WHERE id = $1")
+            .bind(job.id).execute(&pool).await.unwrap();
+        let job = f_zj(&pool, &worker, 60, kinds).await.unwrap().unwrap();
+        let out = f_1bn(&pool, job.id, &worker, "timeout", 5, 60_000).await.unwrap().unwrap();
+        assert_eq!(out.status, "failed_transient");
+        let c = ocr_page_counts(&pool, doc).await.unwrap();
+        assert_eq!(c, OcrPageCounts { pending: 0, failed_transient: 1, page_failed: 0, done: 1 });
+        let f = ocr_failed_counts(&pool, Some(&[project])).await.unwrap();
+        assert_eq!(f.docs_failed, 1);
+        assert_eq!(f.pages_failed_transient, 1);
+
+        // Giả lập bug cũ: tài liệu bị ghi ocr_done dù thiếu trang → requeue_failed sửa lại.
+        sqlx::query("UPDATE documents SET status = 'ocr_done' WHERE id = $1")
+            .bind(doc).execute(&pool).await.unwrap();
+        let r = requeue_failed(&pool, Some(&[project]), None, false).await.unwrap();
+        assert_eq!(r, RequeueResult { pages: 1, documents: 1, skipped_signed: 0 });
+        assert_eq!(doc_status(&pool, doc).await, "ocr_pending");
+        let job = f_zj(&pool, &worker, 60, kinds).await.unwrap().unwrap();
+        assert_eq!(job.attempts, 0);
+        assert!(job.not_before.is_none());
+
+        // Tài liệu đã sang to_sign thì bị bỏ qua, không kéo ngược.
+        f_1bn(&pool, job.id, &worker, "timeout", 0, 0).await.unwrap();
+        sqlx::query("UPDATE documents SET status = 'to_sign' WHERE id = $1")
+            .bind(doc).execute(&pool).await.unwrap();
+        let r = requeue_failed(&pool, Some(&[project]), None, false).await.unwrap();
+        assert_eq!(r, RequeueResult { pages: 0, documents: 0, skipped_signed: 1 });
+        assert_eq!(doc_status(&pool, doc).await, "to_sign");
+
+        cleanup(&pool, project).await;
+    }
 }

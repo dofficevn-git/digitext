@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { V41p } from "@/live/useLive";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V3zt } from "@/state/sessionCore";
-import { V4ex, V4ev, V4ez, V4ek, type V4ey, type V4ej } from "@/api/docs";
+import {
+  V4ex,
+  V4ev,
+  V4ez,
+  V4ek,
+  docsOcrRetryFailed,
+  type V4ey,
+  type V4ej,
+} from "@/api/docs";
 import { listHoSo, V40w, type V40d, type V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
 import { V4br, type V4bm } from "@/api/dossier";
@@ -35,13 +43,16 @@ function V4k4(p: V4ey): V4jt {
     docsFieldsDone: p.docsFieldsDone ?? 0,
     docsFieldsActive: p.docsFieldsActive ?? 0,
     docsFieldsFailed: p.docsFieldsFailed ?? 0,
+    pagesOcrFailed: p.pagesOcrFailed ?? 0,
+    docsOcrFailed: p.docsOcrFailed ?? 0,
   };
 }
 
 export default function V4k5() {
   const [progress, V1nz] = useState<V4ey | null>(null);
-  const [V1o0, V1o1] = useState<"" | "pdf2" | "fields">("");
+  const [V1o0, V1o1] = useState<"" | "pdf2" | "fields" | "ocrretry">("");
   const [V1o2, V1o3] = useState("");
+  const [V1oR, V1oS] = useState(false);
 
   const [flt, V1o4] = useState<V4iz>(V4j0);
   const [V1o5, V1o6] = useState<V40v[]>([]);
@@ -158,6 +169,28 @@ export default function V4k5() {
       await reload();
     } catch (V1p2) {
       V1o3(V4k3(V1p2));
+    } finally {
+      V1o1("");
+    }
+  };
+
+  const V1oT = async () => {
+    V1o1("ocrretry");
+    V1o3("");
+    try {
+      const r = await docsOcrRetryFailed(undefined, V1ow(), V1oR);
+      V1o3(
+        (r.pages > 0
+          ? `Đã xếp hàng lại ${fmtN(r.pages)} trang OCR lỗi của ${fmtN(r.documents)} tài liệu.`
+          : "Không có trang OCR lỗi nào trong phạm vi.") +
+          (r.skippedSigned > 0
+            ? ` Bỏ qua ${fmtN(r.skippedSigned)} tài liệu đã sang bước ký (không kéo ngược).`
+            : "") +
+          V1ox(),
+      );
+      await reload();
+    } catch (e) {
+      V1o3(V4k3(e));
     } finally {
       V1o1("");
     }
@@ -309,6 +342,29 @@ export default function V4k5() {
           </button>
         )}
 
+        {(view?.pagesOcrFailed ?? 0) > 0 && (
+          <>
+            <button
+              className="btn"
+              onClick={() => void V1oT()}
+              disabled={V1o0 !== ""}
+              title="Xếp hàng lại các trang OCR thất bại vì dịch vụ OCR không phản hồi. Tài liệu đã sang bước ký sẽ được bỏ qua."
+            >
+              <Icon name="lamMoi" />
+              {V1o0 === "ocrretry" ? "Đang gửi…" : `Thử lại ${fmtN(view?.pagesOcrFailed ?? 0)} trang OCR lỗi`}
+            </button>
+            <label className="muted text-sm" title="Trang hỏng vĩnh viễn (ảnh lỗi, định dạng lạ) thường hỏng y hệt nếu chưa sửa nguyên nhân">
+              <input
+                type="checkbox"
+                checked={V1oR}
+                onChange={(e) => V1oS(e.target.checked)}
+                disabled={V1o0 !== ""}
+              />{" "}
+              kể cả trang hỏng vĩnh viễn
+            </label>
+          </>
+        )}
+
         <button className="btn" onClick={() => void reload()} disabled={V1o0 !== ""}>
           <Icon name="lamMoi" />
           Làm mới
@@ -323,6 +379,9 @@ export default function V4k5() {
           {fmtN(view.docsFieldsDone)}
           {view.docsFieldsFailed > 0
             ? ` (${fmtN(view.docsFieldsFailed)} lỗi — bấm “Thử lại tài liệu hỏng” sau khi sửa nguyên nhân)`
+            : ""}
+          {view.pagesOcrFailed > 0
+            ? ` · OCR lỗi ${fmtN(view.pagesOcrFailed)} trang / ${fmtN(view.docsOcrFailed)} tài liệu`
             : ""}
           {}
           {V1ov.unknown > 0 && V4j3(flt) && (
