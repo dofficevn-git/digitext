@@ -93,6 +93,7 @@ def main(argv=None) -> int:
     p.add_argument("--batch", type=int, default=32)
     p.add_argument("--lr", type=float, default=1e-4, help="max_lr; fine-tune thấp hơn 3e-4 mặc định")
     p.add_argument("--val-every", type=int, default=1000)
+    p.add_argument("--val-batch", type=int, default=4, help="batch loader val (nhỏ để không bị bỏ batch)")
     p.add_argument("--device", default="cuda:0")
     args = p.parse_args(argv)
 
@@ -103,6 +104,26 @@ def main(argv=None) -> int:
 
     trainer = Trainer(cfg, pretrained=False)
     trainer.load_weights(args.weights)
+    # ClusterRandomSampler của VietOCR gom ảnh theo chiều rộng rồi BỎ batch nào
+    # không đủ batch_size. Tập val vài trăm dòng rải trên nhiều cụm → loader val
+    # rỗng → predict() chết vì 'prob' chưa gán (đã gặp 17/9/2026). Dựng lại
+    # loader val với batch nhỏ; loader train giữ batch lớn để chạy nhanh.
+    from torch.utils.data import DataLoader
+    from vietocr.loader.dataloader import ClusterRandomSampler
+
+    val_ds = trainer.valid_gen.dataset  # LMDB đã mở — không tạo lại được trong cùng tiến trình
+    val_sampler = ClusterRandomSampler(val_ds, args.val_batch, shuffle=False)
+    trainer.valid_gen = DataLoader(
+        val_ds,
+        batch_size=args.val_batch,
+        sampler=val_sampler,
+        collate_fn=trainer.valid_gen.collate_fn,
+        shuffle=False,
+        drop_last=False,
+        **cfg.get("dataloader", {}),
+    )
+    print(f"→ loader val: {len(val_sampler)}/{len(val_ds)} dòng dùng được với batch {args.val_batch}",
+          flush=True)
     print(f"→ nạp trọng số nền {args.weights}; {args.iters} iters, batch {args.batch}, lr {args.lr}",
           flush=True)
     trainer.train()
