@@ -23,7 +23,7 @@ không chạy được. Chép tay trước khi bắt đầu:
 | `crates/digitext-ocr/.env` | | |
 | `infra/compose/.env` | | |
 | `infra/compose/ocr/.env` | | Chứa `OCR_API_KEY` |
-| `infra/compose/docker-compose.override.yml` | | Đổi cổng Postgres 5432→5433 vì máy cũ đã có PostgreSQL 18 chiếm cổng. **Máy mới chưa chắc cần** — kiểm trước |
+| `infra/compose/docker-compose.override.yml` | | Đổi cổng Postgres 5432→5433 vì máy cũ có PostgreSQL 18 chiếm 5432. **Máy `.127` đã tắt** (đổi tên thành `.bak-may-cu`): ở máy này `5433` là của `ntm_qn_db`, một dự án khác — trỏ vào đó là ghi nhầm CSDL |
 | `digitext-rescue.tar.gz` | 204 M | Bản cứu từ server Ubuntu. Không cần để chạy, nhưng là **bản sao duy nhất** — đừng bỏ lại |
 
 `migrations/0001_baseline.sql` và `0002_documents_pdfa.sql` **có** trong git.
@@ -36,10 +36,15 @@ không chạy được. Chép tay trước khi bắt đầu:
 
 | | |
 |---|---|
-| **Máy dev** (Windows) | build Rust, chỉnh mã. IP cũ `192.168.0.212` — **máy mới sẽ khác, kiểm bằng `ipconfig`** |
+| **Máy chủ DigiText** (Windows) | `192.168.0.127`. Chạy Postgres/MinIO/Meilisearch (docker), `digitext-api` và worker `digitext-ocr`. IP máy cũ là `192.168.0.212` |
 | **Alienware x16 R1** | `192.168.0.205`, user `do`, Ubuntu + GPU 16 G. Chạy toàn bộ dịch vụ |
 
 Repo trên Alienware: `/home/do/Downloads/digitext-gpu-bundle/`
+
+Phân vai hiện tại: **Alienware chỉ chạy dịch vụ nhận dạng** (`serve_ocr.py` `:5002`).
+Hàng đợi job, CSDL, kho ảnh và worker đều ở máy Windows. Worker gọi sang Alienware
+theo `DIGITEXT_OCR_HTTP_ENDPOINT` trong `crates/digitext-ocr/.env`. Sau này gộp về
+một máy thì chỉ cần đổi biến đó thành `http://127.0.0.1:5002`.
 
 Chuyển file giữa hai máy theo lối đã dùng suốt (Windows không chạy sshd):
 
@@ -80,6 +85,31 @@ docker compose ps
 docker compose --env-file .env up -d <service>
 docker compose logs -f <service>
 ```
+
+---
+
+## 2b. Máy chủ DigiText `192.168.0.127` — đã dựng 2026-09-17
+
+| Cổng | Dịch vụ | Ghi chú |
+|---|---|---|
+| 5432 | Postgres 16 (`digitext-dev-postgres-1`) | CSDL mới, đã chạy `0001` + `0002`, 34 bảng |
+| 9000/9001 | MinIO | bucket `pages` đã tạo tay — **code không tự tạo bucket** |
+| 7700 | Meilisearch | |
+| 8080 | `digitext-api` | chưa có tài khoản nào, xem dưới |
+| 9095 | worker `digitext-ocr` | `/readyz` gọi thật sang `:5002` của Alienware (các mục kiểm mang tên "triton" là tên cũ) |
+
+- Máy này **không cài Rust**. Các script `dev/run-*.ps1` tự chạy `target\debug\*.exe`
+  (bản build ngày 2026-09-08, mới hơn commit Rust cuối cùng ngày 2026-09-05). Sửa
+  code Rust thì phải build lại ở máy có cargo.
+- `engine_versions` đã có dòng `vietocr-vgg-transformer-http` / `recognition`.
+  Không có dòng này thì worker thoát ngay.
+- Khoá `X-API-Key` đã được kiểm giữa hai máy: không kèm khoá trả 401, kèm khoá trả 200.
+- Máy này còn chạy dự án khác (`plx-*`, `kpi-*`, `ntm_qn_*`, chiếm 1433/1434/3030/5433/6379/8081/8088).
+  Kiểm cổng trước khi thêm dịch vụ.
+- **Chưa có tài khoản:** `bootstrap-superadmin` hỏi mật khẩu qua TTY nên phải tự gõ:
+  `.\dev\run-api.ps1 bootstrap-superadmin --username <tên>`
+- Chưa bật: bóc trường v2 (cần vLLM `:8003` trên Alienware, đang tắt), ký số
+  (`DIGITEXT_SIGN_TRUST_ROOTS`, `DIGITEXT_TSA_TRUST_ROOTS` chưa đặt).
 
 ---
 

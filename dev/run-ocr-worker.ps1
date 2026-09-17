@@ -33,4 +33,16 @@ Write-Host "-> engine=$engine  dich=$target  worker=$env:DIGITEXT_WORKER_ID" -Fo
 $ErrorActionPreference = "Continue"
 
 Push-Location $root
-try { cargo run -p digitext-ocr -- @args } finally { Pop-Location }
+try {
+    if (Get-Command cargo -ErrorAction SilentlyContinue) {
+        cargo run -p digitext-ocr -- @args
+    } else {
+        # May chu khong cai Rust: chay binary da build san trong target\.
+        $exe = @("target\release\digitext-ocr.exe", "target\debug\digitext-ocr.exe") |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $exe) { throw "Khong co cargo va chua co target\...\digitext-ocr.exe" }
+        $built = (Get-Item $exe).LastWriteTime
+        Write-Host "-> khong co cargo, chay $exe (build $built) - binary cu hon source thi phai build lai" -ForegroundColor Yellow
+        & $exe @args
+    }
+} finally { Pop-Location }
