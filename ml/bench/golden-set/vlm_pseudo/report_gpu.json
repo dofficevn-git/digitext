@@ -1,0 +1,30 @@
+{
+  "overall": {
+    "cer": 0.228128,
+    "wer": 0.316744,
+    "cer_no_diac": 0.216534,
+    "delta_dau": 0.011595,
+    "n_lines": 520,
+    "ece": 0.53904,
+    "n_conf": 520
+  },
+  "by_stratum": {
+    "vlm_pseudo": {
+      "cer": 0.228128,
+      "wer": 0.316744,
+      "cer_no_diac": 0.216534,
+      "delta_dau": 0.011595,
+      "n_lines": 520,
+      "ece": 0.53904,
+      "n_conf": 520
+    }
+  },
+  "meta": {
+    "engine_version": "vietocr-vgg-transformer-gpu",
+    "n_gold": 520,
+    "n_scored": 520,
+    "skipped_empty_ref": 0,
+    "missing_pred": 0,
+    "extra_pred": 0
+  }
+}
