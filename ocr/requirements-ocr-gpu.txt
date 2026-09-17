@@ -18,9 +18,10 @@ opencv-python-headless==4.10.0.84
 Pillow==10.4.0
 
 # paddlepaddle-gpu 2.6.2 build CUDA 12.0 / cuDNN 8.9 — chạy được trên runtime
-# CUDA 12.1 của image nvidia/cuda:12.1.1-cudnn8. Wheel nằm ở index riêng của
-# Paddle, PyPI không có → -f là bắt buộc.
--f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+# CUDA 12.1 của image nvidia/cuda:12.1.1-cudnn8. Wheel KHÔNG có trên PyPI (bản
+# PyPI là CUDA 11.8) và cũng không có ở stable.html cũ (chỉ tới 2.6.1.post120);
+# nó nằm ở index PEP 503 theo CUDA của Paddle — đã kiểm ngày 17/9/2026.
+--extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cu120/
 paddlepaddle-gpu==2.6.2.post120
 paddleocr==2.9.1
 
