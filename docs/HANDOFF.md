@@ -61,13 +61,18 @@ curl -O http://<ip-windows>:8899/<file>
 
 ## 2. Trạng thái dịch vụ trên Alienware
 
-| Cổng | Dịch vụ | Trạng thái |
+| Cổng | Dịch vụ | Trạng thái (cập nhật chiều 17/9) |
 |---|---|---|
-| 5002 | OCR toàn văn (`serve_ocr.py`) | **chạy**, `{"ready":true}` |
-| 8003 | vLLM Qwen2.5-VL — DigiText bóc 16 trường | **chạy**, giữ 9,3/16 G VRAM |
-| 5001 | Web + KIE (`app.py`) | **chạy**, `admin`/`admin123` |
-| 1433 | SQL Server | **chạy**, 8 bảng đã dựng |
-| 3000 | vLLM `vnkie` (Vintern) | **DỪNG** — thiếu trọng số, xem mục 3 |
+| 5002 | OCR toàn văn (`serve_ocr.py`) | **chạy trên GPU** (`docker-compose.yml` + `docker-compose.gpu.yml`), health trả `gpu:true`, ~550 MB VRAM lúc rảnh. Ảnh CPU cũ giữ ở tag `digitext-ocr-fulltext-ocr:cpu-20260917` |
+| 8003 | vLLM Qwen2.5-VL — DigiText bóc 16 trường | **chạy**, dựng lại từ `bundle/infra/compose/vllm` (`.env`: `VLLM_BIND=0.0.0.0`, fraction 0.55), ~9 GB VRAM. Trước đó chỉ bind loopback nên từ Windows tưởng chết |
+| 5001 | Web + KIE (`app.py`) | chạy, `admin`/`admin123` |
+| 1433 | SQL Server | chạy (loopback) |
+| 3000 | vLLM `vnkie` (Vintern) | **đã nạp được** sau khi dời 14 file vào `ocr/models/plakie/` (trước đó giải nén nhầm ra `ocr/models/`); **đang stop** để nhường VRAM. Bật khi A/B: `docker compose --env-file .env up -d vllm-vnkie` |
+| — | `digitext@ocr.service` (systemd) | binary cũ 20/8, crash-loop 257+ lần vì trỏ Postgres cũ. **Tắt đi:** `sudo systemctl disable --now digitext@ocr` |
+
+SSH: `ssh do@192.168.0.205` bằng khoá của máy Windows (`~/.ssh/id_ed25519`, đã
+add vào `authorized_keys` 17/9). Bundle trên đó **không phải git** — deploy bằng
+`scp` từng file vào `/home/do/Downloads/digitext-gpu-bundle/`.
 
 `:5002` và `:5001` cố ý tách rời: SQL Server chết thì OCR của DigiText vẫn chạy.
 Đừng gộp. `app.py:184` cũng đăng ký blueprint OCR nên `:5001` có
@@ -125,17 +130,18 @@ Kế hoạch đầy đủ nằm ở plan đã duyệt; runbook máy GPU mới:
 | 1 | Worker: backoff trong DB (`ocr_jobs.not_before`, migration 0003), health gate, đếm đúng trang lỗi, log, metrics, tự tạo bucket/engine, 10 test | **xong, đã kiểm bằng proxy giả lập mất kết nối** |
 | 2 | `POST /documents/ocr-retry-failed`, `progress.pagesOcrFailed`, nút "Thử lại N trang OCR lỗi" | xong (nút chỉ hiện khi có trang lỗi) |
 | 3.1 | `run_bench.py`/`loadtest.py --backend http` | xong |
-| 3.2 | Bộ đồng thuận VLM + baseline CPU | **chưa** — cần Qwen `:8003` sống |
+| 3.2 | Bộ đồng thuận VLM + baseline | **xong**: 520 dòng `val.txt` (nhãn Qwen) → `ml/bench/golden-set/vlm_pseudo/` (trên Alienware + bản sao local). `make_golden_from_pairs.py` mới. GPU CER **0,2281**, CPU **0,2283**, gate PASS. ECE 0,54 → confidence VietOCR gần như không hiệu chuẩn |
 | 3.3 | Gold KIE từ nút Duyệt: `ml/finetune/kie/gold_from_db.py export-gold` | công cụ xong; **chưa có trường nào verified** — cần bạn duyệt ~40 tài liệu trong app |
-| 4 | OCR GPU: `ocr_fulltext.py` (use_gpu cho DBNet, semaphore, empty_cache, log timing, health có `gpu`), Dockerfile ARG, `docker-compose.gpu.yml`, `requirements-ocr-gpu.txt` | code xong, **chưa build/chạy** — cần SSH Alienware |
-| 5 | `VLLM_GPU_FRACTION`/`VLLM_MAX_NUM_SEQS` qua env; chuyển Vintern | compose xong; chuyển model chờ SSH |
-| 6.1 | `DIGITEXT_VLM_PROFILE=qwen\|internvl` — ngân sách token theo model | xong, có test |
-| 6.2 | A/B Qwen vs Vintern: `gold_from_db.py compare --engine …`; `extract_vlm.py` đọc `VLM_ENDPOINT`/`VLM_MODEL` | công cụ xong; chạy cần 3.3 + 5 |
-| 7 | `train_vietocr.py` dùng config + trọng số cục bộ, kiểm vocab; `OCR_REC_WEIGHTS` qua compose | script xong; huấn luyện chờ 3.2 + máy GPU |
+| 4 | OCR GPU | **xong, đang chạy**. Hai bẫy đã trả giá: index wheel paddle cu120 và symlink `libcudnn.so` (§4). 12 trang: 24 s (CPU 240 s); ~1,2 s/trang 44 dòng |
+| 5 | VRAM, Qwen, Vintern | **xong**: Qwen bind LAN; Vintern nạp được (stop chờ A/B). Bảng VRAM: OCR 0,5–3 GB + Qwen 9 GB; Vintern 4 GB chỉ chạy khi Qwen stop |
+| 6.1 | `DIGITEXT_VLM_PROFILE` | xong, có test |
+| 6.2 | A/B Qwen vs Vintern | **v2 với Qwen đã chạy trên cả 110 tài liệu, 0 lỗi**: 8 trường chính phủ 98–100%, `thuTu/toSo/trangSo` thấp (không có trên trang). Thăm dò 1 ảnh với Vintern + `guided_json`: JSON hợp lệ nhưng lẫn trường — cần A/B đúng cách khi có gold (3.3) |
+| 7 | Fine-tune VietOCR | dữ liệu `data/rec_vi` xong, CER thật **0,278 > 0,25 → đáng làm**; script xong; **chưa huấn luyện** (xem 200 dòng `train.txt` trước) |
 | 8 | Runbook máy mới, metrics | xong phần tài liệu; cảnh báo SigNoz chưa đặt |
-| 9 | Chạy lại lô 110 với bước phá | **chưa** |
+| 9 | Chạy lại lô với bước phá | **xong** (16:16 17/9): OCR lại 227 trang trên GPU, 2 lane — **~254 s** chạy thực (sáng cùng ngày trên CPU: ~75 phút). Dừng container OCR 109 s ở ~30%: `attempts` tối đa 1, 0 `failed_transient`, gate tự mở lại, tài liệu giữ `to_sign`. Conf trung bình 0,891 |
 
-**Việc chặn tất cả phần còn lại: SSH vào Alienware** (`:22` đóng suốt 17/9).
+Worker Windows hiện: `DIGITEXT_WORKER_CONCURRENCY=2`, `DIGITEXT_FIELDS_ENGINE=v2`
+(Qwen, profile `qwen`, 2 trang đầu). Engine v2 trong CSDL: `qwen2.5-vl-7b-instruct-awq-kie`.
 
 Điều đã đo được khi kiểm Phase 1 (proxy `127.0.0.1:5999` → Alienware, tắt/bật):
 gate đóng sau lỗi đầu tiên, các lane khác không claim, `attempts` đứng yên; mở
@@ -247,6 +253,17 @@ CPU, và `ocr_fulltext.py` không truyền `use_gpu` cho PaddleOCR — nên 20 s
 suốt tháng 9 dù card 16 GB rảnh. Đã sửa (Phase 4) nhưng **phải up bằng overlay
 `docker-compose.gpu.yml`**; file compose gốc vẫn là CPU. Health giờ trả `gpu:true/false`
 — nhìn vào đó, đừng tin `OCR_USE_GPU` trong `.env`.
+
+**Paddle GPU: hai bẫy lúc build/chạy.** (1) `paddlepaddle-gpu==2.6.2.post120`
+chỉ có ở index `packages/stable/cu120/`, không có ở `stable.html`. (2) Model nạp
+xong, health OK, nhưng **mọi request 500** "Cannot load cudnn shared library":
+Paddle dlopen `libcudnn.so` không phiên bản, image runtime chỉ có `.so.8`.
+Dockerfile giờ tự tạo symlink; nếu thấy lại lỗi này thì kiểm
+`docker exec … ls -la /usr/lib/x86_64-linux-gnu/libcudnn.so`.
+
+**Cổng bind loopback ≠ dịch vụ chết.** Qwen `:8003` và SQL Server `:1433` bind
+`127.0.0.1` trên Alienware; quét cổng từ máy khác thấy "đóng" là bình thường.
+Kiểm bằng `ssh … curl localhost:8003/v1/models`.
 
 **"OCR toàn bộ" không chạy lại trang lỗi.** Nó chỉ lấy tài liệu chưa có job.
 Trang `failed_transient`/`page_failed` phải qua nút "Thử lại N trang OCR lỗi"
