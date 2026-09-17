@@ -120,6 +120,23 @@ export function V4ev(V17s?: string, V17t?: string[]): Promise<V4eu> {
   });
 }
 
+export interface OcrRetryFailedResult {
+  documents: number;
+  pages: number;
+  skippedSigned: number;
+}
+
+/** Xếp hàng lại trang OCR lỗi. `includePageFailed` kèm cả trang hỏng vĩnh viễn. */
+export function docsOcrRetryFailed(
+  projectId?: string,
+  documentIds?: string[],
+  includePageFailed = false,
+): Promise<OcrRetryFailedResult> {
+  return invoke<OcrRetryFailedResult>("docs_ocr_retry_failed", {
+    args: { projectId, documentIds, includePageFailed },
+  });
+}
+
 export interface V4ew {
   documents: number;
 
@@ -147,6 +164,16 @@ export interface V4ey {
   docsFieldsActive?: number;
 
   docsFieldsFailed?: number;
+
+  pagesOcrFailed?: number;
+
+  pagesOcrTransientFailed?: number;
+
+  pagesOcrQueued?: number;
+
+  pagesOcrRunning?: number;
+
+  docsOcrFailed?: number;
   byStatus: Record<string, number>;
 }
 

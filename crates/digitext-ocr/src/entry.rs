@@ -26,6 +26,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
+/// Tên dòng `engine_versions` (role=recognition) mà kết quả OCR được gắn vào.
+/// Mỗi bộ trọng số / dịch vụ nhận dạng một tên riêng để so A/B được trong CSDL.
+pub const ENV_RECOGNITION_ENGINE_NAME: &str = "DIGITEXT_RECOGNITION_ENGINE_NAME";
+/// `true` → tắt các dòng recognition khác để API (chọn dòng active mới nhất) và
+/// worker cùng nhìn một engine. Tường minh, tránh gõ nhầm tên là đổi engine.
+pub const ENV_RECOGNITION_ENGINE_ACTIVATE: &str = "DIGITEXT_RECOGNITION_ENGINE_ACTIVATE";
+const DEFAULT_RECOGNITION_ENGINE: &str = "vietocr-vgg-transformer-http";
 fn help_text(prog: &str) -> String {
     format!(
         "{prog} — worker OCR (DigiText, §G/§P)\n\nCách dùng:\n  {prog} [run]      Chạy worker (mặc định; vòng lặp job đầy đủ ở P-M2)\n  {prog} --health   In báo cáo sức khoẻ JSON rồi thoát (0=Ok, 1=Down)\n  {prog} --version  In phiên bản\n  {prog} --help     In trợ giúp\n\nCấu hình qua biến môi trường DIGITEXT_* (bắt buộc: DIGITEXT_DATABASE_URL,\nDIGITEXT_TRITON_ENDPOINT). Xem module `config` để biết đầy đủ khoá + mặc định.\n"
@@ -189,13 +196,37 @@ async fn f_2gu(
     let r_34m = digitext_db::connect(&cfg.database_url)
         .await
         .map_err(|e| format!("kết nối Postgres: {e}"))?;
-    let engine = digitext_db::engine_versions::f_ql(&r_34m, "recognition")
+    let rec_name = std::env::var(ENV_RECOGNITION_ENGINE_NAME)
+        .ok()
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| DEFAULT_RECOGNITION_ENGINE.to_owned());
+    let activate = std::env::var(ENV_RECOGNITION_ENGINE_ACTIVATE)
+        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false);
+    let engine = digitext_db::engine_versions::ensure(&r_34m, &rec_name, "recognition", "none")
         .await
-        .map_err(|e| format!("đọc engine_versions: {e}"))?
-        .ok_or_else(|| {
-            "chưa đăng ký engine 'recognition' trong bảng engine_versions"
-                .to_owned()
-        })?;
+        .map_err(|e| format!("đăng ký engine recognition '{rec_name}': {e}"))?;
+    if activate {
+        digitext_db::engine_versions::f_2dw(&r_34m, engine.id, true)
+            .await
+            .map_err(|e| format!("bật engine '{rec_name}': {e}"))?;
+        let n = digitext_db::engine_versions::deactivate_others(&r_34m, "recognition", engine.id)
+            .await
+            .map_err(|e| format!("tắt engine recognition khác: {e}"))?;
+        tracing::info!(engine = % rec_name, deactivated = n, "engine recognition được đặt làm active");
+    } else if !engine.active {
+        return Err(format!(
+            "engine recognition '{rec_name}' đang inactive — đặt {ENV_RECOGNITION_ENGINE_ACTIVATE}=true để chuyển sang nó, hoặc đổi {ENV_RECOGNITION_ENGINE_NAME}"
+        ));
+    } else if let Ok(Some(cur)) = digitext_db::engine_versions::f_ql(&r_34m, "recognition").await {
+        if cur.id != engine.id {
+            tracing::warn!(
+                worker_engine = % rec_name, api_engine = % cur.name,
+                "worker ghi kết quả vào engine khác với engine active mới nhất mà API dùng — đặt {ENV_RECOGNITION_ENGINE_ACTIVATE}=true nếu cố ý chuyển"
+            );
+        }
+    }
     let r_33z = engine.id;
     let r_343: Option<(VlmFieldExtractorV2, uuid::Uuid)> = if cfg.fields_engine == FieldsEngine::V2
     {
@@ -213,14 +244,13 @@ async fn f_2gu(
             .and_then(|s| s.parse::<u64>().ok())
             .map(Duration::from_millis)
             .unwrap_or_else(|| Duration::from_secs(120));
-        let v2_engine = digitext_db::engine_versions::ensure(
-            &r_34m,
-            "qwen2.5-vl-7b-awq-kie",
-            "fallback",
-            "none",
-        )
-        .await
-        .map_err(|e| format!("đăng ký engine v2: {e}"))?;
+        // Tên engine đi theo model đang phục vụ, để kết quả Qwen và Vintern (hay bất
+        // kỳ model nào sau này) không bị trộn dưới một id.
+        let v2_name = format!("{}-kie", model.trim().to_ascii_lowercase());
+        let v2_engine =
+            digitext_db::engine_versions::ensure(&r_34m, &v2_name, "fallback", "none")
+                .await
+                .map_err(|e| format!("đăng ký engine v2 '{v2_name}': {e}"))?;
         let extractor = VlmFieldExtractorV2::new(ep, model, timeout)
             .map_err(|e| format!("dựng VLM extractor v2: {e}"))?;
         tracing::info!(
@@ -231,11 +261,13 @@ async fn f_2gu(
     } else {
         None
     };
+    let r_34y = Arc::new(Metrics::new());
     let r_34u = r_34m.clone();
     let r_34v = shutdown.clone();
     let r_34t = cfg.max_retries as i32;
+    let r_34z = r_34y.clone();
     let r_34s = tokio::spawn(async move {
-        let _ = worker::f_2b8(&r_34u, Duration::from_secs(30), r_34t, &r_34v).await;
+        let _ = worker::f_2b8(&r_34u, Duration::from_secs(30), r_34t, &r_34v, Some(r_34z)).await;
     });
     let r_34p = r_34m.clone();
     let r_34q = shutdown.clone();
@@ -257,6 +289,11 @@ async fn f_2gu(
         std::sync::Arc::new(digitext_storage::WormGuard::new(s))
             as std::sync::Arc<dyn digitext_storage::ObjectStore>
     });
+    if let Some(s) = r_34f.as_ref() {
+        s.ensure_ready()
+            .await
+            .map_err(|e| format!("kho PDF 2 lớp chưa sẵn sàng: {e}"))?;
+    }
     match r_34f.as_ref() {
         Some(_) if cfg.pdf_store_bucket.is_some() => {
             tracing::info!(
@@ -466,7 +503,7 @@ async fn f_2gu(
         } else {
             None
         };
-        let r_34a = Metrics::new();
+        let r_34a = r_34y;
         let lexicon = f_1os();
         let corrector = f_v9(cfg.llm_corrector_enabled);
         tracing::info!(

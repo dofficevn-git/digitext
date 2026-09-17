@@ -114,6 +114,9 @@ export interface V4jt {
   docsFieldsDone: number;
   docsFieldsActive: number;
   docsFieldsFailed: number;
+  /** Trang OCR lỗi — chỉ có ở chế độ toàn kho (tiến độ máy chủ), cây lọc không tính được. */
+  pagesOcrFailed: number;
+  docsOcrFailed: number;
 }
 
 const V4ju: V4jt = {
@@ -124,6 +127,8 @@ const V4ju: V4jt = {
   docsFieldsDone: 0,
   docsFieldsActive: 0,
   docsFieldsFailed: 0,
+  pagesOcrFailed: 0,
+  docsOcrFailed: 0,
 };
 
 export function V4jv(docs: V4ej[]): V4jt {

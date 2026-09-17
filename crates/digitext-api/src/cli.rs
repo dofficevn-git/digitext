@@ -112,6 +112,12 @@ async fn serve() -> anyhow::Result<()> {
         );
     }
     if let Some(store) = r_20 {
+        // Tạo bucket nếu thiếu — trước đây phải tạo tay bằng mc, thiếu là upload
+        // trả lỗi mơ hồ lúc chạy.
+        store
+            .ensure_ready()
+            .await
+            .context("kho PDF 2 lớp chưa sẵn sàng (bucket)")?;
         r_24 = r_24.with_store(store);
         tracing::info!(
             minio = r_1w.pdf_store_bucket.is_some(),
@@ -122,6 +128,11 @@ async fn serve() -> anyhow::Result<()> {
     match r_1w.minio {
         Some(r_1z) => match digitext_storage::MinioObjectStore::new(&r_1z) {
             Ok(store) => {
+                use digitext_storage::ObjectStore as _;
+                store
+                    .ensure_ready()
+                    .await
+                    .context("kho PDF nguồn MinIO chưa sẵn sàng (bucket)")?;
                 tracing::info!(
                     bucket = % r_1z.bucket, endpoint = % r_1z.endpoint,
                     "kho PDF nguồn MinIO BẬT (upload → OCR)"

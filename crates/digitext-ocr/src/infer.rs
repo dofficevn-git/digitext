@@ -57,6 +57,12 @@ pub trait Tok: Send + Sync {
         tile: &Tile,
         batch: usize,
     ) -> impl Future<Output = Result<To6, WorkerError>> + Send;
+    /// Kiểm dịch vụ nhận dạng còn sống không — worker dùng để mở lại gate sau khi
+    /// gặp lỗi kết nối. Mặc định luôn Ok: engine không có health riêng thì gate
+    /// mở ngay và backoff trong DB tự điều tiết.
+    fn probe_engine(&self) -> impl Future<Output = Result<(), WorkerError>> + Send {
+        async { Ok(()) }
+    }
 }
 const C_C8: f32 = 0.5;
 struct Span {
@@ -191,6 +197,12 @@ impl Tok for OcrInferSource {
         match self {
             OcrInferSource::Triton(e) => e.infer_tile(tile, batch).await,
             OcrInferSource::Http(e) => e.infer_tile(tile, batch).await,
+        }
+    }
+    async fn probe_engine(&self) -> Result<(), WorkerError> {
+        match self {
+            OcrInferSource::Triton(e) => e.probe_engine().await,
+            OcrInferSource::Http(e) => e.probe_engine().await,
         }
     }
 }

@@ -62,6 +62,17 @@ pub async fn f_ql(r_255: &PgPool, role: &str) -> sqlx::Result<Option<T6t>> {
     .fetch_optional(r_255)
     .await
 }
+/// Tắt mọi dòng cùng `role` trừ `keep` — dùng khi chuyển engine tường minh.
+pub async fn deactivate_others(r_256: &PgPool, role: &str, keep: Uuid) -> sqlx::Result<u64> {
+    let r = sqlx::query(
+        "UPDATE engine_versions SET active = FALSE WHERE role = $1 AND id <> $2 AND active",
+    )
+    .bind(role)
+    .bind(keep)
+    .execute(r_256)
+    .await?;
+    Ok(r.rows_affected())
+}
 pub async fn f_2dw(r_256: &PgPool, id: Uuid, active: bool) -> sqlx::Result<bool> {
     let r_257 = sqlx::query("UPDATE engine_versions SET active = $2 WHERE id = $1")
         .bind(id)

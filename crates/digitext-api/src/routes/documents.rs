@@ -29,6 +29,7 @@ pub fn router() -> Router<AppState> {
         .route("/documents/{id}/download", get(f_173))
         .route("/documents/tree", get(f_2m3))
         .route("/documents/ocr-all", post(ocr_all))
+        .route("/documents/ocr-retry-failed", post(ocr_retry_failed))
         .route("/documents/make-pdf2-all", post(make_pdf2_all))
         .route("/documents/extract-fields-all", post(extract_fields_all))
         .route("/documents/rebuild-non-pdfa", post(rebuild_non_pdfa))
@@ -892,6 +893,73 @@ async fn make_pdf2_all(
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OcrRetryFailedReq {
+    #[serde(default)]
+    pub project_id: Option<Uuid>,
+    #[serde(default)]
+    pub document_ids: Option<Vec<Uuid>>,
+    /// Kèm cả trang `page_failed` (lỗi vĩnh viễn: ảnh hỏng, định dạng lạ). Mặc định
+    /// chỉ chạy lại `failed_transient` — trang thất bại vì dịch vụ OCR chết.
+    #[serde(default)]
+    pub include_page_failed: bool,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OcrRetryFailedResult {
+    pub documents: u64,
+    pub pages: u64,
+    pub skipped_signed: u64,
+}
+/// Xếp hàng lại các trang OCR lỗi. "OCR toàn bộ" cố ý không đụng tới chúng (chỉ lấy
+/// tài liệu chưa có job), nên đây là lối duy nhất ngoài sửa tay CSDL.
+async fn ocr_retry_failed(
+    State(state): State<AppState>,
+    r_ga: Ts,
+    Json(req): Json<OcrRetryFailedReq>,
+) -> Result<Json<OcrRetryFailedResult>, ApiError> {
+    r_ga.require_perm(Permission::DocumentList)?;
+    let projects: Option<Vec<Uuid>> = match req.project_id {
+        Some(p) => {
+            authorize_project(&state, &r_ga, p).await?;
+            Some(vec![p])
+        }
+        None => match f_29a(&state.pool, &r_ga.user).await? {
+            Scope::All => None,
+            Scope::Projects(ids) => Some(ids),
+        },
+    };
+    let docs = scope_ids(req.document_ids.as_ref())?;
+    let r = ocr_jobs::requeue_failed(
+        &state.pool,
+        projects.as_deref(),
+        docs,
+        req.include_page_failed,
+    )
+    .await?;
+    digitext_db::audit::append(
+        &state.pool,
+        digitext_db::audit::Tp {
+            actor_id: Some(r_ga.user.id),
+            device_id: r_ga.claims.device_id,
+            action: "document.ocr_retry_failed",
+            target: None,
+            detail: Some(serde_json::json!(
+                { "documents" : r.documents, "pages" : r.pages, "skippedSigned" : r.skipped_signed,
+                "includePageFailed" : req.include_page_failed, "projectId" : req.project_id,
+                "scopedDocuments" : docs.map(< [Uuid] >::len), }
+            )),
+            ip: r_ga.ip(),
+        },
+    )
+    .await?;
+    Ok(Json(OcrRetryFailedResult {
+        documents: r.documents,
+        pages: r.pages,
+        skipped_signed: r.skipped_signed,
+    }))
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct T74 {
     #[serde(default)]
     pub project_id: Option<Uuid>,
@@ -1054,6 +1122,13 @@ pub struct ProgressDto {
     pub docs_fields_done: i64,
     pub docs_fields_active: i64,
     pub docs_fields_failed: i64,
+    /// Trang OCR lỗi (tạm thời hết lượt + vĩnh viễn). Trước đây không có số nào
+    /// cho lỗi OCR ở cấp trang nên 35 trang thất bại hôm 2026-09-17 không ai thấy.
+    pub pages_ocr_failed: i64,
+    pub pages_ocr_transient_failed: i64,
+    pub pages_ocr_queued: i64,
+    pub pages_ocr_running: i64,
+    pub docs_ocr_failed: i64,
     pub by_status: std::collections::HashMap<String, i64>,
 }
 async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<ProgressDto>, ApiError> {
@@ -1065,6 +1140,7 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
     let counts = documents::status_counts(&state.pool, projects.as_deref()).await?;
     let pages_ocr_done = digitext_db::ocr_results::f_1y3(&state.pool, projects.as_deref()).await?;
     let r_gq = ocr_jobs::f_1ax(&state.pool, projects.as_deref()).await?;
+    let r_gs = ocr_jobs::ocr_failed_counts(&state.pool, projects.as_deref()).await?;
     let mut r_gp = ProgressDto {
         docs: 0,
         pages_total: 0,
@@ -1075,6 +1151,11 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
         docs_fields_done: r_gq.done,
         docs_fields_active: r_gq.active,
         docs_fields_failed: r_gq.failed,
+        pages_ocr_failed: r_gs.pages_failed_transient + r_gs.pages_page_failed,
+        pages_ocr_transient_failed: r_gs.pages_failed_transient,
+        pages_ocr_queued: r_gs.pages_queued,
+        pages_ocr_running: r_gs.pages_running,
+        docs_ocr_failed: r_gs.docs_failed,
         by_status: std::collections::HashMap::new(),
     };
     for (status, docs, pages) in counts {

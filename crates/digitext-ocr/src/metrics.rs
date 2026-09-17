@@ -10,6 +10,8 @@ pub mod names {
     pub const C_F4: &str = "ocr_oom_downshift_total";
     pub const C_77: &str = "ocr_fallback_vietocr_total";
     pub const C_HZ: &str = "ocr_queue_depth";
+    pub const ENGINE_HEALTHY: &str = "ocr_engine_healthy";
+    pub const ENGINE_UNAVAILABLE: &str = "ocr_engine_unavailable_total";
     pub const C_AI: &str = "llm_edits_applied_total";
     pub const C_AJ: &str = "llm_edits_rejected_total";
     pub const C_AC: &str = "status";
@@ -139,6 +141,8 @@ pub struct Metrics {
     pub oom_downshift_total: CounterMetric,
     pub fallback_vietocr_total: CounterMetric,
     pub queue_depth: GaugeMetric,
+    pub engine_healthy: GaugeMetric,
+    pub engine_unavailable_total: CounterMetric,
     pub llm_edits_applied_total: CounterMetric,
     pub llm_edits_rejected_total: CounterMetric,
 }
@@ -147,6 +151,11 @@ impl Metrics {
         Self::from_meter(&opentelemetry::global::meter("digitext-ocr"))
     }
     pub fn from_meter(r_3bm: &Meter) -> Self {
+        let m = Self::build(r_3bm);
+        m.engine_healthy.set(1);
+        m
+    }
+    fn build(r_3bm: &Meter) -> Self {
         Metrics {
             pages_processed: LabeledCounter::new(
                 r_3bm,
@@ -183,6 +192,16 @@ impl Metrics {
                 r_3bm,
                 names::C_HZ,
                 "Độ sâu hàng đợi job cục bộ.",
+            ),
+            engine_healthy: GaugeMetric::new(
+                r_3bm,
+                names::ENGINE_HEALTHY,
+                "1 khi dịch vụ nhận dạng trả lời, 0 khi worker đang chờ nó trở lại.",
+            ),
+            engine_unavailable_total: CounterMetric::new(
+                r_3bm,
+                names::ENGINE_UNAVAILABLE,
+                "Số lần worker phát hiện dịch vụ nhận dạng không phản hồi.",
             ),
             llm_edits_applied_total: CounterMetric::new(
                 r_3bm,

@@ -104,6 +104,7 @@ fn main() {
             docs::docs_pdf_for_view,
             docs::docs_upload_local,
             docs::docs_ocr_all,
+            docs::docs_ocr_retry_failed,
             docs::docs_make_pdf2_all,
             docs::docs_extract_fields_all,
             docs::docs_progress,
