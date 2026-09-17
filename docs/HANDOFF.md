@@ -168,12 +168,39 @@ tuyệt đối — Qwen cũng bịa/sai):
 | ft_v1, không đệm | 96,9–97,1% | 50% |
 | **ft_v1 + đệm 0.12/0.15 (đang chạy)** | **97,84%** | **67%** |
 
-Engine trong CSDL: `vietocr-vgg-transformer-ft-v1-pad12` (active). Rollback: đổi
-`OCR_REC_WEIGHTS`, `OCR_CROP_PAD_*` trên Alienware + `DIGITEXT_RECOGNITION_ENGINE_NAME` ở worker.
-Còn sai: chữ HOA dấu kép ("CÔNG HÒA"), số viết tay. **Chưa chứng nhận được 98%** — cần
-~300 dòng có người đọc. Đòn bẩy tiếp: fine-tune lại trên crop ĐÃ đệm + thêm dòng chữ hoa.
+Rollback engine: đổi `OCR_REC_WEIGHTS`, `OCR_CROP_PAD_*` trên Alienware +
+`DIGITEXT_RECOGNITION_ENGINE_NAME` ở worker (mỗi cấu hình một dòng `engine_versions`).
 
-**PDF/A.** 110 tài liệu dựng lại 2 lần (11–12 s/lần). veraPDF `-f 2b`: **110/110 PASS**
+**Fine-tune lần 2 (v2b) — ĐANG PHỤC VỤ, đạt yêu cầu lớp chữ ≥ 98%.**
+- Vì sao cần: tôi xem tay 42/114 dòng còn lệch của ft_v1 → 82% là OCR sai thật, có hệ
+  thống: "." đọc thành ",", rơi "/." cuối câu, "w"→"=" (pass=ord), thầu→thâu. Gốc: ft_v1
+  học trên crop CẮT SÁT của loại tài liệu khác, nhưng chạy thật với khung đã nới.
+- Dữ liệu: `ml/finetune/vietocr/build_target_pairs.py` — 80 tài liệu DigiText (30 tài liệu
+  để dành đo, không cho model thấy), crop nới khung đúng như dịch vụ, nhãn Qwen, 6.931 dòng.
+  Gộp với 4.119 dòng tiêu đề cũ đã nới viền (`merge_v2.py` trên Alienware).
+- **Bài học đắt: lần đầu (v2) TỆ HƠN** (97,84% → 96,00%) vì nhãn Qwen hay cắt mất đầu dòng
+  ("Căn cứ ", "11. ", "Điều 3. ") mà bộ lọc độ dài để lọt → model học BỎ ĐẦU DÒNG. Sửa bằng
+  **neo đầu/cuối** (3 ký tự chữ-số đầu và cuối của nhãn phải khớp OCR sau khi bỏ dấu): loại
+  543 nhãn. Huấn luyện lại = v2b. Đừng bỏ bộ lọc neo.
+- Kết quả trên 341 dòng / 30 tài liệu để dành (tham chiếu Qwen = cận bi quan):
+
+| | đồng thuận ký tự | dòng khớp tuyệt đối |
+|---|---|---|
+| ft_v1 + đệm | 97,84% | 66,6% |
+| ft_v2 (nhãn chưa neo) | 96,00% | 58,1% |
+| **ft_v2b + đệm (đang chạy)** | **98,25%** | **77,4%** |
+| lớp chữ trích từ chính PDF/A (PyMuPDF) | **98,45%** | 76,5% |
+
+  Phân xử tay 28 dòng còn lệch của v2b: chỉ ~9% phần lệch là OCR sai thật (còn lại Qwen đặt
+  dấu "tòan", bịa đuôi câu, bỏ "4.") → độ chính xác thật ước ~99,4–99,8% trên THÂN văn bản.
+  Bộ tiêu đề 520 dòng: CER 0,1437 (v1 0,1441) — không hồi quy. Chưa đo riêng: dòng ngắn,
+  chữ viết tay, vùng có dấu/chữ ký đè.
+- Engine: `vietocr-vgg-transformer-ft-v2b-pad12`. Trọng số `vgg_transformer_ft_v2b.pth` (+v1)
+  đã sao về `ocr/models/vietocr/` trên máy Windows (gitignored).
+- Còn sai: chữ "w" (pass**W**ord, =ebsite), số viết tay, dòng gạch chân che dấu nặng,
+  ký hiệu ngoài vocab (≥ µ Φ ²).
+
+**PDF/A.** 110 tài liệu dựng lại sau mỗi lần đổi engine (11–12 s/lần); bản hiện tại là v2b. veraPDF `-f 2b`: **110/110 PASS**
 (`docker run verapdf/cli:v1.30.2`). Cách dựng lại toàn bộ khi tài liệu đã `to_sign`:
 `UPDATE documents SET status='ocr_done'` rồi chèn job `make_pdf2` — API `make-pdf2-all`
 chỉ lấy `ocr_done`, nút "Ghép lại PDF/A" chỉ lấy tệp CHƯA đạt 2b.
