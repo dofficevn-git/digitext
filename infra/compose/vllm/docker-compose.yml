@@ -34,7 +34,9 @@ services:
       - "--max-num-seqs"
       - "${VLLM_MAX_NUM_SEQS:-4}"
     ports:
-      - "127.0.0.1:8003:8003"
+      # Mặc định loopback. Worker DigiText ở máy khác thì đặt VLLM_BIND=0.0.0.0
+      # trong .env cạnh file này. vLLM KHÔNG có xác thực — chỉ mở trong LAN tin cậy.
+      - "${VLLM_BIND:-127.0.0.1}:8003:8003"
     volumes:
       - hf_cache:/root/.cache/huggingface
     ipc: host
