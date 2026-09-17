@@ -263,6 +263,7 @@ pub struct VlmFieldExtractorV2 {
     client: reqwest::Client,
     endpoint: String,
     model: String,
+    profile: crate::vlm_prompt_v2::VlmProfile,
 }
 impl VlmFieldExtractorV2 {
     pub fn new(
@@ -278,7 +279,15 @@ impl VlmFieldExtractorV2 {
             client,
             endpoint: endpoint.into(),
             model: model.into(),
+            profile: crate::vlm_prompt_v2::VlmProfile::Qwen28,
         })
+    }
+    pub fn with_profile(mut self, profile: crate::vlm_prompt_v2::VlmProfile) -> Self {
+        self.profile = profile;
+        self
+    }
+    pub fn profile(&self) -> crate::vlm_prompt_v2::VlmProfile {
+        self.profile
     }
 }
 impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
@@ -290,9 +299,9 @@ impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
                     "đọc kích thước ảnh trang: {e}"
                 ))
             })?;
-            let r_3hq = v2::fit_max_side(w, h, v2::MAX_IMAGE_TOKENS_V2)?;
+            let r_3hq = self.profile.fit_max_side(w, h, v2::MAX_IMAGE_TOKENS_V2)?;
             let r_3ho = f_23i(r_3hm, r_3hq.unwrap_or(0))?;
-            let r_3hn = v2::image_tokens(r_3ho.width, r_3ho.height);
+            let r_3hn = self.profile.image_tokens(r_3ho.width, r_3ho.height);
             let max_tokens = v2::output_budget(r_3hn)?;
             if r_3ho.scale < 1.0 {
                 tracing::debug!(

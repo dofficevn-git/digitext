@@ -26,7 +26,13 @@ import cv2
 import numpy as np
 from flask import Blueprint, jsonify, request
 
-from ocr_fulltext import OcrEngineManager, OcrNotReady, OcrOutOfMemory, recognize
+from ocr_fulltext import (
+    OcrEngineManager,
+    OcrNotReady,
+    OcrOutOfMemory,
+    device_info,
+    recognize,
+)
 
 ocr_bp = Blueprint("ocr", __name__)
 
@@ -51,6 +57,8 @@ def health():
     body = {"ready": ready}
     if not ready:
         body["error"] = OcrEngineManager.init_error() or "chưa nạp được model"
+    # Cho biết đang chạy GPU hay CPU — cấu hình rơi về CPU phải nhìn thấy được.
+    body.update(device_info())
     return jsonify(body), (200 if ready else 503)
 
 

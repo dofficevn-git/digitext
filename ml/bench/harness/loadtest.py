@@ -36,27 +36,20 @@ def _load_manifest(path: str):
                 p_ea.append(json.loads(p_e9))
     return p_ea
 
-def run(manifest, triton_url: str, model: str, concurrency: int, requests: int) -> dict:
+def run(manifest, infer, concurrency: int, requests: int) -> dict:
     import concurrent.futures as cf
 
     import cv2
-    import tritonclient.grpc as grpcclient
-
-    sys.path.insert(0, os.path.dirname(__file__))
-    import run_bench
 
     p_ef = [cv2.imread(p_f1["image"]) for p_f1 in manifest]
     p_ef = [p_ed for p_ed in p_ef if p_ed is not None]
     if not p_ef:
         raise SystemExit("❌ không đọc được ảnh nào từ manifest")
-    p_eb = grpcclient.InferenceServerClient(url=triton_url)
-    if not p_eb.is_server_ready():
-        raise SystemExit(f"❌ Triton chưa sẵn sàng: {triton_url}")
 
     def one(i):
         p_ee = p_ef[i % len(p_ef)]
         p_f3 = time.perf_counter()
-        run_bench._infer_line(p_eb, model, p_ee)
+        infer(p_ee)
         return (time.perf_counter() - p_f3) * 1000.0
 
     p_f0 = []
@@ -68,14 +61,18 @@ def run(manifest, triton_url: str, model: str, concurrency: int, requests: int) 
     return summarize(p_f0, p_f5)
 
 def main(argv=None) -> int:
-    p_f6 = argparse.ArgumentParser(description="Load-test throughput OCR qua Triton (§G8)")
+    sys.path.insert(0, os.path.dirname(__file__))
+    import run_bench
+
+    p_f6 = argparse.ArgumentParser(description="Load-test throughput OCR (HTTP :5002 hoặc Triton, §G8)")
     p_f6.add_argument("--manifest", required=True)
-    p_f6.add_argument("--triton", default="localhost:8001")
-    p_f6.add_argument("--model", default="ocr_pipeline")
     p_f6.add_argument("--concurrency", type=int, default=8)
     p_f6.add_argument("--requests", type=int, default=500)
+    run_bench.add_backend_args(p_f6)
     p_f7 = p_f6.parse_args(argv)
-    p_f8 = run(_load_manifest(p_f7.manifest), p_f7.triton, p_f7.model, p_f7.concurrency, p_f7.requests)
+    infer = run_bench.make_infer(p_f7.backend, p_f7.triton, p_f7.model, p_f7.endpoint,
+                                 p_f7.api_key, p_f7.timeout)
+    p_f8 = run(_load_manifest(p_f7.manifest), infer, p_f7.concurrency, p_f7.requests)
     print(json.dumps(p_f8, ensure_ascii=False, indent=2))
     return 0
 

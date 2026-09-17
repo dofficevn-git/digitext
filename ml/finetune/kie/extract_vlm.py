@@ -84,8 +84,11 @@ PROMPT = (
     "\nChỉ trả về duy nhất một đối tượng JSON."
 )
 
-DEFAULT_ENDPOINT = "http://127.0.0.1:8003/v1/chat/completions"
-DEFAULT_MODEL = "Qwen2.5-VL-7B-Instruct-AWQ"
+# Đọc từ env để A/B hai model chỉ cần đổi biến, không sửa script:
+#   Qwen    : VLM_ENDPOINT=http://127.0.0.1:8003/v1/chat/completions VLM_MODEL=Qwen2.5-VL-7B-Instruct-AWQ
+#   Vintern : VLM_ENDPOINT=http://127.0.0.1:3000/v1/chat/completions VLM_MODEL=vnkie
+DEFAULT_ENDPOINT = os.environ.get("VLM_ENDPOINT", "http://127.0.0.1:8003/v1/chat/completions")
+DEFAULT_MODEL = os.environ.get("VLM_MODEL", "Qwen2.5-VL-7B-Instruct-AWQ")
 
 QWEN_PATCH = 28
 MODEL_MAX_LEN = 4096

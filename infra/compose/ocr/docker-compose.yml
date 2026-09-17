@@ -3,6 +3,12 @@
 # biết Triton qua DIGITEXT_TRITON_ENDPOINT.
 #
 #   docker compose -f infra/compose/ocr/docker-compose.yml --env-file infra/compose/ocr/.env up -d --build
+#
+# Máy có GPU NVIDIA: chồng thêm docker-compose.gpu.yml (base CUDA, paddle-gpu,
+# cấp GPU cho container). File này giữ nguyên biến thể CPU để máy không GPU và
+# rollback vẫn dùng được.
+#   docker compose -f infra/compose/ocr/docker-compose.yml -f infra/compose/ocr/docker-compose.gpu.yml \
+#     --env-file infra/compose/ocr/.env up -d --build
 
 name: digitext-ocr-fulltext
 
@@ -23,9 +29,15 @@ services:
       OCR_HOST: "0.0.0.0"
       OCR_PORT: "5002"
       OCR_THREADS: "${OCR_THREADS:-4}"
-      OCR_LANG: "${OCR_LANG:-vi}"
+      OCR_DET_LANG: "${OCR_DET_LANG:-en}"
       OCR_USE_GPU: "${OCR_USE_GPU:-false}"
       OCR_REC_BATCH: "${OCR_REC_BATCH:-8}"
+      # Trọng số VietOCR đang phục vụ. Đổi sang bản fine-tune = đổi biến này +
+      # up -d, không chép đè file gốc (giữ được đường rollback).
+      OCR_REC_WEIGHTS: "${OCR_REC_WEIGHTS:-/models/vietocr/vgg_transformer.pth}"
+      OCR_GPU_CONCURRENCY: "${OCR_GPU_CONCURRENCY:-2}"
+      OCR_DET_GPU_MEM_MB: "${OCR_DET_GPU_MEM_MB:-1024}"
+      OCR_LOG_TIMING: "${OCR_LOG_TIMING:-true}"
       OCR_API_KEY: "${OCR_API_KEY:?dat OCR_API_KEY trong infra/compose/ocr/.env}"
     # Trần bộ nhớ. Không có nó thì một ảnh bất thường có thể đẩy container ăn
     # hết RAM máy chủ; trên máy KHÔNG CÓ SWAP, OOM killer sẽ kéo sập cả phiên
