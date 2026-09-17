@@ -254,6 +254,31 @@ def warp_crop(img: np.ndarray, quad) -> np.ndarray | None:
     h = int(max(np.linalg.norm(pts[0] - pts[3]), np.linalg.norm(pts[1] - pts[2])))
     if w < 4 or h < 4:
         return None
+    # ĐỆM khung trước khi cắt. Khung DBNet ôm sát thân chữ; dấu nặng (ạ ệ ị ộ ự)
+    # nằm DƯỚI dòng kẻ và dấu trên chữ hoa (Ộ Ấ) nằm trên — cắt sát là mất dấu.
+    # Đo 17/9/2026 trên 341 dòng thân văn bản: lỗi chủ đạo còn lại của VietOCR là
+    # a→ạ, ê→ệ, Ô→Ộ, i→ị… Đệm tính theo CHIỀU CAO dòng, theo hướng của chính quad
+    # (trang nghiêng vẫn đúng). Hộp trả về cho lớp chữ PDF vẫn là quad GỐC.
+    pad_y = float(os.getenv("OCR_CROP_PAD_Y", "0") or 0)
+    pad_x = float(os.getenv("OCR_CROP_PAD_X", "0") or 0)
+    if pad_y > 0 or pad_x > 0:
+        tl, tr, br, bl = pts
+
+        def _unit(v):
+            n = float(np.linalg.norm(v))
+            return v / n if n > 1e-6 else v
+
+        down_l, down_r = _unit(bl - tl), _unit(br - tr)
+        right_t, right_b = _unit(tr - tl), _unit(br - bl)
+        dy, dx = pad_y * h, pad_x * h
+        pts = np.array([
+            tl - down_l * dy - right_t * dx,
+            tr - down_r * dy + right_t * dx,
+            br + down_r * dy + right_b * dx,
+            bl + down_l * dy - right_b * dx,
+        ], dtype=np.float32)
+        w = int(max(np.linalg.norm(pts[0] - pts[1]), np.linalg.norm(pts[2] - pts[3])))
+        h = int(max(np.linalg.norm(pts[0] - pts[3]), np.linalg.norm(pts[1] - pts[2])))
     dst = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=np.float32)
     m = cv2.getPerspectiveTransform(pts, dst)
     return cv2.warpPerspective(img, m, (w, h), borderMode=cv2.BORDER_REPLICATE)
