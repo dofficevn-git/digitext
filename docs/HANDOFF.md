@@ -143,6 +143,56 @@ Kế hoạch đầy đủ nằm ở plan đã duyệt; runbook máy GPU mới:
 Worker Windows hiện: `DIGITEXT_WORKER_CONCURRENCY=2`, `DIGITEXT_FIELDS_ENGINE=v2`
 (Qwen, profile `qwen`, 2 trang đầu). Engine v2 trong CSDL: `qwen2.5-vl-7b-instruct-awq-kie`.
 
+## 2d. Fine-tune VietOCR, lớp chữ PDF/A, đóng gói TT05 (tối 17/9)
+
+**Fine-tune (Phase 7) — đã chạy và đang phục vụ.**
+- Dữ liệu: `data/rec_vi` 5.137 dòng nhãn Qwen. Xem 36 crop: lỗi nhãn chủ yếu do crop
+  dính mép dòng bên cạnh. `filter_pairs.py` (VietOCR↔Qwen CER ≤ 0,35, vocab, tỉ lệ)
+  giữ 4.119 train / 427 val. 10.000 iter, batch 32, lr 1e-4, ~25 phút trên RTX 4090
+  (dừng Qwen lúc train). Trọng số: `ocr/models/vietocr/vgg_transformer_ft_v1.pth`
+  (trên Alienware; **chưa sao lưu về máy Windows**).
+- Gate 520 dòng: CER 0,2281 → **0,1441**, WER 0,317 → 0,200, ECE 0,54 → 0,32. PASS.
+- Hai bẫy của `vietocr.Trainer`: sampler theo cụm chiều rộng bỏ batch thiếu → loader
+  val rỗng → `UnboundLocalError: prob`; và cache LMDB `train_data/`, `valid_data/` nằm ở
+  thư mục làm việc chứ không ở `data_root`. Cả hai đã xử lý trong `train_vietocr.py`.
+
+**Đệm khung crop — phát hiện đáng giá nhất.** Lỗi chủ đạo còn lại của VietOCR là **mất dấu
+nặng** (a→ạ, ê→ệ, Ô→Ộ, "Tư do - Hanh phúc") vì khung DBNet cắt sát. `OCR_CROP_PAD_Y=0.12`,
+`OCR_CROP_PAD_X=0.15` (mặc định trong compose). Đo trên 341 dòng thân văn bản của 30 tài
+liệu DigiText, tham chiếu = Qwen đọc lại crop (nên là ĐỒNG THUẬN, không phải độ chính xác
+tuyệt đối — Qwen cũng bịa/sai):
+
+| cấu hình | đồng thuận ký tự | dòng khớp tuyệt đối |
+|---|---|---|
+| trọng số gốc, không đệm | 93,75% | 43% |
+| ft_v1, không đệm | 96,9–97,1% | 50% |
+| **ft_v1 + đệm 0.12/0.15 (đang chạy)** | **97,84%** | **67%** |
+
+Engine trong CSDL: `vietocr-vgg-transformer-ft-v1-pad12` (active). Rollback: đổi
+`OCR_REC_WEIGHTS`, `OCR_CROP_PAD_*` trên Alienware + `DIGITEXT_RECOGNITION_ENGINE_NAME` ở worker.
+Còn sai: chữ HOA dấu kép ("CÔNG HÒA"), số viết tay. **Chưa chứng nhận được 98%** — cần
+~300 dòng có người đọc. Đòn bẩy tiếp: fine-tune lại trên crop ĐÃ đệm + thêm dòng chữ hoa.
+
+**PDF/A.** 110 tài liệu dựng lại 2 lần (11–12 s/lần). veraPDF `-f 2b`: **110/110 PASS**
+(`docker run verapdf/cli:v1.30.2`). Cách dựng lại toàn bộ khi tài liệu đã `to_sign`:
+`UPDATE documents SET status='ocr_done'` rồi chèn job `make_pdf2` — API `make-pdf2-all`
+chỉ lấy `ocr_done`, nút "Ghép lại PDF/A" chỉ lấy tệp CHƯA đạt 2b.
+
+**Đóng gói TT05 — đã chạy một gói AIP thật.**
+1. `ml/tools/muc_luc_from_db.py --project TEST` → mục lục hồ sơ (khuôn TT02) từ tên tệp
+   `<mã hồ sơ>.<STT7>.pdf` + trường v2. Giá trị cấp hồ sơ máy không biết (tiêu đề, thời hạn
+   bảo quản, số tờ, mã hồ sơ giấy) điền TẠM và **in ra danh sách** — phải thay trước khi nộp.
+2. `target\release\digitext.exe tt02 muc_luc.json --fond H05.13.24 --org H05` → `wire.json`
+   (validator TT05 trong CLI: 0 vi phạm). Mã phông/cơ quan là SUY ĐOÁN từ tên tệp.
+3. Chèn vào bảng `packages` (đúng cột của `POST /packages`) → worker dựng:
+   `urn:H05.13.24:uuid:BC90A16F-…`, 110 tài liệu, 79 MB, key `<project>-packages/<id>.zip`.
+4. `ml/tools/check_tt05_package.py <zip>` — kiểm ĐỘC LẬP với crate: 16 mục đạt, 0 lỗi
+   (METS 230 tham chiếu đúng SIZE/SHA-256, không tệp mồ côi, EAD hợp lệ XSD kèm gói, mã
+   trong bảng mã, PREMIS đủ 110 đối tượng, PDF/A + lớp chữ).
+Chưa đạt TT05 ở hai điểm: **PDF chưa ký số** (Điều 8 — cần `DIGITEXT_SIGN_TRUST_ROOTS` +
+token) và `virus_scan=not_configured` (clamd). Khe hở trong code: validator không kiểm định
+dạng ngày; `schemas/METS.xsd`/`PREMIS.xsd` trong gói chỉ là stub `xs:import`.
+
 Điều đã đo được khi kiểm Phase 1 (proxy `127.0.0.1:5999` → Alienware, tắt/bật):
 gate đóng sau lỗi đầu tiên, các lane khác không claim, `attempts` đứng yên; mở
 lại → `dịch vụ OCR đã trở lại` trong ≤ 30 s và job chạy tiếp. Khi dịch vụ
