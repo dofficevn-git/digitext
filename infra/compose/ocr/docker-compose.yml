@@ -35,6 +35,11 @@ services:
       # Trọng số VietOCR đang phục vụ. Đổi sang bản fine-tune = đổi biến này +
       # up -d, không chép đè file gốc (giữ được đường rollback).
       OCR_REC_WEIGHTS: "${OCR_REC_WEIGHTS:-/models/vietocr/vgg_transformer.pth}"
+      # Đệm khung crop (tỉ lệ theo chiều cao dòng) trước khi nhận dạng — giữ dấu
+      # nặng/dấu trên chữ hoa khỏi bị cắt. Đo 17/9/2026: 0 → 0.12/0.15 nâng đồng
+      # thuận ký tự 96,9% → 97,8%, dòng khớp tuyệt đối 50% → 67%.
+      OCR_CROP_PAD_Y: "${OCR_CROP_PAD_Y:-0.12}"
+      OCR_CROP_PAD_X: "${OCR_CROP_PAD_X:-0.15}"
       OCR_GPU_CONCURRENCY: "${OCR_GPU_CONCURRENCY:-2}"
       OCR_DET_GPU_MEM_MB: "${OCR_DET_GPU_MEM_MB:-1024}"
       OCR_LOG_TIMING: "${OCR_LOG_TIMING:-true}"
