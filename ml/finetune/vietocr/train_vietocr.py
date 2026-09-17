@@ -40,10 +40,11 @@ def build_config(args) -> dict:
     if not os.path.exists(args.weights):
         raise SystemExit(f"❌ thiếu trọng số nền: {args.weights}")
     cfg = Cfg.load_config_from_file(args.config)
-    # Trainer(pretrained=True) nạp cfg['pretrain']; đường dẫn cục bộ được dùng
-    # thẳng (download_weights chỉ tải khi là URL).
+    # Trọng số nạp tường minh bằng trainer.load_weights() sau khi dựng (xem main),
+    # không qua cơ chế pretrain/download của VietOCR — tránh mọi đường ra mạng.
     cfg["pretrain"] = args.weights
     cfg["weights"] = args.weights
+    cfg["quiet"] = False
     cfg["dataset"]["data_root"] = args.train_root
     cfg["dataset"]["train_annotation"] = os.path.relpath(args.train, args.train_root)
     cfg["dataset"]["valid_annotation"] = os.path.relpath(args.val, args.train_root)
@@ -100,7 +101,10 @@ def main(argv=None) -> int:
 
     from vietocr.model.trainer import Trainer
 
-    trainer = Trainer(cfg, pretrained=True)
+    trainer = Trainer(cfg, pretrained=False)
+    trainer.load_weights(args.weights)
+    print(f"→ nạp trọng số nền {args.weights}; {args.iters} iters, batch {args.batch}, lr {args.lr}",
+          flush=True)
     trainer.train()
     trainer.save_weights(f"{args.out}.pth")
     print(f"✅ VietOCR fine-tuned → {args.out}.pth")
