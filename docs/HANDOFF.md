@@ -98,18 +98,50 @@ docker compose logs -f <service>
 | 8080 | `digitext-api` | chưa có tài khoản nào, xem dưới |
 | 9095 | worker `digitext-ocr` | `/readyz` gọi thật sang `:5002` của Alienware (các mục kiểm mang tên "triton" là tên cũ) |
 
-- Máy này **không cài Rust**. Các script `dev/run-*.ps1` tự chạy `target\debug\*.exe`
-  (bản build ngày 2026-09-08, mới hơn commit Rust cuối cùng ngày 2026-09-05). Sửa
-  code Rust thì phải build lại ở máy có cargo.
-- `engine_versions` đã có dòng `vietocr-vgg-transformer-http` / `recognition`.
-  Không có dòng này thì worker thoát ngay.
+- Máy này **đã cài Rust** (rustup stable 1.98 + VS Build Tools 2022, chiều 17/9).
+  `cargo` chưa nằm trong PATH của shell mới → `dev/run-*.ps1` tự chạy
+  `target\release\*.exe` (build 17/9 15:03, có đủ Phase 1–2). Smart App Control
+  đã **tắt** — bật lại thì cargo không chạy được (chặn file build-script).
+- App desktop chạy bằng `cd desktop; npm run tauri dev` (lần đầu build ~5 phút).
+- `engine_versions`: worker **tự đăng ký** dòng recognition theo
+  `DIGITEXT_RECOGNITION_ENGINE_NAME` (mặc định `vietocr-vgg-transformer-http`).
+  Bucket MinIO cũng tự tạo khi API/worker khởi động.
 - Khoá `X-API-Key` đã được kiểm giữa hai máy: không kèm khoá trả 401, kèm khoá trả 200.
 - Máy này còn chạy dự án khác (`plx-*`, `kpi-*`, `ntm_qn_*`, chiếm 1433/1434/3030/5433/6379/8081/8088).
   Kiểm cổng trước khi thêm dịch vụ.
-- **Chưa có tài khoản:** `bootstrap-superadmin` hỏi mật khẩu qua TTY nên phải tự gõ:
-  `.\dev\run-api.ps1 bootstrap-superadmin --username <tên>`
+- Tài khoản `admin` đã tạo (17/9). Có 1 dự án `TEST`, 110 tài liệu đã OCR + PDF 2 lớp
+  (`to_sign`).
 - Chưa bật: bóc trường v2 (cần vLLM `:8003` trên Alienware, đang tắt), ký số
   (`DIGITEXT_SIGN_TRUST_ROOTS`, `DIGITEXT_TSA_TRUST_ROOTS` chưa đặt).
+
+## 2c. Nâng cấp OCR — làm tới đâu (kế hoạch 10 phase, 17/9)
+
+Kế hoạch đầy đủ nằm ở plan đã duyệt; runbook máy GPU mới:
+[DEPLOY-GPU-NODE.md](DEPLOY-GPU-NODE.md).
+
+| Phase | Việc | Trạng thái |
+|---|---|---|
+| 0 | Kiểm dữ liệu sau sự cố 35 trang | xong, 0 tài liệu sai |
+| 1 | Worker: backoff trong DB (`ocr_jobs.not_before`, migration 0003), health gate, đếm đúng trang lỗi, log, metrics, tự tạo bucket/engine, 10 test | **xong, đã kiểm bằng proxy giả lập mất kết nối** |
+| 2 | `POST /documents/ocr-retry-failed`, `progress.pagesOcrFailed`, nút "Thử lại N trang OCR lỗi" | xong (nút chỉ hiện khi có trang lỗi) |
+| 3.1 | `run_bench.py`/`loadtest.py --backend http` | xong |
+| 3.2 | Bộ đồng thuận VLM + baseline CPU | **chưa** — cần Qwen `:8003` sống |
+| 3.3 | Gold KIE từ nút Duyệt: `ml/finetune/kie/gold_from_db.py export-gold` | công cụ xong; **chưa có trường nào verified** — cần bạn duyệt ~40 tài liệu trong app |
+| 4 | OCR GPU: `ocr_fulltext.py` (use_gpu cho DBNet, semaphore, empty_cache, log timing, health có `gpu`), Dockerfile ARG, `docker-compose.gpu.yml`, `requirements-ocr-gpu.txt` | code xong, **chưa build/chạy** — cần SSH Alienware |
+| 5 | `VLLM_GPU_FRACTION`/`VLLM_MAX_NUM_SEQS` qua env; chuyển Vintern | compose xong; chuyển model chờ SSH |
+| 6.1 | `DIGITEXT_VLM_PROFILE=qwen\|internvl` — ngân sách token theo model | xong, có test |
+| 6.2 | A/B Qwen vs Vintern: `gold_from_db.py compare --engine …`; `extract_vlm.py` đọc `VLM_ENDPOINT`/`VLM_MODEL` | công cụ xong; chạy cần 3.3 + 5 |
+| 7 | `train_vietocr.py` dùng config + trọng số cục bộ, kiểm vocab; `OCR_REC_WEIGHTS` qua compose | script xong; huấn luyện chờ 3.2 + máy GPU |
+| 8 | Runbook máy mới, metrics | xong phần tài liệu; cảnh báo SigNoz chưa đặt |
+| 9 | Chạy lại lô 110 với bước phá | **chưa** |
+
+**Việc chặn tất cả phần còn lại: SSH vào Alienware** (`:22` đóng suốt 17/9).
+
+Điều đã đo được khi kiểm Phase 1 (proxy `127.0.0.1:5999` → Alienware, tắt/bật):
+gate đóng sau lỗi đầu tiên, các lane khác không claim, `attempts` đứng yên; mở
+lại → `dịch vụ OCR đã trở lại` trong ≤ 30 s và job chạy tiếp. Khi dịch vụ
+"nửa sống" (health 200 nhưng tile lỗi) thì backoff giãn 2→60 s: 8 lượt trong
+6 phút thay vì 5 lượt trong vài giây.
 
 ---
 
@@ -209,6 +241,20 @@ Bash che `link.exe` của MSVC và làm hỏng cả `target/`.
 
 **Bộ nhớ.** Hai lần sập cả máy Alienware đều do `predict_batch` nhận trọn số dòng
 của một trang. Đã vá bằng `OCR_REC_BATCH=8` + `mem_limit`. Đừng bỏ trần bộ nhớ.
+
+**OCR chạy CPU trên máy có GPU.** Image `:5002` là `python:3.10-slim` + paddle
+CPU, và `ocr_fulltext.py` không truyền `use_gpu` cho PaddleOCR — nên 20 s/trang
+suốt tháng 9 dù card 16 GB rảnh. Đã sửa (Phase 4) nhưng **phải up bằng overlay
+`docker-compose.gpu.yml`**; file compose gốc vẫn là CPU. Health giờ trả `gpu:true/false`
+— nhìn vào đó, đừng tin `OCR_USE_GPU` trong `.env`.
+
+**"OCR toàn bộ" không chạy lại trang lỗi.** Nó chỉ lấy tài liệu chưa có job.
+Trang `failed_transient`/`page_failed` phải qua nút "Thử lại N trang OCR lỗi"
+(hoặc `POST /documents/ocr-retry-failed`). Tài liệu đã `to_sign` bị bỏ qua — muốn
+OCR lại thì phải xử lý chữ ký trước.
+
+**Bộ đồng thuận VLM không phải golden set.** Nhãn do Qwen sinh; `gate.py --tol 0.01`
+chỉ để bắt hồi quy. Có người gõ thì thay bằng `golden.py build` hai người.
 
 ---
 

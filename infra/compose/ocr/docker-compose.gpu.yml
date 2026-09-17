@@ -1,0 +1,39 @@
+# Overlay GPU cho dịch vụ OCR toàn văn — chồng lên docker-compose.yml:
+#
+#   docker compose -f infra/compose/ocr/docker-compose.yml -f infra/compose/ocr/docker-compose.gpu.yml \
+#     --env-file infra/compose/ocr/.env up -d --build
+#
+# Yêu cầu máy chủ: driver NVIDIA + nvidia-container-toolkit (scripts/setup-ai-node.sh
+# lo cả hai). Kiểm nhanh: docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+#
+# Rollback: bỏ `-f docker-compose.gpu.yml` và up -d --build lại → biến thể CPU.
+#
+# VRAM (card 16 GB, chạy chung với vLLM): dịch vụ này giữ ≤ ~3 GB với
+# OCR_DET_GPU_MEM_MB=1024, OCR_REC_BATCH=32, OCR_GPU_CONCURRENCY=2. Đo bằng
+# `nvidia-smi --query-compute-apps=pid,used_memory --format=csv` sau ~20 request,
+# không đo lúc container vừa Started.
+
+services:
+  ocr:
+    build:
+      args:
+        BASE_IMAGE: "${OCR_CUDA_IMAGE:-nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04}"
+        TORCH_INDEX: "https://download.pytorch.org/whl/cu121"
+        TORCH_VERSION: "2.4.1"
+        TORCHVISION_VERSION: "0.19.1"
+        OCR_REQS: "requirements-ocr-gpu.txt"
+        OCR_USE_GPU: "true"
+    environment:
+      OCR_USE_GPU: "true"
+      OCR_REC_BATCH: "${OCR_REC_BATCH:-32}"
+      # Decode ảnh, warp crop, mã hoá JSON vẫn là CPU — nới hơn bản CPU-only
+      # nhưng không thả nổi: đã có lần OOM kéo sập cả phiên đồ hoạ trên node GPU.
+    mem_limit: ${OCR_MEM_LIMIT:-8g}
+    cpus: ${OCR_CPUS:-6}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

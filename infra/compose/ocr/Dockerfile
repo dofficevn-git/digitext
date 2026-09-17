@@ -6,7 +6,17 @@
 #
 # Build context là thư mục `ocr/` ở gốc repo.
 
-FROM python:3.10-slim
+# Hai biến thể từ CÙNG một Dockerfile, chọn bằng build-arg:
+#   CPU (mặc định): BASE_IMAGE=python:3.10-slim, torch +cpu, requirements-ocr.txt
+#   GPU:            xem infra/compose/ocr/docker-compose.gpu.yml — base CUDA,
+#                   torch cu121, requirements-ocr-gpu.txt, OCR_USE_GPU=true
+ARG BASE_IMAGE=python:3.10-slim
+FROM ${BASE_IMAGE}
+ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
+ARG TORCH_VERSION=2.4.1+cpu
+ARG TORCHVISION_VERSION=0.19.1+cpu
+ARG OCR_REQS=requirements-ocr.txt
+ARG OCR_USE_GPU=false
 
 # libgomp1:     PaddlePaddle cần OpenMP.
 # libglib2.0-0: OpenCV cần.
@@ -14,29 +24,33 @@ FROM python:3.10-slim
 #               `opencv-python` (bản đầy đủ) làm phụ thuộc riêng, pip cài đè lên,
 #               và bản đó liên kết libGL. Thiếu nó container crash-loop với
 #               "ImportError: libGL.so.1".
+# python3/pip:  image CUDA của NVIDIA (Ubuntu 22.04) không có sẵn Python; trên
+#               python:3.10-slim các gói này đã có, apt chỉ xác nhận.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends libgomp1 libglib2.0-0 libgl1 \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends \
+      libgomp1 libglib2.0-0 libgl1 python3 python3-pip python-is-python3 \
+ && rm -rf /var/lib/apt/lists/* \
+ && python -m pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 
-# torch bản CPU, cài TRƯỚC và từ index riêng của PyTorch. Nếu để vietocr tự kéo
-# torch từ PyPI, pip lấy bản mặc định kèm CUDA — thêm ~2,5GB vô ích vì dịch vụ
-# này chạy CPU. Cài trước thì bước sau thấy đã thoả và bỏ qua.
+# torch cài TRƯỚC và từ index riêng của PyTorch. Nếu để vietocr tự kéo torch từ
+# PyPI, pip lấy bản mặc định kèm CUDA — thêm ~2,5GB vô ích cho biến thể CPU.
 # Hai điều dễ sai ở bước này:
 #  - PHẢI có --extra-index-url PyPI. Index của PyTorch chỉ chứa torch; các phụ
 #    thuộc của nó (filelock, sympy, jinja2...) nằm ở PyPI. Dùng --index-url một
 #    mình sẽ hỏng với "Could not find a version that satisfies flit_core".
-#  - PHẢI ghim hậu tố +cpu. Không có nó, pip có thể lấy bản CUDA từ PyPI vì hai
-#    index được gộp chứ không xét theo thứ tự ưu tiên.
+#  - Biến thể CPU PHẢI ghim hậu tố +cpu; biến thể GPI dùng index cu121 và không
+#    hậu tố. Không ghim thì pip có thể lấy bản khác từ PyPI vì hai index được
+#    gộp chứ không xét theo thứ tự ưu tiên.
 RUN pip install --no-cache-dir \
-      torch==2.4.1+cpu torchvision==0.19.1+cpu \
-      --index-url https://download.pytorch.org/whl/cpu \
+      torch==${TORCH_VERSION} torchvision==${TORCHVISION_VERSION} \
+      --index-url ${TORCH_INDEX} \
       --extra-index-url https://pypi.org/simple
 
 # Cài phụ thuộc trước, tách khỏi mã nguồn — sửa code không phải cài lại từ đầu.
-COPY requirements-ocr.txt .
-RUN pip install --no-cache-dir -r requirements-ocr.txt
+COPY requirements-ocr.txt requirements-ocr-gpu.txt ./
+RUN pip install --no-cache-dir -r ${OCR_REQS}
 
 # vietocr cài RIÊNG với --no-deps.
 #
@@ -66,11 +80,15 @@ COPY vietocr_config ./vietocr_config
 ENV PADDLE_OCR_BASE_DIR=/models/paddleocr
 ENV HOME=/models
 
+# OCR_DET_LANG (không phải OCR_LANG — biến đó không có code nào đọc): ngôn ngữ
+# model PHÁT HIỆN của PaddleOCR; 'en' là DBNet chung, tách dòng tốt cho tiếng Việt.
+# PYTHONUNBUFFERED: log không bị đệm — bẫy "log trống mà tiến trình vẫn chạy".
 ENV OCR_HOST=0.0.0.0 \
     OCR_PORT=5002 \
     OCR_THREADS=4 \
-    OCR_LANG=vi \
-    OCR_USE_GPU=false
+    OCR_DET_LANG=en \
+    OCR_USE_GPU=${OCR_USE_GPU} \
+    PYTHONUNBUFFERED=1
 
 EXPOSE 5002
 

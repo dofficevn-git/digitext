@@ -80,6 +80,81 @@ pub const MODEL_MAX_LEN_V2: u32 = 4096;
 pub const C_G2: u32 = 1122;
 pub const C_JE: u32 = 64;
 pub const MAX_IMAGE_TOKENS_V2: u32 = 1850;
+/// Cách model đếm token ảnh — quyết định thu nhỏ ảnh bao nhiêu và còn bao nhiêu
+/// chỗ cho đầu ra. Sai profile thì `max_tokens` tính lệch: output bị cắt
+/// (finish_reason=length) hoặc ảnh bị thu nhỏ vô ích.
+pub const ENV_VLM_PROFILE: &str = "DIGITEXT_VLM_PROFILE";
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum VlmProfile {
+    /// Qwen2.5-VL: lưới patch 28 px, token ≈ (w/28)·(h/28).
+    #[default]
+    Qwen28,
+    /// InternVL / Vintern: cắt ảnh thành ô 448 px (tối đa 6) + 1 ô thu nhỏ,
+    /// mỗi ô 256 token.
+    InternVl448,
+}
+pub const INTERNVL_TILE: u32 = 448;
+pub const INTERNVL_MAX_TILES: u32 = 6;
+pub const INTERNVL_TOKENS_PER_TILE: u32 = 256;
+impl VlmProfile {
+    pub fn from_env() -> Result<Self, VlmError> {
+        match std::env::var(ENV_VLM_PROFILE) {
+            Err(_) => Ok(Self::Qwen28),
+            Ok(v) => Self::parse(&v),
+        }
+    }
+    pub fn parse(v: &str) -> Result<Self, VlmError> {
+        match v.trim().to_ascii_lowercase().as_str() {
+            "" | "qwen" | "qwen28" | "qwen2.5-vl" => Ok(Self::Qwen28),
+            "internvl" | "internvl448" | "vintern" => Ok(Self::InternVl448),
+            other => Err(VlmError::Backend(format!(
+                "{ENV_VLM_PROFILE}={other:?} không hợp lệ — dùng 'qwen' hoặc 'internvl'"
+            ))),
+        }
+    }
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Qwen28 => "qwen",
+            Self::InternVl448 => "internvl",
+        }
+    }
+    pub fn image_tokens(self, width: u32, height: u32) -> u32 {
+        match self {
+            Self::Qwen28 => image_tokens(width, height),
+            Self::InternVl448 => {
+                let tiles = (width.div_ceil(INTERNVL_TILE) * height.div_ceil(INTERNVL_TILE))
+                    .clamp(1, INTERNVL_MAX_TILES);
+                let thumb = if tiles > 1 { 1 } else { 0 };
+                (tiles + thumb) * INTERNVL_TOKENS_PER_TILE
+            }
+        }
+    }
+    /// Cạnh dài cần thu về để lọt ngân sách token; `None` = ảnh đã vừa.
+    pub fn fit_max_side(
+        self,
+        width: u32,
+        height: u32,
+        budget: u32,
+    ) -> Result<Option<u32>, VlmError> {
+        if width == 0 || height == 0 {
+            return Err(VlmError::Backend(format!(
+                "kích thước ảnh vô lý: {width}x{height}"
+            )));
+        }
+        match self {
+            Self::Qwen28 => fit_max_side(width, height, budget),
+            Self::InternVl448 => {
+                if self.image_tokens(width, height) <= budget {
+                    return Ok(None);
+                }
+                // 3×3 ô = 9 > 6 nên bị kẹp về 6 ô + 1 thu nhỏ = 1792 token < 1850.
+                // Thu cạnh dài về 3 ô là đủ; nhỏ hơn nữa chỉ mất chữ.
+                let cap = INTERNVL_TILE * 3;
+                Ok(Some(cap.min(width.max(height)).max(1)))
+            }
+        }
+    }
+}
 pub fn image_tokens(width: u32, height: u32) -> u32 {
     ((width as f64 / QWEN_PATCH as f64) * (height as f64 / QWEN_PATCH as f64)) as u32
 }
@@ -96,6 +171,40 @@ pub fn fit_max_side(width: u32, height: u32, budget: u32) -> Result<Option<u32>,
         / (width as f64 * height as f64))
         .sqrt();
     Ok(Some(((r_3k3 * width.max(height) as f64) as u32).max(1)))
+}
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+    #[test]
+    fn internvl_tokens_capped_at_six_tiles_plus_thumbnail() {
+        let p = VlmProfile::InternVl448;
+        assert_eq!(p.image_tokens(448, 448), 256);
+        assert_eq!(p.image_tokens(896, 448), 3 * 256);
+        assert_eq!(p.image_tokens(1654, 2339), 7 * 256);
+        assert!(p.image_tokens(1654, 2339) <= MAX_IMAGE_TOKENS_V2);
+    }
+    #[test]
+    fn internvl_fit_caps_long_side_to_three_tiles() {
+        let p = VlmProfile::InternVl448;
+        assert_eq!(p.fit_max_side(448, 448, MAX_IMAGE_TOKENS_V2).unwrap(), None);
+        assert_eq!(p.fit_max_side(1654, 2339, 1000).unwrap(), Some(1344));
+        assert!(p.fit_max_side(0, 10, 1000).is_err());
+    }
+    #[test]
+    fn qwen_profile_matches_free_functions() {
+        let p = VlmProfile::Qwen28;
+        assert_eq!(p.image_tokens(1400, 1000), image_tokens(1400, 1000));
+        assert_eq!(
+            p.fit_max_side(3000, 2000, MAX_IMAGE_TOKENS_V2).unwrap(),
+            fit_max_side(3000, 2000, MAX_IMAGE_TOKENS_V2).unwrap()
+        );
+    }
+    #[test]
+    fn parse_profile() {
+        assert_eq!(VlmProfile::parse("qwen").unwrap(), VlmProfile::Qwen28);
+        assert_eq!(VlmProfile::parse("VINTERN").unwrap(), VlmProfile::InternVl448);
+        assert!(VlmProfile::parse("llava").is_err());
+    }
 }
 pub fn output_budget(img_tokens: u32) -> Result<u32, VlmError> {
     let budget = MODEL_MAX_LEN_V2 as i64 - img_tokens as i64 - C_G2 as i64 - C_JE as i64;

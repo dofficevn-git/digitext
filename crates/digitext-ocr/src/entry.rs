@@ -251,10 +251,13 @@ async fn f_2gu(
             digitext_db::engine_versions::ensure(&r_34m, &v2_name, "fallback", "none")
                 .await
                 .map_err(|e| format!("đăng ký engine v2 '{v2_name}': {e}"))?;
+        let profile = crate::vlm_prompt_v2::VlmProfile::from_env()
+            .map_err(|e| format!("cấu hình VLM v2: {e}"))?;
         let extractor = VlmFieldExtractorV2::new(ep, model, timeout)
-            .map_err(|e| format!("dựng VLM extractor v2: {e}"))?;
+            .map_err(|e| format!("dựng VLM extractor v2: {e}"))?
+            .with_profile(profile);
         tracing::info!(
-            engine = % v2_engine.id,
+            engine = % v2_engine.id, name = % v2_name, profile = profile.as_str(),
             "bóc 16 trường v2 (VLM-primary) BẬT"
         );
         Some((extractor, v2_engine.id))

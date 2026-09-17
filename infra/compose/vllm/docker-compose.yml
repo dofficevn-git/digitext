@@ -1,3 +1,12 @@
+# vLLM Qwen2.5-VL-7B-AWQ — bóc 16 trường (v2) cho DigiText.
+#
+# --gpu-memory-utilization là tỉ lệ trên TOÀN BỘ card, không phải phần trống.
+# Card 16 GB chạy chung với OCR GPU (~3 GB): 0.55 ≈ 8,8 GB. Vintern (:3000)
+# không chạy đồng thời với Qwen trên 16 GB — A/B thì stop cái này, up cái kia.
+# Card ≥ 24 GB: đặt VLLM_GPU_FRACTION=0.60 và bật cả hai được.
+#
+# --max-model-len 4096 gắn với MODEL_MAX_LEN_V2 trong
+# crates/digitext-ocr/src/vlm_prompt_v2.rs — đổi một bên phải đổi bên kia.
 name: digitext-vllm
 
 services:
@@ -14,7 +23,7 @@ services:
       - "--port"
       - "8003"
       - "--gpu-memory-utilization"
-      - "0.60"
+      - "${VLLM_GPU_FRACTION:-0.55}"
       - "--max-model-len"
       - "4096"
       - "--limit-mm-per-prompt"
@@ -23,7 +32,7 @@ services:
       - "half"
       - "--enforce-eager"
       - "--max-num-seqs"
-      - "6"
+      - "${VLLM_MAX_NUM_SEQS:-4}"
     ports:
       - "127.0.0.1:8003:8003"
     volumes:

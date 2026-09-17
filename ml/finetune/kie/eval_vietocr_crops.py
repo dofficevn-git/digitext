@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import sys
 import unicodedata
@@ -26,10 +27,16 @@ def q_15e(images: list[Path], weights: str | None) -> list[str]:
     from vietocr.tool.config import Cfg
     from vietocr.tool.predictor import Predictor
 
-    p_35e = Cfg.load_config_from_name("vgg_transformer")
-    if weights:
-        p_35e["weights"] = weights
-    p_35e["device"] = "cuda:0"
+    # Cấu hình + trọng số CỤC BỘ, đúng bản đang phục vụ (load_config_from_name
+    # tải từ vocr.vn — chứng chỉ hết hạn — và có thể lệch vocab).
+    p_35g = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    p_35e = Cfg.load_config_from_file(
+        os.environ.get("OCR_REC_CONFIG", os.path.join(p_35g, "ocr", "vietocr_config", "vgg_transformer.yml"))
+    )
+    p_35e["weights"] = weights or os.environ.get(
+        "OCR_REC_WEIGHTS", os.path.join(p_35g, "ocr", "models", "vietocr", "vgg_transformer.pth")
+    )
+    p_35e["device"] = os.environ.get("OCR_DEVICE", "cuda:0")
     p_35e["predictor"]["beamsearch"] = False
     p_35f = Predictor(p_35e)
     return [p_35f.predict(Image.open(p_360).convert("RGB")) for p_360 in images]

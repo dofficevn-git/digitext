@@ -1,0 +1,27 @@
+# Phụ thuộc cho dịch vụ OCR toàn văn — BẢN GPU (CUDA 12).
+#
+# Giống requirements-ocr.txt, chỉ đổi paddlepaddle → paddlepaddle-gpu. Bản CPU
+# của paddle không có đường nào lên GPU dù OCR_USE_GPU=true: đó là lý do máy
+# 16 GB VRAM vẫn chạy 20 s/trang suốt tháng 9/2026.
+#
+# Chọn bằng build-arg OCR_REQS=requirements-ocr-gpu.txt (xem
+# infra/compose/ocr/docker-compose.gpu.yml). torch bản CUDA cài riêng trong
+# Dockerfile (TORCH_INDEX), không khai ở đây.
+
+Flask==3.0.3
+Werkzeug==3.0.4
+waitress==3.0.0
+python-dotenv==1.0.1
+
+numpy==1.26.4               # PHẢI <2 — PaddleOCR build với numpy 1.x
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+
+# paddlepaddle-gpu 2.6.2 build CUDA 12.0 / cuDNN 8.9 — chạy được trên runtime
+# CUDA 12.1 của image nvidia/cuda:12.1.1-cudnn8. Wheel nằm ở index riêng của
+# Paddle, PyPI không có → -f là bắt buộc.
+-f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+paddlepaddle-gpu==2.6.2.post120
+paddleocr==2.9.1
+
+gdown==5.2.0
