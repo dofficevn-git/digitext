@@ -1,6 +1,6 @@
 [package]
 name = "digitext-desktop"
-version = "0.15.0"
+version = "0.15.2"
 edition = "2021"
 publish = false
 
@@ -49,6 +49,7 @@ thiserror = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-appender = "0.2"
+tauri-plugin-updater = "2"
 
 [target.'cfg(windows)'.dependencies]
 libloading = { version = "0.8", optional = true }

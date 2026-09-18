@@ -135,3 +135,6 @@ ocr/output/
 ocr/exports/
 ocr/temp_processing/
 ocr/static/processed_images/
+
+# Bộ cài phát hành (dev/release-desktop.ps1) — API phát qua /updates, không vào repo
+updates/
