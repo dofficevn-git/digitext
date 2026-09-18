@@ -16,5 +16,6 @@ pub mod records;
 pub mod sign;
 pub mod stats;
 pub mod submissions;
+pub mod updates;
 pub mod upload_batches;
 pub mod users;

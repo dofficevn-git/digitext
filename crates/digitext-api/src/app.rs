@@ -15,6 +15,8 @@ pub struct AppState {
     pub keys: Arc<JwtKeys>,
     pub limiter: Arc<LoginLimiter>,
     pub data_dir: Arc<std::path::PathBuf>,
+    /// Thư mục phát bộ cài tự cập nhật (DIGITEXT_UPDATES_DIR) — xem routes::updates.
+    pub updates_dir: Arc<std::path::PathBuf>,
     pub upload_locks: Tpc,
     pub behind_proxy: bool,
     pub store: Option<Arc<dyn digitext_storage::ObjectStore>>,
@@ -35,6 +37,7 @@ impl AppState {
             keys,
             limiter: Arc::new(LoginLimiter::default()),
             data_dir: Arc::new(data_dir.into()),
+            updates_dir: Arc::new(std::path::PathBuf::from("updates")),
             upload_locks: Arc::new(Mutex::new(HashMap::new())),
             behind_proxy: false,
             store: None,
@@ -48,6 +51,10 @@ impl AppState {
             sign_stamp: false,
             change_prune: Arc::new(Mutex::new(None)),
         }
+    }
+    pub fn with_updates_dir(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
+        self.updates_dir = Arc::new(dir.into());
+        self
     }
     pub fn with_behind_proxy(mut self, r_0: bool) -> Self {
         self.behind_proxy = r_0;
@@ -96,6 +103,7 @@ impl AppState {
 pub fn router(r_b: AppState) -> Router {
     Router::new()
         .route("/healthz", get(|| async { "ok" }))
+        .merge(crate::routes::updates::router())
         .nest("/api/v1", f_rv())
         .layer(TraceLayer::new_for_http())
         .with_state(r_b)

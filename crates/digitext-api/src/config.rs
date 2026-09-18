@@ -6,6 +6,7 @@ pub struct Config {
     pub bind: String,
     pub jwt_key_path: String,
     pub data_dir: String,
+    pub updates_dir: String,
     pub behind_proxy: bool,
     pub pdf_store_dir: Option<String>,
     pub pdf_store_bucket: Option<String>,
@@ -52,6 +53,7 @@ impl Config {
             jwt_key_path: std::env::var("DIGITEXT_JWT_KEY_PATH")
                 .unwrap_or_else(|_| "jwt-ed25519.pem".into()),
             data_dir: std::env::var("DIGITEXT_DATA_DIR").unwrap_or_else(|_| "data".into()),
+            updates_dir: std::env::var("DIGITEXT_UPDATES_DIR").unwrap_or_else(|_| "updates".into()),
             behind_proxy: std::env::var("DIGITEXT_BEHIND_PROXY")
                 .map(|v| {
                     matches!(

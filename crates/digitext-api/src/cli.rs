@@ -96,7 +96,9 @@ async fn serve() -> anyhow::Result<()> {
     let r_25 = r_21.clone();
     let r_22 = r_21.clone();
     let mut r_24 =
-        AppState::new(r_21, Arc::new(r_1x), r_1w.data_dir).with_behind_proxy(r_1w.behind_proxy);
+        AppState::new(r_21, Arc::new(r_1x), r_1w.data_dir)
+            .with_updates_dir(r_1w.updates_dir.clone())
+            .with_behind_proxy(r_1w.behind_proxy);
     let r_20 = digitext_storage::f_vr(
         r_1w.minio.as_ref(),
         r_1w.pdf_store_bucket.as_deref(),

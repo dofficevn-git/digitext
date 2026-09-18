@@ -85,52 +85,44 @@ nhầm `api.digitext.vn.khodulieu.vn` trong zone `khodulieu.vn` — xoá.
   không cần domain, cả hai máy phải cài Tailscale.
 - **Caddy + Let's Encrypt** trên máy chủ: cần IP công cộng và mở 80/443.
 
-## 3. Mỗi lần có bản mới — checklist phát hành
+## 3. Mỗi lần có bản mới — ĐÃ BẬT tự cập nhật (từ v0.15.1)
 
-Tự cập nhật (tauri-plugin-updater) **đã bị gỡ chủ ý** (`desktop/src/api/updater.ts`
-giải thích: bản cũ tin khoá của một tài khoản GitHub bên ngoài). Nút
-"Kiểm tra cập nhật" hiện chỉ báo "Bản dựng này không bật tự cập nhật". Vậy quy trình
-hiện tại là **thủ công**:
+App kiểm `https://api.digitext.vn/updates/latest.json` lúc mở; có bản mới → tải bộ cài
+đã ký → cài (chế độ passive) → khởi động lại. Nút *Cài đặt → Chẩn đoán → Kiểm tra cập nhật*
+làm cùng việc theo yêu cầu. Máy còn chạy **v0.15.0** (bản chưa có updater) phải cài tay
+**một lần** bộ cài ≥ 0.15.1, sau đó tự động.
 
-1. **Tăng số phiên bản ở 3 chỗ, cùng một số**:
-   `desktop/src-tauri/tauri.conf.json` (`version`), `desktop/src-tauri/Cargo.toml`
-   (`version`), `desktop/package.json` (`version`). Số này hiện ở màn đăng nhập,
-   Cài đặt → Chẩn đoán, và được gửi lên máy chủ khi đăng nhập (`app_version`).
-2. **Máy chủ trước, app sau.** API không ép phiên bản app tối thiểu, nên app cũ vẫn
-   đăng nhập được vào API mới; ngược lại (app mới gọi route API chưa có) sẽ lỗi.
-   Nếu bản mới có route API mới → cập nhật máy chủ (`cargo build --release -p digitext-api`,
-   khởi động lại `dev/run-api.ps1`) trước khi phát app.
-3. `npm run tauri build` → gửi `DigiText_<ver>_x64-setup.exe` → người dùng đóng app,
-   chạy setup (cài đè, không cần gỡ), mở lại.
-4. **Kiểm tra máy nào đã lên bản mới** — máy chủ ghi `app_version` + `last_seen`
-   theo thiết bị khi đăng nhập:
+Phát hành = **một lệnh** trên máy này:
 
-   ```powershell
-   # token admin lấy từ đăng nhập; hoặc xem thẳng CSDL
-   docker exec -i digitext-dev-postgres-1 psql -U digitext -d digitext -c \
-     "select name, app_version, last_seen from devices order by last_seen desc"
-   ```
+```powershell
+powershell -ExecutionPolicy Bypass -File dev\release-desktop.ps1 -Version 0.16.0 -Notes "Sửa X, thêm Y"
+```
 
-   (`GET /devices` trả cùng dữ liệu cho app/công cụ.)
+Nó tăng version ở 3 file (`tauri.conf.json`, `package.json`, `Cargo.toml`), build NSIS
+**có ký** bằng `%USERPROFILE%\.tauri\digitext.key`, chép `DigiText_<ver>_x64-setup.exe` +
+`.sig` vào `D:\DigiText\updates\` (`DIGITEXT_UPDATES_DIR` của API) và ghi `latest.json`.
+API phát thư mục đó ở `/updates/<tệp>` (không cần đăng nhập; route
+`crates/digitext-api/src/routes/updates.rs`, chỉ tên phẳng + đuôi cho phép, `Cache-Control:
+no-store`). Không cần khởi động lại API.
 
-### Muốn bật tự cập nhật (làm sau, khi đã ổn định)
+Sau lệnh: `git commit` 3 file version (+ `git tag v0.16.0`). Kiểm:
+`curl.exe https://api.digitext.vn/updates/latest.json`.
 
-Làm được và an toàn nếu **khoá là của mình, máy chủ là của mình**:
+Quy tắc an toàn đã cài:
 
-1. `npm i @tauri-apps/plugin-updater`, thêm `tauri-plugin-updater` vào `Cargo.toml`.
-2. `npx tauri signer generate -w ~/.tauri/digitext.key` → giữ khoá riêng **ngoài repo**;
-   dán khoá công khai vào `tauri.conf.json` → `plugins.updater.pubkey`,
-   `endpoints = ["https://api.digitext.vn/updates/latest.json"]`,
-   `bundle.createUpdaterArtifacts = true`.
-3. Máy chủ phục vụ tĩnh `updates/latest.json` + file `.exe` + `.sig` (thêm route tĩnh
-   vào API hoặc một MinIO bucket public sau proxy).
-4. Khôi phục `check()/downloadAndInstall()` trong `desktop/src/api/updater.ts` — kiểu
-   dữ liệu và giao diện đã để nguyên, chỉ thiếu phần gọi.
+- App chỉ cài bản có chữ ký khớp khoá công khai nhúng trong `tauri.conf.json` →
+  `plugins.updater.pubkey`. **Mất `digitext.key` = không phát hành được nữa** (phải đổi
+  khoá và cài tay lại mọi máy) — sao lưu file đó ở nơi an toàn, không đưa vào repo.
+- **Máy chủ trước, app sau**: API không ép version app; app mới gọi route chưa có mới lỗi.
+  Bản app cần route mới → build/khởi động lại API trước rồi mới chạy release.
+- Máy nào đã lên bản: `select name, app_version, last_seen from devices order by 2`.
+- Lượt kiểm tự động im lặng khi không có mạng; lỗi lúc tải/cài thì luôn hiện hộp thoại.
+- Script .ps1 có tiếng Việt phải lưu **UTF-8 có BOM** (PowerShell 5.1 đọc không BOM thành ANSI → lỗi cú pháp).
 
-Khi đó checklist mục 3 rút còn: tăng version → build (đã ký) → tải `latest.json` +
-exe + sig lên máy chủ → app tự cập nhật lúc mở.
+Trước v0.15.1 (bản gửi tay đầu tiên): quy trình thủ công là gửi `-setup.exe` cài đè;
+vẫn dùng được cho máy không có internet.
 
-## 4. Khi dự án lên git mới (GitHub): phát hành bằng tag, app tự cập nhật
+## 4. Khi dự án lên git mới (GitHub): phát hành bằng tag (thay cho chạy script tay)
 
 Đây là đường đi gọn nhất cho "mỗi lần có bản mới": **đẩy một tag → GitHub Actions dựng
 bộ cài → tạo Release → app trên các máy tự thấy bản mới**. Đã có sẵn workflow mẫu
@@ -144,12 +136,12 @@ Làm một lần:
    khoá công khai. Vào repo → Settings → Secrets → thêm
    `TAURI_SIGNING_PRIVATE_KEY` (nội dung file .key) và
    `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
-3. Bật updater (chi tiết ở mục "Muốn bật tự cập nhật" trên) với
-   `endpoints = ["https://github.com/<owner>/<repo>/releases/latest/download/latest.json"]`.
-   **Lưu ý repo private**: app không có token nên không tải được asset của repo private
-   → dùng một repo **public riêng chỉ chứa Releases** (ví dụ `<owner>/digitext-releases`),
-   workflow đẩy Release sang đó bằng `GH_TOKEN` có quyền repo ấy. Không đưa source lên
-   repo public.
+3. Updater đã bật, endpoint hiện là máy chủ của mình (`api.digitext.vn/updates`). Muốn phát
+   qua GitHub Releases: đổi `plugins.updater.endpoints` sang
+   `https://github.com/<owner>/<repo>/releases/latest/download/latest.json`.
+   **Repo private**: app không có token nên không tải được asset → cần repo **public riêng
+   chỉ chứa Releases**. Đơn giản hơn: giữ endpoint máy chủ, workflow chỉ build rồi `scp`
+   bộ cài + `.sig` + `latest.json` vào `D:\DigiText\updates` (hoặc chạy `release-desktop.ps1`).
 
 Mỗi lần phát hành:
 

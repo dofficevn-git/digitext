@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "DigiText",
-  "version": "0.15.0",
+  "version": "0.15.2",
   "identifier": "vn.digitext.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -38,6 +38,18 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNEQTVFNEQ4MDg1QjFCODEKUldTQkcxc0kyT1NsUFpCeUdqUWN2QVUzZnRFQnN0MEZoWFFrVzRjU2VyeUk3S2w5bEZ5Y0I1MisK",
+      "endpoints": [
+        "https://api.digitext.vn/updates/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
