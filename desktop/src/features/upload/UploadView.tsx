@@ -468,6 +468,7 @@ function V4qo() {
         destRel: V2fn || undefined,
 
         phongMa: V2ek && V2ek !== V4qh ? V2ei || undefined : undefined,
+        projectLabel: V2g9 || undefined,
       });
       V2e0(V4ps(r));
       await V2ep();
@@ -527,6 +528,17 @@ function V4qo() {
   }, [V2dq, V2ei, V2ek, V2em]);
 
   const V2g2 = V2dq.length > 0 && !V2ek;
+
+  // Nhãn dự án máy chủ đã chọn (hoặc dự án duy nhất của tài khoản) — thư mục cấp 1 trong Kho.
+  const V2g9 = useMemo(() => {
+    const p = V2ee.find((x) => x.id === V2eg.trim()) ?? (V2ee.length === 1 ? V2ee[0] : undefined);
+    return p ? `${p.code} · ${p.name}`.split("/").join("-").split("\\").join("-") : "";
+  }, [V2ee, V2eg]);
+  const V2gaDest = useMemo(() => {
+    const hoSo = !!(V2ek && V2ek !== V4qh);
+    const tail = V2fn || "Chưa phân loại";
+    return hoSo || !V2g9 ? tail : `${V2g9}/${tail}`;
+  }, [V2ek, V2fn, V2g9]);
 
   const V2g3 = useMemo(() => V4cl(V2e4, flt.maDa), [V2e4, flt.maDa]);
   const V2g4 = useMemo(() => V4cm(V2e6, flt.maDv), [V2e6, flt.maDv]);
@@ -686,9 +698,7 @@ function V4qo() {
               <span className="muted text-sm">
                 {V2g2
                   ? "Chọn phông + hồ sơ theo danh mục rồi mới chọn tệp."
-                  : V2fn
-                    ? `Sẽ lưu vào Kho: ${V2fn}`
-                    : "Sẽ lưu vào Kho: Chưa phân loại"}
+                  : `Sẽ lưu vào Kho: ${V2gaDest}`}
               </span>
             </div>
             <div className="muted text-sm">
