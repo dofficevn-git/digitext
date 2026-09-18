@@ -329,11 +329,13 @@ def recognize(image_bgr: np.ndarray) -> dict:
         result, det_ms = _recognize_locked(image_bgr, rec)
         total_ms = (time.perf_counter() - t0) * 1000.0
     # Lớp dự phòng chữ viết tay chạy NGOÀI semaphore GPU: nó chỉ chờ mạng (VLM), không
-    # được giữ chỗ GPU của VietOCR trong lúc chờ. Crop chỉ được gói kèm khi lớp này bật.
-    crops = result.pop("_crops", None)
-    if crops is not None:
-        import handwriting
-        texts, confs, sources, _ = handwriting.get().refine(crops, result["texts"], result["confidences"])
+    # được giữ chỗ GPU của VietOCR trong lúc chờ. Lớp này tự cắt crop từ ảnh trang + boxes.
+    import handwriting
+    hw = handwriting.get()
+    if hw.enabled and result["texts"]:
+        from PIL import Image
+        page = Image.fromarray(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
+        texts, confs, sources, _ = hw.refine(page, result["boxes"], result["texts"], result["confidences"])
         result["texts"], result["confidences"], result["sources"] = texts, confs, sources
     if _env_flag("OCR_LOG_TIMING", "true"):
         h, w = image_bgr.shape[:2]
@@ -434,8 +436,4 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
             confidences.append(max(0.0, min(1.0, float(prob))))
 
     assert len(boxes) == len(out_texts) == len(confidences) == len(kept_crops)
-    out = {"boxes": boxes, "texts": out_texts, "confidences": confidences}
-    import handwriting
-    if handwriting.get().enabled:
-        out["_crops"] = kept_crops  # recognize() gỡ khoá này trước khi trả về
-    return out, det_ms
+    return {"boxes": boxes, "texts": out_texts, "confidences": confidences}, det_ms

@@ -27,6 +27,12 @@ import re
 import time
 import urllib.request
 
+BLOCK_PROMPT = (
+    "Đây là một phần văn bản hành chính tiếng Việt, gồm chữ in và nhiều chữ VIẾT TAY. Chép lại "
+    "toàn bộ nội dung, MỖI DÒNG TRONG ẢNH LÀ MỘT DÒNG VĂN BẢN, đúng thứ tự từ trên xuống. "
+    "Tiếng Việt có dấu. Không giải thích, không đánh số, không thêm chữ không có trong ảnh."
+)
+
 PROMPT = (
     "Ảnh là MỘT dòng chữ cắt từ văn bản hành chính Việt Nam, có phần chữ in và phần chữ "
     "VIẾT TAY điền vào chỗ trống. Chép lại chính xác đúng một dòng này (không thêm dòng "
@@ -59,6 +65,13 @@ class HandwritingFallback:
         self.timeout = _env_f("OCR_HW_TIMEOUT_S", 25.0)
         self.workers = max(1, _env_i("OCR_HW_WORKERS", 2))
         self.min_height = _env_i("OCR_HW_MIN_HEIGHT", 64)
+        # Chế độ KHỐI: chữ tay nối nét cần ngữ cảnh — cắt từng dòng thì VLM đọc "Cụm Dân chủ
+        # phường Lê Lợi" thành "Cụng Disoal Chế Ph 2008"; cho nhìn cả vùng thì đọc đúng
+        # (đo 18/9/2026). Vùng = cụm ≥ block_min dòng tin cậy thấp gần nhau theo chiều dọc.
+        self.block_min = _env_i("OCR_HW_BLOCK_MIN_LINES", 3)
+        self.block_gap = _env_f("OCR_HW_BLOCK_GAP", 2.5)  # tính theo chiều cao dòng trung vị
+        self.max_blocks = _env_i("OCR_HW_MAX_BLOCKS", 3)
+        self.block_timeout = _env_f("OCR_HW_BLOCK_TIMEOUT_S", 90.0)
         self._pool = cf.ThreadPoolExecutor(max_workers=self.workers) if self.url else None
         self._warned = False
 
@@ -79,6 +92,9 @@ class HandwritingFallback:
         w, h = crop.size
         if h < self.min_height:
             crop = crop.resize((max(1, int(w * self.min_height / h)), self.min_height))
+        return self._ask(crop, PROMPT, 160, self.timeout)
+
+    def _ask(self, crop, prompt: str, max_tokens: int, timeout: float) -> str | None:
         if max(crop.size) > 1600:
             k = 1600 / max(crop.size)
             crop = crop.resize((max(1, int(crop.width * k)), max(1, int(crop.height * k))))
@@ -87,19 +103,19 @@ class HandwritingFallback:
         body = {
             "model": self.model,
             "temperature": 0.0,
-            "max_tokens": 160,
+            "max_tokens": max_tokens,
             "messages": [{
                 "role": "user",
                 "content": [
                     {"type": "image_url", "image_url": {
                         "url": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()}},
-                    {"type": "text", "text": PROMPT},
+                    {"type": "text", "text": prompt},
                 ],
             }],
         }
         req = urllib.request.Request(
             self.url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=self.timeout) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             out = json.load(r)
         return out["choices"][0]["message"]["content"]
 
@@ -130,41 +146,199 @@ class HandwritingFallback:
             return None
         return t
 
+    # ---- tiện ích ---------------------------------------------------------
+    @staticmethod
+    def _norm(t: str) -> str:
+        import unicodedata
+        t = unicodedata.normalize("NFD", t.lower()).replace("đ", "d")
+        return "".join(c for c in t if c.isalnum() and not unicodedata.combining(c))
+
+    @classmethod
+    def _sim(cls, a: str, b: str) -> float:
+        import difflib
+        a, b = cls._norm(a), cls._norm(b)
+        if not a or not b:
+            return 0.0
+        return difflib.SequenceMatcher(None, a, b).ratio()
+
+    @staticmethod
+    def _clean_lines(raw: str | None) -> list[str]:
+        if not raw:
+            return []
+        out = []
+        for ln in raw.replace("\r", "").split("\n"):
+            ln = re.sub(r"\s+", " ", ln).strip().strip("`").strip()
+            if not ln or re.fullmatch(r"[-–—_.·•\s]+", ln):
+                continue
+            if re.search(r"[　-鿿]", ln):
+                continue
+            out.append(ln)
+        return out
+
+    def _crop_line(self, page, box):
+        x1, y1, x2, y2 = box
+        h = max(1.0, y2 - y1)
+        return page.crop((max(0, int(x1 - 0.15 * h)), max(0, int(y1 - 0.12 * h)),
+                          min(page.width, int(x2 + 0.15 * h)), min(page.height, int(y2 + 0.12 * h))))
+
+    def _blocks(self, boxes, low: set[int]) -> list[list[int]]:
+        """Gom các dòng tin cậy thấp gần nhau theo chiều dọc thành khối; mỗi khối trả về MỌI
+        chỉ số dòng (cả dòng in) nằm trong dải dọc của khối, xếp theo y."""
+        if len(low) < self.block_min:
+            return []
+        hs = sorted(b[3] - b[1] for b in boxes)
+        med = max(1.0, hs[len(hs) // 2])
+        order = sorted(low, key=lambda i: (boxes[i][1] + boxes[i][3]) / 2)
+        groups, cur = [], [order[0]]
+        for i in order[1:]:
+            if boxes[i][1] - boxes[cur[-1]][3] <= self.block_gap * med:
+                cur.append(i)
+            else:
+                groups.append(cur)
+                cur = [i]
+        groups.append(cur)
+        out = []
+        for g in groups:
+            if len(g) < self.block_min:
+                continue
+            top = min(boxes[i][1] for i in g) - 1.2 * med   # kèm ~1 dòng in trên/dưới làm mốc
+            bot = max(boxes[i][3] for i in g) + 1.2 * med
+            span = [i for i, b in enumerate(boxes) if top <= (b[1] + b[3]) / 2 <= bot]
+            span.sort(key=lambda i: ((boxes[i][1] + boxes[i][3]) / 2, boxes[i][0]))
+            out.append(span)
+        out.sort(key=len, reverse=True)
+        return out[: self.max_blocks]
+
+    def _align(self, span, texts, confs, vlm_lines):
+        """Gióng dòng VLM vào dòng đã phát hiện (Needleman–Wunsch). Dòng IN (tin cậy cao) là
+        neo: điểm theo độ giống chữ. Dòng TAY: chữ VietOCR là rác nên cho điểm nền dương nhỏ,
+        chỉ để giữ thứ tự. Trả ({chỉ số dòng: chữ VLM}, [(chỉ số dòng liền trước, chữ thừa)])."""
+        n, m = len(span), len(vlm_lines)
+        gap = -0.35
+        sc = [[0.0] * (m + 1) for _ in range(n + 1)]
+        bt = [[0] * (m + 1) for _ in range(n + 1)]
+        for a in range(1, n + 1):
+            sc[a][0], bt[a][0] = a * gap, 1
+        for b in range(1, m + 1):
+            sc[0][b], bt[0][b] = b * gap, 2
+        for a in range(1, n + 1):
+            i = span[a - 1]
+            is_low = confs[i] < self.conf
+            for b in range(1, m + 1):
+                sim = self._sim(texts[i], vlm_lines[b - 1])
+                pair = (0.25 + 0.5 * sim) if is_low else (2.0 * sim - 0.6)
+                best, how = sc[a - 1][b - 1] + pair, 0
+                if sc[a - 1][b] + gap > best:
+                    best, how = sc[a - 1][b] + gap, 1
+                if sc[a][b - 1] + gap > best:
+                    best, how = sc[a][b - 1] + gap, 2
+                sc[a][b], bt[a][b] = best, how
+        a, b, pairs, extra = n, m, {}, []
+        while a > 0 or b > 0:
+            how = bt[a][b]
+            if a > 0 and b > 0 and how == 0:
+                pairs[span[a - 1]] = vlm_lines[b - 1]
+                a -= 1
+                b -= 1
+            elif a > 0 and (b == 0 or how == 1):
+                a -= 1
+            else:
+                extra.append((a, vlm_lines[b - 1]))   # a = số dòng span đã đi qua
+                b -= 1
+        extra.reverse()
+        return pairs, [(span[k - 1] if k > 0 else span[0], t) for k, t in extra]
+
+    def _refine_block(self, page, boxes, texts, confs, span) -> dict[int, str]:
+        x1 = min(boxes[i][0] for i in span)
+        y1 = min(boxes[i][1] for i in span)
+        x2 = max(boxes[i][2] for i in span)
+        y2 = max(boxes[i][3] for i in span)
+        mx, my = 0.02 * page.width, 0.006 * page.height
+        crop = page.crop((max(0, int(x1 - mx)), max(0, int(y1 - my)),
+                          min(page.width, int(x2 + mx)), min(page.height, int(y2 + my))))
+        raw = self._ask(crop, BLOCK_PROMPT, 1200, self.block_timeout)
+        lines = self._clean_lines(raw)
+        if not lines or len(lines) > 3 * len(span) + 5:
+            return {}
+        pairs, extra = self._align(span, texts, confs, lines)
+        out: dict[int, str] = {}
+        for i, t in pairs.items():
+            if confs[i] < self.conf:            # chỉ thay dòng TAY; dòng in giữ chữ VietOCR
+                out[i] = t
+        # Dòng VLM không có khung (bộ phát hiện bỏ sót chữ tay trên hàng chấm): nối vào dòng
+        # tay liền trước để nội dung vẫn nằm trong lớp chữ và tìm kiếm được.
+        low_in_span = [i for i in span if confs[i] < self.conf]
+        for anchor, t in extra:
+            if not low_in_span:
+                break
+            pos = span.index(anchor)
+            cand = [i for i in span[: pos + 1] if confs[i] < self.conf] or low_in_span[:1]
+            tgt = cand[-1]
+            out[tgt] = (out.get(tgt, "") + " " + t).strip()
+        return out
+
     # ---- áp vào kết quả một trang ----------------------------------------
-    def refine(self, crops: list, texts: list[str], confs: list[float]) -> tuple[list[str], list[float], list[str], int]:
-        """crops/texts/confs cùng độ dài. Trả (texts, confs, sources, số dòng đã đổi)."""
+    def refine(self, page, boxes, texts: list[str], confs: list[float]) -> tuple[list[str], list[float], list[str], int]:
+        """page: PIL RGB cả trang/tile; boxes/texts/confs cùng độ dài.
+        Trả (texts, confs, sources, số dòng đã đổi)."""
         sources = ["ocr"] * len(texts)
         if not self.enabled or not texts:
             return texts, confs, sources, 0
-        idx = [i for i, (t, c) in enumerate(zip(texts, confs))
+        low = [i for i, (t, c) in enumerate(zip(texts, confs))
                if c < self.conf and len(t.strip()) >= self.min_chars]
-        if not idx:
+        if not low:
             return texts, confs, sources, 0
-        # Ưu tiên dòng tin cậy thấp nhất khi trang có quá nhiều dòng xấu (ảnh mờ toàn trang
-        # không phải chữ tay — không đáng đốt VLM cho cả trang).
-        idx.sort(key=lambda i: confs[i])
-        idx = idx[: self.max_per_page]
         t0 = time.perf_counter()
+        texts, confs = list(texts), list(confs)
+        orig_confs = list(confs)
+        changed, done = 0, set()
+
+        def warn(e):
+            if not self._warned:
+                self._warned = True
+                print(f"⚠  lớp chữ viết tay: VLM lỗi, giữ kết quả VietOCR ({e})", flush=True)
+
+        # 1) KHỐI — vùng nhiều dòng tay liền nhau, đọc có ngữ cảnh.
+        blocks = self._blocks(boxes, set(low))
+        n_block_lines = 0
+        if blocks:
+            def work_block(span):
+                try:
+                    return span, self._refine_block(page, boxes, texts, orig_confs, span)
+                except Exception as e:  # noqa: BLE001
+                    warn(e)
+                    return span, {}
+
+            for span, repl in list(self._pool.map(work_block, blocks)):
+                for i, t in repl.items():
+                    t = re.sub(r"\s+", " ", t).strip()
+                    if len(t) >= 2 and t != texts[i]:
+                        texts[i], confs[i], sources[i] = t, self.accept_conf, "hw-block"
+                        changed += 1
+                        n_block_lines += 1
+                    done.add(i)
+
+        # 2) TỪNG DÒNG — dòng tay lẻ không thuộc khối nào (hoặc khối không trả kết quả).
+        rest = [i for i in low if i not in done]
+        rest.sort(key=lambda i: orig_confs[i])
+        rest = rest[: self.max_per_page]
 
         def work(i: int):
             try:
-                return i, self._read_line(crops[i])
+                return i, self._read_line(self._crop_line(page, boxes[i]))
             except Exception as e:  # noqa: BLE001
-                if not self._warned:
-                    self._warned = True
-                    print(f"⚠  lớp chữ viết tay: VLM lỗi, giữ kết quả VietOCR ({e})", flush=True)
+                warn(e)
                 return i, None
 
-        texts, confs = list(texts), list(confs)
-        changed = 0
-        for i, raw in self._pool.map(work, idx):
+        for i, raw in self._pool.map(work, rest):
             t = self.accept(texts[i], raw)
             if t is None or t == texts[i]:
                 continue
             texts[i], confs[i], sources[i] = t, self.accept_conf, "hw"
             changed += 1
         ms = (time.perf_counter() - t0) * 1000.0
-        print(f"✍  chữ viết tay: gửi {len(idx)} dòng (<{self.conf:.2f}) → đổi {changed} · {ms:.0f}ms", flush=True)
+        print(f"✍  chữ viết tay: {len(low)} dòng <{self.conf:.2f} · khối {len(blocks)} (đổi {n_block_lines}) · "
+              f"lẻ {len(rest)} · tổng đổi {changed} · {ms:.0f}ms", flush=True)
         return texts, confs, sources, changed
 
 
