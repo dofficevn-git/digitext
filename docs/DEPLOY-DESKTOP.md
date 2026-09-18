@@ -33,35 +33,39 @@ Installer tự thêm rule tường lửa "DigiText LAN" nếu chạy có quyền
 (`src-tauri/windows/hooks.nsh`); không có quyền thì Windows hỏi lúc mở app lần đầu —
 với máy khác mạng, bấm Cancel cũng không sao (rule chỉ phục vụ thu thập LAN).
 
-## 2. Đường HTTPS cho máy khác mạng — ĐÃ LÀM: Cloudflare Tunnel, `https://api.khodulieu.vn`
+## 2. Đường HTTPS cho máy khác mạng — ĐÃ LÀM: Cloudflare Tunnel, `https://api.digitext.vn`
 
-Trạng thái 18/9/2026: app ở bất kỳ mạng nào trỏ **`https://api.khodulieu.vn`** là tới API
-trên máy này. Cách nối:
+Trạng thái 18/9/2026: app ở bất kỳ mạng nào trỏ **`https://api.digitext.vn`** là tới API
+trên máy này (Windows `DESKTOP-2DMGE1I`, 192.168.0.127). Cách nối:
 
-- Máy này chạy service Windows `Cloudflared` (tunnel `zalo-smart-commune`,
-  id `3eda566d-…`) dùng chung cho nhiều dự án khác trên `khodulieu.vn`.
-- Config của service: `C:\Windows\System32\config\systemprofile\.cloudflared\config.yml`
-  (cần admin để sửa; bản sao tham khảo `%USERPROFILE%\.cloudflared\config.yml` — KHÔNG
-  phải file service đọc). Đã thêm luật:
+- Zone `digitext.vn` và tunnel nằm ở tài khoản Cloudflare **Dofficevn@gmail.com**
+  (Zero Trust team `fragrant-firefly-da40`, gói Free). Tunnel kiểu *remotely managed*:
+  route `api.digitext.vn → http://localhost:8080` cấu hình trên dashboard
+  (Zero Trust → Networks → Tunnels & Mesh → tunnel → *Published application routes*),
+  **không có file config cục bộ**; sửa route trên dashboard là tunnel nhận sau vài giây.
+- Trên máy này chạy service Windows **`cloudflared-digitext`** (tự khởi động, tự restart
+  khi lỗi), lệnh: `cloudflared.exe tunnel run --token-file C:\ProgramData\cloudflared-digitext	oken`,
+  log `C:\ProgramData\cloudflared-digitext\cloudflared.log`. Token chỉ SYSTEM/Administrators đọc.
+  Service này **độc lập** với service `Cloudflared` sẵn có (tunnel `zalo-smart-commune`,
+  tài khoản khác, phục vụ `*.khodulieu.vn`) — hai service không đụng nhau.
+- API vẫn bind `127.0.0.1:8080`; không mở cổng nào ra ngoài. TLS kết thúc ở Cloudflare,
+  Cloudflare→máy này đi trong tunnel mã hoá.
+- Dự phòng: `https://api.khodulieu.vn` cũng trỏ vào cùng API (luật ingress trong config
+  của service `Cloudflared`, file `C:\Windows\System32\config\systemprofile\.cloudflared\config.yml`).
 
-  ```yaml
-    - hostname: api.khodulieu.vn
-      service: http://localhost:8080
-  ```
+Kiểm nhanh từ máy bất kỳ: `curl.exe https://api.digitext.vn/healthz` → `ok`.
 
-- DNS `api.khodulieu.vn` là CNAME tới tunnel (`cloudflared tunnel route dns …`, đã có).
-- API vẫn bind `127.0.0.1:8080` — không mở cổng nào ra ngoài. TLS kết thúc ở Cloudflare,
-  đoạn Cloudflare→máy này đi trong tunnel mã hoá.
-
-Kiểm nhanh từ máy bất kỳ: `curl.exe https://api.khodulieu.vn/healthz` → `ok`.
-
-Đổi/kiểm sau này (PowerShell **admin**):
+Vận hành (PowerShell **admin**):
 
 ```powershell
-$cfg="C:\Windows\System32\config\systemprofile\.cloudflared\config.yml"
-& "C:\Program Files (x86)\cloudflared\cloudflared.exe" --config $cfg tunnel ingress validate
-Restart-Service Cloudflared      # các hostname khác trên tunnel gián đoạn ~3 s
+Get-Service cloudflared-digitext            # Running?
+Restart-Service cloudflared-digitext
+Get-Content C:\ProgramData\cloudflared-digitext\cloudflared.log -Tail 20
+# đổi token (tạo tunnel mới trên dashboard): ghi đè file token rồi Restart-Service
 ```
+
+Chuyển sang máy chủ mới: cài `cloudflared`, tạo cùng service với token của tunnel
+(hoặc *Add a connector* trên dashboard), địa chỉ trong app **không đổi**.
 
 Giới hạn của Cloudflare cần biết:
 
@@ -69,13 +73,11 @@ Giới hạn của Cloudflare cần biết:
   (`/documents/upload`) → không vướng. Riêng `POST /documents` (tải nguyên tệp, nút
   "Tải PDF lên") sẽ hỏng với tệp > 100 MB — dùng luồng Đồng bộ dữ liệu cho tệp lớn.
 - **100 s/response**: request nào máy chủ xử lý quá 100 s bị cắt (524). Các thao tác
-  dài (OCR toàn bộ, PDF 2 lớp, đóng gói) đều là enqueue rồi poll nên không vướng.
-- Máy chủ tắt/đổi máy → chỉ cần cài cloudflared trên máy mới với cùng luật; địa chỉ
-  trong app không đổi.
+  dài (OCR toàn bộ, PDF 2 lớp, đóng gói) đều enqueue rồi poll nên không vướng.
 
-Ghi chú: trong cùng config còn `do360-api/do360-admin.khodulieu.vn → localhost:8080` của
-dự án cũ — hai hostname đó hiện đang rơi vào API DigiText. Nếu dự án đó đã bỏ, xoá hai
-dòng ấy.
+Rác còn lại trên Cloudflare (không ảnh hưởng, dọn khi tiện): tunnel `digitext` đầu tiên
+(id `45424f54-…`, không còn connector) với route `api.digifile.vn` — xoá cả hai; bản ghi
+nhầm `api.digitext.vn.khodulieu.vn` trong zone `khodulieu.vn` — xoá.
 
 ### Phương án thay thế (chưa dùng)
 
@@ -118,7 +120,7 @@ Làm được và an toàn nếu **khoá là của mình, máy chủ là của m
 1. `npm i @tauri-apps/plugin-updater`, thêm `tauri-plugin-updater` vào `Cargo.toml`.
 2. `npx tauri signer generate -w ~/.tauri/digitext.key` → giữ khoá riêng **ngoài repo**;
    dán khoá công khai vào `tauri.conf.json` → `plugins.updater.pubkey`,
-   `endpoints = ["https://<máy>.<tailnet>.ts.net/updates/latest.json"]`,
+   `endpoints = ["https://api.digitext.vn/updates/latest.json"]`,
    `bundle.createUpdaterArtifacts = true`.
 3. Máy chủ phục vụ tĩnh `updates/latest.json` + file `.exe` + `.sig` (thêm route tĩnh
    vào API hoặc một MinIO bucket public sau proxy).
