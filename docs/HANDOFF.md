@@ -297,6 +297,12 @@ do VLM sinh, chưa ai kiểm bằng mắt. Nhãn rác thì huấn luyện xong m
 ## 4. Bẫy đã trả giá
 
 **Ba thứ hỏng âm thầm — web vẫn trả 200:**
+- **Xoá dự án/tài liệu đang OCR**: không có API xoá dự án; xoá bằng SQL (`delete from projects`
+  cascade, gỡ `devices.project_id`/`users.project_id` trước) + `mc rm -r` các prefix
+  `<id>/`, `<id>-warm/`, `<id>-packages/` trên MinIO + xoá `collected_docs` của Kho cục bộ.
+  Trước 18/9 worker coi lỗi FK khi ghi `ocr_results` của tài liệu vừa xoá là lỗi DB nghiêm
+  trọng và **thoát** (trên Windows không có systemd nên nằm im) — đã sửa: SQLSTATE 23xxx
+  chỉ WARN và chạy tiếp (`worker.rs` `is_row_level_db_error`).
 - `ocr/best.pt` thiếu → `main.py:90` nuốt lỗi, đặt `yolo_model = None`, mọi tài
   liệu rơi vào nhánh fallback, nhận dạng loại văn bản sai mà không báo gì.
 - vLLM `vnkie` chết → `DocumentKIE.__init__` chỉ đọc biến môi trường, **không hề

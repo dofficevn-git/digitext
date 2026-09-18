@@ -990,7 +990,17 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             let Some(r_3nk) = f_1u9(self.run_once(), r_3nl).await else {
                 break;
             };
-            let r_3ni = r_3nk?;
+            let r_3ni = match r_3nk {
+                Ok(o) => o,
+                // Lỗi toàn vẹn dữ liệu (SQLSTATE 23xxx: khoá ngoại, trùng khoá…) là của
+                // RIÊNG job vừa chạy — điển hình tài liệu bị xoá giữa chừng nên ghi
+                // ocr_results vi phạm FK. Không phải lỗi kết nối → không hạ cả worker.
+                Err(e) if is_row_level_db_error(&e) => {
+                    tracing::warn!(error = %e, "job vi phạm toàn vẹn dữ liệu — bỏ qua, chạy tiếp");
+                    continue;
+                }
+                Err(e) => return Err(e),
+            };
             if r_3ni == RunOutcome::Idle {
                 tokio::select! {
                     _ = r_3nl.cancelled() => break, _ = tokio::time::sleep(r_3nh) => {}
@@ -1001,6 +1011,14 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         }
         Ok(r_3nj)
     }
+}
+/// SQLSTATE lớp 23 (integrity constraint violation) — lỗi thuộc về dòng dữ liệu đang
+/// xử lý, không phải kết nối/CSDL hỏng. Worker được phép bỏ qua job đó và chạy tiếp.
+pub(crate) fn is_row_level_db_error(e: &sqlx::Error) -> bool {
+    e.as_database_error()
+        .and_then(|d| d.code())
+        .map(|c| c.starts_with("23"))
+        .unwrap_or(false)
 }
 async fn f_1u9<F: Future>(r_3nm: F, r_3nn: &CancellationToken) -> Option<F::Output> {
     tokio::select! {
@@ -1034,6 +1052,13 @@ pub async fn f_2b8(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loi_ket_noi_khong_phai_loi_dong() {
+        // Không có mã SQLSTATE → không phải lỗi dòng → vẫn phải hạ worker như cũ.
+        assert!(!is_row_level_db_error(&sqlx::Error::PoolTimedOut));
+        assert!(!is_row_level_db_error(&sqlx::Error::RowNotFound));
+    }
     fn counts(pending: i64, failed_transient: i64, page_failed: i64, done: i64) -> OcrPageCounts {
         OcrPageCounts {
             pending,
