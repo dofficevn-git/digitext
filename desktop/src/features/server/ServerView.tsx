@@ -87,6 +87,8 @@ export default function V4wh() {
   const [V340, V341] = useState<{ done: number; total: number } | null>(null);
   const V342 = useRef(false);
   const [V343, V344] = useState("");
+  // Tải bản PDF/A (lớp chữ, về Kho/_pdfa) thay vì bản gốc đã tải lên (về Kho/_nhan_ve).
+  const [taiPdfa, setTaiPdfa] = useState(false);
 
   const V345 = useRef(false);
 
@@ -172,22 +174,28 @@ export default function V4wh() {
     let V34u = 0;
     let last = "";
     let V34v = "";
+    let chuaPdfa = 0;
     for (const [i, V34w] of V34s.entries()) {
       if (V342.current) break;
       V341({ done: i, total: V34s.length });
+      if (taiPdfa && !(V34w.doc.pdfaPages ?? 0)) {
+        chuaPdfa++;
+        continue;
+      }
       try {
-        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath);
+        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath, taiPdfa);
         V34u++;
       } catch (V34x) {
         if (V34v === "") V34v = V4wa(V34x);
       }
     }
     V341(null);
-    const fail = V34s.length - V34u;
+    const fail = V34s.length - V34u - chuaPdfa;
     const dung = V342.current ? " (đã dừng giữa chừng)" : "";
     V344(
-      `Đã tải ${V4wc(V34u)}/${V4wc(V34s.length)} tệp ${V34t}${dung}.` +
+      `Đã tải ${V4wc(V34u)}/${V4wc(V34s.length)} tệp ${taiPdfa ? "PDF/A " : ""}${V34t}${dung}.` +
         (V34u > 0 ? ` Lưu tại: ${last}` : "") +
+        (chuaPdfa > 0 ? ` — ${V4wc(chuaPdfa)} tệp chưa có bản PDF/A (chạy “PDF 2 lớp” trước)` : "") +
         (fail > 0 ? ` — ${V4wc(fail)} tệp lỗi: ${V34v}` : ""),
     );
   };
@@ -254,9 +262,10 @@ export default function V4wh() {
               className="btn"
               disabled={V340 !== null}
               onClick={() => void V34r([{ doc: d, folderPath: V358 }], `“${d.filename}”`)}
+              title={taiPdfa ? "Tải bản PDF/A" : "Tải bản gốc"}
             >
               <Icon name="taiVe" />
-              Tải
+              {taiPdfa ? "Tải PDF/A" : "Tải"}
             </button>
           </td>
         </tr>,
@@ -415,6 +424,17 @@ export default function V4wh() {
                 <Icon name="taiVe" />
                 Tải xuống ({V4wc(V34p.length)})
               </button>
+              <label
+                className="flex items-center gap-1 text-sm"
+                title="Bật: tải bản PDF/A có lớp chữ (về Kho/_pdfa). Tắt: tải bản gốc đã tải lên (về Kho/_nhan_ve)."
+              >
+                <input
+                  type="checkbox"
+                  checked={taiPdfa}
+                  onChange={(e) => setTaiPdfa(e.target.checked)}
+                />
+                Bản PDF/A
+              </label>
               <button
                 className="btn"
                 onClick={() => void V34y()}

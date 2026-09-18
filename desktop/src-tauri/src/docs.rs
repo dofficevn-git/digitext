@@ -97,6 +97,9 @@ pub struct DownloadArgs {
     pub filename: String,
     #[serde(default)]
     pub rel_path: Option<String>,
+    /// `true` → tải bản PDF/A (lớp chữ) về `_pdfa/…` thay vì bản gốc về `_nhan_ve/…`.
+    #[serde(default)]
+    pub pdfa: bool,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -741,6 +744,16 @@ async fn f_174(
     r_1l0: &Path,
     r_1kz: &(dyn Fn(u64, Option<u64>) + Sync),
 ) -> Result<u64, AppError> {
+    f_174_variant(r_1kx, auth, id, r_1l0, r_1kz, false).await
+}
+async fn f_174_variant(
+    r_1kx: &State<'_, Db>,
+    auth: &State<'_, AuthState>,
+    id: &str,
+    r_1l0: &Path,
+    r_1kz: &(dyn Fn(u64, Option<u64>) + Sync),
+    pdfa: bool,
+) -> Result<u64, AppError> {
     let r_1ky = r_1l0.parent().ok_or_else(|| {
         AppError::internal("đường dẫn lưu không hợp lệ")
     })?;
@@ -750,16 +763,12 @@ async fn f_174(
     let part = part_path(r_1l0);
     let n = f_2r8(r_1kx, auth, Permission::DocumentDownload, |r_1kw, r_1l1| {
         let (id, part) = (id.to_string(), part.clone());
-        async move {
-            client::f_1ez(
-                &r_1kw,
-                &r_1l1,
-                &format!("/documents/{id}/download"),
-                &part,
-                r_1kz,
-            )
-            .await
-        }
+        let route = if pdfa {
+            format!("/documents/{id}/download?variant=pdfa")
+        } else {
+            format!("/documents/{id}/download")
+        };
+        async move { client::f_1ez(&r_1kw, &r_1l1, &route, &part, r_1kz).await }
     })
     .await
     .inspect_err(|_| {
@@ -772,6 +781,9 @@ async fn f_174(
 }
 const C_BN: usize = 8;
 fn f_179(r_1l3: &Path, rel_path: Option<&str>, filename: &str) -> PathBuf {
+    f_179_in(r_1l3, "_nhan_ve", rel_path, filename)
+}
+fn f_179_in(r_1l3: &Path, bucket: &str, rel_path: Option<&str>, filename: &str) -> PathBuf {
     let r_1l5: Vec<&str> = rel_path
         .unwrap_or("")
         .split(['/', '\\'])
@@ -779,7 +791,7 @@ fn f_179(r_1l3: &Path, rel_path: Option<&str>, filename: &str) -> PathBuf {
         .filter(|s| !s.is_empty() && *s != "." && *s != "..")
         .take(C_BN)
         .collect();
-    let r_1l2 = crate::storage::f_1jt(&r_1l3.join("_nhan_ve"), &r_1l5, false);
+    let r_1l2 = crate::storage::f_1jt(&r_1l3.join(bucket), &r_1l5, false);
     let r_1l4 = Path::new(filename)
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
@@ -794,12 +806,18 @@ pub async fn docs_download(
     args: DownloadArgs,
 ) -> Result<String, AppError> {
     let r_1l7 = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
-    let r_1l6 = f_179(&r_1l7, args.rel_path.as_deref(), &args.filename);
+    let bucket = if args.pdfa { "_pdfa" } else { "_nhan_ve" };
+    let r_1l6 = f_179_in(&r_1l7, bucket, args.rel_path.as_deref(), &args.filename);
     let gate = std::sync::Mutex::new(crate::forward_progress::ProgressGate::new(u64::MAX));
     let id = args.id.clone();
-    let n = f_174(&db, &auth, &args.id, &r_1l6, &|received, total| {
-        f_18y(&app, &gate, &id, received, total, false)
-    })
+    let n = f_174_variant(
+        &db,
+        &auth,
+        &args.id,
+        &r_1l6,
+        &|received, total| f_18y(&app, &gate, &id, received, total, false),
+        args.pdfa,
+    )
     .await?;
     f_18y(&app, &gate, &args.id, n, Some(n), true);
     Ok(r_1l6.to_string_lossy().into_owned())
