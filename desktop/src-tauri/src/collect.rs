@@ -2612,6 +2612,8 @@ pub struct Tf {
     pub dest_rel: Option<String>,
     #[serde(default)]
     pub phong_ma: Option<String>,
+    #[serde(default)]
+    pub project_label: Option<String>,
 }
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -2640,6 +2642,27 @@ fn f_14x(dest_rel: Option<&str>) -> Vec<String> {
     } else {
         r_yh
     }
+}
+/// Thư mục đích trong Kho. Tệp KHÔNG gắn hồ sơ theo mục lục (`phong_ma` trống) nằm dưới
+/// một thư mục theo DỰ ÁN máy chủ (`<mã · tên>/Chưa phân loại` hay `<mã · tên>/<vị trí tự gõ>`)
+/// để Kho tài liệu không gộp mọi dự án vào một chỗ. Tệp gắn hồ sơ theo mục lục giữ nguyên
+/// `<phông>/<hộp>/<hồ sơ>` vì đường dẫn đó là khoá tra `ho_so.folder_path`.
+fn dest_segments(
+    dest_rel: Option<&str>,
+    phong_ma: Option<&str>,
+    project_label: Option<&str>,
+    project_id: &str,
+) -> Vec<String> {
+    let mut r = f_14x(dest_rel);
+    if phong_ma.map(str::trim).filter(|s| !s.is_empty()).is_some() {
+        return r;
+    }
+    let label = project_label
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(project_id);
+    r.insert(0, label.to_string());
+    r
 }
 fn inside(root: &Path, path: &Path) -> bool {
     let r_yi = |r_yj: &Path| r_yj.canonicalize().unwrap_or_else(|_| r_yj.to_path_buf());
@@ -2688,7 +2711,12 @@ pub async fn collect_add_files(
                 })?
         }
     };
-    let r_yx = f_14x(args.dest_rel.as_deref());
+    let r_yx = dest_segments(
+        args.dest_rel.as_deref(),
+        args.phong_ma.as_deref(),
+        args.project_label.as_deref(),
+        &r_yr,
+    );
     let r_yw: Vec<&str> = r_yx.iter().map(String::as_str).collect();
     let folder = crate::storage::f_1jt(&root, &r_yw, false);
     tokio::fs::create_dir_all(&folder).await.map_err(|e| {

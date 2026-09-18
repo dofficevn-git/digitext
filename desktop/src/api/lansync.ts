@@ -111,6 +111,9 @@ export interface V43d {
   destRel?: string;
 
   phongMa?: string;
+
+  /** "<mã> · <tên>" của dự án máy chủ — thành thư mục cấp 1 trong Kho khi tệp không gắn hồ sơ. */
+  projectLabel?: string;
 }
 
 export interface V43e {
