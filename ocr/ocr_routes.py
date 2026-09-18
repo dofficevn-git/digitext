@@ -31,6 +31,7 @@ from ocr_fulltext import (
     OcrNotReady,
     OcrOutOfMemory,
     device_info,
+    handwriting_info,
     recognize,
 )
 
@@ -59,6 +60,7 @@ def health():
         body["error"] = OcrEngineManager.init_error() or "chưa nạp được model"
     # Cho biết đang chạy GPU hay CPU — cấu hình rơi về CPU phải nhìn thấy được.
     body.update(device_info())
+    body["handwriting"] = handwriting_info()
     return jsonify(body), (200 if ready else 503)
 
 
