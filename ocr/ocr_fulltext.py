@@ -73,6 +73,11 @@ def _release_cuda() -> None:
         pass
 
 
+def handwriting_info() -> dict:
+    import handwriting
+    return handwriting.get().describe()
+
+
 def device_info() -> dict:
     """Cho /api/ocr/health: máy đang chạy trên gì. Trước đây health chỉ nói
     'ready', không phân biệt được cấu hình GPU bị rơi về CPU."""
@@ -323,6 +328,13 @@ def recognize(image_bgr: np.ndarray) -> dict:
         t0 = time.perf_counter()
         result, det_ms = _recognize_locked(image_bgr, rec)
         total_ms = (time.perf_counter() - t0) * 1000.0
+    # Lớp dự phòng chữ viết tay chạy NGOÀI semaphore GPU: nó chỉ chờ mạng (VLM), không
+    # được giữ chỗ GPU của VietOCR trong lúc chờ. Crop chỉ được gói kèm khi lớp này bật.
+    crops = result.pop("_crops", None)
+    if crops is not None:
+        import handwriting
+        texts, confs, sources, _ = handwriting.get().refine(crops, result["texts"], result["confidences"])
+        result["texts"], result["confidences"], result["sources"] = texts, confs, sources
     if _env_flag("OCR_LOG_TIMING", "true"):
         h, w = image_bgr.shape[:2]
         print(f"⏱ tile {w}x{h} · dòng={len(result['texts'])} · det={det_ms:.0f}ms · "
@@ -399,8 +411,9 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
     boxes: list[list[float]] = []
     out_texts: list[str] = []
     confidences: list[float] = []
+    kept_crops: list = []
 
-    for q, text, prob in zip(keep, texts, probs):
+    for q, text, prob, crop in zip(keep, texts, probs, crops):
         # Mỗi span PHẢI là một dòng đơn — ký tự xuống dòng làm hỏng phép giãn
         # ngang Tz khi dựng lớp text vô hình.
         text = " ".join(str(text).split())
@@ -411,6 +424,7 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
             continue
         boxes.append(box)
         out_texts.append(text)
+        kept_crops.append(crop)
         # Chỉ rơi vào 0.9 khi bản VietOCR này không trả nổi xác suất — lúc đó
         # tín hiệu low_conf_ratio coi như mất, ghi log một lần để biết.
         if prob is None:
@@ -419,5 +433,9 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
         else:
             confidences.append(max(0.0, min(1.0, float(prob))))
 
-    assert len(boxes) == len(out_texts) == len(confidences)
-    return {"boxes": boxes, "texts": out_texts, "confidences": confidences}, det_ms
+    assert len(boxes) == len(out_texts) == len(confidences) == len(kept_crops)
+    out = {"boxes": boxes, "texts": out_texts, "confidences": confidences}
+    import handwriting
+    if handwriting.get().enabled:
+        out["_crops"] = kept_crops  # recognize() gỡ khoá này trước khi trả về
+    return out, det_ms
