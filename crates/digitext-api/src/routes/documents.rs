@@ -426,10 +426,16 @@ async fn f_1nb(
     };
     Ok(Json(r_et.into_iter().map(DocDto::from).collect()))
 }
+#[derive(Debug, Default, Deserialize)]
+pub struct DownloadQuery {
+    /// `pdfa` → trả bản PDF/A (lớp chữ) từ kho object; mặc định trả bản gốc đã tải lên.
+    pub variant: Option<String>,
+}
 async fn f_173(
     State(state): State<AppState>,
     r_eu: Ts,
     Path(id): Path<Uuid>,
+    Query(q): Query<DownloadQuery>,
 ) -> Result<Response, ApiError> {
     r_eu.require_perm(Permission::DocumentDownload)?;
     let r_ev = documents::get(&state.pool, id)
@@ -440,6 +446,25 @@ async fn f_173(
         .allows_project(r_ev.project_id)
     {
         return Err(ApiError::forbidden());
+    }
+    if q.variant.as_deref() == Some("pdfa") {
+        let key = documents::pdfa_key(&state.pool, id)
+            .await?
+            .ok_or_else(|| ApiError::bad_request("tài liệu chưa có bản PDF/A — chạy “PDF 2 lớp” trước"))?;
+        let store = state
+            .store
+            .as_ref()
+            .ok_or_else(|| ApiError::service_unavailable("kho lưu trữ chưa cấu hình"))?;
+        let bytes = store
+            .get(&key)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = % e, key, "lỗi đọc bản PDF/A từ kho object");
+                ApiError::service_unavailable("kho lưu trữ không sẵn sàng")
+            })?
+            .ok_or_else(ApiError::not_found)?;
+        let n = bytes.len() as u64;
+        return Ok((f_177(&r_ev.filename, Some(n)), Body::from(bytes)).into_response());
     }
     let r_ey = state.data_dir.join(&r_ev.storage_path);
     let file = match tokio::fs::File::open(&r_ey).await {

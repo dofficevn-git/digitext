@@ -87,6 +87,14 @@ pub async fn get(r_23n: &PgPool, id: Uuid) -> sqlx::Result<Option<Document>> {
         .fetch_optional(r_23n)
         .await
 }
+/// Khoá object của bản PDF/A (NULL khi chưa ghép PDF 2 lớp).
+pub async fn pdfa_key(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar::<_, Option<String>>("SELECT pdfa_key FROM documents WHERE id = $1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map(|r| r.flatten())
+}
 const DOC_COLS: &str = "d.id, d.project_id, d.filename, d.ho_so_ref, d.page_count, \
      d.size_bytes, d.status, u.display_name AS uploaded_by_name, d.uploaded_at, \
      d.review_status, d.reviewed_at, d.review_note";
