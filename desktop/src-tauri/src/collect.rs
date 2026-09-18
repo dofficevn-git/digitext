@@ -2372,16 +2372,27 @@ fn f_y5(filename: &str, total: u64) -> Result<(), ForwardFail> {
         permanent: true,
     })
 }
+/// File ẩn đặt trong thư mục cấp 1 của Kho khi thư mục đó là "thư mục theo dự án máy chủ"
+/// (tạo bởi "Thêm tài liệu từ ổ cứng"). Nội dung = id dự án.
+pub(crate) const PROJECT_MARKER: &str = ".digitext-project";
 fn f_26u(root: &Path, storage_path: &str) -> Option<String> {
     let r_xy = Path::new(storage_path).parent()?;
     let r_xz = r_xy.strip_prefix(root).ok()?;
-    let r_y0: Vec<String> = r_xz
+    let mut r_y0: Vec<String> = r_xz
         .components()
         .filter_map(|c| match c {
             std::path::Component::Normal(s) => Some(s.to_string_lossy().into_owned()),
             _ => None,
         })
         .collect();
+    // Cấp 1 là thư mục theo dự án → bỏ, vì cây trên máy chủ đã nhóm theo dự án.
+    if r_y0
+        .first()
+        .map(|top| root.join(top).join(PROJECT_MARKER).is_file())
+        .unwrap_or(false)
+    {
+        r_y0.remove(0);
+    }
     if r_y0.is_empty() {
         None
     } else {
@@ -2724,6 +2735,14 @@ pub async fn collect_add_files(
             "tạo thư mục đích trong Kho lỗi: {e}"
         ))
     })?;
+    // Thư mục cấp 1 theo dự án được đánh dấu bằng file ẩn để lúc đẩy lên máy chủ bỏ
+    // cấp này khỏi relPath (cây máy chủ tự thêm cấp dự án — không đánh dấu là lặp 2 lần).
+    if args.phong_ma.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none() {
+        let marker = crate::storage::f_1jt(&root, &r_yw[..1], false).join(PROJECT_MARKER);
+        if let Err(e) = tokio::fs::write(&marker, r_yr.as_bytes()).await {
+            tracing::warn!(error = % e, path = % marker.display(), "không ghi được dấu thư mục dự án");
+        }
+    }
     let mut r_yy = Tg {
         project_id: r_yr.clone(),
         dest: r_yx.join("/"),
