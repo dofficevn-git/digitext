@@ -371,3 +371,13 @@ chỉ để bắt hồi quy. Có người gõ thì thay bằng `golden.py build`
   bcrypt/argon2 — nhưng đó là sửa mã nguồn `doc_extract_pla`.
 - **Không có test nào** cho mã sản phẩm ở cả hai dự án. Mọi kiểm chứng đều thủ
   công, và đó là tất cả những gì có.
+
+- **API + worker là dịch vụ Windows (từ 19/9/2026)**: Task Scheduler `DigiText-API`, `DigiText-Worker`
+  (SYSTEM, At startup) chạy `dev\service-supervisor.ps1` → binary `targetelease\*.exe`, log
+  `logspi.log|worker.log|*.err.log`. Đăng ký/gỡ: `dev\install-services.ps1 [-Uninstall]` (admin).
+  Sau khi `cargo build --release` phải restart task (`Restart: Stop-/Start-ScheduledTask`, admin).
+  KHÔNG chạy thêm `devun-*.ps1` song song (trùng cổng 8080/9095). Trước đó API/worker chạy trong
+  phiên tay nên reboot là tắt — máy khác báo 502.
+- **Poppler bắt buộc trên máy worker**: PDF quét CCITT/JBIG2 (không phải JPEG) cần `pdftoppm`;
+  `DIGITEXT_PDFTOPPM_BIN` trỏ đường dẫn tuyệt đối (winget `oschwartz10612.Poppler`). Thiếu → job
+  `failed_transient` "không chạy được 'pdftoppm'" (157 trang Sơn La, 18/9).
