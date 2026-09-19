@@ -42,8 +42,12 @@ while ($true) {
   Log "khởi động $exe $($exeArgs -join ' ')"
   $started = Get-Date
   try {
-    $p = Start-Process -FilePath $exe -ArgumentList $exeArgs -WorkingDirectory $root -NoNewWindow -PassThru `
-         -RedirectStandardOutput (Join-Path $logDir "$Role.out.log") -RedirectStandardError (Join-Path $logDir "$Role.err.log")
+    # PowerShell 5.1 không nhận -ArgumentList rỗng → chỉ thêm khi có tham số.
+    $sp = @{ FilePath = $exe; WorkingDirectory = $root; NoNewWindow = $true; PassThru = $true
+             RedirectStandardOutput = (Join-Path $logDir "$Role.out.log")
+             RedirectStandardError = (Join-Path $logDir "$Role.err.log") }
+    if ($exeArgs.Count -gt 0) { $sp.ArgumentList = $exeArgs }
+    $p = Start-Process @sp
     $p.WaitForExit()
     Log "tiến trình thoát mã $($p.ExitCode) sau $([int]((Get-Date) - $started).TotalSeconds)s"
   } catch {
