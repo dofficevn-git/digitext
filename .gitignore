@@ -138,3 +138,6 @@ ocr/static/processed_images/
 
 # Bộ cài phát hành (dev/release-desktop.ps1) — API phát qua /updates, không vào repo
 updates/
+
+# Bộ cài đã build nhưng CHƯA phát hành (release-desktop.ps1 -UpdatesDir updates-staging)
+updates-staging/
