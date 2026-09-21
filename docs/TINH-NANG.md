@@ -56,6 +56,7 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 - Tạo gói **SIP** (nộp lưu), **AIP** (bảo quản), **DIP** (khai thác có xác thực) theo bố cục E-ARK: METS, EAD, PREMIS, schemas, checksum SHA-256.
 - **Tự kiểm gói** trước khi xuất; có thêm **bộ kiểm độc lập** để nghiệm thu gói của chính mình hoặc của đơn vị khác (đã dùng kiểm 2 gói bên ngoài: phát hiện 72/72 tệp không phải PDF/A).
 - Gắn gói SIP với lần nộp lưu và dải số thứ tự mục lục; biên bản giao nhận.
+- **Đóng gói kho tài liệu từ bên ngoài**: nhận thư mục đã quét sẵn (Phông/Hộp/Hồ sơ) + một tệp Excel metadata; đối chiếu thư mục với Excel (mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu/thừa tệp, số trang, điều kiện Điều 8 TT05) và **khớp hết mới đóng gói**, mỗi hồ sơ một gói; có báo cáo lỗi theo từng dòng Excel.
 
 ## 9. Bảo quản, khai thác, tiêu huỷ
 

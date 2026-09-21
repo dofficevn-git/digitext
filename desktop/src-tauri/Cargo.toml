@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 digitext-core = { path = "../../crates/digitext-core" }
+digitext-extimport = { path = "../../crates/digitext-extimport" }
 tauri = { version = "2", features = [] }
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }

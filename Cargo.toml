@@ -16,6 +16,7 @@ members = [
     "crates/digitext-token-signpdf",
     "crates/digitext-cli",
     "crates/digitext-wipe",
+    "crates/digitext-extimport",
 ]
 exclude = ["desktop", "dev/obfuscate/rust-rename"]
 

@@ -267,6 +267,30 @@ trong khung. Chỉnh `det_limit_side_len`/ngưỡng DBNet chỉ sinh khung vụn
 fine-tune DBNet bằng nhãn sinh từ `inklines`); VLM đọc nguyên trang có toạ độ cho trang
 vẫn rớt chốt. Độ CHÍNH XÁC chữ tay chưa cải thiện — dòng lẻ (không thuộc khối) VLM còn bịa.
 
+## 2f. Đóng gói kho tài liệu TỪ BÊN NGOÀI (21/9) — `crates/digitext-extimport`
+
+Hướng dẫn + bảng mã lỗi: **[NHAP-KHO-NGOAI.md](NHAP-KHO-NGOAI.md)**. Tóm tắt cho người làm tiếp:
+
+- Crate mới `digitext-extimport` (tên KHÔNG obfuscate — viết thẳng ở repo này): `excel.rs` (đọc
+  xlsx bằng `calamine`, tách cột trùng tên theo 3 khối phông/hồ sơ/tài liệu), `check.rs` (đối chiếu
+  thư mục ↔ Excel; đơn vị hồ sơ = THƯ MỤC), `pack.rs` (dòng Excel → `tt02::Tos` → `f_11h` → `Tq4`
+  → `f_vn` → `f_2p7` → ghi zip; chạy lại được nhờ `trang-thai-dong-goi.json`), `report.rs`
+  (CSV có BOM + JSON), `cli.rs` (`digitext ext-import check|pack`).
+- Desktop: `src-tauri/src/extimport.rs` (lệnh `extimport_check`, `extimport_pack`, sự kiện
+  `extimport://progress`, quyền `PackageCreate`, một lượt một lúc) + `src/api/extimport.ts` +
+  `src/features/package/ExternalImportPanel.tsx` gắn trong `PackageView`. **Chưa phát hành** bản
+  desktop có tính năng này (đang 0.15.2).
+- Chính sách (yêu cầu của anh Hiếu): **khớp hết mới đóng gói**; lệch mã phông / mã hồ sơ / đường
+  dẫn / tên tệp / số trang và tệp chưa đạt Điều 8.2.a đều là LỖI. `--allow-partial` đóng trước hồ sơ
+  sạch; `--allow-non-tt05` CHỈ ĐỂ THỬ (không có trong app).
+- **Sửa ở thư viện dùng chung `digitext-pdf` (`f_1xp` + `raw_has_text`)**: trang có nhiều luồng nội
+  dung mà luồng đầu chỉ là chú thích (`% CANON_PFINF_TYPE0_TEXTON`, máy quét Canon) làm lopdf phân
+  tích hỏng → trang có lớp chữ ẩn bị coi là không có chữ. Cổng `f_2p9` của package worker cũng
+  hưởng sửa này — cần build lại worker để có hiệu lực ở máy chủ.
+- Kho Điền Xá: thư mục ↔ Excel khớp 34.354/34.354 tệp, nhưng **0 tệp là PDF/A** (đã ký số bằng
+  iTextSharp) → chưa đóng gói được bản chuẩn. Hướng xử lý còn MỞ: chuyển PDF/A + ký lại (qua
+  pipeline DigiText: nộp → OCR → PDF/A → ký → đóng gói, ~95.657 trang) hay nhận gói không PDF/A.
+
 ## 3. Việc đang dở — làm tiếp từ đây
 
 ### 3.1 Đưa Vintern lên Alienware (dừng giữa chừng ở đúng đây)

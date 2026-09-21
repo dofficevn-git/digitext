@@ -11,6 +11,7 @@ import { V460 } from "@/state";
 
 import { V4su, V4sn, V4sk, V4ss, type V4sm, type V4sj } from "./packageWire";
 import { Icon } from "@/components/Icon";
+import ExternalImportPanel from "./ExternalImportPanel";
 
 const V4sv: Record<string, string> = {
   queued: "Chờ dựng",
@@ -165,6 +166,8 @@ export default function V4sx() {
       </div>
 
       {V2ph && <div className="card p-2.5 mb-2.5">{V2ph}</div>}
+
+      <ExternalImportPanel />
 
       <div className="card p-4 mb-4">
         <h3 className="mt-0">Tạo gói tin mới</h3>
