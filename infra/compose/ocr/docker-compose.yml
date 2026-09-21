@@ -51,6 +51,10 @@ services:
       OCR_HW_MODEL: "${OCR_HW_MODEL:-Qwen2.5-VL-7B-Instruct-AWQ}"
       OCR_HW_CONF: "${OCR_HW_CONF:-0.85}"
       OCR_HW_MAX_PER_PAGE: "${OCR_HW_MAX_PER_PAGE:-15}"
+      # Lưới an toàn phát hiện dòng theo NÉT MỰC (ocr/inklines.py): DBNet sót chữ viết tay →
+      # sinh khung cho mực chưa có khung; trả thêm ink_coverage (độ phủ mực) mỗi tile.
+      OCR_INK_LINES: "${OCR_INK_LINES:-true}"
+      OCR_INK_TRUST_CONF: "${OCR_INK_TRUST_CONF:-0.85}"
       OCR_GPU_CONCURRENCY: "${OCR_GPU_CONCURRENCY:-2}"
       OCR_DET_GPU_MEM_MB: "${OCR_DET_GPU_MEM_MB:-1024}"
       OCR_LOG_TIMING: "${OCR_LOG_TIMING:-true}"

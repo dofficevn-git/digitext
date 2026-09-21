@@ -15,9 +15,10 @@ pub struct Tfd {
     pub low_conf_ratio: Option<f32>,
     pub boxes: Option<Json>,
     pub created_at: DateTime<Utc>,
+    pub ink_coverage: Option<f32>,
 }
 const COLS: &str = "id, document_id, page_no, engine_version_id, text_source, content, \
-     mean_confidence, low_conf_ratio, boxes, created_at";
+     mean_confidence, low_conf_ratio, boxes, created_at, ink_coverage";
 #[derive(Debug)]
 pub struct Tdx<'a> {
     pub document_id: Uuid,
@@ -28,18 +29,20 @@ pub struct Tdx<'a> {
     pub mean_confidence: Option<f32>,
     pub low_conf_ratio: Option<f32>,
     pub boxes: Option<Json>,
+    pub ink_coverage: Option<f32>,
 }
 pub async fn upsert(r_28k: &PgPool, r: Tdx<'_>) -> sqlx::Result<Tfd> {
     sqlx::query_as::<_, Tfd>(&format!(
         "INSERT INTO ocr_results \
             (id, document_id, page_no, engine_version_id, text_source, content, \
-             mean_confidence, low_conf_ratio, boxes) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+             mean_confidence, low_conf_ratio, boxes, ink_coverage) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
          ON CONFLICT (document_id, page_no, engine_version_id, text_source) DO UPDATE SET \
             content = EXCLUDED.content, \
             mean_confidence = EXCLUDED.mean_confidence, \
             low_conf_ratio = EXCLUDED.low_conf_ratio, \
-            boxes = EXCLUDED.boxes \
+            boxes = EXCLUDED.boxes, \
+            ink_coverage = EXCLUDED.ink_coverage \
          RETURNING {COLS}"
     ))
     .bind(Uuid::now_v7())
@@ -51,6 +54,7 @@ pub async fn upsert(r_28k: &PgPool, r: Tdx<'_>) -> sqlx::Result<Tfd> {
     .bind(r.mean_confidence)
     .bind(r.low_conf_ratio)
     .bind(r.boxes)
+    .bind(r.ink_coverage)
     .fetch_one(r_28k)
     .await
 }
@@ -105,6 +109,28 @@ pub async fn count_for_document(r_28o: &PgPool, document_id: Uuid) -> sqlx::Resu
         .bind(document_id)
         .fetch_one(r_28o)
         .await
+}
+/// Độ phủ mực theo trang (kết quả `ocr_raw` MỚI NHẤT của mỗi trang): (số trang đã đo,
+/// số trang dưới ngưỡng `min`). Trang OCR trước 21/9/2026 chưa đo (NULL) không tính.
+pub async fn ink_coverage_counts(
+    pool: &PgPool,
+    projects: Option<&[Uuid]>,
+    min: f32,
+) -> sqlx::Result<(i64, i64)> {
+    let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
+    sqlx::query_as::<_, (i64, i64)>(
+        "SELECT count(*) FILTER (WHERE t.ink_coverage IS NOT NULL)::bigint, \
+                count(*) FILTER (WHERE t.ink_coverage < $2)::bigint \
+         FROM (SELECT DISTINCT ON (r.document_id, r.page_no) r.ink_coverage \
+               FROM ocr_results r JOIN documents d ON d.id = r.document_id \
+               WHERE r.text_source = 'ocr_raw' AND d.status <> 'disposed' \
+                 AND ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
+               ORDER BY r.document_id, r.page_no, r.created_at DESC) t",
+    )
+    .bind(projects)
+    .bind(min)
+    .fetch_one(pool)
+    .await
 }
 pub async fn f_1y3(r_28q: &PgPool, r_28s: Option<&[Uuid]>) -> sqlx::Result<i64> {
     let r_28r: Option<Vec<Uuid>> = r_28s.map(|r_28p| r_28p.to_vec());

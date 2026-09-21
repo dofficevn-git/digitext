@@ -27,6 +27,9 @@ struct TileResponse {
     boxes: Vec<[f32; 4]>,
     texts: Vec<String>,
     confidences: Vec<f32>,
+    /// Dịch vụ OCR từ 21/9/2026 trả thêm độ phủ mực; bản cũ không có → None.
+    #[serde(default)]
+    ink_coverage: Option<f32>,
 }
 
 impl HttpOcrInfer {
@@ -175,6 +178,7 @@ impl Tok for HttpOcrInfer {
             boxes: parsed.boxes,
             texts: parsed.texts,
             confidences: parsed.confidences,
+            ink_coverage: parsed.ink_coverage.filter(|c| c.is_finite()).map(|c| c.clamp(0.0, 1.0)),
         })
     }
 }

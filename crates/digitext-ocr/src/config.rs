@@ -14,6 +14,7 @@ pub const C_6C: &str = "DIGITEXT_TILE_SIZE";
 pub const C_6B: &str = "DIGITEXT_TILE_OVERLAP";
 pub const C_5F: &str = "DIGITEXT_CONF_FALLBACK";
 pub const C_6A: &str = "DIGITEXT_REVIEW_LOW_CONF_RATIO";
+pub const ENV_REVIEW_MIN_INK_COVERAGE: &str = "DIGITEXT_REVIEW_MIN_INK_COVERAGE";
 pub const C_5S: &str = "DIGITEXT_MAX_RETRIES";
 pub const C_68: &str = "DIGITEXT_RETRY_BASE_DELAY_MS";
 pub const C_69: &str = "DIGITEXT_RETRY_MAX_DELAY_MS";
@@ -99,6 +100,9 @@ pub struct WorkerConfig {
     pub tile_overlap: u32,
     pub conf_fallback: f32,
     pub review_low_conf_ratio: f32,
+    /// Trang có độ phủ mực (dịch vụ OCR đo) DƯỚI ngưỡng này → đưa người soát với lý do
+    /// `low_ink_coverage`: còn chữ trên trang chưa có khung, tức chưa vào lớp text. 0 = tắt.
+    pub review_min_ink_coverage: f32,
     pub max_retries: u32,
     pub retry_base_delay: Duration,
     pub retry_max_delay: Duration,
@@ -123,7 +127,7 @@ pub struct WorkerConfig {
     pub auto_make_pdf2: bool,
 }
 impl WorkerConfig {
-    pub const ENV_KEYS: [&'static str; 40] = [
+    pub const ENV_KEYS: [&'static str; 41] = [
         C_5G,
         C_6D,
         C_6E,
@@ -134,6 +138,7 @@ impl WorkerConfig {
         C_6B,
         C_5F,
         C_6A,
+        ENV_REVIEW_MIN_INK_COVERAGE,
         C_5S,
         C_68,
         C_69,
@@ -280,6 +285,8 @@ impl WorkerConfig {
         }
         let conf_fallback = f_1eu::<f32>(r_30y, C_5F, 0.80, 0.0, 1.0)?;
         let review_low_conf_ratio = f_1eu::<f32>(r_30y, C_6A, 0.20, 0.0, 1.0)?;
+        let review_min_ink_coverage =
+            f_1eu::<f32>(r_30y, ENV_REVIEW_MIN_INK_COVERAGE, 0.90, 0.0, 1.0)?;
         let max_retries = f_1eu::<u32>(r_30y, C_5S, 5, 0, 20)?;
         let base_ms = f_1eu::<u64>(r_30y, C_68, 200, 1, 60_000)?;
         let max_ms = f_1eu::<u64>(r_30y, C_69, 30_000, 1, 600_000)?;
@@ -396,6 +403,7 @@ impl WorkerConfig {
             tile_overlap,
             conf_fallback,
             review_low_conf_ratio,
+            review_min_ink_coverage,
             max_retries,
             retry_base_delay: Duration::from_millis(base_ms),
             retry_max_delay: Duration::from_millis(max_ms),

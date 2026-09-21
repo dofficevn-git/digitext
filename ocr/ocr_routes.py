@@ -61,6 +61,8 @@ def health():
     # Cho biết đang chạy GPU hay CPU — cấu hình rơi về CPU phải nhìn thấy được.
     body.update(device_info())
     body["handwriting"] = handwriting_info()
+    import inklines
+    body["ink_lines"] = inklines.describe()
     return jsonify(body), (200 if ready else 503)
 
 

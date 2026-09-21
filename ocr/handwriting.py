@@ -121,7 +121,7 @@ class HandwritingFallback:
 
     # ---- kiểm hợp lệ --------------------------------------------------------
     @staticmethod
-    def accept(ocr_text: str, vlm_text: str | None) -> str | None:
+    def accept(ocr_text: str, vlm_text: str | None, loose: bool = False) -> str | None:
         """Trả về dòng đã làm sạch nếu đáng tin, None nếu giữ kết quả VietOCR."""
         if not vlm_text:
             return None
@@ -141,8 +141,12 @@ class HandwritingFallback:
             return None
         # Độ dài tương xứng với dòng VietOCR đọc — chữ tay có thể dài hơn chữ in bịa ra
         # (VietOCR hay rút gọn phần chấm chấm), nên nới trần rộng hơn sàn.
+        # loose: dòng từ lưới nét mực — chữ VietOCR ở đó là rác/rỗng, không dùng làm thước đo.
         n = max(len(ocr_text), 1)
-        if not (0.4 * n <= len(t) <= 3.0 * n + 12):
+        if loose:
+            if len(t) > 200:
+                return None
+        elif not (0.4 * n <= len(t) <= 3.0 * n + 12):
             return None
         return t
 
@@ -278,14 +282,18 @@ class HandwritingFallback:
         return out
 
     # ---- áp vào kết quả một trang ----------------------------------------
-    def refine(self, page, boxes, texts: list[str], confs: list[float]) -> tuple[list[str], list[float], list[str], int]:
+    def refine(self, page, boxes, texts: list[str], confs: list[float],
+               force: set[int] | None = None) -> tuple[list[str], list[float], list[str], int]:
         """page: PIL RGB cả trang/tile; boxes/texts/confs cùng độ dài.
         Trả (texts, confs, sources, số dòng đã đổi)."""
         sources = ["ocr"] * len(texts)
         if not self.enabled or not texts:
             return texts, confs, sources, 0
+        # force: dòng do lưới an toàn nét mực sinh ra (DBNet không thấy → gần như chắc là chữ
+        # tay) — luôn đọc lại, kể cả khi VietOCR trả chuỗi rỗng/ngắn.
+        force = force or set()
         low = [i for i, (t, c) in enumerate(zip(texts, confs))
-               if c < self.conf and len(t.strip()) >= self.min_chars]
+               if c < self.conf and (i in force or len(t.strip()) >= self.min_chars)]
         if not low:
             return texts, confs, sources, 0
         t0 = time.perf_counter()
@@ -331,7 +339,7 @@ class HandwritingFallback:
                 return i, None
 
         for i, raw in self._pool.map(work, rest):
-            t = self.accept(texts[i], raw)
+            t = self.accept(texts[i], raw, loose=i in force)
             if t is None or t == texts[i]:
                 continue
             texts[i], confs[i], sources[i] = t, self.accept_conf, "hw"

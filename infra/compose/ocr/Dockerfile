@@ -70,7 +70,7 @@ RUN pip install --no-cache-dir --no-deps vietocr==0.3.13 \
  && pip install --no-cache-dir einops==0.8.0
 
 # Chỉ chép những gì dịch vụ OCR thực sự dùng.
-COPY ocr_fulltext.py ocr_routes.py serve_ocr.py handwriting.py ./
+COPY ocr_fulltext.py ocr_routes.py serve_ocr.py handwriting.py inklines.py ./
 # Cau hinh VietOCR gop san — de container khong phai goi ra vocr.vn
 # (chung chi TLS cua may chu do da het han).
 COPY vietocr_config ./vietocr_config

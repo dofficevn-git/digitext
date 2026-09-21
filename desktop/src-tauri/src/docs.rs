@@ -404,6 +404,10 @@ pub struct ProgressDto {
     pub pages_ocr_running: i64,
     #[serde(default)]
     pub docs_ocr_failed: i64,
+    #[serde(default)]
+    pub pages_ink_measured: i64,
+    #[serde(default)]
+    pub pages_ink_low: i64,
     pub by_status: std::collections::HashMap<String, i64>,
 }
 #[tauri::command]

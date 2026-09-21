@@ -117,6 +117,9 @@ export interface V4jt {
   /** Trang OCR lỗi — chỉ có ở chế độ toàn kho (tiến độ máy chủ), cây lọc không tính được. */
   pagesOcrFailed: number;
   docsOcrFailed: number;
+  /** Độ phủ mực: số trang đã đo / số trang còn chữ chưa có khung — chỉ có ở chế độ toàn kho. */
+  pagesInkMeasured: number;
+  pagesInkLow: number;
 }
 
 const V4ju: V4jt = {
@@ -129,6 +132,8 @@ const V4ju: V4jt = {
   docsFieldsFailed: 0,
   pagesOcrFailed: 0,
   docsOcrFailed: 0,
+  pagesInkMeasured: 0,
+  pagesInkLow: 0,
 };
 
 export function V4jv(docs: V4ej[]): V4jt {

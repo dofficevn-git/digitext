@@ -84,6 +84,7 @@ pub async fn f_1i1<P: Tok>(
                 boxes: Vec::new(),
                 texts: Vec::new(),
                 confidences: Vec::new(),
+                ink_coverage: None,
             };
             for r_3ll in f_2gw(tile) {
                 let r_3lm = Box::pin(f_1i1(infer, &r_3ll, r_3lf, r_3lk, r_3lg)).await?;
@@ -98,6 +99,8 @@ pub async fn f_1i1<P: Tok>(
                 }
                 r_3lj.texts.extend(r_3lm.texts);
                 r_3lj.confidences.extend(r_3lm.confidences);
+                r_3lj.ink_coverage =
+                    crate::infer::min_ink_coverage(r_3lj.ink_coverage, r_3lm.ink_coverage);
             }
             Ok(r_3lj)
         }
@@ -122,14 +125,22 @@ pub async fn f_242<P: Tok>(
 enum ReviewReason {
     LowConfidence,
     EmptyPage,
+    LowInkCoverage,
 }
 impl ReviewReason {
     fn as_str(self) -> &'static str {
         match self {
             ReviewReason::LowConfidence => review_queue::C_I3,
             ReviewReason::EmptyPage => review_queue::C_I0,
+            ReviewReason::LowInkCoverage => review_queue::REASON_LOW_INK_COVERAGE,
         }
     }
+}
+/// Chốt "đã bắt hết chữ chưa": dịch vụ OCR đo được độ phủ mực và nó dưới ngưỡng → còn chữ
+/// trên trang chưa có khung. Xét TRƯỚC độ tin cậy vì chữ sót thì không có trong lớp text,
+/// nặng hơn chữ đọc chưa chắc. `min <= 0` = tắt; `None` (engine không đo) = không kết luận.
+fn ink_coverage_too_low(coverage: Option<f32>, min: f32) -> bool {
+    matches!(coverage, Some(c) if min > 0.0 && c < min)
 }
 fn needs_review(r_3lu: usize, r_3ls: Option<f32>, r_3lv: f32) -> Option<ReviewReason> {
     if r_3lu == 0 {
@@ -494,6 +505,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                         mean_confidence: r_3ma.mean_confidence(),
                         low_conf_ratio: r_3ma.low_conf_ratio(self.cfg.conf_fallback),
                         boxes: Some(crate::assemble::f_2gl(&r_3ma)),
+                        ink_coverage: r_3ma.ink_coverage,
                     },
                 )
                 .await?;
@@ -512,11 +524,25 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                 } else {
                     None
                 };
-                if let Some(reason) = needs_review(
-                    r_3ma.confidences.len(),
-                    r_3ma.low_conf_ratio(self.cfg.conf_fallback),
-                    self.cfg.review_low_conf_ratio,
-                ) {
+                let r_ink_low =
+                    ink_coverage_too_low(r_3ma.ink_coverage, self.cfg.review_min_ink_coverage);
+                if r_ink_low {
+                    tracing::warn!(
+                        document = % job.document_id, page = job.page_no,
+                        ink_coverage = ? r_3ma.ink_coverage,
+                        "độ phủ mực thấp — còn chữ chưa có khung → đưa người soát"
+                    );
+                }
+                let r_reason = if r_ink_low && !r_3ma.confidences.is_empty() {
+                    Some(ReviewReason::LowInkCoverage)
+                } else {
+                    needs_review(
+                        r_3ma.confidences.len(),
+                        r_3ma.low_conf_ratio(self.cfg.conf_fallback),
+                        self.cfg.review_low_conf_ratio,
+                    )
+                };
+                if let Some(reason) = r_reason {
                     if reason == ReviewReason::EmptyPage {
                         tracing::warn!(
                             document = % job.document_id, r_3ma = job.page_no,
@@ -1052,6 +1078,22 @@ pub async fn f_2b8(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn do_phu_muc_thap_thi_dua_nguoi_soat() {
+        assert!(ink_coverage_too_low(Some(0.80), 0.93));
+        assert!(!ink_coverage_too_low(Some(0.97), 0.93));
+        // Engine không đo (Triton / dịch vụ OCR bản cũ) → không kết luận gì.
+        assert!(!ink_coverage_too_low(None, 0.93));
+        // Ngưỡng 0 = tắt chốt.
+        assert!(!ink_coverage_too_low(Some(0.10), 0.0));
+        // Gộp tile: lấy giá trị xấu nhất, mảnh không đo thì bỏ qua.
+        use crate::infer::min_ink_coverage;
+        assert_eq!(min_ink_coverage(Some(0.9), Some(0.7)), Some(0.7));
+        assert_eq!(min_ink_coverage(None, Some(0.7)), Some(0.7));
+        assert_eq!(min_ink_coverage(Some(0.9), None), Some(0.9));
+        assert_eq!(min_ink_coverage(None, None), None);
+    }
 
     #[test]
     fn loi_ket_noi_khong_phai_loi_dong() {
