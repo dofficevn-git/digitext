@@ -12,6 +12,7 @@ calamine = { version = "0.26", features = ["dates"] }
 chrono = { workspace = true }
 digitext-package = { path = "../digitext-package" }
 digitext-pdf = { path = "../digitext-pdf" }
+lopdf = "0.43"
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

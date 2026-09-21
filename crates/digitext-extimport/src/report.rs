@@ -46,7 +46,9 @@ pub fn check_summary(r: &CheckReport) -> String {
         let pdfa: u32 = r.dossiers.iter().filter_map(|d| d.pdfa).sum();
         let signed: u32 = r.dossiers.iter().filter_map(|d| d.signed).sum();
         let pages: u32 = r.dossiers.iter().filter_map(|d| d.pages).sum();
-        s.push_str(&format!("  PDF/A: {pdfa}/{docs} tệp · đã ký số: {signed}/{docs} tệp · tổng {pages} trang\n\n"));
+        s.push_str(&format!("  PDF/A: {pdfa}/{docs} tệp · đã ký số: {signed}/{docs} tệp · tổng {pages} trang\n"));
+        let kinds = r.pdfa_flavours.iter().map(|(k, v)| format!("{k}: {v}")).collect::<Vec<_>>().join(" · ");
+        s.push_str(&format!("  Theo loại tệp tự khai: {kinds}\n\n"));
     }
     let mut by: BTreeMap<(Severity, &str), (u32, u32, &str)> = BTreeMap::new();
     for i in &r.issues {

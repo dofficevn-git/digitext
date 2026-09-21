@@ -41,6 +41,7 @@ export interface ExtCheckSummary {
   pdfa: number | null;
   signed: number | null;
   pages: number | null;
+  pdfaFlavours: Record<string, number>;
   byCode: ExtCodeSummary[];
   issues: ExtIssue[];
   issuesTotal: number;
@@ -72,7 +73,7 @@ export interface ExtPackSummary {
 }
 
 export interface ExtProgress {
-  phase: "excel" | "check" | "precheck" | "pack";
+  phase: "excel" | "check" | "precheck" | "pack" | "pdfa";
   done: number;
   total: number;
   note: string | null;
@@ -98,4 +99,53 @@ export function extimportPack(args: {
 export async function onExtimportProgress(cb: (p: ExtProgress) => void): Promise<UnlistenFn> {
   if (!isTauri()) return () => {};
   return listen<ExtProgress>("extimport://progress", (e) => cb(e.payload));
+}
+
+// ---- Kiểm tra PDF/A cho tệp / thư mục bất kỳ ----
+
+export interface PdfaVera {
+  flavour: string;
+  compliant: boolean;
+  rules: string[];
+}
+
+export interface PdfaFileReport {
+  path: string;
+  name: string;
+  bytes: number;
+  pdfVersion: string;
+  declared: string | null;
+  hasXmp: boolean;
+  hasOutputIntent: boolean;
+  pages: number;
+  textPages: number;
+  minDpi: number | null;
+  minBitDepth: number | null;
+  signed: boolean;
+  producer: string | null;
+  verdict: string;
+  looksPdfa: boolean;
+  problems: string[];
+  verapdf: PdfaVera | null;
+  error: string | null;
+}
+
+export interface PdfaSummary {
+  total: number;
+  truncated: boolean;
+  verapdfUsed: boolean;
+  verapdfAvailable: boolean;
+  byKind: Record<string, number>;
+  ok: number;
+  notOk: number;
+  files: PdfaFileReport[];
+  reportFile: string | null;
+}
+
+export function pdfaCheck(args: { paths: string[]; useVerapdf: boolean }): Promise<PdfaSummary> {
+  return invoke<PdfaSummary>("pdfa_check", { args });
+}
+
+export function pdfaVerapdfAvailable(): Promise<boolean> {
+  return invoke<boolean>("pdfa_verapdf_available");
 }

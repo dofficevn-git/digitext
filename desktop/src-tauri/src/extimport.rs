@@ -8,7 +8,7 @@
 use crate::auth::AuthState;
 use crate::error::AppError;
 use digitext_core::Permission;
-use digitext_extimport::{check, excel, pack, report};
+use digitext_extimport::{check, excel, pack, pdfa, report};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -78,6 +78,8 @@ pub struct CheckSummary {
     pub pdfa: Option<u32>,
     pub signed: Option<u32>,
     pub pages: Option<u32>,
+    /// Số tệp theo loại PDF/A tự khai (chỉ khi mở từng PDF).
+    pub pdfa_flavours: BTreeMap<String, u32>,
     pub by_code: Vec<CodeSummary>,
     /// Tối đa 300 dòng đầu (lỗi trước) — bản đầy đủ nằm trong tệp CSV.
     pub issues: Vec<check::Issue>,
@@ -111,6 +113,7 @@ fn summarize(rep: &check::CheckReport, report_dir: &std::path::Path, files: Vec<
         pdfa: sum(|d| d.pdfa),
         signed: sum(|d| d.signed),
         pages: sum(|d| d.pages),
+        pdfa_flavours: rep.pdfa_flavours.clone(),
         by_code: by
             .into_iter()
             .map(|((severity, code), (count, ds, ex))| CodeSummary {
@@ -269,4 +272,89 @@ pub async fn extimport_pack(app: AppHandle, auth: State<'_, AuthState>, args: Pa
     })
     .await
     .map_err(|e| AppError::internal(format!("luồng đóng gói dừng bất thường: {e}")))?
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfaArgs {
+    /// Tệp PDF và/hoặc thư mục (quét đệ quy).
+    pub paths: Vec<String>,
+    /// Chạy thêm veraPDF (bộ kiểm chuẩn ISO 19005) — cần Docker trên máy này.
+    #[serde(default)]
+    pub use_verapdf: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfaSummary {
+    pub total: usize,
+    /// Bị cắt bớt vì vượt trần số tệp một lượt.
+    pub truncated: bool,
+    pub verapdf_used: bool,
+    pub verapdf_available: bool,
+    /// Loại → số tệp ("PDF/A-2B", "không khai PDF/A", "hỏng"…).
+    pub by_kind: BTreeMap<String, u32>,
+    pub ok: usize,
+    pub not_ok: usize,
+    /// Tối đa 500 dòng (tệp KHÔNG đạt xếp trước) — bản đầy đủ nằm trong CSV.
+    pub files: Vec<pdfa::PdfaReport>,
+    pub report_file: Option<String>,
+}
+
+const PDFA_MAX_FILES: usize = 5000;
+
+/// Có veraPDF trên máy này không — để giao diện bật/tắt ô chọn.
+#[tauri::command]
+pub async fn pdfa_verapdf_available() -> Result<bool, AppError> {
+    tauri::async_runtime::spawn_blocking(pdfa::verapdf_available)
+        .await
+        .map_err(|e| AppError::internal(e.to_string()))
+}
+
+/// Kiểm PDF/A cho tệp/thư mục bất kỳ: loại tự khai, dấu hiệu bắt buộc, tuỳ chọn veraPDF.
+#[tauri::command]
+pub async fn pdfa_check(app: AppHandle, auth: State<'_, AuthState>, args: PdfaArgs) -> Result<PdfaSummary, AppError> {
+    auth.require_perm(Permission::PackageView)?;
+    if args.paths.is_empty() {
+        return Err(AppError::validation("Chưa chọn tệp hoặc thư mục nào."));
+    }
+    let guard = BusyGuard::take()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let mut files = pdfa::collect(&args.paths, PDFA_MAX_FILES + 1);
+        let truncated = files.len() > PDFA_MAX_FILES;
+        files.truncate(PDFA_MAX_FILES);
+        if files.is_empty() {
+            return Err(AppError::validation("Không thấy tệp PDF nào trong lựa chọn."));
+        }
+        let available = pdfa::verapdf_available();
+        let use_vera = args.use_verapdf && available;
+        let app2 = app.clone();
+        let mut reports = pdfa::run(&files, use_vera, &move |done, total| {
+            if done == total || done % 10 == 0 {
+                let _ = app2.emit(EV_PROGRESS, Progress { phase: "pdfa", done, total, note: None });
+            }
+        });
+        let mut by_kind: BTreeMap<String, u32> = BTreeMap::new();
+        for r in &reports {
+            let k = if r.error.is_some() { "hỏng / không đọc được".to_string() } else { r.declared.clone().unwrap_or_else(|| "không khai PDF/A".into()) };
+            *by_kind.entry(k).or_default() += 1;
+        }
+        let ok = reports.iter().filter(|r| r.looks_pdfa).count();
+        let not_ok = reports.len() - ok;
+        // Báo cáo CSV cạnh lựa chọn đầu tiên.
+        let first = std::path::Path::new(&args.paths[0]);
+        let dir = if first.is_dir() { first.to_path_buf() } else { first.parent().map(|p| p.to_path_buf()).unwrap_or_default() };
+        let report_file = pdfa::write_csv(&reports, &dir.join("_digitext_kiem_tra_pdfa.csv")).ok();
+        reports.sort_by_key(|r| (r.looks_pdfa, r.path.clone()));
+        let total = reports.len();
+        reports.truncate(500);
+        tracing::info!(total, ok, not_ok, verapdf = use_vera, "pdfa_check");
+        Ok(PdfaSummary {
+            total, truncated, verapdf_used: use_vera, verapdf_available: available, by_kind, ok, not_ok,
+            files: reports, report_file,
+        })
+    })
+    .await
+    .map_err(|e| AppError::internal(format!("luồng kiểm PDF/A dừng bất thường: {e}")))?
 }

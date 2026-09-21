@@ -115,6 +115,8 @@ fn main() {
             packaging::package_download,
             extimport::extimport_check,
             extimport::extimport_pack,
+            extimport::pdfa_check,
+            extimport::pdfa_verapdf_available,
             submission::submissions_list,
             submission::submission_get,
             submission::submission_register,

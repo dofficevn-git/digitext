@@ -21,6 +21,7 @@ const PHASE_LABEL: Record<ExtProgress["phase"], string> = {
   check: "Đang kiểm tra",
   precheck: "Kiểm tra trước khi đóng gói",
   pack: "Đang đóng gói",
+  pdfa: "Đang kiểm PDF/A",
 };
 
 function gb(n: number): string {
@@ -172,6 +173,9 @@ export default function ExternalImportPanel() {
             {check.deep && check.pdfa != null
               ? ` · PDF/A ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)}/${fmt(check.rows)} · ${fmt(check.pages ?? 0)} trang`
               : " · (chưa mở từng PDF)"}
+            {check.deep && Object.keys(check.pdfaFlavours ?? {}).length > 0
+              ? ` · Loại tệp: ${Object.entries(check.pdfaFlavours).map(([k, v]) => `${k} ${fmt(v)}`).join(", ")}`
+              : ""}
           </div>
           {check.byCode.length > 0 && (
             <div className="tbl-scroll mt-2.5">

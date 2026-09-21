@@ -98,6 +98,8 @@ pub struct CheckReport {
     pub dossiers: Vec<DossierSummary>,
     pub issues: Vec<Issue>,
     pub column_mapping: Vec<(String, String)>,
+    /// Chỉ có khi kiểm sâu: số tệp theo loại PDF/A tự khai.
+    pub pdfa_flavours: BTreeMap<String, u32>,
 }
 impl CheckReport {
     pub fn errors(&self) -> u32 {
@@ -300,6 +302,8 @@ pub struct PdfFacts {
     pub min_dpi: Option<u32>,
     pub min_bit_depth: Option<u32>,
     pub pdfa: bool,
+    /// Loại PDF/A tệp tự khai ("PDF/A-2B"…), `None` = không khai.
+    pub declared: Option<String>,
     pub signed: bool,
     pub encrypted_or_broken: Option<String>,
 }
@@ -337,7 +341,8 @@ pub fn inspect_pdf(bytes: &[u8]) -> PdfFacts {
         f.encrypted_or_broken = Some("không phải tệp PDF (thiếu đầu %PDF)".into());
         return f;
     }
-    f.pdfa = contains(bytes, b"pdfaid:part");
+    f.declared = crate::pdfa::declared_flavour(bytes);
+    f.pdfa = f.declared.is_some();
     f.signed = contains(bytes, b"/ByteRange");
     let r = digitext_pdf::f_2p9(bytes, None);
     f.pages = r.pages as u32;
@@ -355,6 +360,8 @@ struct Deep {
     pdfa: u32,
     signed: u32,
     pages: u32,
+    /// Đếm theo loại tệp tự khai; khoá "không khai PDF/A" cho tệp không có pdfaid.
+    flavours: BTreeMap<String, u32>,
 }
 
 fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>, deep: bool, tt05_strict: bool, sink: &mut Sink) -> (u64, Option<Deep>) {
@@ -520,6 +527,7 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
                     }
                     deep_acc.pages += f.pages;
                     deep_acc.pdfa += f.pdfa as u32;
+                    *deep_acc.flavours.entry(f.declared.clone().unwrap_or_else(|| "không khai PDF/A".into())).or_default() += 1;
                     deep_acc.signed += f.signed as u32;
                     if let Some(p) = pages_xl {
                         if p != f.pages {
@@ -648,7 +656,13 @@ pub fn run(
     let mut results = results.into_inner().unwrap();
     results.sort_by_key(|r| r.0);
     let mut per: Vec<(u64, Option<Deep>)> = Vec::with_capacity(total);
+    let mut pdfa_flavours: BTreeMap<String, u32> = BTreeMap::new();
     for (_, bytes, dp, local) in results {
+        if let Some(d) = &dp {
+            for (k, v) in &d.flavours {
+                *pdfa_flavours.entry(k.clone()).or_default() += v;
+            }
+        }
         sink.merge(local);
         per.push((bytes, dp));
     }
@@ -695,6 +709,7 @@ pub fn run(
         dossiers,
         issues,
         column_mapping: sheet.mapping.clone(),
+        pdfa_flavours,
     }
 }
 
