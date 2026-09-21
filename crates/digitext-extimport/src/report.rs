@@ -95,7 +95,7 @@ pub fn write_check(r: &CheckReport, out_dir: &Path) -> Result<Vec<PathBuf>, Stri
 pub fn pack_summary(results: &[PackResult]) -> String {
     let n = |st: &str| results.iter().filter(|r| r.status == st).count();
     let bytes: u64 = results.iter().filter(|r| r.status == "built").filter_map(|r| r.zip_size).sum();
-    let not_pdfa: u32 = results.iter().map(|r| r.not_pdfa).sum();
+    let not_pdfa: u32 = results.iter().filter(|r| r.status == "built").map(|r| r.not_pdfa).sum();
     let mut s = format!(
         "ĐÓNG GÓI — {}\n  Dựng mới: {} gói ({:.1} GB) · đã có từ trước: {} · giữ lại vì lỗi bước kiểm: {} · dựng hỏng: {}\n",
         chrono::Local::now().format("%d/%m/%Y %H:%M"), n("built"), bytes as f64 / 1e9, n("skipped_existing"),
