@@ -23,6 +23,7 @@ digitext-storage = { path = "../digitext-storage" }
 digitext-token-signpdf = { path = "../digitext-token-signpdf" }
 digitext-wipe = { path = "../digitext-wipe" }
 digitext-package = { path = "../digitext-package" }
+digitext-extimport = { path = "../digitext-extimport" }
 chrono = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }

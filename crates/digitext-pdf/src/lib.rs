@@ -434,10 +434,38 @@ fn page_w_pt(page: &lopdf::Dictionary, r_4ah: &Document) -> Option<f32> {
     }
     Some(r_4al(&r_4af[2])? - r_4al(&r_4af[0])?)
 }
+/// Dò thô lớp chữ khi bộ phân tích toán tử không đọc nổi luồng nội dung. Gặp thật (21/9/2026,
+/// 28.793 tệp của một kho quét bằng máy Canon): trang có NHIỀU luồng nội dung, luồng đầu chỉ là
+/// dòng chú thích `% CANON_PFINF_TYPE0_TEXTON` — lopdf ghép các luồng rồi phân tích hỏng, khiến
+/// trang có lớp chữ ẩn (`3 Tr … <6E3F> Tj`) bị coi là KHÔNG có chữ. Ở đây chỉ cần biết có toán tử
+/// vẽ chữ mang chuỗi khác rỗng nằm sau `BT` hay không.
+fn raw_has_text(doc: &Document, page: lopdf::ObjectId) -> bool {
+    for id in doc.get_page_contents(page) {
+        let Ok(Object::Stream(st)) = doc.get_object(id) else { continue };
+        let bytes = st.decompressed_content().unwrap_or_else(|_| st.content.clone());
+        let Some(bt) = bytes.windows(2).position(|w| w == b"BT") else { continue };
+        let body = &bytes[bt..];
+        let shows = |op: &[u8]| {
+            body.windows(op.len() + 1).enumerate().any(|(i, w)| {
+                &w[1..] == op
+                    && matches!(w[0], b' ' | b'\n' | b'\r' | b'>' | b')' | b']')
+                    && body.get(i + 1 + op.len()).map_or(true, |c| c.is_ascii_whitespace())
+            })
+        };
+        let has_string = body.windows(2).any(|w| (w[0] == b'<' && w[1].is_ascii_hexdigit()) || (w[0] == b'(' && w[1] != b')'));
+        if has_string && (shows(b"Tj") || shows(b"TJ")) {
+            return true;
+        }
+    }
+    false
+}
 fn f_1xp(r_4ao: &Document, r_4as: lopdf::ObjectId) -> bool {
     let Ok(content) = r_4ao.get_and_decode_page_content(r_4as) else {
-        return false;
+        return raw_has_text(r_4ao, r_4as);
     };
+    f_1xp_ops(&content) || raw_has_text(r_4ao, r_4as)
+}
+fn f_1xp_ops(content: &lopdf::content::Content) -> bool {
     content
         .operations
         .iter()

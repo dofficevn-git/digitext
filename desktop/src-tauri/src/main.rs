@@ -23,6 +23,7 @@ mod lan_session;
 mod live;
 mod ocr;
 mod packaging;
+mod extimport;
 mod records;
 mod report;
 mod scanner;
@@ -112,6 +113,8 @@ fn main() {
             packaging::packages_list,
             packaging::package_create,
             packaging::package_download,
+            extimport::extimport_check,
+            extimport::extimport_pack,
             submission::submissions_list,
             submission::submission_get,
             submission::submission_register,

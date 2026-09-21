@@ -1,0 +1,17 @@
+[package]
+name = "digitext-extimport"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Nhập KHO TÀI LIỆU TỪ BÊN NGOÀI (thư mục PDF đã quét + một tệp Excel metadata phẳng) →
+# đối chiếu thư mục với Excel → đóng gói TT05 theo từng hồ sơ. Không cần Postgres/MinIO.
+
+[dependencies]
+calamine = { version = "0.26", features = ["dates"] }
+chrono = { workspace = true }
+digitext-package = { path = "../digitext-package" }
+digitext-pdf = { path = "../digitext-pdf" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }

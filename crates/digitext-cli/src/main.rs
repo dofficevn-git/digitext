@@ -20,6 +20,7 @@ fn main() -> ExitCode {
         Route::Sign => digitext_token_signpdf::cli_main("digitext sign", r_1wk),
         Route::Wipe => digitext_cli::wipe::cli_main("digitext wipe", r_1wk),
         Route::Tt02 => digitext_cli::tt02::cli_main("digitext tt02", r_1wk),
+        Route::ExtImport => digitext_extimport::cli::cli_main("digitext ext-import", r_1wk),
         Route::Unknown(cmd) => {
             eprintln!("lệnh không rõ: {cmd}\n");
             eprint!("{}", help_text());

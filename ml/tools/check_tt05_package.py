@@ -118,6 +118,12 @@ def check_codes(name: str, f: dict[str, list[str]]) -> None:
 
 
 def main() -> int:
+    # Console Windows mặc định cp1252 → in tiếng Việt/ký hiệu ─ ✓ ✗ là nổ UnicodeEncodeError.
+    for _st in (sys.stdout, sys.stderr):
+        try:
+            _st.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001
+            pass
     src = sys.argv[1]
     tmp = None
     if os.path.isfile(src):
