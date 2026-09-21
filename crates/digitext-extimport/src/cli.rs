@@ -14,6 +14,9 @@ fn usage(prog: &str) -> String {
 Đưa kho tài liệu ĐÃ QUÉT TỪ BÊN NGOÀI (thư mục Phông/Hộp/Hồ sơ + một tệp Excel metadata,
 mỗi dòng một tài liệu) vào đóng gói TT 05/2025. Không cần máy chủ DigiText.
 
+pdfa    {prog} pdfa <tệp.pdf | thư mục>… [--verapdf] [--csv <tệp.csv>]
+        Cho biết từng tệp là loại PDF/A nào (PDF/A-1B, 2B…) hay không phải PDF/A, kèm lý do.
+        --verapdf  kiểm đúng chuẩn ISO 19005 bằng veraPDF (cần Docker).
 check   Đối chiếu thư mục với Excel, KHÔNG ghi gì vào kho. Báo cáo ra --report
         (mặc định <thư mục Excel>\\_digitext_kiem_tra): tom-tat-kiem-tra.txt,
         kiem-tra-ho-so.csv, kiem-tra-van-de.csv, kiem-tra.json.
@@ -119,6 +122,9 @@ pub fn cli_main(prog: &str, argv: &[String]) -> ExitCode {
         print!("{}", usage(prog));
         return if argv.is_empty() { ExitCode::from(2) } else { ExitCode::SUCCESS };
     }
+    if argv[0] == "pdfa" {
+        return pdfa_main(&argv[1..]);
+    }
     let a = match parse(argv) {
         Ok(a) => a,
         Err(e) => {
@@ -185,4 +191,44 @@ pub fn cli_main(prog: &str, argv: &[String]) -> ExitCode {
     }
     let bad = results.iter().any(|r| r.status == "failed" || r.status == "skipped_errors");
     if bad { ExitCode::from(1) } else { ExitCode::SUCCESS }
+}
+
+fn pdfa_main(argv: &[String]) -> ExitCode {
+    let mut paths = Vec::new();
+    let (mut vera, mut csv) = (false, None);
+    let mut it = argv.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--verapdf" => vera = true,
+            "--csv" => csv = it.next().cloned(),
+            p => paths.push(p.to_string()),
+        }
+    }
+    let files = crate::pdfa::collect(&paths, 100_000);
+    if files.is_empty() {
+        eprintln!("không thấy tệp PDF nào");
+        return ExitCode::from(2);
+    }
+    if vera && !crate::pdfa::verapdf_available() {
+        eprintln!("không chạy được veraPDF (Docker chưa bật hoặc chưa có image {}) — chỉ soi dấu hiệu", crate::pdfa::VERAPDF_IMAGE);
+        vera = false;
+    }
+    let reports = crate::pdfa::run(&files, vera, &|d, t| tick("kiểm PDF/A", d, t));
+    let mut kinds = std::collections::BTreeMap::<String, u32>::new();
+    for r in &reports {
+        *kinds.entry(r.declared.clone().unwrap_or_else(|| "không khai PDF/A".into())).or_default() += 1;
+        println!("{:42} {}", r.verdict, r.name);
+        for p in r.problems.iter().chain(r.verapdf.iter().flat_map(|v| v.rules.iter())) {
+            println!("      - {p}");
+        }
+    }
+    let ok = reports.iter().filter(|r| r.looks_pdfa).count();
+    println!("\nTỔNG {} tệp · đạt {} · không đạt {} · theo loại: {:?}", reports.len(), ok, reports.len() - ok, kinds);
+    if let Some(c) = csv {
+        match crate::pdfa::write_csv(&reports, std::path::Path::new(&c)) {
+            Ok(p) => println!("Bảng kết quả: {p}"),
+            Err(e) => eprintln!("{e}"),
+        }
+    }
+    if ok == reports.len() { ExitCode::SUCCESS } else { ExitCode::from(1) }
 }

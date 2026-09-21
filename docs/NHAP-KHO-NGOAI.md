@@ -78,6 +78,23 @@ Dữ liệu bẩn được hiểu giúp (không chặn): ngày lưu thành số 
 Lưu ý về PDF/A: bước kiểm nhận tệp **có khai** PDF/A trong XMP. Hợp chuẩn ISO 19005 đầy đủ
 kiểm bằng veraPDF (`dev/verapdf-gate.sh`) — nên chạy mẫu trước khi nộp.
 
+## 4b. Nút "Kiểm tra PDF/A" (tệp / thư mục bất kỳ)
+
+Màn **Đóng gói** → khối **Kiểm tra PDF/A**; dòng lệnh: `digitext ext-import pdfa <tệp|thư mục>… [--verapdf] [--csv out.csv]`.
+Cho biết từng tệp **là loại PDF/A nào** (PDF/A-1B, 2B, 3B… đọc từ `pdfaid` trong XMP, kể cả XMP nén)
+hay không phải PDF/A, kèm lý do; tích «veraPDF» (máy có Docker + image `verapdf/cli:v1.30.2`) thì
+kiểm đúng chuẩn ISO 19005 theo loại tệp tự khai (tệp không khai → kiểm theo 2b) và liệt kê luật vi phạm.
+Bảng đầy đủ ghi ra `_digitext_kiem_tra_pdfa.csv` cạnh lựa chọn. Trần 5.000 tệp/lượt trong app.
+
+**TT05 đòi loại nào?** Khoản 2 Điều 8 chỉ ghi *"định dạng PDF/A hai lớp"* — KHÔNG chỉ định phiên bản.
+Mọi loại PDF/A (1b, 2b, 3b…) đều thoả chữ nghĩa; DigiText tạo PDF/A-2B. "Bôi được chữ bằng Ctrl+A"
+chỉ chứng minh có LỚP CHỮ, không chứng minh là PDF/A; dải PDF/A của Foxit chỉ hiện khi bật
+Preferences → Documents → PDF/A View Mode.
+
+Kho Điền Xá (21/9): veraPDF trên 1 tệp/hồ sơ = 863 tệp → **0 đạt** cả 2b lẫn 1b; quét 34.354 tệp:
+0 tệp có `pdfaid`, 0 có khối XMP, 0 có `/OutputIntents`; 34.354 có chữ ký, 34.354 do iTextSharp tạo.
+Kết quả: `test/dienxa/vera-863/`.
+
 ## 5. Gói tin ra sao
 
 - Một gói / hồ sơ, tên `urn_<mã phông>_uuid_<UUID>.zip` (AIP) — bố cục METS / EAD / PREMIS /

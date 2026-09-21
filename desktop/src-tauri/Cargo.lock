@@ -1081,6 +1081,7 @@ dependencies = [
  "chrono",
  "digitext-package",
  "digitext-pdf",
+ "lopdf 0.43.0",
  "serde",
  "serde_json",
  "uuid",
