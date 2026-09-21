@@ -23,6 +23,7 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 
 - OCR tiếng Việt có dấu chạy GPU: khoảng **1 giây/trang**. Mô hình đã tinh chỉnh trên chính loại văn bản hành chính đang số hoá — độ chính xác lớp chữ in **≈ 98–99%**.
 - **Chữ viết tay**: dòng máy đọc kém tự động được mô hình AI đọc lại, có ngữ cảnh cả đoạn. Đủ để tìm kiếm theo nội dung; tên riêng/chữ số viết tay vẫn cần người soát.
+- **Không sót dòng**: ngoài mô hình phát hiện dòng, có lớp tách dòng theo nét mực bắt cả chữ viết tay nét mảnh; mỗi trang được đo **độ phủ mực** (bao nhiêu % nét mực đã nằm trong lớp chữ), trang dưới 90% tự vào hàng soát.
 - Đọc được cả tệp quét đen trắng/nén (CCITT, JBIG2), không chỉ JPEG.
 - **Chịu lỗi**: máy GPU tắt thì hàng đợi tự chờ, không hỏng việc; trang lỗi được đếm riêng và có nút **chạy lại**; tài liệu thiếu trang không bị coi là xong.
 

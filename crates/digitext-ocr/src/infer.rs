@@ -25,12 +25,25 @@ pub struct To6 {
     pub boxes: Vec<[f32; 4]>,
     pub texts: Vec<String>,
     pub confidences: Vec<f32>,
+    /// Độ phủ mực của tile (0..1): phần nét mực nằm trong một khung chữ. `None` khi engine
+    /// không đo (Triton, dịch vụ OCR bản cũ).
+    pub ink_coverage: Option<f32>,
+}
+/// Gộp độ phủ mực của nhiều tile/mảnh: lấy giá trị XẤU NHẤT (chốt "đã bắt hết chữ chưa"
+/// phải bi quan); mảnh không đo thì bỏ qua.
+pub fn min_ink_coverage(a: Option<f32>, b: Option<f32>) -> Option<f32> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x.min(y)),
+        (x, None) => x,
+        (None, y) => y,
+    }
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tgi {
     pub boxes: Vec<[f32; 4]>,
     pub texts: Vec<String>,
     pub confidences: Vec<f32>,
+    pub ink_coverage: Option<f32>,
 }
 impl Tgi {
     pub fn mean_confidence(&self) -> Option<f32> {
@@ -147,7 +160,9 @@ pub fn f_1si(r_3ap: &[(u32, u32, To6)]) -> Tgi {
     let mut boxes = Vec::new();
     let mut texts = Vec::new();
     let mut confidences = Vec::new();
+    let mut ink_coverage: Option<f32> = None;
     for (r_3al, r_3am, r_3aj) in r_3ap {
+        ink_coverage = min_ink_coverage(ink_coverage, r_3aj.ink_coverage);
         let (r_3ah, r_3ai) = (*r_3al as f32, *r_3am as f32);
         for b in &r_3aj.boxes {
             boxes.push([b[0] + r_3ah, b[1] + r_3ai, b[2] + r_3ah, b[3] + r_3ai]);
@@ -160,6 +175,7 @@ pub fn f_1si(r_3ap: &[(u32, u32, To6)]) -> Tgi {
             boxes,
             texts,
             confidences,
+            ink_coverage,
         };
     }
     let r_3ao: Vec<Span> = boxes
@@ -181,6 +197,7 @@ pub fn f_1si(r_3ap: &[(u32, u32, To6)]) -> Tgi {
         boxes,
         texts,
         confidences,
+        ink_coverage,
     }
 }
 /// Bọc các engine nhận dạng để chọn được lúc chạy.

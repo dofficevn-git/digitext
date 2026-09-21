@@ -9,6 +9,7 @@ pub const C_I4: &str = "page_failed";
 pub const C_I5: &str = "vlm_fallback";
 pub const C_I0: &str = "empty_page";
 pub const C_I6: &str = "vlm_primary";
+pub const REASON_LOW_INK_COVERAGE: &str = "low_ink_coverage";
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Tj7 {
     pub id: Uuid,

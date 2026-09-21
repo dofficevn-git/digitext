@@ -208,6 +208,7 @@ where
                 mean_confidence: page.mean_confidence(),
                 low_conf_ratio: page.low_conf_ratio(r_32p),
                 boxes: None,
+                ink_coverage: page.ink_coverage,
             },
         )
         .await?;

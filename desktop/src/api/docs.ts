@@ -176,6 +176,10 @@ export interface V4ey {
   pagesOcrRunning?: number;
 
   docsOcrFailed?: number;
+
+  pagesInkMeasured?: number;
+
+  pagesInkLow?: number;
   byStatus: Record<string, number>;
 }
 

@@ -156,6 +156,7 @@ fn f_1z5(r_38s: pb::ModelInferResponse) -> Result<To6, WorkerError> {
         boxes,
         texts,
         confidences,
+        ink_coverage: None,
     })
 }
 #[derive(Clone)]

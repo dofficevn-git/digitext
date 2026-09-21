@@ -45,6 +45,8 @@ function V4k4(p: V4ey): V4jt {
     docsFieldsFailed: p.docsFieldsFailed ?? 0,
     pagesOcrFailed: p.pagesOcrFailed ?? 0,
     docsOcrFailed: p.docsOcrFailed ?? 0,
+    pagesInkMeasured: p.pagesInkMeasured ?? 0,
+    pagesInkLow: p.pagesInkLow ?? 0,
   };
 }
 
@@ -382,6 +384,11 @@ export default function V4k5() {
             : ""}
           {view.pagesOcrFailed > 0
             ? ` · OCR lỗi ${fmtN(view.pagesOcrFailed)} trang / ${fmtN(view.docsOcrFailed)} tài liệu`
+            : ""}
+          {view.pagesInkMeasured > 0
+            ? view.pagesInkLow > 0
+              ? ` · còn sót chữ ${fmtN(view.pagesInkLow)}/${fmtN(view.pagesInkMeasured)} trang đã đo (đã đưa vào hàng soát)`
+              : ` · bắt đủ chữ ${fmtN(view.pagesInkMeasured)}/${fmtN(view.pagesInkMeasured)} trang đã đo`
             : ""}
           {}
           {V1ov.unknown > 0 && V4j3(flt) && (

@@ -1154,7 +1154,19 @@ pub struct ProgressDto {
     pub pages_ocr_queued: i64,
     pub pages_ocr_running: i64,
     pub docs_ocr_failed: i64,
+    /// Chốt "đã bắt hết chữ chưa": số trang dịch vụ OCR đã đo độ phủ mực, và số trang có độ
+    /// phủ dưới ngưỡng (còn chữ chưa có khung → chưa vào lớp text PDF/A).
+    pub pages_ink_measured: i64,
+    pub pages_ink_low: i64,
     pub by_status: std::collections::HashMap<String, i64>,
+}
+/// Cùng biến môi trường + mặc định với worker (`digitext-ocr/src/config.rs`).
+fn min_ink_coverage_threshold() -> f32 {
+    std::env::var("DIGITEXT_REVIEW_MIN_INK_COVERAGE")
+        .ok()
+        .and_then(|v| v.trim().parse::<f32>().ok())
+        .filter(|v| (0.0..=1.0).contains(v))
+        .unwrap_or(0.90)
 }
 async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<ProgressDto>, ApiError> {
     r_go.require_perm(Permission::DocumentList)?;
@@ -1166,6 +1178,12 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
     let pages_ocr_done = digitext_db::ocr_results::f_1y3(&state.pool, projects.as_deref()).await?;
     let r_gq = ocr_jobs::f_1ax(&state.pool, projects.as_deref()).await?;
     let r_gs = ocr_jobs::ocr_failed_counts(&state.pool, projects.as_deref()).await?;
+    let (pages_ink_measured, pages_ink_low) = digitext_db::ocr_results::ink_coverage_counts(
+        &state.pool,
+        projects.as_deref(),
+        min_ink_coverage_threshold(),
+    )
+    .await?;
     let mut r_gp = ProgressDto {
         docs: 0,
         pages_total: 0,
@@ -1181,6 +1199,8 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
         pages_ocr_queued: r_gs.pages_queued,
         pages_ocr_running: r_gs.pages_running,
         docs_ocr_failed: r_gs.docs_failed,
+        pages_ink_measured,
+        pages_ink_low,
         by_status: std::collections::HashMap::new(),
     };
     for (status, docs, pages) in counts {

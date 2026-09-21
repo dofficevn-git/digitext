@@ -335,12 +335,31 @@ def recognize(image_bgr: np.ndarray) -> dict:
     if hw.enabled and result["texts"]:
         from PIL import Image
         page = Image.fromarray(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
-        texts, confs, sources, _ = hw.refine(page, result["boxes"], result["texts"], result["confidences"])
+        force = {i for i, o in enumerate(result.get("origins", [])) if o == "ink"}
+        texts, confs, sources, _ = hw.refine(page, result["boxes"], result["texts"],
+                                             result["confidences"], force=force)
         result["texts"], result["confidences"], result["sources"] = texts, confs, sources
+    # Dòng "ink" mà cả VietOCR lẫn VLM đều không đọc ra chữ: bỏ ở MỌI mảng song song (lớp
+    # text PDF không nhận span rỗng), rồi đo LẠI độ phủ mực trên đúng các khung còn lại —
+    # con số trả về phải là thứ thật sự vào lớp text.
+    alive = [i for i, t in enumerate(result["texts"]) if t and t.strip()]
+    if len(alive) != len(result["texts"]):
+        for k in ("boxes", "texts", "confidences", "origins", "sources"):
+            if k in result:
+                result[k] = [result[k][i] for i in alive]
+        if "ink_added" in result:
+            result["ink_added"] = sum(1 for o in result.get("origins", []) if o == "ink")
+    mask = result.pop("_ink_mask", None)
+    if mask is not None:
+        import inklines
+        result["ink_coverage"] = round(inklines.coverage(mask, result["boxes"]), 4)
     if _env_flag("OCR_LOG_TIMING", "true"):
         h, w = image_bgr.shape[:2]
         print(f"⏱ tile {w}x{h} · dòng={len(result['texts'])} · det={det_ms:.0f}ms · "
-              f"tổng={total_ms:.0f}ms · chờ={waited_ms:.0f}ms", flush=True)
+              f"tổng={total_ms:.0f}ms · chờ={waited_ms:.0f}ms"
+              + (f" · phủ mực {result['ink_coverage_before']:.0%}→{result['ink_coverage']:.0%}"
+                 f" (+{result.get('ink_added', 0)} dòng)" if "ink_coverage" in result else ""),
+              flush=True)
     return result
 
 
@@ -382,9 +401,76 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
     # Số dòng mỗi trang là do TÀI LIỆU quyết định, không phải ta — nên không
     # được để nó điều khiển lượng bộ nhớ dùng. Mẻ cố định thì đỉnh bộ nhớ có
     # trần, bất kể trang dày bao nhiêu.
+    texts, probs = _rec_texts(rec, crops)
+
+    def _conf(prob) -> float:
+        # Chỉ rơi vào 0.9 khi bản VietOCR này không trả nổi xác suất — lúc đó
+        # tín hiệu low_conf_ratio coi như mất, ghi log một lần để biết.
+        if prob is None:
+            _warn_no_prob()
+            return 0.9
+        return max(0.0, min(1.0, float(prob)))
+
+    # Mỗi span PHẢI là một dòng đơn — ký tự xuống dòng làm hỏng phép giãn
+    # ngang Tz khi dựng lớp text vô hình.
+    lines = []  # (box, text, conf, origin)
+    for q, text, prob in zip(keep, texts, probs):
+        box = quad_to_aabb(q)
+        if box[2] <= box[0] or box[3] <= box[1]:
+            continue
+        text = " ".join(str(text).split())
+        lines.append((box, text, _conf(prob) if text else 0.0, "det"))
+
+    # LƯỚI AN TOÀN theo nét mực: DBNet sót chữ viết tay → sinh khung cho phần mực chưa có
+    # khung, thay các mẩu vụn tin cậy thấp bằng khung cả dòng. Xem ocr/inklines.py.
+    ink = None
+    import inklines
+    if inklines.enabled():
+        try:
+            ink = inklines.complete(image_bgr, [l[0] for l in lines], [l[2] for l in lines])
+        except Exception as e:  # noqa: BLE001 — lưới an toàn không được làm hỏng OCR
+            print(f"⚠  tách dòng theo nét mực lỗi, bỏ qua: {e}", flush=True)
+    if ink and ink["new"]:
+        new_crops, new_boxes = [], []
+        for b in ink["new"]:
+            x1, y1, x2, y2 = (float(v) for v in b)
+            patch = warp_crop(image_bgr, [[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
+            if patch is None:
+                continue
+            new_crops.append(Image.fromarray(cv2.cvtColor(patch, cv2.COLOR_BGR2RGB)))
+            new_boxes.append([x1, y1, x2, y2])
+        n_texts, n_probs = _rec_texts(rec, new_crops)
+        lines = [l for i, l in enumerate(lines) if i not in ink["drop"]]
+        for b, text, prob in zip(new_boxes, n_texts, n_probs):
+            text = " ".join(str(text).split())
+            # Trần 0,5: khung này sinh ra vì DBNet KHÔNG nhận ra chữ ở đó (gần như chắc chắn
+            # chữ tay) — luôn đưa sang lớp chữ viết tay, luôn vào diện cần soát.
+            lines.append((b, text, min(_conf(prob), 0.5) if text else 0.0, "ink"))
+
+    # Dòng DBNet rỗng chữ thì bỏ như trước; dòng "ink" rỗng được GIỮ tới sau lớp chữ viết
+    # tay (VLM có thể đọc được) — recognize() sẽ lọc nếu vẫn rỗng.
+    lines = [l for l in lines if l[1] or l[3] == "ink"]
+    order = inklines.reading_order([l[0] for l in lines])
+    lines = [lines[i] for i in order]
+    result = {
+        "boxes": [l[0] for l in lines],
+        "texts": [l[1] for l in lines],
+        "confidences": [l[2] for l in lines],
+        "origins": [l[3] for l in lines],
+    }
+    if ink:
+        result["ink_coverage_before"] = round(ink["before"], 4)
+        result["ink_coverage"] = round(ink["after"], 4)
+        result["ink_added"] = sum(1 for l in lines if l[3] == "ink")
+        result["_ink_mask"] = ink["mask"]
+    return result, det_ms
+
+
+def _rec_texts(rec, crops: list) -> tuple[list, list]:
+    """VietOCR theo MẺ cố định (xem chú thích CHIA MẺ ở trên). Trả (texts, probs)."""
     batch = max(1, int(os.getenv("OCR_REC_BATCH", "8")))
+    texts, probs = [], []
     try:
-        texts, probs = [], []
         for i in range(0, len(crops), batch):
             chunk = crops[i:i + batch]
             done = False
@@ -409,31 +495,4 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
             _release_cuda()
             raise OcrOutOfMemory(str(e)) from e
         raise
-
-    boxes: list[list[float]] = []
-    out_texts: list[str] = []
-    confidences: list[float] = []
-    kept_crops: list = []
-
-    for q, text, prob, crop in zip(keep, texts, probs, crops):
-        # Mỗi span PHẢI là một dòng đơn — ký tự xuống dòng làm hỏng phép giãn
-        # ngang Tz khi dựng lớp text vô hình.
-        text = " ".join(str(text).split())
-        if not text:
-            continue  # bỏ đồng thời ở CẢ BA mảng, giữ bất biến độ dài
-        box = quad_to_aabb(q)
-        if box[2] <= box[0] or box[3] <= box[1]:
-            continue
-        boxes.append(box)
-        out_texts.append(text)
-        kept_crops.append(crop)
-        # Chỉ rơi vào 0.9 khi bản VietOCR này không trả nổi xác suất — lúc đó
-        # tín hiệu low_conf_ratio coi như mất, ghi log một lần để biết.
-        if prob is None:
-            _warn_no_prob()
-            confidences.append(0.9)
-        else:
-            confidences.append(max(0.0, min(1.0, float(prob))))
-
-    assert len(boxes) == len(out_texts) == len(confidences) == len(kept_crops)
-    return {"boxes": boxes, "texts": out_texts, "confidences": confidences}, det_ms
+    return texts, probs

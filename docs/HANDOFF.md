@@ -228,6 +228,45 @@ lại → `dịch vụ OCR đã trở lại` trong ≤ 30 s và job chạy tiế
 
 ---
 
+## 2e. Bắt HẾT dòng chữ: lưới an toàn theo nét mực + độ phủ mực (21/9)
+
+**Vấn đề.** DBNet (PaddleOCR, học trên chữ in) chỉ bắt từng mẩu của dòng viết tay, có dòng
+mất hẳn → chữ không có khung thì không vào lớp text PDF/A, VLM đọc đúng cũng bị nhồi vào
+một khung ngắn. Đo trên `H05.13.24.01.2015.313.01.0000001` trang 1: chỉ 80% nét mực nằm
+trong khung. Chỉnh `det_limit_side_len`/ngưỡng DBNet chỉ sinh khung vụn, vẫn sót.
+
+**Đã làm.**
+- `ocr/inklines.py`: sau khi VietOCR đọc các khung DBNet, khung tin cậy ≥ 0,85 được tin;
+  mực còn lại (điểm tối hoặc mực xanh, trừ đỏ, trừ chấm dòng kẻ, trừ đường kẻ dài) được nối
+  ngang thành dòng → khung mới (`origins[i]="ink"`, độ tin cậy trần 0,5, LUÔN đưa sang
+  lớp chữ viết tay kể cả khi VietOCR trả rỗng). Mẩu DBNet tin cậy thấp bị khung mới phủ
+  ≥ 60% thì bỏ. Tắt: `OCR_INK_LINES=false`.
+- Dịch vụ trả thêm `ink_coverage` (đo lại SAU khi bỏ dòng rỗng), `ink_coverage_before`,
+  `ink_added`. Trang mẫu: 80% → 97%, mọi dòng tay có khung + chữ.
+- Worker: `To6/Tgi.ink_coverage` (gộp tile = giá trị xấu nhất) → cột
+  `ocr_results.ink_coverage` (migration `0004`, ĐÃ áp trên máy này). Trang dưới
+  `DIGITEXT_REVIEW_MIN_INK_COVERAGE` (mặc định 0,90) → `review_queue` lý do
+  `low_ink_coverage`. API `/documents/progress` thêm `pagesInkMeasured`, `pagesInkLow`;
+  desktop hiện "bắt đủ chữ N/N trang" / "còn sót chữ X/N trang".
+- Ngưỡng 0,90 vì phần mực không phủ ở trang "sạch" là dấu tích bút, đuôi chữ ký, vết mép
+  giấy (trang 2 của tài liệu mẫu: 91% mà không sót dòng nào).
+
+**Bẫy.**
+- Build dịch vụ OCR trên máy GPU PHẢI chồng file GPU, nếu không image rơi về torch CPU và
+  health báo "torch không thấy CUDA":
+  `docker compose -f docker-compose.yml -f docker-compose.gpu.yml build && … up -d`
+  (thư mục `~/Downloads/digitext-gpu-bundle/infra/compose/ocr`). Image trước thay đổi này:
+  `digitext-ocr:truoc-inklines-20260921`.
+- Build Rust khi dịch vụ Windows đang chạy: đổi tên exe đang chạy rồi build, sau đó
+  `dev\restart-services.ps1` (tự xin UAC). Lần build ngưỡng 0,90 UAC bị từ chối → tiến
+  trình đang chạy là bản ngưỡng 0,93; bản mới có hiệu lực khi chạy lại script/khởi động máy.
+- Dự án Bắc Ninh CHƯA chạy lại OCR hàng loạt (chỉ tài liệu mẫu `…313.01.0000001`); trang
+  OCR trước 21/9 có `ink_coverage` NULL = chưa đo.
+
+**Chưa làm (đề xuất bước 4–5).** Thay/tinh chỉnh bộ phát hiện cho chữ tay (PP-OCRv5 hoặc
+fine-tune DBNet bằng nhãn sinh từ `inklines`); VLM đọc nguyên trang có toạ độ cho trang
+vẫn rớt chốt. Độ CHÍNH XÁC chữ tay chưa cải thiện — dòng lẻ (không thuộc khối) VLM còn bịa.
+
 ## 3. Việc đang dở — làm tiếp từ đây
 
 ### 3.1 Đưa Vintern lên Alienware (dừng giữa chừng ở đúng đây)
@@ -373,10 +412,12 @@ chỉ để bắt hồi quy. Có người gõ thì thay bằng `golden.py build`
   công, và đó là tất cả những gì có.
 
 - **API + worker là dịch vụ Windows (từ 19/9/2026)**: Task Scheduler `DigiText-API`, `DigiText-Worker`
-  (SYSTEM, At startup) chạy `dev\service-supervisor.ps1` → binary `targetelease\*.exe`, log
+  (SYSTEM, At startup) chạy `dev\service-supervisor.ps1` → binary `target
+elease\*.exe`, log
   `logspi.log|worker.log|*.err.log`. Đăng ký/gỡ: `dev\install-services.ps1 [-Uninstall]` (admin).
   Sau khi `cargo build --release` phải restart task (`Restart: Stop-/Start-ScheduledTask`, admin).
-  KHÔNG chạy thêm `devun-*.ps1` song song (trùng cổng 8080/9095). Trước đó API/worker chạy trong
+  KHÔNG chạy thêm `dev
+un-*.ps1` song song (trùng cổng 8080/9095). Trước đó API/worker chạy trong
   phiên tay nên reboot là tắt — máy khác báo 502.
 - **Poppler bắt buộc trên máy worker**: PDF quét CCITT/JBIG2 (không phải JPEG) cần `pdftoppm`;
   `DIGITEXT_PDFTOPPM_BIN` trỏ đường dẫn tuyệt đối (winget `oschwartz10612.Poppler`). Thiếu → job

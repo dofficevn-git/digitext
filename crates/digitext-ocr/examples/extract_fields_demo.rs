@@ -27,6 +27,7 @@ fn main() {
         boxes: r_2zl,
         texts: r_2zv,
         confidences: r_2zm,
+        ink_coverage: None,
     };
     let r_2zo = extract_fields(&r_2zs);
     let r_2zr: Vec<Value> = r_2zo
