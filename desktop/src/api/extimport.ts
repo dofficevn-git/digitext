@@ -31,6 +31,7 @@ export interface ExtCheckSummary {
   root: string;
   sheet: string;
   deep: boolean;
+  verapdf: boolean;
   rows: number;
   filesOnDisk: number;
   dossiers: number;
@@ -79,7 +80,7 @@ export interface ExtProgress {
   note: string | null;
 }
 
-export function extimportCheck(args: { root: string; excel: string; deep: boolean }): Promise<ExtCheckSummary> {
+export function extimportCheck(args: { root: string; excel: string; deep: boolean; useVerapdf: boolean }): Promise<ExtCheckSummary> {
   return invoke<ExtCheckSummary>("extimport_check", { args });
 }
 
@@ -92,6 +93,7 @@ export function extimportPack(args: {
   orgCode: string | null;
   allowPartial: boolean;
   force: boolean;
+  useVerapdf: boolean;
 }): Promise<ExtPackSummary> {
   return invoke<ExtPackSummary>("extimport_pack", { args });
 }

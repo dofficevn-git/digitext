@@ -50,6 +50,9 @@ pub struct CheckArgs {
     pub excel: String,
     #[serde(default)]
     pub deep: bool,
+    /// Xác minh ISO 19005 bằng veraPDF theo đúng loại tệp tự khai (cần Docker).
+    #[serde(default)]
+    pub use_verapdf: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -68,6 +71,7 @@ pub struct CheckSummary {
     pub root: String,
     pub sheet: String,
     pub deep: bool,
+    pub verapdf: bool,
     pub rows: usize,
     pub files_on_disk: usize,
     pub dossiers: usize,
@@ -103,6 +107,7 @@ fn summarize(rep: &check::CheckReport, report_dir: &std::path::Path, files: Vec<
         root: rep.root.clone(),
         sheet: rep.sheet.clone(),
         deep: rep.deep,
+        verapdf: rep.verapdf,
         rows: rep.rows,
         files_on_disk: rep.files_on_disk,
         dossiers: rep.dossiers.len(),
@@ -154,7 +159,8 @@ fn run_check(app: &AppHandle, a: &CheckArgs, phase: &'static str) -> Result<(che
     let _ = app.emit(EV_PROGRESS, Progress { phase: "excel", done: 0, total: 0, note: None });
     let (sheet, plan) = load(&a.excel, &a.root)?;
     let app2 = app.clone();
-    let rep = check::run(&sheet, std::path::Path::new(&a.excel), &plan, a.deep, true, 4, &move |done, total| {
+    let vera = a.use_verapdf && pdfa::verapdf_available();
+    let rep = check::run(&sheet, std::path::Path::new(&a.excel), &plan, a.deep, true, vera, 4, &move |done, total| {
         if done == total || done % 5 == 0 {
             let _ = app2.emit(EV_PROGRESS, Progress { phase, done, total, note: None });
         }
@@ -195,6 +201,9 @@ pub struct PackArgs {
     pub allow_partial: bool,
     #[serde(default)]
     pub force: bool,
+    /// Trước khi dựng, xác minh ISO từng tệp bằng veraPDF (cần Docker).
+    #[serde(default)]
+    pub use_verapdf: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -232,7 +241,7 @@ pub async fn extimport_pack(app: AppHandle, auth: State<'_, AuthState>, args: Pa
         let out_dir = PathBuf::from(&args.out_dir);
         // Bước kiểm NHANH trên toàn kho (mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu/thừa tệp…).
         // Từng PDF được soi lại ngay trước khi dựng gói (số trang khớp Excel + Điều 8.2.a TT05).
-        let (plan, rep) = run_check(&app, &CheckArgs { root: args.root.clone(), excel: args.excel.clone(), deep: false }, "precheck")?;
+        let (plan, rep) = run_check(&app, &CheckArgs { root: args.root.clone(), excel: args.excel.clone(), deep: false, use_verapdf: false }, "precheck")?;
         let files = report::write_check(&rep, &out_dir).map_err(AppError::internal)?;
         let check_sum = summarize(&rep, &out_dir, files);
         let mut out = PackSummary {
@@ -246,6 +255,7 @@ pub async fn extimport_pack(app: AppHandle, auth: State<'_, AuthState>, args: Pa
         let opts = pack::PackOptions {
             kind: args.kind.clone(), org_code: args.org_code.clone().filter(|s| !s.trim().is_empty()), agreement,
             out_dir: out_dir.clone(), force: args.force, allow_partial: args.allow_partial, allow_non_tt05: false,
+            verapdf: args.use_verapdf && pdfa::verapdf_available(),
             threads: 2, only: Vec::new(), limit: None,
         };
         let app2 = app.clone();

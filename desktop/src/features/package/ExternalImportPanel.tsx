@@ -10,6 +10,7 @@ import {
   extimportCheck,
   extimportPack,
   onExtimportProgress,
+  pdfaVerapdfAvailable,
   type ExtCheckSummary,
   type ExtPackSummary,
   type ExtProgress,
@@ -39,6 +40,8 @@ export default function ExternalImportPanel() {
   const [agreement, setAgreement] = useState("");
   const [orgCode, setOrgCode] = useState("");
   const [deep, setDeep] = useState(true);
+  const [useVera, setUseVera] = useState(true);
+  const [veraOk, setVeraOk] = useState<boolean | null>(null);
   const [allowPartial, setAllowPartial] = useState(false);
   const [busy, setBusy] = useState<"" | "check" | "pack">("");
   const [progress, setProgress] = useState<ExtProgress | null>(null);
@@ -48,6 +51,7 @@ export default function ExternalImportPanel() {
   const [err, setErr] = useState("");
 
   useEffect(() => {
+    if (isTauri()) pdfaVerapdfAvailable().then(setVeraOk).catch(() => setVeraOk(false));
     let off: (() => void) | undefined;
     void onExtimportProgress((p) => {
       setProgress(p);
@@ -81,7 +85,7 @@ export default function ExternalImportPanel() {
     setBusy("check");
     setProgress(null);
     try {
-      setCheck(await extimportCheck({ root, excel, deep }));
+      setCheck(await extimportCheck({ root, excel, deep, useVerapdf: useVera && veraOk === true }));
     } catch (e) {
       setErr(String((e as { message?: string })?.message ?? e));
     } finally {
@@ -104,6 +108,7 @@ export default function ExternalImportPanel() {
         orgCode: orgCode.trim() || null,
         allowPartial,
         force: false,
+        useVerapdf: useVera && veraOk === true,
       });
       setPack(r);
       setCheck(r.check);
@@ -149,6 +154,16 @@ export default function ExternalImportPanel() {
           <input type="checkbox" checked={deep} onChange={(e) => setDeep(e.target.checked)} disabled={!!busy} />
           Mở từng PDF (số trang, PDF/A hai lớp, dpi, màu, chữ ký số — Điều 8 TT05). Kho lớn mất vài chục phút.
         </label>
+        <label className="flex items-center gap-1.5" title="Nhận mọi loại PDF/A theo ISO 19005 (1b, 2b, 2u, 3b, 3u…); veraPDF kiểm theo đúng loại tệp tự khai">
+          <input
+            type="checkbox"
+            checked={useVera && veraOk === true}
+            onChange={(e) => setUseVera(e.target.checked)}
+            disabled={!!busy || veraOk !== true}
+          />
+          Xác minh chuẩn ISO bằng veraPDF, ở bước kiểm và trước khi đóng gói
+          {veraOk === false ? " (máy này chưa có Docker)" : ""}. Kho lớn: vài giờ.
+        </label>
         <button className="btn primary" onClick={() => void runCheck()} disabled={!ready}>
           {busy === "check" ? "Đang kiểm tra…" : "③ Kiểm tra khớp với Excel"}
         </button>
@@ -171,7 +186,7 @@ export default function ExternalImportPanel() {
             {gb(check.bytes)} · <b>{fmt(check.dossiersOk)}</b> hồ sơ đạt ·{" "}
             <b>{fmt(check.dossiers - check.dossiersOk)}</b> hồ sơ có lỗi · {fmt(check.errors)} lỗi · {fmt(check.warnings)} cảnh báo
             {check.deep && check.pdfa != null
-              ? ` · PDF/A ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)}/${fmt(check.rows)} · ${fmt(check.pages ?? 0)} trang`
+              ? ` · PDF/A${check.verapdf ? " (đã xác minh veraPDF)" : ""} ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)}/${fmt(check.rows)} · ${fmt(check.pages ?? 0)} trang`
               : " · (chưa mở từng PDF)"}
             {check.deep && Object.keys(check.pdfaFlavours ?? {}).length > 0
               ? ` · Loại tệp: ${Object.entries(check.pdfaFlavours).map(([k, v]) => `${k} ${fmt(v)}`).join(", ")}`

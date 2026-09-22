@@ -93,6 +93,8 @@ pub struct CheckReport {
     pub header_line: u32,
     pub root: String,
     pub deep: bool,
+    /// Đã xác minh ISO bằng veraPDF.
+    pub verapdf: bool,
     pub rows: usize,
     pub files_on_disk: usize,
     pub dossiers: Vec<DossierSummary>,
@@ -301,9 +303,11 @@ pub struct PdfFacts {
     pub text_pages: u32,
     pub min_dpi: Option<u32>,
     pub min_bit_depth: Option<u32>,
+    /// Tệp tự khai một loại PDF/A hợp lệ (bất kỳ phiên bản/mức nào) VÀ có nhúng hồ sơ màu.
     pub pdfa: bool,
     /// Loại PDF/A tệp tự khai ("PDF/A-2B"…), `None` = không khai.
     pub declared: Option<String>,
+    pub has_output_intent: bool,
     pub signed: bool,
     pub encrypted_or_broken: Option<String>,
 }
@@ -313,12 +317,16 @@ fn contains(hay: &[u8], needle: &[u8]) -> bool {
 impl PdfFacts {
     /// Các điểm CHƯA ĐẠT Điều 8 khoản 2 điểm a TT 05/2025 (PDF/A hai lớp, màu ≥ 24 bit,
     /// ≥ 200 dpi, có chữ ký số). Trả (mã vấn đề, nội dung). Rỗng = đạt.
-    /// Lưu ý: "PDF/A" ở đây là tệp CÓ KHAI pdfaid trong XMP; hợp chuẩn ISO 19005 đầy đủ phải
-    /// kiểm bằng veraPDF (dev/verapdf-gate.sh).
+    /// TT05 không chỉ định phiên bản PDF/A → nhận MỌI loại ISO 19005 (1a/1b/2a/2b/2u/3a/3b/3u/4…).
+    /// Ở đây kiểm dấu hiệu cấu trúc (khai pdfaid + hồ sơ màu); hợp chuẩn ISO đầy đủ do veraPDF
+    /// kiểm theo đúng loại tệp tự khai (bật `verapdf` ở bước kiểm/đóng gói).
     pub fn tt05_failures(&self) -> Vec<(&'static str, String)> {
         let mut v = Vec::new();
-        if !self.pdfa {
-            v.push(("PDF-KHONG-PHAI-PDFA", "tệp KHÔNG phải PDF/A (thiếu pdfaid trong XMP) — TT05 Điều 8.2.a đòi PDF/A; chuyển đổi sau khi đã ký sẽ phá chữ ký, phải ký lại".to_string()));
+        match (&self.declared, crate::pdfa::is_known_flavour(&self.declared), self.has_output_intent) {
+            (None, _, _) => v.push(("PDF-KHONG-PHAI-PDFA", "tệp KHÔNG phải PDF/A (không khai pdfaid trong XMP) — TT05 Điều 8.2.a đòi PDF/A (bất kỳ phiên bản 1/2/3/4, mức a/b/u); chuyển đổi sau khi đã ký sẽ phá chữ ký, phải ký lại".to_string())),
+            (Some(d), false, _) => v.push(("PDF-LOAI-PDFA-LA", format!("tệp khai «{d}» không phải một loại PDF/A mà ISO 19005 định nghĩa"))),
+            (Some(d), true, false) => v.push(("PDF-THIEU-HO-SO-MAU", format!("tệp khai {d} nhưng không nhúng hồ sơ màu (OutputIntent) — vi phạm ISO 19005 mục 6.2.4.3"))),
+            _ => {}
         }
         if self.text_pages < self.pages {
             v.push(("PDF-THIEU-LOP-CHU", format!("{}/{} trang không có lớp chữ — TT05 Điều 8.2.a đòi PDF/A HAI LỚP", self.pages - self.text_pages, self.pages)));
@@ -342,7 +350,8 @@ pub fn inspect_pdf(bytes: &[u8]) -> PdfFacts {
         return f;
     }
     f.declared = crate::pdfa::declared_flavour(bytes);
-    f.pdfa = f.declared.is_some();
+    f.has_output_intent = contains(bytes, b"/OutputIntents");
+    f.pdfa = crate::pdfa::is_known_flavour(&f.declared) && f.has_output_intent;
     f.signed = contains(bytes, b"/ByteRange");
     let r = digitext_pdf::f_2p9(bytes, None);
     f.pages = r.pages as u32;
@@ -364,7 +373,7 @@ struct Deep {
     flavours: BTreeMap<String, u32>,
 }
 
-fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>, deep: bool, tt05_strict: bool, sink: &mut Sink) -> (u64, Option<Deep>) {
+fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>, deep: bool, tt05_strict: bool, verapdf: bool, sink: &mut Sink) -> (u64, Option<Deep>) {
     let first = d.first();
     let hs = d.hs_code();
     let dir = d.dir.as_str();
@@ -433,6 +442,8 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
     let mut seqs: BTreeMap<u32, u32> = BTreeMap::new();
     let mut deep_acc = Deep::default();
     let mut sum_pages_xl = 0u32;
+    // Tệp qua kiểm cấu trúc → đem xác minh ISO bằng veraPDF theo đúng loại tự khai (nếu bật).
+    let mut to_verify: Vec<(PathBuf, Option<String>, u32, String)> = Vec::new();
     for r in &d.rows {
         let Some(path) = r.doc_path.as_deref() else {
             sink.error("TL-THIEU-DUONG-DAN", dir, &hs, Some(r.line), None, "dòng không có «Tệp tin tài liệu»".into());
@@ -534,7 +545,11 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
                             sink.error("PDF-LECH-SO-TRANG", dir, &hs, Some(r.line), Some(&name), format!("Excel ghi {p} trang, PDF thật có {} trang", f.pages));
                         }
                     }
-                    for (code, msg) in f.tt05_failures() {
+                    let fails = f.tt05_failures();
+                    if verapdf && f.pdfa {
+                        to_verify.push((rel_to_path(root, real_rel), f.declared.clone(), r.line, name.clone()));
+                    }
+                    for (code, msg) in fails {
                         if tt05_strict {
                             sink.error(code, dir, &hs, Some(r.line), Some(&name), msg);
                         } else {
@@ -542,6 +557,19 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
                         }
                     }
                 }
+            }
+        }
+    }
+    if !to_verify.is_empty() {
+        let res = crate::pdfa::verify_files(&to_verify.iter().map(|(p, d, _, _)| (p.clone(), d.clone())).collect::<Vec<_>>());
+        for (p, declared, line, name) in &to_verify {
+            match res.get(p) {
+                Some(v) if v.compliant => {}
+                Some(v) => {
+                    let msg = format!("veraPDF: KHÔNG ĐẠT {} — {}", declared.clone().unwrap_or_default(), v.rules.iter().take(3).cloned().collect::<Vec<_>>().join(" | "));
+                    if tt05_strict { sink.error("PDF-KHONG-DAT-ISO", dir, &hs, Some(*line), Some(name), msg) } else { sink.warn("PDF-KHONG-DAT-ISO", dir, &hs, Some(*line), Some(name), msg) }
+                }
+                None => sink.warn("PDF-VERAPDF-KHONG-CHAY", dir, &hs, Some(*line), Some(name), "veraPDF không trả kết quả cho tệp này (Docker?) — chỉ mới kiểm dấu hiệu cấu trúc".into()),
             }
         }
     }
@@ -576,6 +604,7 @@ pub fn run(
     plan: &Plan,
     deep: bool,
     tt05_strict: bool,
+    verapdf: bool,
     threads: usize,
     progress: &(dyn Fn(usize, usize) + Sync),
 ) -> CheckReport {
@@ -647,7 +676,7 @@ pub fn run(
                     break;
                 }
                 let mut local = Sink::new();
-                let (bytes, dp) = check_dossier(&plan.dossiers[i], &plan.root, &disk, deep, tt05_strict, &mut local);
+                let (bytes, dp) = check_dossier(&plan.dossiers[i], &plan.root, &disk, deep, tt05_strict, verapdf && deep, &mut local);
                 results.lock().unwrap().push((i, bytes, dp, local));
                 progress(done.fetch_add(1, Ordering::Relaxed) + 1, total);
             });
@@ -704,6 +733,7 @@ pub fn run(
         header_line: sheet.header_line,
         root: plan.root.display().to_string(),
         deep,
+        verapdf: verapdf && deep,
         rows: sheet.rows.len(),
         files_on_disk: disk.len(),
         dossiers,

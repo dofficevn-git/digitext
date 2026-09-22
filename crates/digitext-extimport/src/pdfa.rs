@@ -218,7 +218,7 @@ fn attr<'a>(s: &'a str, key: &str) -> Option<&'a str> {
 }
 
 /// Chạy veraPDF cho các tệp CÙNG một thư mục, cùng một loại (flavour). Trả tên tệp → kết quả.
-fn verapdf_dir(dir: &Path, names: &[String], flavour: &str) -> BTreeMap<String, VeraResult> {
+pub fn verapdf_dir(dir: &Path, names: &[String], flavour: &str) -> BTreeMap<String, VeraResult> {
     let mut out = BTreeMap::new();
     let mut cmd = docker();
     cmd.args(["run", "--rm", "-v"]).arg(format!("{}:/data:ro", dir.display())).arg(VERAPDF_IMAGE).args(["-f", flavour, "--format", "xml"]);
@@ -247,13 +247,50 @@ fn verapdf_dir(dir: &Path, names: &[String], flavour: &str) -> BTreeMap<String, 
     out
 }
 
+/// Mọi phiên bản/mức PDF/A mà ISO 19005 định nghĩa — TT05 chỉ đòi "PDF/A hai lớp", không chỉ
+/// định phiên bản, nên loại nào trong danh sách này cũng được nhận.
+pub const KNOWN_FLAVOURS: &[&str] = &["1a", "1b", "2a", "2b", "2u", "3a", "3b", "3u", "4", "4e", "4f"];
+
+/// Tệp tự khai một loại PDF/A hợp lệ ("PDF/A-3U"…) không?
+pub fn is_known_flavour(declared: &Option<String>) -> bool {
+    declared
+        .as_deref()
+        .and_then(|d| d.strip_prefix("PDF/A-"))
+        .map(|s| KNOWN_FLAVOURS.contains(&s.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
+/// Xác minh ISO 19005 bằng veraPDF cho một danh sách tệp, MỖI TỆP THEO ĐÚNG LOẠI NÓ TỰ KHAI
+/// (tệp không khai → kiểm theo 2b, chắc chắn rớt). Gom theo thư mục + loại, 150 tệp/lượt.
+/// Trả đường dẫn → kết quả; tệp không có trong kết quả = veraPDF không chạy được.
+pub fn verify_files(files: &[(PathBuf, Option<String>)]) -> BTreeMap<PathBuf, VeraResult> {
+    let mut groups: BTreeMap<(PathBuf, String), Vec<&PathBuf>> = BTreeMap::new();
+    for (p, declared) in files {
+        let dir = p.parent().map(Path::to_path_buf).unwrap_or_default();
+        groups.entry((dir, flavour_for(declared))).or_default().push(p);
+    }
+    let mut out = BTreeMap::new();
+    for ((dir, flavour), paths) in groups {
+        for chunk in paths.chunks(150) {
+            let names: Vec<String> = chunk.iter().map(|p| p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default()).collect();
+            let res = verapdf_dir(&dir, &names, &flavour);
+            for (p, n) in chunk.iter().zip(&names) {
+                if let Some(v) = res.get(n) {
+                    out.insert((*p).clone(), v.clone());
+                }
+            }
+        }
+    }
+    out
+}
+
 /// "PDF/A-2B" → "2b". Tệp không khai → kiểm theo "2b" (loại DigiText và TT05 đang dùng).
-fn flavour_for(declared: &Option<String>) -> String {
+pub fn flavour_for(declared: &Option<String>) -> String {
     declared
         .as_deref()
         .and_then(|d| d.strip_prefix("PDF/A-"))
         .map(|s| s.to_lowercase())
-        .filter(|s| matches!(s.as_str(), "1a" | "1b" | "2a" | "2b" | "2u" | "3a" | "3b" | "3u" | "4" | "4e" | "4f"))
+        .filter(|s| KNOWN_FLAVOURS.contains(&s.as_str()))
         .unwrap_or_else(|| "2b".into())
 }
 
