@@ -75,8 +75,11 @@ không liên tục, tên tệp không có STT 7 số, thời hạn lưu trữ c�
 Dữ liệu bẩn được hiểu giúp (không chặn): ngày lưu thành số Excel (`39052` → `01/12/2006`),
 `9/7/2012` → `09/07/2012`, `2017-11-01` → `01/11/2017`, «Số lượng tờ» = `36 '` → 36.
 
-Lưu ý về PDF/A: bước kiểm nhận tệp **có khai** PDF/A trong XMP. Hợp chuẩn ISO 19005 đầy đủ
-kiểm bằng veraPDF (`dev/verapdf-gate.sh`) — nên chạy mẫu trước khi nộp.
+PDF/A: **nhận mọi loại theo ISO 19005** (1a/1b/2a/2b/2u/3a/3b/3u/4/4e/4f) vì TT05 chỉ đòi "PDF/A hai
+lớp". Kiểm cấu trúc (khai `pdfaid` + hồ sơ màu) luôn chạy; bật `--verapdf` / ô «Xác minh chuẩn ISO
+bằng veraPDF» thì từng tệp được veraPDF kiểm **theo đúng loại nó tự khai**, ở bước kiểm sâu và ngay
+trước khi dựng gói (mã lỗi `PDF-KHONG-DAT-ISO`, `PDF-THIEU-HO-SO-MAU`, `PDF-LOAI-PDFA-LA`). Cần Docker;
+kho lớn mất vài giờ. Đã thử (22/9): tệp PDF/A-2B của DigiText qua trọn bộ, chỉ vướng «chưa ký số».
 
 ## 4b. Nút "Kiểm tra PDF/A" (tệp / thư mục bất kỳ)
 

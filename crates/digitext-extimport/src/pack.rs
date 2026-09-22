@@ -33,6 +33,8 @@ pub struct PackOptions {
     /// CHỈ ĐỂ THỬ: vẫn đóng gói khi tệp chưa đạt Điều 8.2.a TT05 (không PDF/A, thiếu lớp
     /// chữ, dpi/màu thấp, chưa ký). Mặc định `false` — gói TT05 phải chuẩn.
     pub allow_non_tt05: bool,
+    /// Trước khi dựng, xác minh ISO 19005 từng tệp bằng veraPDF theo đúng loại tự khai (cần Docker).
+    pub verapdf: bool,
     pub threads: usize,
     /// Chỉ đóng các hồ sơ này (theo thư mục HOẶC mã hồ sơ); rỗng = tất cả.
     pub only: Vec<String>,
@@ -170,11 +172,15 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
     }
     // ---- đọc byte theo đúng thứ tự văn bản
     let mut bytes = Vec::with_capacity(d.rows.len());
+    let mut to_verify: Vec<(std::path::PathBuf, Option<String>)> = Vec::new();
     for r in &d.rows {
         let rel = r.doc_path.as_deref().unwrap_or("");
         match std::fs::read(rel_to_path(root, rel)) {
             Ok(b) => {
                 let f = inspect_pdf(&b);
+                if o.verapdf && !o.allow_non_tt05 {
+                    to_verify.push((rel_to_path(root, rel), f.declared.clone()));
+                }
                 if let Some(why) = f.encrypted_or_broken {
                     res.error = Some(format!("{rel}: {why}"));
                     return res;
@@ -198,6 +204,22 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
             Err(e) => {
                 res.error = Some(format!("không đọc được {rel}: {e}"));
                 return res;
+            }
+        }
+    }
+    if !to_verify.is_empty() {
+        let vera = crate::pdfa::verify_files(&to_verify);
+        for (p, declared) in &to_verify {
+            match vera.get(p) {
+                Some(v) if v.compliant => {}
+                Some(v) => {
+                    res.error = Some(format!("{}: veraPDF KHÔNG ĐẠT {} — {} — không đóng gói", p.display(), declared.clone().unwrap_or_default(), v.rules.first().cloned().unwrap_or_default()));
+                    return res;
+                }
+                None => {
+                    res.error = Some(format!("{}: veraPDF không chạy được (Docker chưa bật?) — bỏ tuỳ chọn veraPDF hoặc bật Docker", p.display()));
+                    return res;
+                }
             }
         }
     }

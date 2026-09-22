@@ -35,7 +35,10 @@ pack    Chạy lại bước kiểm, và CHỈ KHI KHÔNG CÒN LỖI NÀO mới 
         --allow-non-tt05           CHỈ ĐỂ THỬ: đóng cả tệp chưa đạt Điều 8.2.a TT05 (mặc định: tệp
                                    không PDF/A / thiếu lớp chữ / <200 dpi / <24 bit / chưa ký → TỪ CHỐI)
         --force                    dựng lại cả hồ sơ đã có gói
-Chung:  --threads <n>  số luồng (mặc định 4 cho check --deep, 2 cho pack)
+Chung:  --verapdf      xác minh ISO 19005 từng tệp bằng veraPDF THEO ĐÚNG LOẠI tệp tự khai (1b/2b/2u/3u…),
+                       ở bước kiểm (--deep) và ngay trước khi đóng gói. Cần Docker. Kho lớn: vài giờ.
+        --threads <n>  số luồng (mặc định 4 cho check --deep, 2 cho pack)
+Mọi loại PDF/A theo ISO 19005 (1a/1b/2a/2b/2u/3a/3b/3u/4/4e/4f) đều được nhận — TT05 chỉ đòi «PDF/A hai lớp».
 
 Mã thoát: 0 = không lỗi · 1 = có hồ sơ lỗi / gói hỏng · 2 = sai tham số hoặc không đọc được Excel.
 ")
@@ -54,6 +57,7 @@ struct Args {
     only: Vec<String>,
     limit: Option<usize>,
     allow_non_tt05: bool,
+    verapdf: bool,
     allow_partial: bool,
     force: bool,
     threads: Option<usize>,
@@ -67,7 +71,7 @@ fn parse(argv: &[String]) -> Result<Args, String> {
     let mut a = Args {
         cmd, root: PathBuf::new(), excel: PathBuf::new(), report: None, out: None, deep: false,
         kind: "aip_hoso".into(), agreement: None, org: None, only: Vec::new(), limit: None,
-        allow_non_tt05: false, allow_partial: false, force: false, threads: None,
+        allow_non_tt05: false, verapdf: false, allow_partial: false, force: false, threads: None,
     };
     let mut it = argv[1..].iter();
     while let Some(k) = it.next() {
@@ -85,6 +89,7 @@ fn parse(argv: &[String]) -> Result<Args, String> {
             "--threads" => a.threads = Some(val("--threads")?.parse().map_err(|_| "--threads phải là số")?),
             "--deep" => a.deep = true,
             "--allow-non-tt05" => a.allow_non_tt05 = true,
+            "--verapdf" => a.verapdf = true,
             "--allow-partial" => a.allow_partial = true,
             "--force" => a.force = true,
             other => return Err(format!("tham số không rõ: {other}")),
@@ -147,7 +152,12 @@ pub fn cli_main(prog: &str, argv: &[String]) -> ExitCode {
     let plan = check::plan(&sheet, &a.root);
     eprintln!("  {} dòng tài liệu · {} hồ sơ · gốc {}", sheet.rows.len(), plan.dossiers.len(), plan.root.display());
     let deep = a.deep && a.cmd == "check";
-    let rep = check::run(&sheet, &a.excel, &plan, deep, !a.allow_non_tt05, a.threads.unwrap_or(4), &|d, t| tick("kiểm", d, t));
+    let mut verapdf = a.verapdf;
+    if verapdf && !crate::pdfa::verapdf_available() {
+        eprintln!("veraPDF không chạy được (Docker chưa bật hoặc chưa có image {}) — bỏ qua xác minh ISO", crate::pdfa::VERAPDF_IMAGE);
+        verapdf = false;
+    }
+    let rep = check::run(&sheet, &a.excel, &plan, deep, !a.allow_non_tt05, verapdf, a.threads.unwrap_or(4), &|d, t| tick("kiểm", d, t));
     let report_dir = a.report.clone().unwrap_or_else(|| match (&a.cmd[..], &a.out) {
         ("pack", Some(o)) => o.clone(),
         _ => a.excel.parent().unwrap_or(&a.root).join("_digitext_kiem_tra"),
@@ -169,7 +179,7 @@ pub fn cli_main(prog: &str, argv: &[String]) -> ExitCode {
     }
     let opts = pack::PackOptions {
         kind: a.kind, org_code: a.org, agreement: a.agreement, out_dir: a.out.expect("đã kiểm"), force: a.force,
-        allow_non_tt05: a.allow_non_tt05, allow_partial: a.allow_partial, threads: a.threads.unwrap_or(2), only: a.only, limit: a.limit,
+        allow_non_tt05: a.allow_non_tt05, verapdf, allow_partial: a.allow_partial, threads: a.threads.unwrap_or(2), only: a.only, limit: a.limit,
     };
     println!("\nĐóng gói vào {} …", opts.out_dir.display());
     let results = match pack::run(&plan, &rep.packable(), &opts, &|d, t, r| {
