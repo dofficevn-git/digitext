@@ -100,6 +100,10 @@ pub struct DownloadArgs {
     /// `true` → tải bản PDF/A (lớp chữ) về `_pdfa/…` thay vì bản gốc về `_nhan_ve/…`.
     #[serde(default)]
     pub pdfa: bool,
+    /// Thư mục người dùng CHỌN để lưu (tuyệt đối). Có → lưu `<dest>/<rel_path>/<tên tệp>`,
+    /// không qua Kho `_nhan_ve`/`_pdfa`. Không có → như cũ (Kho trong Documents).
+    #[serde(default)]
+    pub dest_dir: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -795,7 +799,8 @@ fn f_179_in(r_1l3: &Path, bucket: &str, rel_path: Option<&str>, filename: &str) 
         .filter(|s| !s.is_empty() && *s != "." && *s != "..")
         .take(C_BN)
         .collect();
-    let r_1l2 = crate::storage::f_1jt(&r_1l3.join(bucket), &r_1l5, false);
+    let base = if bucket.is_empty() { r_1l3.to_path_buf() } else { r_1l3.join(bucket) };
+    let r_1l2 = crate::storage::f_1jt(&base, &r_1l5, false);
     let r_1l4 = Path::new(filename)
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
@@ -809,9 +814,23 @@ pub async fn docs_download(
     auth: State<'_, AuthState>,
     args: DownloadArgs,
 ) -> Result<String, AppError> {
-    let r_1l7 = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
-    let bucket = if args.pdfa { "_pdfa" } else { "_nhan_ve" };
-    let r_1l6 = f_179_in(&r_1l7, bucket, args.rel_path.as_deref(), &args.filename);
+    let r_1l6 = match args.dest_dir.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(dest) => {
+            let dest = Path::new(dest);
+            if !dest.is_absolute() {
+                return Err(AppError::validation("thư mục lưu phải là đường dẫn tuyệt đối"));
+            }
+            if !dest.is_dir() {
+                return Err(AppError::validation(format!("thư mục lưu không tồn tại: {}", dest.display())));
+            }
+            f_179_in(dest, "", args.rel_path.as_deref(), &args.filename)
+        }
+        None => {
+            let r_1l7 = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
+            let bucket = if args.pdfa { "_pdfa" } else { "_nhan_ve" };
+            f_179_in(&r_1l7, bucket, args.rel_path.as_deref(), &args.filename)
+        }
+    };
     let gate = std::sync::Mutex::new(crate::forward_progress::ProgressGate::new(u64::MAX));
     let id = args.id.clone();
     let n = f_174_variant(
