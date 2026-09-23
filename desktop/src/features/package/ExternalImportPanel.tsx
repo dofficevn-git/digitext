@@ -40,8 +40,28 @@ export default function ExternalImportPanel() {
   const [agreement, setAgreement] = useState("");
   const [orgCode, setOrgCode] = useState("");
   const [deep, setDeep] = useState(true);
-  const [useVera, setUseVera] = useState(true);
+  // "Dự án này có yêu cầu đạt chuẩn ISO 19005 không?" — quyết định theo từng dự án, nhớ theo
+  // tệp Excel. Mặc định KHÔNG: TT05 chỉ ghi "PDF/A hai lớp", không dẫn chiếu ISO.
+  const [useVera, setUseVeraState] = useState(false);
   const [veraOk, setVeraOk] = useState<boolean | null>(null);
+  const isoKey = (x: string) => `extimport.iso.${x.toLowerCase()}`;
+  const setUseVera = (v: boolean) => {
+    setUseVeraState(v);
+    try {
+      if (excel) localStorage.setItem(isoKey(excel), v ? "1" : "0");
+    } catch {
+      /* localStorage có thể bị chặn — chỉ là tiện ích nhớ lựa chọn */
+    }
+  };
+  useEffect(() => {
+    if (!excel) return;
+    try {
+      const v = localStorage.getItem(isoKey(excel));
+      if (v != null) setUseVeraState(v === "1");
+    } catch {
+      /* bỏ qua */
+    }
+  }, [excel]);
   const [allowPartial, setAllowPartial] = useState(false);
   const [busy, setBusy] = useState<"" | "check" | "pack">("");
   const [progress, setProgress] = useState<ExtProgress | null>(null);
@@ -154,15 +174,19 @@ export default function ExternalImportPanel() {
           <input type="checkbox" checked={deep} onChange={(e) => setDeep(e.target.checked)} disabled={!!busy} />
           Mở từng PDF (số trang, PDF/A hai lớp, dpi, màu, chữ ký số — Điều 8 TT05). Kho lớn mất vài chục phút.
         </label>
-        <label className="flex items-center gap-1.5" title="Nhận mọi loại PDF/A theo ISO 19005 (1b, 2b, 2u, 3b, 3u…); veraPDF kiểm theo đúng loại tệp tự khai">
+        <label
+          className="flex items-center gap-1.5"
+          title="Bật: từng tệp được veraPDF kiểm đúng chuẩn ISO 19005 theo loại nó tự khai (1b, 2b, 2u, 3b, 3u…), ở bước kiểm và ngay trước khi đóng gói; tệp không đạt là LỖI. Tắt: chỉ đòi tệp khai PDF/A và có hồ sơ màu (TT05 không dẫn chiếu ISO). Lựa chọn được nhớ theo tệp Excel."
+        >
           <input
             type="checkbox"
             checked={useVera && veraOk === true}
             onChange={(e) => setUseVera(e.target.checked)}
             disabled={!!busy || veraOk !== true}
           />
-          Xác minh chuẩn ISO bằng veraPDF, ở bước kiểm và trước khi đóng gói
-          {veraOk === false ? " (máy này chưa có Docker)" : ""}. Kho lớn: vài giờ.
+          <b>Dự án này yêu cầu đạt chuẩn ISO 19005</b> (kiểm bằng veraPDF, không đạt là lỗi)
+          {veraOk === false ? " — máy này chưa có Docker nên không bật được" : ""}
+          {veraOk === true ? ". Kho lớn: vài giờ." : ""}
         </label>
         <button className="btn primary" onClick={() => void runCheck()} disabled={!ready}>
           {busy === "check" ? "Đang kiểm tra…" : "③ Kiểm tra khớp với Excel"}
@@ -185,8 +209,9 @@ export default function ExternalImportPanel() {
             {fmt(check.rows)} dòng Excel · {fmt(check.filesOnDisk)} tệp PDF trên đĩa · {fmt(check.dossiers)} hồ sơ ·{" "}
             {gb(check.bytes)} · <b>{fmt(check.dossiersOk)}</b> hồ sơ đạt ·{" "}
             <b>{fmt(check.dossiers - check.dossiersOk)}</b> hồ sơ có lỗi · {fmt(check.errors)} lỗi · {fmt(check.warnings)} cảnh báo
+            {check.deep ? (check.verapdf ? " · ISO 19005: YÊU CẦU (đã xác minh veraPDF)" : " · ISO 19005: không yêu cầu") : ""}
             {check.deep && check.pdfa != null
-              ? ` · PDF/A${check.verapdf ? " (đã xác minh veraPDF)" : ""} ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)}/${fmt(check.rows)} · ${fmt(check.pages ?? 0)} trang`
+              ? ` · PDF/A ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)}/${fmt(check.rows)} · ${fmt(check.pages ?? 0)} trang`
               : " · (chưa mở từng PDF)"}
             {check.deep && Object.keys(check.pdfaFlavours ?? {}).length > 0
               ? ` · Loại tệp: ${Object.entries(check.pdfaFlavours).map(([k, v]) => `${k} ${fmt(v)}`).join(", ")}`

@@ -35,8 +35,9 @@ pack    Chạy lại bước kiểm, và CHỈ KHI KHÔNG CÒN LỖI NÀO mới 
         --allow-non-tt05           CHỈ ĐỂ THỬ: đóng cả tệp chưa đạt Điều 8.2.a TT05 (mặc định: tệp
                                    không PDF/A / thiếu lớp chữ / <200 dpi / <24 bit / chưa ký → TỪ CHỐI)
         --force                    dựng lại cả hồ sơ đã có gói
-Chung:  --verapdf      xác minh ISO 19005 từng tệp bằng veraPDF THEO ĐÚNG LOẠI tệp tự khai (1b/2b/2u/3u…),
-                       ở bước kiểm (--deep) và ngay trước khi đóng gói. Cần Docker. Kho lớn: vài giờ.
+Chung:  --verapdf      DỰ ÁN YÊU CẦU ĐẠT ISO 19005: xác minh từng tệp bằng veraPDF THEO ĐÚNG LOẠI tệp tự
+                       khai (1b/2b/2u/3u…), ở bước kiểm (--deep) và ngay trước khi đóng gói; không đạt = LỖI.
+                       Không có cờ này = không kiểm ISO (chỉ đòi khai PDF/A + hồ sơ màu). Cần Docker.
         --threads <n>  số luồng (mặc định 4 cho check --deep, 2 cho pack)
 Mọi loại PDF/A theo ISO 19005 (1a/1b/2a/2b/2u/3a/3b/3u/4/4e/4f) đều được nhận — TT05 chỉ đòi «PDF/A hai lớp».
 
