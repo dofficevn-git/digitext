@@ -270,6 +270,22 @@ function V4qo() {
   const [V2ea, V2eb] = useState<V4bm[]>([]);
 
   const [V2ec, V2ed] = useState(false);
+  // "Thêm xong đẩy lên luôn": bỏ bước ② thủ công. Nhớ lựa chọn trên máy này.
+  const [tuDongDay, setTuDongDayState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("upload.autoForward") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const setTuDongDay = (v: boolean) => {
+    setTuDongDayState(v);
+    try {
+      localStorage.setItem("upload.autoForward", v ? "1" : "0");
+    } catch {
+      /* chỉ là tiện ích nhớ */
+    }
+  };
   const [V2ee, V2ef] = useState<V4a9[]>([]);
   const [V2eg, V2eh] = useState("");
 
@@ -524,6 +540,19 @@ function V4qo() {
       });
       V2e0(V4ps(r));
       await V2ep();
+      // Thêm xong → đẩy lên máy chủ luôn (nếu bật và có bản mới). Lỗi mạng thì bản vẫn nằm
+      // trong kho gom, bấm "② Đẩy lên máy chủ" sau.
+      if (tuDongDay && r.added > 0 && !V2dg) {
+        V2dy("forward");
+        try {
+          V2e0(`${V4ps(r)} → đang đẩy lên máy chủ…`);
+          const f = await V2de();
+          V2e0(`${V4ps(r)} ${V4pu(f)}`);
+          await V2ep();
+        } catch (e) {
+          V2e0(`${V4ps(r)} — đẩy lên lỗi: ${V4ql(e)}. Bản vẫn ở kho gom, bấm “② Đẩy lên máy chủ” để gửi lại.`);
+        }
+      }
     } catch (V2fo) {
       V2e0(V4ql(V2fo));
     } finally {
@@ -762,6 +791,13 @@ function V4qo() {
                   ? "Chọn phông + hồ sơ theo danh mục rồi mới chọn tệp."
                   : `Sẽ lưu vào Kho: ${V2gaDest}`}
               </span>
+              <label
+                className="flex items-center gap-1.5 text-sm"
+                title="Bật: thêm xong là đẩy lên máy chủ ngay, không cần bấm ② nữa. Tệp vẫn được chép vào Kho máy này để nối lại khi đứt mạng."
+              >
+                <input type="checkbox" checked={tuDongDay} onChange={(e) => setTuDongDay(e.target.checked)} disabled={V2dx !== ""} />
+                Đẩy lên máy chủ ngay sau khi thêm
+              </label>
             </div>
             <div className="muted text-sm">
               Tệp được CHÉP vào Kho tài liệu rồi đi cùng một đường với dữ liệu thu thập từ nhân
