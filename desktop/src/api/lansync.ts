@@ -174,6 +174,17 @@ export function V43j(): Promise<number> {
   return invoke<number>("collected_retry_rejected");
 }
 
+export interface WipeCollectedResult {
+  rows: number;
+  filesRemoved: number;
+  filesMissing: number;
+  filesFailed: number;
+}
+/** Xoá SẠCH kho gom trên máy này: bản ghi + tệp trong Kho, kể cả bản đã đẩy. Không đụng máy chủ. */
+export function collectedWipeAll(): Promise<WipeCollectedResult> {
+  return invoke<WipeCollectedResult>("collected_wipe_all");
+}
+
 /** Xoá dấu lỗi của mọi bản chưa lên được máy chủ (giữ bản) — lần đẩy sau gửi lại từ đầu. */
 export function collectedClearErrors(): Promise<number> {
   return invoke<number>("collected_clear_errors");
