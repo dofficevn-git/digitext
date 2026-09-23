@@ -24,6 +24,7 @@ import { V4ak, type V4a9 } from "@/api/users";
 import {
   V43i,
   V43j,
+  collectedClearErrors,
   V431,
   V435,
   V436,
@@ -371,6 +372,24 @@ function V4qo() {
       await V2ep();
     } catch (V2f1) {
       V2e0(V4ql(V2f1));
+    } finally {
+      V2dy("");
+    }
+  };
+
+  const xoaLoi = async () => {
+    V2dy("retry");
+    V2e0("");
+    try {
+      const n = await collectedClearErrors();
+      V2e0(
+        n > 0
+          ? `Đã xoá dấu lỗi của ${fmtN(n)} bản. Bấm “② Đẩy lên máy chủ” để gửi lại từ đầu.`
+          : "Không có bản nào đang lỗi.",
+      );
+      await V2ep();
+    } catch (e) {
+      V2e0(V4ql(e));
     } finally {
       V2dy("");
     }
@@ -935,7 +954,7 @@ function V4qo() {
             </div>
           )}
 
-          {V2fx.length > 0 && <V4qp rows={V2fx} queued={V2dg} onResend={V2f4} />}
+          {V2fx.length > 0 && <V4qp rows={V2fx} queued={V2dg} onResend={V2f4} onClearAll={xoaLoi} />}
 
           {(V2g0 || V2fz.hiddenRows > 0 || V2fz.unmatched > 0 || V2fv) && (
             <p className="kg-note">
@@ -985,15 +1004,28 @@ function V4qp({
   rows: V2gm,
   queued: V2gn,
   onResend: V2go,
+  onClearAll,
 }: {
   rows: V43g[];
   queued: boolean;
   onResend: (V2gp: number, V2gq: string) => void;
+  onClearAll: () => void;
 }) {
   return (
     <details className="kg-errs" open>
       <summary>
-        <Icon name="canhBao" /> {fmtN(V2gm.length)} file lỗi — chưa lên được máy chủ
+        <Icon name="canhBao" /> {fmtN(V2gm.length)} file lỗi — chưa lên được máy chủ{" "}
+        <button
+          className="btn sm"
+          disabled={V2gn}
+          onClick={(e) => {
+            e.preventDefault();
+            onClearAll();
+          }}
+          title="Xoá dấu lỗi của tất cả các bản này (không xoá bản trong kho). Sau đó bấm “② Đẩy lên máy chủ” để gửi lại từ đầu."
+        >
+          <Icon name="lamMoi" /> Xoá lỗi, thử lại tất cả ({fmtN(V2gm.length)})
+        </button>
       </summary>
       <div className="tbl-scroll">
         <table className="tbl kg-errtbl">

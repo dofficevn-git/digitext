@@ -2602,6 +2602,18 @@ pub fn collected_list(
         rows,
     })
 }
+/// "Xoá lỗi, thử lại tất cả": bỏ dấu lỗi của mọi bản chưa lên được (giữ bản trong kho gom).
+#[tauri::command]
+pub fn collected_clear_errors(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+) -> Result<usize, AppError> {
+    auth.require(Perm::Admin)?;
+    let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+    let n = db::clear_forward_errors(&conn)?;
+    tracing::info!(cleared = n, "collected_clear_errors");
+    Ok(n)
+}
 #[tauri::command]
 pub fn collected_retry_rejected(
     db: State<'_, Db>,

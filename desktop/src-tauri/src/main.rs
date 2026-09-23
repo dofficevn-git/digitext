@@ -183,6 +183,7 @@ fn main() {
             collect::data_forward_cancel,
             collect::collected_list,
             collect::collected_retry_rejected,
+            collect::collected_clear_errors,
             collect::collect_add_files,
             scanner::list_scanners,
             scanner::start_scan_batch,

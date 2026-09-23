@@ -173,3 +173,8 @@ export function V43i(V7q?: number): Promise<V43h> {
 export function V43j(): Promise<number> {
   return invoke<number>("collected_retry_rejected");
 }
+
+/** Xoá dấu lỗi của mọi bản chưa lên được máy chủ (giữ bản) — lần đẩy sau gửi lại từ đầu. */
+export function collectedClearErrors(): Promise<number> {
+  return invoke<number>("collected_clear_errors");
+}
