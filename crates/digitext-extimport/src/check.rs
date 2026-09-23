@@ -457,7 +457,10 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
             }
         }
         if let Some(fc) = r.doc_file_code.as_deref() {
-            if !fc.eq_ignore_ascii_case(&name) {
+            // Excel có nơi ghi mã KHÔNG đuôi (.pdf) — so cả tên tệp lẫn phần trước đuôi.
+            let stem = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(&name);
+            let fc = fc.trim();
+            if !fc.eq_ignore_ascii_case(&name) && !fc.eq_ignore_ascii_case(stem) {
                 sink.error("TL-MA-LECH-TEN-TEP", dir, &hs, Some(r.line), Some(&name), format!("«Mã lưu trữ tài liệu» = «{fc}» khác tên tệp thật «{name}»"));
             }
         }
@@ -753,6 +756,16 @@ mod tests {
         assert_eq!(norm_date("12/14/20").1, false);
         assert_eq!(norm_date("2021").1, false);
         assert_eq!(norm_date("01/01/2017 - 31/12/2017").1, false);
+    }
+    #[test]
+    fn ma_luu_tru_khong_duoi_van_khop_ten_tep() {
+        let name = "H49.139.01.2011.599.0000001.pdf";
+        let stem = name.rsplit_once('.').map(|(s, _)| s).unwrap();
+        for fc in ["H49.139.01.2011.599.0000001", "H49.139.01.2011.599.0000001.pdf", "h49.139.01.2011.599.0000001.PDF "] {
+            let fc = fc.trim();
+            assert!(fc.eq_ignore_ascii_case(name) || fc.eq_ignore_ascii_case(stem), "{fc}");
+        }
+        assert!(!"H49.139.01.2011.600.0000001".eq_ignore_ascii_case(stem));
     }
     #[test]
     fn so_thu_tu_tu_ten_tep() {
