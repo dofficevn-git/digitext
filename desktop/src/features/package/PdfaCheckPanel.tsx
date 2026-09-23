@@ -157,7 +157,10 @@ export default function PdfaCheckPanel() {
                         <td>
                           {f.textPages}/{f.pages} trang
                         </td>
-                        <td>{f.minDpi ?? "—"}</td>
+                        <td>
+                          {f.minDpi ?? "—"}
+                          {f.isMap ? " (bản đồ, cần 300)" : ""}
+                        </td>
                         <td>{f.signed ? "có" : "không"}</td>
                         <td>{f.producer ?? "—"}</td>
                       </tr>

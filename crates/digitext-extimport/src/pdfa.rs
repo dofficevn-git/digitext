@@ -37,6 +37,9 @@ pub struct PdfaReport {
     pub text_pages: u32,
     pub min_dpi: Option<u32>,
     pub min_bit_depth: Option<u32>,
+    /// Cạnh dài nhất của trang (cm); ≥ 45 cm coi là bản đồ/bản vẽ (ngưỡng 300 dpi).
+    pub max_page_cm: Option<f32>,
+    pub is_map: bool,
     pub signed: bool,
     pub producer: Option<String>,
     /// Kết luận ngắn cho người dùng.
@@ -110,7 +113,7 @@ pub fn inspect(path: &Path) -> PdfaReport {
     let mut r = PdfaReport {
         path: path.display().to_string(), name, bytes: 0, pdf_version: String::new(), declared: None,
         has_xmp: false, has_output_intent: false, pages: 0, text_pages: 0, min_dpi: None, min_bit_depth: None,
-        signed: false, producer: None, verdict: String::new(), looks_pdfa: false, problems: Vec::new(),
+        max_page_cm: None, is_map: false, signed: false, producer: None, verdict: String::new(), looks_pdfa: false, problems: Vec::new(),
         verapdf: None, error: None,
     };
     let bytes = match std::fs::read(path) {
@@ -132,6 +135,8 @@ pub fn inspect(path: &Path) -> PdfaReport {
     r.pages = f.pages;
     r.text_pages = f.text_pages;
     r.min_dpi = f.min_dpi;
+    r.max_page_cm = f.max_page_cm;
+    r.is_map = crate::check::is_map_like(None, None, f.max_page_cm);
     r.min_bit_depth = f.min_bit_depth;
     r.signed = f.signed;
     r.declared = declared_flavour(&bytes);
@@ -152,8 +157,10 @@ pub fn inspect(path: &Path) -> PdfaReport {
     if r.text_pages < r.pages {
         r.problems.push(format!("{}/{} trang không có lớp chữ (TT05 đòi PDF/A HAI LỚP)", r.pages - r.text_pages, r.pages));
     }
-    if let Some(d) = r.min_dpi.filter(|d| *d < digitext_pdf::FM1_MIN_DPI) {
-        r.problems.push(format!("độ phân giải {d} dpi < 200 dpi (TT05 Điều 8.2.a)"));
+    let need = if r.is_map { crate::check::MAP_MIN_DPI } else { digitext_pdf::FM1_MIN_DPI };
+    if let Some(d) = r.min_dpi.filter(|d| *d < need) {
+        r.problems.push(format!("độ phân giải {d} dpi < {need} dpi cho {} (TT05 Điều 8.2.a, khổ trang {:.0} cm)",
+            if r.is_map { "bản đồ/bản vẽ khổ lớn" } else { "tài liệu hành chính" }, r.max_page_cm.unwrap_or(0.0)));
     }
     if let Some(b) = r.min_bit_depth.filter(|b| *b < digitext_pdf::FM1_MIN_BIT_DEPTH) {
         r.problems.push(format!("ảnh {b} bit < 24 bit màu (TT05 Điều 8.2.a)"));

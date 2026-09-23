@@ -194,7 +194,8 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
                 res.not_pdfa += (!f.pdfa) as u32;
                 res.unsigned += (!f.signed) as u32;
                 if !o.allow_non_tt05 {
-                    if let Some((code, msg)) = f.tt05_failures().into_iter().next() {
+                    let is_map = crate::check::is_map_like(r.doc_type.as_deref(), r.doc_subject.as_deref(), f.max_page_cm);
+                    if let Some((code, msg)) = f.tt05_failures(is_map).into_iter().next() {
                         res.error = Some(format!("{rel}: [{code}] {msg} — chưa đạt TT05, không đóng gói"));
                         return res;
                     }

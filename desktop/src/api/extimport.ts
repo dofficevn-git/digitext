@@ -123,6 +123,8 @@ export interface PdfaFileReport {
   textPages: number;
   minDpi: number | null;
   minBitDepth: number | null;
+  maxPageCm: number | null;
+  isMap: boolean;
   signed: boolean;
   producer: string | null;
   verdict: string;
