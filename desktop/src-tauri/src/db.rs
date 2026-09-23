@@ -1072,6 +1072,15 @@ pub fn f_101(r_1fo: &Connection, id: i64) -> rusqlite::Result<usize> {
 pub fn f_100(r_1fp: &Connection) -> rusqlite::Result<usize> {
     r_1fp.execute("DELETE FROM collected_docs WHERE forward_fatal = 1", [])
 }
+/// Xoá DẤU LỖI (không xoá bản): mọi bản chưa lên được máy chủ về trạng thái chưa thử —
+/// lần "② Đẩy lên" tiếp theo gửi lại từ đầu, kể cả bản đã bị từ chối vĩnh viễn.
+pub fn clear_forward_errors(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE collected_docs SET forward_error = NULL, forward_tries = 0, forward_fatal = 0 \
+         WHERE forwarded_at IS NULL AND (forward_tries > 0 OR forward_fatal = 1 OR forward_error IS NOT NULL)",
+        [],
+    )
+}
 pub fn f_10e(r_1fq: &Connection) -> rusqlite::Result<(i64, i64, i64, i64)> {
     r_1fq.query_row(
         "SELECT COUNT(*), \
