@@ -68,6 +68,13 @@ LỖI (chặn đóng gói):
 | `PDF-LECH-SO-TRANG` | số trang Excel khác số trang PDF thật |
 | `PDF-KHONG-PHAI-PDFA`, `PDF-THIEU-LOP-CHU`, `PDF-DPI-THAP`, `PDF-KHONG-MAU-24BIT`, `PDF-CHUA-KY-SO` | tệp chưa đạt **Điều 8.2.a TT05** |
 
+**Bản đồ / bản vẽ (ngưỡng 300 dpi thay vì 200).** Xếp loại cố ý BẢO THỦ, chỉ hai dấu hiệu CHẮC:
+(1) khổ trang có cạnh dài ≥ 45 cm (lớn hơn A3), hoặc (2) cột «Tên loại tài liệu» ghi bản đồ / bản vẽ /
+sơ đồ / bản trích đo / bình đồ / mặt cắt / mặt bằng. Mỗi tệp bị xếp là bản đồ có dòng THÔNG TIN
+`TL-XEP-BAN-DO` ghi rõ lý do để soát. Trích yếu có từ khoá («tỉ lệ 1/…», «sơ đồ»…) mà tên loại
+không nói và trang ≤ A3 → chỉ CẢNH BÁO `TL-NGHI-BAN-DO`, vẫn áp 200 dpi. Muốn ép 300 dpi cho tệp
+đó: ghi «Tên loại tài liệu» = «Bản đồ» hoặc «Bản vẽ» trong Excel.
+
 CẢNH BÁO (vẫn đóng gói): ngày sai dạng `dd/mm/yyyy` hoặc thiếu, ngày ban hành ngoài khoảng thời
 gian hồ sơ, thiếu trích yếu/tên loại, các dòng cùng hồ sơ ghi thông tin hồ sơ khác nhau, STT
 không liên tục, tên tệp không có STT 7 số, thời hạn lưu trữ của tài liệu khác của hồ sơ.

@@ -136,7 +136,8 @@ pub fn inspect(path: &Path) -> PdfaReport {
     r.text_pages = f.text_pages;
     r.min_dpi = f.min_dpi;
     r.max_page_cm = f.max_page_cm;
-    r.is_map = crate::check::is_map_like(None, None, f.max_page_cm);
+    // Không có Excel → chỉ khổ trang quyết định (≥ 45 cm).
+    r.is_map = crate::check::classify_map(None, None, f.max_page_cm).is_map();
     r.min_bit_depth = f.min_bit_depth;
     r.signed = f.signed;
     r.declared = declared_flavour(&bytes);

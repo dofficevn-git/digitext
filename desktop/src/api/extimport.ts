@@ -6,7 +6,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import { invoke, isTauri } from "@/api/ipc";
 
-export type ExtSeverity = "error" | "warning";
+export type ExtSeverity = "error" | "warning" | "info";
 
 export interface ExtIssue {
   severity: ExtSeverity;
