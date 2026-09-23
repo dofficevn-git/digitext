@@ -27,12 +27,15 @@ use std::sync::Mutex;
 pub enum Severity {
     Error,
     Warning,
+    /// Không phải vấn đề — ghi để người dùng soát một quyết định tự động (vd xếp loại bản đồ).
+    Info,
 }
 impl Severity {
     pub fn label(self) -> &'static str {
         match self {
             Severity::Error => "LỖI",
             Severity::Warning => "CẢNH BÁO",
+            Severity::Info => "THÔNG TIN",
         }
     }
 }
@@ -281,11 +284,17 @@ impl Sink {
         });
     }
     fn warn(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
+        self.note(Severity::Warning, code, d, hs, line, file, msg)
+    }
+    fn info(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
+        self.note(Severity::Info, code, d, hs, line, file, msg)
+    }
+    fn note(&mut self, severity: Severity, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
         self.warns
             .entry((d.to_string(), code))
             .and_modify(|i| i.count += 1)
             .or_insert(Issue {
-                severity: Severity::Warning, code, dossier: d.into(), hs_code: hs.into(), line,
+                severity, code, dossier: d.into(), hs_code: hs.into(), line,
                 file: file.map(Into::into), message: msg, count: 1,
             });
     }
@@ -320,13 +329,42 @@ pub const MAP_MIN_DPI: u32 = 300;
 /// Trang có cạnh dài từ đây trở lên (cm) là khổ lớn hơn A3 → coi là bản đồ/bản vẽ.
 pub const MAP_PAGE_CM: f32 = 45.0;
 
-/// Tài liệu là bản đồ/bản vẽ? Dựa vào tên loại + trích yếu trong Excel (từ khoá) HOẶC khổ trang.
-pub fn is_map_like(doc_type: Option<&str>, subject: Option<&str>, max_page_cm: Option<f32>) -> bool {
-    // KHÔNG dùng "quy hoạch"/"thiết kế": quyết định phê duyệt quy hoạch là văn bản hành chính A4.
-    const KW: &[&str] = &["ban do", "ban ve", "so do", "mat bang", "ti le 1/", "ty le 1/", "trac dia", "ban trich do"];
+/// Kết quả xếp loại bản đồ/bản vẽ.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MapClass {
+    /// Văn bản hành chính → ngưỡng 200 dpi.
+    No,
+    /// CHẮC CHẮN bản đồ/bản vẽ → ngưỡng 300 dpi. Chuỗi = lý do (để người dùng soát).
+    Sure(String),
+    /// Chỉ có dấu hiệu yếu (từ khoá trong trích yếu, trang ≤ A3) → VẪN 200 dpi, chỉ nhắc.
+    Suspect(String),
+}
+impl MapClass {
+    pub fn is_map(&self) -> bool {
+        matches!(self, MapClass::Sure(_))
+    }
+}
+
+/// Xếp loại bản đồ/bản vẽ — cố ý BẢO THỦ: văn bản hành chính bị áp nhầm 300 dpi còn tệ hơn
+/// bản đồ bị áp 200 dpi.
+///   CHẮC: cột «Tên loại tài liệu» ghi bản đồ/bản vẽ/sơ đồ/bản trích đo…, HOẶC khổ trang có
+///         cạnh dài ≥ 45 cm (lớn hơn A3 — văn bản hành chính không có khổ này).
+///   NGHI: chỉ trích yếu có từ khoá («sơ đồ», «tỉ lệ 1/…») mà tên loại không nói và trang ≤ A3.
+pub fn classify_map(doc_type: Option<&str>, subject: Option<&str>, max_page_cm: Option<f32>) -> MapClass {
+    const TYPE_KW: &[&str] = &["ban do", "ban ve", "so do", "ban trich do", "trich luc ban do", "binh do", "mat cat", "mat bang"];
+    const SUBJ_KW: &[&str] = &["ban do", "ban ve", "so do", "mat bang", "ti le 1/", "ty le 1/", "trac dia", "trich do"];
+    if let Some(c) = max_page_cm.filter(|c| *c >= MAP_PAGE_CM) {
+        return MapClass::Sure(format!("khổ trang {c:.0} cm, lớn hơn A3"));
+    }
     let t = crate::excel::fold(doc_type.unwrap_or(""));
-    let s = crate::excel::fold(subject.unwrap_or(""));
-    KW.iter().any(|k| t.contains(k) || s.contains(k)) || max_page_cm.map_or(false, |c| c >= MAP_PAGE_CM)
+    if let Some(k) = TYPE_KW.iter().find(|k| t.contains(*k)) {
+        return MapClass::Sure(format!("tên loại tài liệu «{}» (khớp «{k}»)", doc_type.unwrap_or("").trim()));
+    }
+    let sj = crate::excel::fold(subject.unwrap_or(""));
+    if let Some(k) = SUBJ_KW.iter().find(|k| sj.contains(*k)) {
+        return MapClass::Suspect(format!("trích yếu có «{k}» nhưng tên loại là «{}» và khổ trang ≤ A3", doc_type.unwrap_or("").trim()));
+    }
+    MapClass::No
 }
 fn contains(hay: &[u8], needle: &[u8]) -> bool {
     hay.windows(needle.len()).any(|w| w == needle)
@@ -597,11 +635,16 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
                             sink.error("PDF-LECH-SO-TRANG", dir, &hs, Some(r.line), Some(&name), format!("Excel ghi {p} trang, PDF thật có {} trang", f.pages));
                         }
                     }
-                    let is_map = is_map_like(r.doc_type.as_deref(), r.doc_subject.as_deref(), f.max_page_cm);
-                    if is_map {
-                        deep_acc.maps += 1;
+                    let mc = classify_map(r.doc_type.as_deref(), r.doc_subject.as_deref(), f.max_page_cm);
+                    match &mc {
+                        MapClass::Sure(why) => {
+                            deep_acc.maps += 1;
+                            sink.info("TL-XEP-BAN-DO", dir, &hs, Some(r.line), Some(&name), format!("tệp được xếp là BẢN ĐỒ/BẢN VẼ → áp 300 dpi. Lý do: {why}. Nếu không phải, sửa «Tên loại tài liệu» trong Excel"));
+                        }
+                        MapClass::Suspect(why) => sink.warn("TL-NGHI-BAN-DO", dir, &hs, Some(r.line), Some(&name), format!("có thể là bản đồ/bản vẽ ({why}) — đang áp 200 dpi như văn bản hành chính; nếu đúng là bản đồ, ghi «Tên loại tài liệu» = «Bản đồ» / «Bản vẽ» để áp 300 dpi")),
+                        MapClass::No => {}
                     }
-                    let fails = f.tt05_failures(is_map);
+                    let fails = f.tt05_failures(mc.is_map());
                     if verapdf && f.pdfa {
                         to_verify.push((rel_to_path(root, real_rel), f.declared.clone(), r.line, name.clone()));
                     }
@@ -760,6 +803,7 @@ pub fn run(
         match i.severity {
             Severity::Error => e.0 += i.count,
             Severity::Warning => e.1 += i.count,
+            Severity::Info => {}
         }
     }
     let dossiers = plan
@@ -823,11 +867,19 @@ mod tests {
     }
     #[test]
     fn nhan_dien_ban_do() {
-        assert!(is_map_like(Some("Khác"), Some("Quy hoạch chi tiết xây dựng tỉ lệ 1/500 - Khu 2"), Some(29.7)));
-        assert!(!is_map_like(Some("Quyết định"), Some("Phê duyệt quy hoạch chi tiết khu dân cư"), Some(29.7)));
-        assert!(is_map_like(Some("Bản đồ"), None, None));
-        assert!(is_map_like(None, None, Some(161.0)));
-        assert!(!is_map_like(Some("Quyết định"), Some("Về việc cấp đất"), Some(29.7)));
+        // Chỉ trích yếu gợi ý, trang A4 → NGHI, vẫn 200 dpi.
+        assert!(matches!(classify_map(Some("Khác"), Some("Quy hoạch chi tiết xây dựng tỉ lệ 1/500 - Khu 2"), Some(29.7)), MapClass::Suspect(_)));
+        // Quyết định phê duyệt quy hoạch, A4 → văn bản hành chính.
+        assert_eq!(classify_map(Some("Quyết định"), Some("Phê duyệt quy hoạch chi tiết khu dân cư"), Some(29.7)), MapClass::No);
+        // Tên loại nói rõ → CHẮC.
+        assert!(classify_map(Some("Bản đồ"), None, None).is_map());
+        assert!(classify_map(Some("Bản vẽ kỹ thuật"), Some("Hồ sơ nhà văn hoá"), Some(29.7)).is_map());
+        // Khổ lớn → CHẮC, bất kể Excel ghi gì.
+        assert!(classify_map(Some("Khác"), None, Some(161.0)).is_map());
+        // A3 (42 cm) chưa phải khổ lớn.
+        assert_eq!(classify_map(Some("Quyết định"), Some("Về việc cấp đất"), Some(42.0)), MapClass::No);
+        // Từ khoá gợi ý bên trong từ khác: «sơ đồ tổ chức» trong quyết định → chỉ NGHI.
+        assert!(matches!(classify_map(Some("Quyết định"), Some("Ban hành sơ đồ tổ chức bộ máy"), Some(29.7)), MapClass::Suspect(_)));
         let f = PdfFacts { min_dpi: Some(250), pages: 1, text_pages: 1, pdfa: true, declared: Some("PDF/A-2B".into()),
             has_output_intent: true, signed: true, ..PdfFacts::default() };
         assert!(f.tt05_failures(false).is_empty());

@@ -208,8 +208,8 @@ export default function ExternalImportPanel() {
                   {check.byCode.map((c) => (
                     <tr key={`${c.severity}-${c.code}`}>
                       <td>
-                        <span className={`badge ${c.severity === "error" ? "err" : "warn"}`}>
-                          {c.severity === "error" ? "LỖI" : "Cảnh báo"}
+                        <span className={`badge ${c.severity === "error" ? "err" : c.severity === "warning" ? "warn" : "info"}`}>
+                          {c.severity === "error" ? "LỖI" : c.severity === "warning" ? "Cảnh báo" : "Thông tin"}
                         </span>
                       </td>
                       <td>{c.code}</td>

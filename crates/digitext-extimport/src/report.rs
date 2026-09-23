@@ -57,7 +57,7 @@ pub fn check_summary(r: &CheckReport) -> String {
         e.0 += i.count;
         e.1 += 1;
     }
-    s.push_str("  Theo loại vấn đề (số lần · số hồ sơ/dòng báo cáo · ví dụ):\n");
+    s.push_str("  Theo loại vấn đề (số lần · số hồ sơ/dòng báo cáo · ví dụ) — THÔNG TIN không phải lỗi:\n");
     for ((sev, code), (n, k, ex)) in by {
         let ex: String = ex.chars().take(110).collect();
         s.push_str(&format!("    {:9} {:26} {:>6} · {:>5} · {}\n", sev.label(), code, n, k, ex));
