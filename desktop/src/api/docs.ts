@@ -58,9 +58,9 @@ export function V4ek(): Promise<V4ej[]> {
   return invoke<V4ej[]>("docs_tree");
 }
 
-export function V4el(V17h: string, V17i: string, V17j?: string, pdfa = false): Promise<string> {
+export function V4el(V17h: string, V17i: string, V17j?: string, pdfa = false, destDir?: string): Promise<string> {
   return invoke<string>("docs_download", {
-    args: { id: V17h, filename: V17i, relPath: V17j, pdfa },
+    args: { id: V17h, filename: V17i, relPath: V17j, pdfa, destDir: destDir ?? null },
   });
 }
 

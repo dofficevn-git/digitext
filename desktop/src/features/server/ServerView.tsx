@@ -26,6 +26,24 @@ import { V4w5, V4w9 } from "./pdfa";
 import { V4k1 } from "./progress";
 import "./server.css";
 import { Icon } from "@/components/Icon";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+
+// Thư mục lưu lần trước — chỉ là tiện ích nhớ, hỏng cũng không sao.
+const DL_DIR_KEY = "server.download.dir";
+function nhoThuMuc(): string | undefined {
+  try {
+    return localStorage.getItem(DL_DIR_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+function luuThuMuc(d: string): void {
+  try {
+    localStorage.setItem(DL_DIR_KEY, d);
+  } catch {
+    /* bỏ qua */
+  }
+}
 
 const V4wa = (V33e: unknown) =>
   V3zt(
@@ -168,6 +186,22 @@ export default function V4wh() {
 
   const V34r = async (V34s: V4vu[], V34t: string) => {
     if (V34s.length === 0) return;
+    // Người dùng CHỌN thư mục lưu mỗi lần tải — không mặc định về Documents\DigiText nữa.
+    let destDir: string;
+    try {
+      const r = await openDialog({
+        directory: true,
+        multiple: false,
+        defaultPath: nhoThuMuc(),
+        title: `Chọn thư mục lưu ${V4wc(V34s.length)} tệp ${taiPdfa ? "PDF/A" : "bản gốc"} (giữ nguyên cây thư mục)`,
+      });
+      if (typeof r !== "string" || !r) return;
+      destDir = r;
+    } catch (e) {
+      V344(`Không mở được hộp chọn thư mục: ${V4wa(e)}`);
+      return;
+    }
+    luuThuMuc(destDir);
     V342.current = false;
     V341({ done: 0, total: V34s.length });
     V344("");
@@ -183,7 +217,7 @@ export default function V4wh() {
         continue;
       }
       try {
-        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath, taiPdfa);
+        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath, taiPdfa, destDir);
         V34u++;
       } catch (V34x) {
         if (V34v === "") V34v = V4wa(V34x);
@@ -419,14 +453,14 @@ export default function V4wh() {
                 className="btn primary"
                 disabled={V34p.length === 0}
                 onClick={() => void V34r(V34p, "đã chọn")}
-                title="Tải mọi tệp đã tích về kho máy này, giữ nguyên cây thư mục"
+                title="Tải mọi tệp đã tích về thư mục anh chọn, giữ nguyên cây thư mục"
               >
                 <Icon name="taiVe" />
                 Tải xuống ({V4wc(V34p.length)})
               </button>
               <label
                 className="flex items-center gap-1 text-sm"
-                title="Bật: tải bản PDF/A có lớp chữ (về Kho/_pdfa). Tắt: tải bản gốc đã tải lên (về Kho/_nhan_ve)."
+                title="Bật: tải bản PDF/A có lớp chữ. Tắt: tải bản gốc đã tải lên. Thư mục lưu được chọn khi bấm tải."
               >
                 <input
                   type="checkbox"
