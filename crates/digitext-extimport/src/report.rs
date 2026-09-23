@@ -46,7 +46,8 @@ pub fn check_summary(r: &CheckReport) -> String {
         let pdfa: u32 = r.dossiers.iter().filter_map(|d| d.pdfa).sum();
         let signed: u32 = r.dossiers.iter().filter_map(|d| d.signed).sum();
         let pages: u32 = r.dossiers.iter().filter_map(|d| d.pages).sum();
-        s.push_str(&format!("  PDF/A: {pdfa}/{docs} tệp · đã ký số: {signed}/{docs} tệp · tổng {pages} trang\n"));
+        let maps: u32 = r.dossiers.iter().filter_map(|d| d.maps).sum();
+        s.push_str(&format!("  PDF/A: {pdfa}/{docs} tệp · đã ký số: {signed}/{docs} tệp · tổng {pages} trang · bản đồ/bản vẽ (ngưỡng 300 dpi): {maps} tệp\n"));
         let kinds = r.pdfa_flavours.iter().map(|(k, v)| format!("{k}: {v}")).collect::<Vec<_>>().join(" · ");
         s.push_str(&format!("  Theo loại tệp tự khai: {kinds}\n\n"));
     }

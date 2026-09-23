@@ -83,6 +83,7 @@ pub struct DossierSummary {
     pub pdfa: Option<u32>,
     pub signed: Option<u32>,
     pub pages: Option<u32>,
+    pub maps: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -309,7 +310,23 @@ pub struct PdfFacts {
     pub declared: Option<String>,
     pub has_output_intent: bool,
     pub signed: bool,
+    /// Cạnh dài nhất của trang (cm). Trang > A3 (cạnh dài ≥ 45 cm) coi là bản đồ/bản vẽ.
+    pub max_page_cm: Option<f32>,
     pub encrypted_or_broken: Option<String>,
+}
+
+/// Ngưỡng dpi TT05 Điều 8.2.a: 300 với bản đồ/bản vẽ, 200 với tài liệu hành chính.
+pub const MAP_MIN_DPI: u32 = 300;
+/// Trang có cạnh dài từ đây trở lên (cm) là khổ lớn hơn A3 → coi là bản đồ/bản vẽ.
+pub const MAP_PAGE_CM: f32 = 45.0;
+
+/// Tài liệu là bản đồ/bản vẽ? Dựa vào tên loại + trích yếu trong Excel (từ khoá) HOẶC khổ trang.
+pub fn is_map_like(doc_type: Option<&str>, subject: Option<&str>, max_page_cm: Option<f32>) -> bool {
+    // KHÔNG dùng "quy hoạch"/"thiết kế": quyết định phê duyệt quy hoạch là văn bản hành chính A4.
+    const KW: &[&str] = &["ban do", "ban ve", "so do", "mat bang", "ti le 1/", "ty le 1/", "trac dia", "ban trich do"];
+    let t = crate::excel::fold(doc_type.unwrap_or(""));
+    let s = crate::excel::fold(subject.unwrap_or(""));
+    KW.iter().any(|k| t.contains(k) || s.contains(k)) || max_page_cm.map_or(false, |c| c >= MAP_PAGE_CM)
 }
 fn contains(hay: &[u8], needle: &[u8]) -> bool {
     hay.windows(needle.len()).any(|w| w == needle)
@@ -320,7 +337,7 @@ impl PdfFacts {
     /// TT05 không chỉ định phiên bản PDF/A → nhận MỌI loại ISO 19005 (1a/1b/2a/2b/2u/3a/3b/3u/4…).
     /// Ở đây kiểm dấu hiệu cấu trúc (khai pdfaid + hồ sơ màu); hợp chuẩn ISO đầy đủ do veraPDF
     /// kiểm theo đúng loại tệp tự khai (bật `verapdf` ở bước kiểm/đóng gói).
-    pub fn tt05_failures(&self) -> Vec<(&'static str, String)> {
+    pub fn tt05_failures(&self, is_map: bool) -> Vec<(&'static str, String)> {
         let mut v = Vec::new();
         match (&self.declared, crate::pdfa::is_known_flavour(&self.declared), self.has_output_intent) {
             (None, _, _) => v.push(("PDF-KHONG-PHAI-PDFA", "tệp KHÔNG phải PDF/A (không khai pdfaid trong XMP) — TT05 Điều 8.2.a đòi PDF/A (bất kỳ phiên bản 1/2/3/4, mức a/b/u); chuyển đổi sau khi đã ký sẽ phá chữ ký, phải ký lại".to_string())),
@@ -331,8 +348,10 @@ impl PdfFacts {
         if self.text_pages < self.pages {
             v.push(("PDF-THIEU-LOP-CHU", format!("{}/{} trang không có lớp chữ — TT05 Điều 8.2.a đòi PDF/A HAI LỚP", self.pages - self.text_pages, self.pages)));
         }
-        if let Some(d) = self.min_dpi.filter(|d| *d < digitext_pdf::FM1_MIN_DPI) {
-            v.push(("PDF-DPI-THAP", format!("độ phân giải {d} dpi < 200 dpi (TT05 Điều 8.2.a)")));
+        let (need, loai) = if is_map { (MAP_MIN_DPI, "bản đồ/bản vẽ") } else { (digitext_pdf::FM1_MIN_DPI, "tài liệu hành chính") };
+        if let Some(d) = self.min_dpi.filter(|d| *d < need) {
+            let kho = self.max_page_cm.map(|c| format!(", khổ trang {c:.0} cm")).unwrap_or_default();
+            v.push(("PDF-DPI-THAP", format!("độ phân giải {d} dpi < {need} dpi cho {loai} (TT05 Điều 8.2.a{kho})")));
         }
         if let Some(b) = self.min_bit_depth.filter(|b| *b < digitext_pdf::FM1_MIN_BIT_DEPTH) {
             v.push(("PDF-KHONG-MAU-24BIT", format!("ảnh {b} bit < 24 bit màu (TT05 Điều 8.2.a)")));
@@ -343,6 +362,33 @@ impl PdfFacts {
         v
     }
 }
+/// Cạnh dài nhất (cm) trong các trang, đọc MediaBox (kế thừa từ nút cha nếu trang không khai).
+fn max_page_cm(bytes: &[u8]) -> Option<f32> {
+    let doc = lopdf::Document::load_mem(bytes).ok()?;
+    let mut best: f32 = 0.0;
+    for (_, id) in doc.get_pages() {
+        let Ok(page) = doc.get_dictionary(id) else { continue };
+        let mut cur = Some(page);
+        let mut depth = 0;
+        while let Some(d) = cur {
+            if let Ok(mb) = d.get(b"MediaBox").and_then(|o| doc.dereference(o).map(|(_, o)| o)) {
+                if let Ok(arr) = mb.as_array() {
+                    let v: Vec<f32> = arr.iter().filter_map(|o| o.as_float().ok().or_else(|| o.as_i64().ok().map(|i| i as f32))).collect();
+                    if v.len() == 4 {
+                        let w = (v[2] - v[0]).abs() / 72.0 * 2.54;
+                        let h = (v[3] - v[1]).abs() / 72.0 * 2.54;
+                        best = best.max(w).max(h);
+                    }
+                }
+                break;
+            }
+            depth += 1;
+            cur = if depth > 32 { None } else { d.get(b"Parent").ok().and_then(|p| p.as_reference().ok()).and_then(|r| doc.get_dictionary(r).ok()) };
+        }
+    }
+    (best > 0.0).then_some(best)
+}
+
 pub fn inspect_pdf(bytes: &[u8]) -> PdfFacts {
     let mut f = PdfFacts::default();
     if !bytes.starts_with(b"%PDF") {
@@ -357,6 +403,7 @@ pub fn inspect_pdf(bytes: &[u8]) -> PdfFacts {
     f.pages = r.pages as u32;
     f.text_pages = r.pages_with_text as u32;
     f.min_dpi = r.min_dpi;
+    f.max_page_cm = max_page_cm(bytes);
     f.min_bit_depth = r.min_bit_depth;
     if r.pages == 0 {
         f.encrypted_or_broken = Some(r.reason.unwrap_or_else(|| "không đọc được trang nào".into()));
@@ -369,6 +416,8 @@ struct Deep {
     pdfa: u32,
     signed: u32,
     pages: u32,
+    /// Số tệp được coi là bản đồ/bản vẽ (ngưỡng 300 dpi).
+    maps: u32,
     /// Đếm theo loại tệp tự khai; khoá "không khai PDF/A" cho tệp không có pdfaid.
     flavours: BTreeMap<String, u32>,
 }
@@ -548,7 +597,11 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
                             sink.error("PDF-LECH-SO-TRANG", dir, &hs, Some(r.line), Some(&name), format!("Excel ghi {p} trang, PDF thật có {} trang", f.pages));
                         }
                     }
-                    let fails = f.tt05_failures();
+                    let is_map = is_map_like(r.doc_type.as_deref(), r.doc_subject.as_deref(), f.max_page_cm);
+                    if is_map {
+                        deep_acc.maps += 1;
+                    }
+                    let fails = f.tt05_failures(is_map);
                     if verapdf && f.pdfa {
                         to_verify.push((rel_to_path(root, real_rel), f.declared.clone(), r.line, name.clone()));
                     }
@@ -727,6 +780,7 @@ pub fn run(
                 pdfa: dp.as_ref().map(|x| x.pdfa),
                 signed: dp.as_ref().map(|x| x.signed),
                 pages: dp.as_ref().map(|x| x.pages),
+                maps: dp.as_ref().map(|x| x.maps),
             }
         })
         .collect();
@@ -766,6 +820,18 @@ mod tests {
             assert!(fc.eq_ignore_ascii_case(name) || fc.eq_ignore_ascii_case(stem), "{fc}");
         }
         assert!(!"H49.139.01.2011.600.0000001".eq_ignore_ascii_case(stem));
+    }
+    #[test]
+    fn nhan_dien_ban_do() {
+        assert!(is_map_like(Some("Khác"), Some("Quy hoạch chi tiết xây dựng tỉ lệ 1/500 - Khu 2"), Some(29.7)));
+        assert!(!is_map_like(Some("Quyết định"), Some("Phê duyệt quy hoạch chi tiết khu dân cư"), Some(29.7)));
+        assert!(is_map_like(Some("Bản đồ"), None, None));
+        assert!(is_map_like(None, None, Some(161.0)));
+        assert!(!is_map_like(Some("Quyết định"), Some("Về việc cấp đất"), Some(29.7)));
+        let f = PdfFacts { min_dpi: Some(250), pages: 1, text_pages: 1, pdfa: true, declared: Some("PDF/A-2B".into()),
+            has_output_intent: true, signed: true, ..PdfFacts::default() };
+        assert!(f.tt05_failures(false).is_empty());
+        assert_eq!(f.tt05_failures(true).len(), 1);
     }
     #[test]
     fn so_thu_tu_tu_ten_tep() {
