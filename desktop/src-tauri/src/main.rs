@@ -184,6 +184,7 @@ fn main() {
             collect::collected_list,
             collect::collected_retry_rejected,
             collect::collected_clear_errors,
+            collect::collected_wipe_all,
             collect::collect_add_files,
             scanner::list_scanners,
             scanner::start_scan_batch,

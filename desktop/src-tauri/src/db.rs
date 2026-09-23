@@ -1001,6 +1001,15 @@ pub fn f_29p(r_1f9: &Connection, id: i64, blake3: &str, size_bytes: i64) -> rusq
         Err(e) => Err(e),
     }
 }
+/// Mọi bản trong kho gom (đã đẩy hay chưa) — cho "Xoá sạch kho gom".
+pub fn collected_all(conn: &Connection) -> rusqlite::Result<Vec<T2w>> {
+    let mut st = conn.prepare(&format!("SELECT {COLLECTED_COLS} FROM collected_docs ORDER BY id"))?;
+    let rows = st.query_map([], f_1qr)?;
+    rows.collect()
+}
+pub fn collected_delete_all(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.execute("DELETE FROM collected_docs", [])
+}
 pub fn f_13u(r_1fa: &Connection, id: i64) -> rusqlite::Result<()> {
     r_1fa.execute("DELETE FROM collected_docs WHERE id = ?1", params![id])?;
     Ok(())

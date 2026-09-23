@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { V41p } from "@/live/useLive";
-import { open } from "@tauri-apps/plugin-dialog";
+import { confirm, open } from "@tauri-apps/plugin-dialog";
 import { V460, useCollects, useUploads } from "@/state";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V3yw } from "@/domain/permissions";
@@ -25,6 +25,7 @@ import {
   V43i,
   V43j,
   collectedClearErrors,
+  collectedWipeAll,
   V431,
   V435,
   V436,
@@ -377,6 +378,38 @@ function V4qo() {
     }
   };
 
+  const xoaSachKhoGom = async () => {
+    const n = collected?.total ?? 0;
+    if (n === 0) return;
+    let ok = false;
+    try {
+      ok = await confirm(
+        `Xoá SẠCH kho gom trên máy này: ${n.toLocaleString("vi-VN")} bản (cả bản đã đẩy lên) và các tệp của chúng trong thư mục Kho. ` +
+          "Dữ liệu đã đẩy lên máy chủ KHÔNG bị ảnh hưởng. Không hoàn tác được. Tiếp tục?",
+        { title: "Xoá sạch kho gom", kind: "warning", okLabel: "Xoá", cancelLabel: "Huỷ" },
+      );
+    } catch {
+      ok = window.confirm(`Xoá sạch ${n} bản trong kho gom và tệp của chúng trong Kho? Không hoàn tác được.`);
+    }
+    if (!ok) return;
+    V2dy("retry");
+    V2e0("");
+    try {
+      const r = await collectedWipeAll();
+      V2e0(
+        `Đã xoá ${fmtN(r.rows)} bản khỏi kho gom · xoá ${fmtN(r.filesRemoved)} tệp trong Kho` +
+          (r.filesMissing > 0 ? ` · ${fmtN(r.filesMissing)} tệp đã không còn` : "") +
+          (r.filesFailed > 0 ? ` · ${fmtN(r.filesFailed)} tệp không xoá được (ngoài Kho hoặc đang mở)` : "") +
+          ".",
+      );
+      await V2ep();
+    } catch (e) {
+      V2e0(V4ql(e));
+    } finally {
+      V2dy("");
+    }
+  };
+
   const xoaLoi = async () => {
     V2dy("retry");
     V2e0("");
@@ -617,6 +650,16 @@ function V4qo() {
               {V2dx === "retry"
                 ? "Đang gom lại…"
                 : `Gom lại bản bị từ chối (${V2fq})`}
+            </button>
+          )}
+          {(collected?.total ?? 0) > 0 && (
+            <button
+              className="btn"
+              onClick={() => void xoaSachKhoGom()}
+              disabled={V2dx !== "" || V2dg}
+              title="Xoá mọi bản đã thu thập trên máy này (bản ghi + tệp trong Kho), kể cả bản đã đẩy lên. Không đụng máy chủ."
+            >
+              <Icon name="xoa" /> Xoá sạch kho gom ({fmtN(collected?.total ?? 0)})
             </button>
           )}
           {V2dz && <span className="muted text-sm">{V2dz}</span>}

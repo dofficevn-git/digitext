@@ -2602,6 +2602,112 @@ pub fn collected_list(
         rows,
     })
 }
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WipeCollectedResult {
+    pub rows: usize,
+    pub files_removed: usize,
+    pub files_missing: usize,
+    pub files_failed: usize,
+}
+/// "Xoá sạch kho gom": xoá MỌI bản đã thu thập trên máy này (bản ghi + tệp trong Kho), kể cả
+/// bản đã đẩy lên. Chỉ xoá tệp nằm trong thư mục Kho; thư mục rỗng còn lại được dọn.
+/// Không đụng máy chủ. Người dùng đã xác nhận ở giao diện.
+#[tauri::command]
+pub fn collected_wipe_all(
+    app: AppHandle,
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+) -> Result<WipeCollectedResult, AppError> {
+    auth.require(Perm::Admin)?;
+    let root = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
+    let root_c = root.canonicalize().unwrap_or(root.clone());
+    let rows = {
+        let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+        db::collected_all(&conn)?
+    };
+    let paths: Vec<String> = rows.iter().map(|r| r.storage_path.clone()).collect();
+    let out = wipe_collected_files(&root_c, &paths);
+    {
+        let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+        db::collected_delete_all(&conn)?;
+    }
+    tracing::warn!(?out, "collected_wipe_all");
+    Ok(out)
+}
+/// Xoá các tệp kho gom — CHỈ tệp nằm trong `root` (đã canonicalize); tệp ngoài root, tệp đang
+/// mở → đếm vào `files_failed`, không đụng. Thư mục rỗng còn lại được dọn tới sát gốc.
+pub(crate) fn wipe_collected_files(root_c: &std::path::Path, paths: &[String]) -> WipeCollectedResult {
+    let mut out = WipeCollectedResult { rows: paths.len(), files_removed: 0, files_missing: 0, files_failed: 0 };
+    let mut dirs: std::collections::BTreeSet<std::path::PathBuf> = std::collections::BTreeSet::new();
+    for sp in paths {
+        let p = std::path::Path::new(sp);
+        match p.canonicalize() {
+            Err(_) => out.files_missing += 1,
+            Ok(c) if !c.starts_with(root_c) => {
+                tracing::warn!(path = % sp, "bản ghi trỏ ra ngoài Kho — không xoá tệp");
+                out.files_failed += 1;
+            }
+            Ok(c) => match std::fs::remove_file(&c) {
+                Ok(()) => {
+                    out.files_removed += 1;
+                    if let Some(d) = c.parent() {
+                        dirs.insert(d.to_path_buf());
+                    }
+                }
+                Err(_) => out.files_failed += 1,
+            },
+        }
+    }
+    // Dọn thư mục rỗng từ sâu lên nông, dừng ở gốc Kho.
+    for d in dirs.into_iter().rev() {
+        let mut cur = d;
+        while cur != root_c && cur.starts_with(root_c) && std::fs::remove_dir(&cur).is_ok() {
+            match cur.parent() {
+                Some(p) => cur = p.to_path_buf(),
+                None => break,
+            }
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod wipe_tests {
+    use super::wipe_collected_files;
+    #[test]
+    fn chi_xoa_tep_trong_kho_va_don_thu_muc_rong() {
+        let tmp = std::env::temp_dir().join(format!("digitext-wipe-{}", std::process::id()));
+        let root = tmp.join("Kho");
+        let outside = tmp.join("NgoaiKho");
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(root.join("PhongA").join("Hop1").join("HS1")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        let f1 = root.join("PhongA").join("Hop1").join("HS1").join("a.pdf");
+        let f2 = root.join("PhongA").join("Hop1").join("HS1").join("b.pdf");
+        let giu = root.join("PhongA").join("giu-lai.txt"); // không có trong kho gom → phải còn
+        let ngoai = outside.join("x.pdf");
+        for f in [&f1, &f2, &giu, &ngoai] {
+            std::fs::write(f, b"%PDF").unwrap();
+        }
+        let root_c = root.canonicalize().unwrap();
+        let paths = vec![
+            f1.to_string_lossy().to_string(),
+            f2.to_string_lossy().to_string(),
+            ngoai.to_string_lossy().to_string(),
+            root.join("khong-ton-tai.pdf").to_string_lossy().to_string(),
+        ];
+        let r = wipe_collected_files(&root_c, &paths);
+        assert_eq!((r.rows, r.files_removed, r.files_failed, r.files_missing), (4, 2, 1, 1));
+        assert!(!f1.exists() && !f2.exists(), "tệp trong kho gom phải bị xoá");
+        assert!(ngoai.exists(), "tệp ngoài Kho KHÔNG được xoá");
+        assert!(giu.exists(), "tệp không thuộc kho gom phải còn");
+        assert!(!root.join("PhongA").join("Hop1").exists(), "thư mục rỗng phải được dọn");
+        assert!(root.join("PhongA").exists(), "thư mục còn tệp khác phải giữ");
+        assert!(root.exists(), "gốc Kho phải còn");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+}
 /// "Xoá lỗi, thử lại tất cả": bỏ dấu lỗi của mọi bản chưa lên được (giữ bản trong kho gom).
 #[tauri::command]
 pub fn collected_clear_errors(
