@@ -82,6 +82,11 @@ không liên tục, tên tệp không có STT 7 số, thời hạn lưu trữ c�
 Dữ liệu bẩn được hiểu giúp (không chặn): ngày lưu thành số Excel (`39052` → `01/12/2006`),
 `9/7/2012` → `09/07/2012`, `2017-11-01` → `01/11/2017`, «Số lượng tờ» = `36 '` → 36.
 
+**Dự án có yêu cầu ISO không?** Ô «Dự án này yêu cầu đạt chuẩn ISO 19005» (app, nhớ theo tệp Excel;
+CLI `--verapdf`). Mặc định TẮT vì TT05 chỉ ghi "PDF/A hai lớp", không dẫn chiếu ISO. Bật khi bên
+nghiệm thu kiểm bằng veraPDF hoặc đơn vị muốn chắc chắn: từng tệp bị kiểm đúng chuẩn theo loại tự
+khai, không đạt là LỖI chặn đóng gói. Tắt: chỉ đòi tệp khai PDF/A + hồ sơ màu.
+
 PDF/A: **nhận mọi loại theo ISO 19005** (1a/1b/2a/2b/2u/3a/3b/3u/4/4e/4f) vì TT05 chỉ đòi "PDF/A hai
 lớp". Kiểm cấu trúc (khai `pdfaid` + hồ sơ màu) luôn chạy; bật `--verapdf` / ô «Xác minh chuẩn ISO
 bằng veraPDF» thì từng tệp được veraPDF kiểm **theo đúng loại nó tự khai**, ở bước kiểm sâu và ngay
