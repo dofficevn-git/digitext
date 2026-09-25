@@ -16,6 +16,9 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
 const C_C7: usize = 200 * 1024 * 1024;
+/// Tải lên chia khúc (tus) ghi dần ra đĩa nên cho tệp lớn hơn đường một lần: bản quét hồ sơ
+/// dày có tệp 500+ MB (25/9/2026: 3 tệp LTLSBN 224–551 MB bị chặn ở 200 MB).
+const MAX_RESUMABLE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
@@ -607,7 +610,7 @@ async fn f_20h(
         .ok_or_else(|| ApiError::bad_request("thiếu Upload-Offset"))?;
     let r_fk = f_1ge(&r_fe, "upload-length")
         .ok_or_else(|| ApiError::bad_request("thiếu Upload-Length"))?;
-    if r_fk == 0 || r_fk as usize > C_C7 {
+    if r_fk == 0 || r_fk > MAX_RESUMABLE_BYTES {
         return Err(ApiError::bad_request(
             "kích thước file không hợp lệ",
         ));
