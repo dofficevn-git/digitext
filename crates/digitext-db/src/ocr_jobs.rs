@@ -111,7 +111,10 @@ pub async fn enqueue_ocr_bulk(pool: &PgPool, docs: &[(Uuid, i32)]) -> sqlx::Resu
     Ok(ids.len() as i64)
 }
 pub const C_BG: i32 = 0;
-const C_BH: i32 = 200;
+/// Ưu tiên việc tạo PDF 2 lớp: TRƯỚC OCR (100). Tài liệu OCR xong trang cuối là ghép PDF/A
+/// ngay (CPU máy chủ, ~0,4 s/trang) thay vì đợi cả kho OCR xong (25/9/2026: 800 việc đứng
+/// sau 91.000 trang OCR, ~17 ngày).
+const C_BH: i32 = 50;
 const C_K8: i32 = 300;
 const C_6Q: i32 = 150;
 pub async fn f_19p(r_274: &PgPool, document_id: Uuid) -> sqlx::Result<()> {
