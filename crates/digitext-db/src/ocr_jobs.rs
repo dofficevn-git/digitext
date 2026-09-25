@@ -71,6 +71,45 @@ pub async fn f_19m(r_272: &PgPool, document_id: Uuid, r_271: i32) -> sqlx::Resul
     r_273.commit().await?;
     Ok(r_271 as i64)
 }
+/// Xếp việc OCR cho nhiều tài liệu một lượt: mỗi khối 20.000 trang là MỘT câu INSERT (UNNEST)
+/// thay vì một câu mỗi trang. 25/9/2026: «OCR toàn bộ» 30.000 tài liệu / 70.000 trang chạy
+/// nhiều phút, client hết giờ chờ → máy chủ huỷ giữa chừng (mới xếp 13.585 trang).
+pub async fn enqueue_ocr_bulk(pool: &PgPool, docs: &[(Uuid, i32)]) -> sqlx::Result<i64> {
+    let mut ids: Vec<Uuid> = Vec::new();
+    let mut doc_ids: Vec<Uuid> = Vec::new();
+    let mut pages: Vec<i32> = Vec::new();
+    for &(doc, n) in docs {
+        for page_no in 1..=n.max(0) {
+            ids.push(Uuid::now_v7());
+            doc_ids.push(doc);
+            pages.push(page_no);
+        }
+    }
+    let mut tx = pool.begin().await?;
+    const CHUNK: usize = 20_000;
+    let mut start = 0;
+    while start < ids.len() {
+        let end = (start + CHUNK).min(ids.len());
+        sqlx::query(
+            "INSERT INTO ocr_jobs (id, document_id, page_no, kind) \
+             SELECT i, d, p, 'ocr' FROM UNNEST($1::uuid[], $2::uuid[], $3::int4[]) AS t(i, d, p) \
+             ON CONFLICT (document_id, page_no) WHERE kind = 'ocr' DO NOTHING",
+        )
+        .bind(&ids[start..end])
+        .bind(&doc_ids[start..end])
+        .bind(&pages[start..end])
+        .execute(&mut *tx)
+        .await?;
+        start = end;
+    }
+    let touched: Vec<Uuid> = docs.iter().filter(|(_, n)| *n > 0).map(|(d, _)| *d).collect();
+    sqlx::query("UPDATE documents SET status = 'ocr_pending' WHERE id = ANY($1) AND status = 'uploaded'")
+        .bind(&touched)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(ids.len() as i64)
+}
 pub const C_BG: i32 = 0;
 const C_BH: i32 = 200;
 const C_K8: i32 = 300;

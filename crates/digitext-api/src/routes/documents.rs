@@ -872,7 +872,8 @@ pub struct OcrAllResult {
     pub pages: i64,
     pub skipped_no_page_count: usize,
 }
-const C_EE: i64 = 5000;
+/// Trần tài liệu mỗi lần «OCR toàn bộ» (chỉ chặn bất thường; xếp theo lô nên 30.000+ vẫn vài giây).
+const C_EE: i64 = 500_000;
 async fn ocr_all(
     State(state): State<AppState>,
     r_g4: Ts,
@@ -890,18 +891,13 @@ async fn ocr_all(
         },
     };
     let r_g9 = documents::f_1o0(&state.pool, projects.as_deref(), C_EE).await?;
-    let mut r_g5 = 0usize;
-    let mut pages = 0i64;
-    let mut skipped = 0usize;
-    for r in &r_g9 {
-        match r.page_count {
-            Some(r_g6) if r_g6 > 0 => {
-                pages += ocr_jobs::f_19m(&state.pool, r.id, r_g6).await?;
-                r_g5 += 1;
-            }
-            _ => skipped += 1,
-        }
-    }
+    let batch: Vec<(Uuid, i32)> = r_g9
+        .iter()
+        .filter_map(|r| r.page_count.filter(|n| *n > 0).map(|n| (r.id, n)))
+        .collect();
+    let r_g5 = batch.len();
+    let skipped = r_g9.len() - r_g5;
+    let pages = ocr_jobs::enqueue_ocr_bulk(&state.pool, &batch).await?;
     digitext_db::audit::append(
         &state.pool,
         digitext_db::audit::Tp {
