@@ -234,7 +234,8 @@ pub async fn f_1eo<T: serde::de::DeserializeOwned>(
     r_f0: &str,
     path: &str,
 ) -> Result<T, ClientError> {
-    parse(http().get(api(r_ez, path)).bearer_auth(r_f0).send().await).await
+    // Danh sách lớn (30.000+ tài liệu) qua đường hầm có thể quá 15 s mặc định.
+    parse(http().get(api(r_ez, path)).timeout(Duration::from_secs(60)).bearer_auth(r_f0).send().await).await
 }
 pub async fn f_23d<T: serde::de::DeserializeOwned>(
     r_f1: &str,

@@ -7,6 +7,7 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::Mutex as AsyncMutex;
+use tower_http::compression::Predicate as _;
 use tower_http::trace::TraceLayer;
 pub type Tpc = Arc<Mutex<HashMap<String, Arc<AsyncMutex<()>>>>>;
 #[derive(Clone)]
@@ -105,6 +106,16 @@ pub fn router(r_b: AppState) -> Router {
         .route("/healthz", get(|| async { "ok" }))
         .merge(crate::routes::updates::router())
         .nest("/api/v1", f_rv())
+        // Nén gzip JSON (danh sách 30.000 tài liệu ≈ 12 MB → ~1 MB) khi client xin
+        // (Accept-Encoding). Không nén PDF/zip/bộ cài: đã nén sẵn, chỉ tốn CPU.
+        .layer(
+            tower_http::compression::CompressionLayer::new().gzip(true).compress_when(
+                tower_http::compression::predicate::DefaultPredicate::new()
+                    .and(tower_http::compression::predicate::NotForContentType::const_new("application/pdf"))
+                    .and(tower_http::compression::predicate::NotForContentType::const_new("application/zip"))
+                    .and(tower_http::compression::predicate::NotForContentType::const_new("application/octet-stream")),
+            ),
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(r_b)
 }

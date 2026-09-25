@@ -58,7 +58,7 @@ sqlx = { version = "0.8", default-features = false, features = [
 ] }
 tower = "0.5"
 unicode-normalization = "0.1"
-tower-http = { version = "0.6", features = ["trace"] }
+tower-http = { version = "0.6", features = ["trace", "compression-gzip"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 opentelemetry = { version = "0.32", features = ["trace", "metrics", "logs"] }
