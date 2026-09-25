@@ -39,8 +39,11 @@ export function V3zt(V14: string, V15: string): string {
       return "Máy này đã bị thu hồi quyền truy cập — liên hệ quản trị dự án.";
     case "offline_expired":
       return "Quá 30 ngày chưa xác thực online — kết nối mạng rồi đăng nhập lại.";
-    case "server_unreachable":
-      return "Không kết nối được máy chủ. Kiểm tra mạng, hoặc đăng nhập offline nếu đã dùng máy này trước đó.";
+    case "server_unreachable": {
+      // Kèm lỗi thật (hết giờ chờ / đọc phản hồi lỗi…) để biết đâu là nguyên nhân.
+      const chiTiet = V15.match(/\((.*)\)\.?$/)?.[1];
+      return "Không kết nối được máy chủ. Kiểm tra mạng, hoặc đăng nhập offline nếu đã dùng máy này trước đó." + (chiTiet ? ` Chi tiết: ${chiTiet}` : "");
+    }
     case "server_not_configured":
       return "Chưa cấu hình địa chỉ máy chủ — bấm “Cài đặt” để nhập.";
     case "busy":
