@@ -166,6 +166,8 @@ async fn f_28v(
     state: &AppState,
     project_id: uuid::Uuid,
     blake3: &str,
+    filename: &str,
+    rel_path: Option<&str>,
     r_eb: &std::path::Path,
     r_ec: &str,
 ) -> Result<digitext_db::documents::Document, ApiError> {
@@ -178,7 +180,7 @@ async fn f_28v(
             );
         }
     }
-    documents::find_by_hash(&state.pool, project_id, blake3)
+    documents::find_same_file(&state.pool, project_id, blake3, filename, rel_path)
         .await?
         .ok_or_else(|| {
             ApiError::conflict(
@@ -238,8 +240,15 @@ async fn f_2nl(
     }
     let r_4 = f_29f(&state, &r_ef, r_eo.project_id, r_eo.on_behalf_of).await?;
     let batch_id = f_28s(&state, &r_ef, r_eo.batch_id).await?;
-    if let Some(existing) =
-        documents::find_by_hash(&state.pool, r_eo.project_id, &r_eo.blake3).await?
+    let rel_norm = r_eo.rel_path.as_deref().and_then(f_zy);
+    if let Some(existing) = documents::find_same_file(
+        &state.pool,
+        r_eo.project_id,
+        &r_eo.blake3,
+        &r_eo.filename,
+        rel_norm.as_deref(),
+    )
+    .await?
     {
         return Ok((
             StatusCode::OK,
@@ -300,8 +309,14 @@ async fn f_2nl(
             "hash không khớp (file hỏng khi truyền) — gửi lại",
         ));
     }
-    if let Some(existing) =
-        documents::find_by_hash(&state.pool, r_eo.project_id, &r_eo.blake3).await?
+    if let Some(existing) = documents::find_same_file(
+        &state.pool,
+        r_eo.project_id,
+        &r_eo.blake3,
+        &r_eo.filename,
+        rel_norm.as_deref(),
+    )
+    .await?
     {
         let _ = tokio::fs::remove_file(&part).await;
         return Ok((
@@ -351,7 +366,7 @@ async fn f_2nl(
             (d, false)
         }
         None => (
-            f_28v(&state, r_eo.project_id, &r_eo.blake3, &r_en, &r_3).await?,
+            f_28v(&state, r_eo.project_id, &r_eo.blake3, &r_eo.filename, rel_path.as_deref(), &r_en, &r_3).await?,
             true,
         ),
     };
@@ -573,6 +588,12 @@ fn f_10s(id: Uuid, duplicate: bool) -> Response {
 pub struct Thk {
     pub project_id: Uuid,
     pub blake3: String,
+    /// Client mới gửi kèm tên + đường dẫn để "đã có" nghĩa là đúng TỆP này đã lên, không phải
+    /// một tệp khác cùng nội dung. Client cũ không gửi → so theo nội dung như trước.
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub rel_path: Option<String>,
 }
 async fn f_1g9(
     State(state): State<AppState>,
@@ -584,7 +605,15 @@ async fn f_1g9(
     if !valid_blake3(&r_f6.blake3) {
         return Err(ApiError::bad_request("blake3 không hợp lệ"));
     }
-    if let Some(r_f5) = documents::find_by_hash(&state.pool, r_f6.project_id, &r_f6.blake3).await? {
+    let r_f5 = match r_f6.filename.as_deref() {
+        Some(name) => {
+            let rel_norm = r_f6.rel_path.as_deref().and_then(f_zy);
+            documents::find_same_file(&state.pool, r_f6.project_id, &r_f6.blake3, name, rel_norm.as_deref())
+                .await?
+        }
+        None => documents::find_by_hash(&state.pool, r_f6.project_id, &r_f6.blake3).await?,
+    };
+    if let Some(r_f5) = r_f5 {
         return Ok(f_10s(r_f5.id, true));
     }
     let offset = tokio::fs::metadata(part_path(&state, r_f6.project_id, &r_f6.blake3))
@@ -618,8 +647,15 @@ async fn f_20h(
     if offset == 0 {
         f_28s(&state, &r_f8, r_fi.batch_id).await?;
     }
-    if let Some(existing) =
-        documents::find_by_hash(&state.pool, r_fi.project_id, &r_fi.blake3).await?
+    let rel_norm = r_fi.rel_path.as_deref().and_then(f_zy);
+    if let Some(existing) = documents::find_same_file(
+        &state.pool,
+        r_fi.project_id,
+        &r_fi.blake3,
+        &r_fi.filename,
+        rel_norm.as_deref(),
+    )
+    .await?
     {
         let lock = state.upload_lock(r_fi.project_id, &r_fi.blake3);
         let _guard = lock.lock().await;
@@ -680,8 +716,14 @@ async fn f_20h(
             ),
         );
     }
-    if let Some(existing) =
-        documents::find_by_hash(&state.pool, r_fi.project_id, &r_fi.blake3).await?
+    if let Some(existing) = documents::find_same_file(
+        &state.pool,
+        r_fi.project_id,
+        &r_fi.blake3,
+        &r_fi.filename,
+        rel_norm.as_deref(),
+    )
+    .await?
     {
         let _ = tokio::fs::remove_file(&part).await;
         return Ok(f_10s(existing.id, true));
@@ -726,7 +768,7 @@ async fn f_20h(
             (d, false)
         }
         None => (
-            f_28v(&state, r_fi.project_id, &r_fi.blake3, &r_fd, &r_5).await?,
+            f_28v(&state, r_fi.project_id, &r_fi.blake3, &r_fi.filename, rel_path.as_deref(), &r_fd, &r_5).await?,
             true,
         ),
     };

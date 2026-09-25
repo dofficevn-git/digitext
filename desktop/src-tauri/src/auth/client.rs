@@ -294,11 +294,18 @@ pub async fn f_2nq(
     r_fc: &str,
     project_id: &str,
     blake3: &str,
+    filename: &str,
+    rel_path: Option<&str>,
 ) -> Result<UploadProbe, ClientError> {
+    // Gửi tên + đường dẫn: "đã có" phải là đúng tệp này, không phải tệp khác cùng nội dung.
+    let mut q: Vec<(&str, &str)> = vec![("projectId", project_id), ("blake3", blake3), ("filename", filename)];
+    if let Some(r) = rel_path {
+        q.push(("relPath", r));
+    }
     let r_fb = http()
         .head(api(r_fa, "/documents/upload"))
         .bearer_auth(r_fc)
-        .query(&[("projectId", project_id), ("blake3", blake3)])
+        .query(&q)
         .send()
         .await
         .map_err(|e| ClientError::Unreachable(e.to_string()))?;

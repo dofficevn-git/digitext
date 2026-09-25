@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 19;
+const C_P1: i64 = 20;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -75,8 +75,9 @@ CREATE TABLE IF NOT EXISTS collected_docs (
     forward_error   TEXT,                   -- lỗi lần đẩy gần nhất (để thử lại)
     forward_tries   INTEGER NOT NULL DEFAULT 0
 );
--- Khử trùng: cùng (dự án, hash) chỉ gom 1 lần dù kéo lại nhiều lần.
-CREATE UNIQUE INDEX IF NOT EXISTS ux_collected_hash ON collected_docs (project_id, blake3);
+-- Khử trùng: cùng (dự án, hash, tệp trong Kho) chỉ gom 1 lần dù kéo lại nhiều lần. Cùng nội
+-- dung mà khác tên/vị trí là văn bản khác → vẫn gom (bản 20, 25/9/2026).
+CREATE UNIQUE INDEX IF NOT EXISTS ux_collected_hash_path ON collected_docs (project_id, blake3, storage_path);
 "#;
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     let mut r_1cw = Connection::open(path)?;
@@ -213,6 +214,12 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
                  first_seen TEXT NOT NULL DEFAULT (datetime('now')),
                  last_addr  TEXT
              );",
+        )?;
+    }
+    if r_1d2 < 20 {
+        r_1d3.execute_batch(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_collected_hash_path ON collected_docs (project_id, blake3, storage_path);
+             DROP INDEX IF EXISTS ux_collected_hash;",
         )?;
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;
@@ -1032,6 +1039,16 @@ pub fn f_1r8(r_1fe: &Connection, id: i64) -> rusqlite::Result<()> {
         )?;
     Ok(())
 }
+/// Đúng tệp này (cùng nội dung + cùng chỗ trong Kho) đã gom chưa. Khác `f_10m` (chỉ so nội
+/// dung): hai văn bản khác tên có thể trùng từng byte mà vẫn phải lưu đủ cả hai.
+pub fn collected_same_file(conn: &Connection, project_id: &str, blake3: &str, storage_path: &str) -> rusqlite::Result<bool> {
+    let n: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM collected_docs WHERE project_id = ?1 AND blake3 = ?2 AND storage_path = ?3",
+        params![project_id, blake3, storage_path],
+        |r| r.get(0),
+    )?;
+    Ok(n > 0)
+}
 pub fn f_10m(r_1ff: &Connection, blake3: &str) -> rusqlite::Result<Option<String>> {
     r_1ff
         .query_row(
@@ -1126,4 +1143,37 @@ pub fn list_phong(r_1fv: &Connection) -> rusqlite::Result<Vec<Th9>> {
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(r_1fw)
+}
+
+#[cfg(test)]
+mod same_file_tests {
+    use super::*;
+    fn row<'a>(blake3: &'a str, path: &'a str, name: &'a str) -> Tds<'a> {
+        Tds {
+            source_user_id: "u",
+            source_username: None,
+            project_id: "p",
+            phong_ma: None,
+            ho_so_ref: None,
+            filename: name,
+            page_count: None,
+            size_bytes: 1,
+            blake3,
+            storage_path: path,
+        }
+    }
+    #[test]
+    fn cung_noi_dung_khac_ten_van_gom_du_ca_hai() {
+        let f = std::env::temp_dir().join(format!("digitext-samefile-{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&f);
+        let conn = open(&f).unwrap();
+        let h = "ab".repeat(32);
+        assert!(f_1id(&conn, row(&h, r"K\HS\a.0000006.pdf", "a.0000006.pdf")).unwrap());
+        assert!(f_1id(&conn, row(&h, r"K\HS\a.0000010.pdf", "a.0000010.pdf")).unwrap(), "khác tên phải gom được");
+        assert!(!f_1id(&conn, row(&h, r"K\HS\a.0000010.pdf", "a.0000010.pdf")).unwrap(), "đúng tệp cũ thì bỏ qua");
+        assert!(collected_same_file(&conn, "p", &h, r"K\HS\a.0000010.pdf").unwrap());
+        assert!(!collected_same_file(&conn, "p", &h, r"K\HS\a.0000011.pdf").unwrap());
+        drop(conn);
+        let _ = std::fs::remove_file(&f);
+    }
 }

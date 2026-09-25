@@ -2431,8 +2431,8 @@ async fn f_1dj(
     let batch = r_y3.map(str::to_string);
     let rel = r_yb.map(str::to_string);
     let r_ya = f_2r7(db, r_y2, Perm::Admin, |base, token| {
-        let (r_y8, b) = (pid.clone(), blake3.clone());
-        async move { client::f_2nq(&base, &token, &r_y8, &b).await }
+        let (r_y8, b, name, rel) = (pid.clone(), blake3.clone(), filename.clone(), rel.clone());
+        async move { client::f_2nq(&base, &token, &r_y8, &b, &name, rel.as_deref()).await }
     })
     .await
     .map_err(ForwardFail::from_app)?;
@@ -3106,16 +3106,22 @@ async fn f_qr(
     if r_zf.cancelled() {
         return Ok(AddOutcome::Cancelled);
     }
+    let root = r_zd.root;
     {
+        // Chỉ bỏ qua khi ĐÚNG tệp này đã gom (cùng nội dung + cùng chỗ trong Kho). Tệp khác tên
+        // mà trùng từng byte (bản quét lưu nhầm hai số) vẫn là văn bản riêng → vẫn thêm.
+        let planned = if inside(root, src) {
+            src.to_path_buf()
+        } else {
+            r_z9.join(f_14v(&src.file_name().unwrap_or_default().to_string_lossy()))
+        };
         let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
-        if db::f_10m(&conn, &blake3)
+        if db::collected_same_file(&conn, r_zd.project_id, &blake3, &planned.to_string_lossy())
             .map_err(|e| e.to_string())?
-            .is_some()
         {
             return Ok(AddOutcome::Skipped);
         }
     }
-    let root = r_zd.root;
     let dest = if inside(root, src) {
         src.to_path_buf()
     } else {
