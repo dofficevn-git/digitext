@@ -29,6 +29,7 @@ impl ClientError {
         }
     }
 }
+const UPLOAD_TIMEOUT: Duration = Duration::from_secs(120);
 fn http() -> &'static reqwest::Client {
     static C_1V: OnceLock<reqwest::Client> = OnceLock::new();
     C_1V.get_or_init(|| {
@@ -304,6 +305,7 @@ pub async fn f_2nq(
     }
     let r_fb = http()
         .head(api(r_fa, "/documents/upload"))
+        .timeout(UPLOAD_TIMEOUT)
         .bearer_auth(r_fc)
         .query(&q)
         .send()
@@ -363,6 +365,9 @@ pub async fn f_2nk(
     }
     let r_fm = http()
         .patch(api(r_fd, "/documents/upload"))
+        // Khúc cuối còn PUT kho object + ghi CSDL: máy chủ ổ quay bận có thể quá 15 s mặc định
+        // (25/9/2026) → báo nhầm "Không kết nối được máy chủ". Tải lên được chờ lâu hơn.
+        .timeout(UPLOAD_TIMEOUT)
         .bearer_auth(r_fn)
         .query(&r_fk)
         .header("Upload-Offset", offset.to_string())
