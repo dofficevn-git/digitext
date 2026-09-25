@@ -56,6 +56,26 @@ pub async fn find_by_hash(
         .fetch_optional(r_23l)
         .await
 }
+/// Cùng dự án + cùng nội dung + cùng tên + cùng đường dẫn = cùng một tài liệu (khoá
+/// `ux_documents_hash_name`, migration 0005). Cùng nội dung mà khác tên/vị trí là tài liệu khác.
+pub async fn find_same_file(
+    pool: &PgPool,
+    project_id: Uuid,
+    blake3: &str,
+    filename: &str,
+    rel_path: Option<&str>,
+) -> sqlx::Result<Option<Document>> {
+    sqlx::query_as::<_, Document>(
+        "SELECT * FROM documents WHERE project_id = $1 AND blake3 = $2 AND filename = $3 \
+         AND COALESCE(rel_path, '') = COALESCE($4, '')",
+    )
+    .bind(project_id)
+    .bind(blake3)
+    .bind(filename)
+    .bind(rel_path)
+    .fetch_optional(pool)
+    .await
+}
 pub async fn insert(r_23m: &PgPool, d: Tdt<'_>) -> sqlx::Result<Option<Document>> {
     sqlx::query_as::<
         _,
@@ -64,7 +84,7 @@ pub async fn insert(r_23m: &PgPool, d: Tdt<'_>) -> sqlx::Result<Option<Document>
             "INSERT INTO documents \
             (id, project_id, uploaded_by, filename, ho_so_ref, page_count, size_bytes, blake3, storage_path, batch_id, rel_path) \
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) \
-         ON CONFLICT (project_id, blake3) DO NOTHING \
+         ON CONFLICT (project_id, blake3, filename, (COALESCE(rel_path, ''))) DO NOTHING \
          RETURNING *",
         )
         .bind(Uuid::now_v7())
