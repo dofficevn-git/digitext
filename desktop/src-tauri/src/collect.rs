@@ -1303,7 +1303,9 @@ async fn f_1i6(
     }
     Ok(r_ui)
 }
-const C_BQ: usize = 20_000;
+/// Trần số PDF lấy từ MỘT lần chọn thư mục (chỉ để chặn chọn nhầm cả ổ). 20.000 cũ quá thấp:
+/// 25/9/2026 chọn thư mục 30.729 PDF bị cắt còn 20.000 mà người dùng không để ý cảnh báo.
+const C_BQ: usize = 500_000;
 fn f_2fv(r_ul: &str) -> bool {
     crate::storage::f_1j2(r_ul)
 }
@@ -2793,6 +2795,34 @@ fn dest_segments(
     r.insert(0, label.to_string());
     r
 }
+/// Chọn một thư mục thì giữ luôn tên thư mục đó trong Kho (như chép thư mục trong Windows):
+/// chọn `PHONG SCTBG` → `Chưa phân loại/PHONG SCTBG/HOP 1/…`. Trước đây tên bị bỏ nên các HOP
+/// của nhiều phông dồn chung một chỗ (25/9/2026: 4.510 tệp mất tầng phông). Hồ sơ theo mục lục
+/// (`phong_ma`) thì KHÔNG thêm: thư mục đích đã là `<phông>/<hộp>/<hồ sơ>`.
+fn keep_selected_folder_name(src: &Path, sub: Vec<String>, chua_phan_loai: bool) -> Vec<String> {
+    if !chua_phan_loai {
+        return sub;
+    }
+    match src.file_name().map(|n| n.to_string_lossy().into_owned()).filter(|n| !n.is_empty()) {
+        Some(name) => std::iter::once(name).chain(sub).collect(),
+        None => sub,
+    }
+}
+#[cfg(test)]
+mod keep_name_tests {
+    use super::keep_selected_folder_name;
+    use std::path::Path;
+    #[test]
+    fn giu_ten_thu_muc_da_chon_khi_chua_phan_loai() {
+        let sub = vec!["HOP 1".to_string(), "HO SO 2".to_string()];
+        assert_eq!(
+            keep_selected_folder_name(Path::new(r"F:\TTLTLS BNI\PHONG SCTBG"), sub.clone(), true),
+            vec!["PHONG SCTBG", "HOP 1", "HO SO 2"]
+        );
+        assert_eq!(keep_selected_folder_name(Path::new(r"F:\TTLTLS BNI\PHONG SCTBG"), sub.clone(), false), sub);
+        assert_eq!(keep_selected_folder_name(Path::new(r"F:\"), sub.clone(), true), sub);
+    }
+}
 fn inside(root: &Path, path: &Path) -> bool {
     let r_yi = |r_yj: &Path| r_yj.canonicalize().unwrap_or_else(|_| r_yj.to_path_buf());
     r_yi(path).strip_prefix(r_yi(root)).is_ok()
@@ -2877,6 +2907,7 @@ pub async fn collect_add_files(
     );
     let mut r_yv = 0usize;
     let mut r_yo: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let chua_phan_loai = args.phong_ma.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none();
     for r_ys in &args.paths {
         let src = PathBuf::from(r_ys);
         let Ok(r_yq) = std::fs::metadata(&src) else {
@@ -2918,6 +2949,7 @@ pub async fn collect_add_files(
                             .collect::<Vec<_>>()
                     })
                     .unwrap_or_default();
+                let sub = keep_selected_folder_name(&src, sub, chua_phan_loai);
                 let r_yt: Vec<&str> = sub.iter().map(String::as_str).collect();
                 r_yo.push((f, crate::storage::f_1jt(&folder, &r_yt, false)));
             }
