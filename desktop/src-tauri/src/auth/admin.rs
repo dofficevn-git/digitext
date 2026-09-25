@@ -10,10 +10,11 @@ use std::future::Future;
 use tauri::State;
 pub(crate) fn map_err(r_be: ClientError) -> AppError {
     match r_be {
-        ClientError::Unreachable(_) => AppError::new(
-            "server_unreachable",
-            "Không kết nối được máy chủ.",
-        ),
+        ClientError::Unreachable(detail) => {
+            // Ghi lỗi thật: "Không kết nối được" còn che cả hết giờ chờ lẫn lỗi đọc phản hồi.
+            tracing::warn!(error = % detail, "server_unreachable");
+            AppError::new("server_unreachable", format!("Không kết nối được máy chủ ({detail})."))
+        }
         ClientError::Api {
             code,
             message: r_bf,
