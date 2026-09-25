@@ -212,6 +212,15 @@ async fn login(
     .await?;
     Ok(Json(r_ao))
 }
+/// Châm chước cho refresh token VỪA xoay bị gửi lại: client hết thời gian chờ (máy chủ chậm —
+/// 25/9/2026 ổ cứng quá tải, COMMIT 25 s) nên gửi lại đúng token cũ. Không có khoảng này thì bị
+/// coi là trộm token → thu hồi cả phiên → 4.275 tệp đang đẩy lên lỗi «Chưa đăng nhập».
+/// Chỉ áp cho lý do `rotated` (không phải logout / thu hồi thiết bị / reuse).
+const REFRESH_REUSE_GRACE_SECS: i64 = 120;
+fn rotated_recently(t: &tokens::Tij, now: chrono::DateTime<Utc>) -> bool {
+    t.revoked_reason.as_deref() == Some("rotated")
+        && t.revoked_at.is_some_and(|at| now - at <= chrono::Duration::seconds(REFRESH_REUSE_GRACE_SECS))
+}
 async fn refresh(
     State(r_ay): State<AppState>,
     r_aq: crate::client_ip::T2t,
@@ -223,7 +232,11 @@ async fn refresh(
         return Err(ApiError::auth_failed());
     };
     let r_au = Utc::now();
-    if r_aw.revoked_at.is_some() {
+    let grace = rotated_recently(&r_aw, r_au);
+    if grace {
+        tracing::warn!(token = % r_aw.id, "refresh token vừa xoay bị gửi lại trong thời gian châm chước — cấp phiên mới, không thu hồi");
+    }
+    if r_aw.revoked_at.is_some() && !grace {
         tokens::f_2a1(&r_ay.pool, r_aw.user_id, r_aw.device_id, "refresh_reuse").await?;
         audit::append(
             &r_ay.pool,
@@ -257,7 +270,12 @@ async fn refresh(
             }
         }
     }
-    if !tokens::revoke(&r_ay.pool, r_aw.id, "rotated").await? {
+    if !grace
+        && !tokens::revoke(&r_ay.pool, r_aw.id, "rotated").await?
+        && !tokens::find_by_hash(&r_ay.pool, &r_as)
+            .await?
+            .is_some_and(|t| rotated_recently(&t, Utc::now()))
+    {
         tokens::f_2a1(&r_ay.pool, r_aw.user_id, r_aw.device_id, "refresh_reuse").await?;
         audit::append(
             &r_ay.pool,
