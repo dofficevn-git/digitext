@@ -183,6 +183,24 @@ async fn f_28v(
             )
         })
 }
+/// Bản sao thô trong `data/` chỉ là bước đệm để PUT lên kho object. Kho object có bản chính
+/// (worker OCR, PDF/A, đóng gói, tải xuống đều đọc từ đó) nên giữ thêm bản thô là tốn gấp đôi
+/// đĩa (25/9/2026: 45 GB thừa). Chỉ giữ khi `DIGITEXT_KEEP_SOURCE_COPY=true` hoặc không có kho
+/// object (khi đó `data/` là nơi duy nhất còn tệp).
+async fn drop_local_copy(state: &AppState, path: &std::path::Path) {
+    if state.source_store.is_none() {
+        return;
+    }
+    let keep = std::env::var("DIGITEXT_KEEP_SOURCE_COPY")
+        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false);
+    if keep {
+        return;
+    }
+    if let Err(e) = tokio::fs::remove_file(path).await {
+        tracing::warn!(error = % e, path = % path.display(), "không xoá được bản sao thô sau khi đẩy kho");
+    }
+}
 async fn f_24y(state: &AppState, r_1: &str, r_ed: &std::path::Path) -> Result<(), ApiError> {
     let Some(r_2) = &state.source_store else {
         return Ok(());
@@ -325,7 +343,10 @@ async fn f_2nl(
     )
     .await?;
     let (r_eh, duplicate) = match r_ek {
-        Some(d) => (d, false),
+        Some(d) => {
+            drop_local_copy(&state, &r_en).await;
+            (d, false)
+        }
         None => (
             f_28v(&state, r_eo.project_id, &r_eo.blake3, &r_en, &r_3).await?,
             true,
@@ -469,9 +490,25 @@ async fn f_173(
     let r_ey = state.data_dir.join(&r_ev.storage_path);
     let file = match tokio::fs::File::open(&r_ey).await {
         Ok(r_ew) => r_ew,
-        Err(_) => tokio::fs::File::open(&r_ev.storage_path)
-            .await
-            .map_err(|_| ApiError::not_found())?,
+        Err(_) => match tokio::fs::File::open(&r_ev.storage_path).await {
+            Ok(f) => f,
+            Err(_) => {
+                // Không còn bản sao thô trên đĩa (từ 25/9/2026 không giữ nữa — MinIO là bản chính).
+                let Some(store) = state.source_store.as_ref().or(state.store.as_ref()) else {
+                    return Err(ApiError::not_found());
+                };
+                let bytes = store
+                    .get(&r_ev.storage_path)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(error = % e, key = % r_ev.storage_path, "lỗi đọc PDF gốc từ kho object");
+                        ApiError::service_unavailable("kho lưu trữ không sẵn sàng")
+                    })?
+                    .ok_or_else(ApiError::not_found)?;
+                let n = bytes.len() as u64;
+                return Ok((f_177(&r_ev.filename, Some(n)), Body::from(bytes)).into_response());
+            }
+        },
     };
     let r_ex = file.metadata().await.ok().map(|m| m.len());
     let body = Body::from_stream(tokio_util::io::ReaderStream::new(file));
@@ -681,7 +718,10 @@ async fn f_20h(
     )
     .await?;
     let (r_fb, duplicate) = match r_ff {
-        Some(d) => (d, false),
+        Some(d) => {
+            drop_local_copy(&state, &r_fd).await;
+            (d, false)
+        }
         None => (
             f_28v(&state, r_fi.project_id, &r_fi.blake3, &r_fd, &r_5).await?,
             true,
