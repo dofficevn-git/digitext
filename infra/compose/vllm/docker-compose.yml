@@ -5,6 +5,9 @@
 # không chạy đồng thời với Qwen trên 16 GB — A/B thì stop cái này, up cái kia.
 # Card ≥ 24 GB: đặt VLLM_GPU_FRACTION=0.60 và bật cả hai được.
 #
+# Đổi mô hình chỉ qua .env (VLLM_IMAGE, VLLM_MODEL, VLLM_SERVED_NAME, VLLM_LIMIT_MM) —
+# xem dev/qwen3-vl.env.example. OCR đọc tên mô hình ở OCR_HW_MODEL (compose ocr/.env).
+#
 # --max-model-len 4096 gắn với MODEL_MAX_LEN_V2 trong
 # crates/digitext-ocr/src/vlm_prompt_v2.rs — đổi một bên phải đổi bên kia.
 name: digitext-vllm
@@ -15,9 +18,9 @@ services:
     restart: unless-stopped
     command:
       - "--model"
-      - "Qwen/Qwen2.5-VL-7B-Instruct-AWQ"
+      - "${VLLM_MODEL:-Qwen/Qwen2.5-VL-7B-Instruct-AWQ}"
       - "--served-model-name"
-      - "Qwen2.5-VL-7B-Instruct-AWQ"
+      - "${VLLM_SERVED_NAME:-Qwen2.5-VL-7B-Instruct-AWQ}"
       - "--host"
       - "0.0.0.0"
       - "--port"
@@ -27,7 +30,8 @@ services:
       - "--max-model-len"
       - "4096"
       - "--limit-mm-per-prompt"
-      - "image=1"
+      # vLLM mới (≥0.10) nhận dạng JSON: VLLM_LIMIT_MM='{"image":1}'
+      - "${VLLM_LIMIT_MM:-image=1}"
       - "--dtype"
       - "half"
       - "--enforce-eager"
