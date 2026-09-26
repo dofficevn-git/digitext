@@ -51,6 +51,8 @@ services:
       OCR_HW_MODEL: "${OCR_HW_MODEL:-Qwen2.5-VL-7B-Instruct-AWQ}"
       OCR_HW_CONF: "${OCR_HW_CONF:-0.85}"
       OCR_HW_MAX_PER_PAGE: "${OCR_HW_MAX_PER_PAGE:-15}"
+      # Số yêu cầu gửi VLM cùng lúc (dùng chung mọi trang). vLLM gộp lượt → 8 ≈ giá 2.
+      OCR_HW_WORKERS: "${OCR_HW_WORKERS:-8}"
       # Lưới an toàn phát hiện dòng theo NÉT MỰC (ocr/inklines.py): DBNet sót chữ viết tay →
       # sinh khung cho mực chưa có khung; trả thêm ink_coverage (độ phủ mực) mỗi tile.
       OCR_INK_LINES: "${OCR_INK_LINES:-true}"
