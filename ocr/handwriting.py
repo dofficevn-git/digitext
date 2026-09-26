@@ -72,6 +72,10 @@ class HandwritingFallback:
         self.block_gap = _env_f("OCR_HW_BLOCK_GAP", 2.5)  # tính theo chiều cao dòng trung vị
         self.max_blocks = _env_i("OCR_HW_MAX_BLOCKS", 3)
         self.block_timeout = _env_f("OCR_HW_BLOCK_TIMEOUT_S", 90.0)
+        # Cạnh dài tối đa của ảnh gửi VLM. Qwen2.5-VL tính theo mảnh 28×28 px nên ảnh nhỏ hơn
+        # = ít token hơn = nhanh hơn (GPU máy OCR đã chạy 98% — 26/9/2026). Đổi thì phải đo
+        # lại độ phủ + nội dung trên trang tay thật (dev/thu-hw-max-side).
+        self.max_side = max(256, _env_i("OCR_HW_MAX_SIDE", 1600))
         self._pool = cf.ThreadPoolExecutor(max_workers=self.workers) if self.url else None
         self._warned = False
 
@@ -85,6 +89,7 @@ class HandwritingFallback:
             "url": self.url or None,
             "model": self.model if self.enabled else None,
             "conf_threshold": self.conf,
+            "max_side": self.max_side,
         }
 
     # ---- VLM ---------------------------------------------------------------
@@ -95,8 +100,8 @@ class HandwritingFallback:
         return self._ask(crop, PROMPT, 160, self.timeout)
 
     def _ask(self, crop, prompt: str, max_tokens: int, timeout: float) -> str | None:
-        if max(crop.size) > 1600:
-            k = 1600 / max(crop.size)
+        if max(crop.size) > self.max_side:
+            k = self.max_side / max(crop.size)
             crop = crop.resize((max(1, int(crop.width * k)), max(1, int(crop.height * k))))
         buf = io.BytesIO()
         crop.save(buf, "PNG")
@@ -132,6 +137,9 @@ class HandwritingFallback:
         t = re.sub(r"\s+", " ", t)
         if len(t) < 2:
             return None
+        # Kẹt vòng lặp → không tin cả dòng, giữ chữ VietOCR (dòng vẫn còn trong lớp chữ).
+        if HandwritingFallback._looping(t):
+            return None
         # Từ chối câu trả lời kiểu hội thoại / từ chối ("Xin lỗi", "Không thể", "The image").
         low = t.lower()
         if low.startswith(("xin lỗi", "không thể", "tôi không", "the image", "i cannot", "i'm sorry")):
@@ -149,6 +157,41 @@ class HandwritingFallback:
         elif not (0.4 * n <= len(t) <= 3.0 * n + 12):
             return None
         return t
+
+    # ---- lặp vô hạn ------------------------------------------------------
+    # VLM (giải mã tham lam) đôi khi kẹt vòng: "1 tháng lương la: 1 tháng lương la: …" ×200
+    # (đo 26/9/2026). Vừa đưa rác vào lớp chữ, vừa đốt tới max_tokens (~18 s/khối).
+    _LOOP = re.compile(r"(.{3,60}?)(?:\s*\1){3,}")
+
+    @staticmethod
+    def _wordy(unit: str) -> bool:
+        # Chỉ coi là kẹt vòng khi đoạn lặp có chữ cái — hàng chấm "……", "0000", "! ! !" của
+        # biểu mẫu/bảng là nội dung thật, giữ nguyên.
+        return sum(c.isalpha() for c in unit) >= 2
+
+    # Lặp KHÔNG có chữ (`" " " "…`, dấu câu) chỉ coi là kẹt vòng khi dài bất thường: hàng
+    # chấm điền, dấu "như trên" của bảng không bao giờ dài tới mức này (26/9/2026: 2.262 ký tự).
+    _JUNK_RUN = 200
+
+    @classmethod
+    def _bad(cls, m) -> bool:
+        return cls._wordy(m.group(1)) or len(m.group(0)) > cls._JUNK_RUN
+
+    @classmethod
+    def _looping(cls, t: str) -> bool:
+        return any(cls._bad(m) for m in cls._LOOP.finditer(t))
+
+    @classmethod
+    def _unloop(cls, t: str) -> str:
+        """Gộp đoạn lặp ≥4 lần liên tiếp về một lần (giữ nội dung trước/sau vòng lặp); lặp
+        không chữ mà quá dài thì cắt về 40 ký tự."""
+        def fix(m):
+            if cls._wordy(m.group(1)):
+                return m.group(1)
+            if len(m.group(0)) > cls._JUNK_RUN:
+                return m.group(0)[:40]
+            return m.group(0)
+        return cls._LOOP.sub(fix, t)
 
     # ---- tiện ích ---------------------------------------------------------
     @staticmethod
@@ -260,8 +303,10 @@ class HandwritingFallback:
         mx, my = 0.02 * page.width, 0.006 * page.height
         crop = page.crop((max(0, int(x1 - mx)), max(0, int(y1 - my)),
                           min(page.width, int(x2 + mx)), min(page.height, int(y2 + my))))
-        raw = self._ask(crop, BLOCK_PROMPT, 1200, self.block_timeout)
-        lines = self._clean_lines(raw)
+        # Trần token theo số dòng của khối (~90 token/dòng dư cho một dòng tiếng Việt dài):
+        # câu trả lời bình thường không chạm trần, vòng lặp thì bị cắt sớm thay vì chạy 1200.
+        raw = self._ask(crop, BLOCK_PROMPT, min(1200, 90 * len(span) + 80), self.block_timeout)
+        lines = [self._unloop(ln) for ln in self._clean_lines(raw)]
         if not lines or len(lines) > 3 * len(span) + 5:
             return {}
         pairs, extra = self._align(span, texts, confs, lines)
