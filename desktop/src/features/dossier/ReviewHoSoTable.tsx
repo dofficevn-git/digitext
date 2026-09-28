@@ -318,7 +318,7 @@ function V4l6({
               )}
             </td>
             {}
-            <td colSpan={3} />
+            <td colSpan={4} />
             <td className="oh-fname oh-files">
               {f.filename} <span className={`badge ${V1r5.tone}`}>{V1r5.label}</span>
             </td>
@@ -531,6 +531,7 @@ export default function ReviewHoSoTable({
                   )}
                 </th>
                 <th>Dự án</th>
+                <th>Phông</th>
                 <th>Hộp số</th>
                 <th>Hồ sơ số</th>
                 <th className="oh-files">Tổng số file</th>
@@ -554,7 +555,7 @@ export default function ReviewHoSoTable({
                         />
                       )}
                     </td>
-                    <th className="oh-groupname" colSpan={3}>
+                    <th className="oh-groupname" colSpan={4}>
                       <Icon name="thuMuc" /> Dự án: {g.label}
                     </th>
                     <td className="oh-num oh-files">{fmtN(g.tally.files)}</td>
@@ -582,6 +583,7 @@ export default function ReviewHoSoTable({
                           </td>
                           {}
                           <th className="oh-duan kg-hoso">{g.label}</th>
+                          <th className="kg-hoso">{r.phong || "—"}</th>
                           <th className="kg-hoso">{r.hopSo || V4ke}</th>
                           <th className="kg-hoso">
                             {r.hoSoSo || V4kf}
