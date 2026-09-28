@@ -519,9 +519,16 @@ mod token {
         let pkcs11 = Pkcs11::new(module_path).map_err(|e| {
             format!("không nạp được module PKCS#11 '{module_path}': {e}")
         })?;
-        pkcs11
-            .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
-            .map_err(|e| format!("khởi tạo PKCS#11 lỗi: {e}"))?;
+        match pkcs11.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK)) {
+            // Driver đã được khởi tạo trong tiến trình này (vd. "Dò token" trước đó) — chuẩn
+            // PKCS#11 coi là dùng tiếp được, không phải lỗi (iCA trả mã này, 28/9/2026).
+            Ok(())
+            | Err(cryptoki::error::Error::Pkcs11(
+                cryptoki::error::RvError::CryptokiAlreadyInitialized,
+                _,
+            )) => {}
+            Err(e) => return Err(format!("khởi tạo PKCS#11 lỗi: {e}")),
+        }
         Ok(pkcs11)
     }
     pub fn f_1oh(module_path: &str) -> Result<Vec<Toa>, String> {
