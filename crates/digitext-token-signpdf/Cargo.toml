@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 digitext-sign-verify = { path = "../digitext-sign-verify" }
-cryptoki = "0.8"
+cryptoki = "0.12"
 x509-cert = { version = "0.2", features = ["builder"] }
 der = { version = "0.7", features = ["oid"] }
 sha2 = "0.10"

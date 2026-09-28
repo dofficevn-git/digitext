@@ -503,7 +503,7 @@ pub(crate) fn select_signer(r_2p6: &[CertMeta], r_2p7: i64) -> Option<CertSelect
 }
 mod token {
     use super::{To9, Toa};
-    use cryptoki::context::{CInitializeArgs, Pkcs11};
+    use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
     use cryptoki::mechanism::Mechanism;
     use cryptoki::object::{Attribute, AttributeType, ObjectClass, ObjectHandle};
     use cryptoki::session::{Session, UserType};
@@ -513,7 +513,7 @@ mod token {
             format!("không nạp được module PKCS#11 '{module_path}': {e}")
         })?;
         pkcs11
-            .initialize(CInitializeArgs::OsThreads)
+            .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
             .map_err(|e| format!("khởi tạo PKCS#11 lỗi: {e}"))?;
         Ok(pkcs11)
     }
@@ -562,7 +562,7 @@ mod token {
                 .open_rw_session(slot)
                 .map_err(|e| format!("mở phiên token lỗi: {e}"))?;
             session
-                .login(UserType::User, Some(&AuthPin::new(pin.to_owned())))
+                .login(UserType::User, Some(&AuthPin::new(pin.into())))
                 .map_err(|_| {
                     "PIN không đúng hoặc token bị khoá".to_string()
                 })?;
