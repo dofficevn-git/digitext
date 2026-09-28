@@ -58,6 +58,8 @@ tauri-plugin-updater = "2"
 libloading = { version = "0.8", optional = true }
 
 [features]
+# Bản phát hành chạy song song WIA + TWAIN trên Windows (đề nghị chỉnh sửa mục 3).
+default = ["twain"]
 mock-scanner = []
 twain = ["dep:libloading"]
 
