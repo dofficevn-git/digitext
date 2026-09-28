@@ -67,7 +67,8 @@ export default function V4qy() {
     V2hb("jobs");
     try {
       V2h0(await V4qt(projectId));
-      V2hd(null);
+      // KHÔNG xoá thông báo ở đây: sau khi ký xong màn tự làm mới danh sách — xoá thì kết quả /
+      // lỗi (vd. sai PIN) vừa hiện biến mất ngay, người dùng không biết chuyện gì xảy ra.
     } catch (V2hf) {
       V2hd({
         kind: "err",
@@ -353,11 +354,18 @@ export default function V4qy() {
             )}
             {batch && (
               <span className="text-sm">
-                {batch.done}/{batch.total} · đã ký {batch.signed}
+                {V2ha === "batch" && batch.done === 0
+                  ? "Đang mở token và kiểm PIN…"
+                  : `${batch.done}/${batch.total} · đã ký ${batch.signed}`}
                 {batch.bad > 0 && <span className="text-danger"> · lỗi {batch.bad}</span>}
               </span>
             )}
           </div>
+          {V2hc && V2ha !== "batch" && batch && (
+            <div className={`banner mt-2 ${V2hc.kind === "err" ? "error" : V2hc.kind === "ok" ? "success" : "info"}`}>
+              <div className="bx">{V2hc.text}</div>
+            </div>
+          )}
           {batch && (
             <div className="mt-2 h-2 bg-border-subtle rounded">
               <div
