@@ -15,14 +15,9 @@ import V4h8 from "./TaiLieuPanel";
 import { V4e3, V4e8 } from "./excel";
 import { type V4dk, V4d0, V4di, V4dr, V4cm, V4ct, V4cl, V4dt, V4dp, V4du, V4co } from "./logic";
 import { Icon } from "@/components/Icon";
+import { PackDialog } from "@/features/package/PackFromDossiers";
 
 const V4h9 = [10, 25, 50, 100];
-
-const V4ha = [
-  { value: "nop", label: "Gói nộp (SIP)" },
-  { value: "luutru", label: "Gói lưu trữ (AIP)" },
-  { value: "khaithac", label: "Gói khai thác (DIP)" },
-];
 
 type V4hb = "import" | "inpack" | null;
 type V4hc = { key: V4dk; dir: "asc" | "desc" };
@@ -64,7 +59,6 @@ export default function SoHoaPane({
   const [V1f7, V1f8] = useState<V4hc>({ key: "id", dir: "asc" });
 
   const [V1f9, V1fa] = useState<V4hb>(null);
-  const [V1fj, V1fk] = useState("nop");
   const [V1fl, V1fm] = useState(false);
   const V1fn = useRef<HTMLInputElement>(null);
   const V1fo = useRef<HTMLInputElement>(null);
@@ -623,32 +617,7 @@ export default function SoHoaPane({
 
       {}
       {V1f9 === "inpack" && (
-        <Modal title="Chọn loại gói tin để đóng gói" onClose={() => V1fa(null)}>
-          <div className="input-group">
-            <label className="input-group-addon">Loại gói</label>
-            <select
-              className="form-control"
-              value={V1fj}
-              onChange={(V1hl) => V1fk(V1hl.target.value)}
-            >
-              {V4ha.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="muted mt-2.5">
-            Đã chọn {V1eu.size} hồ sơ. Đóng gói {V4ha.find((p) => p.value === V1fj)?.label} (zip +
-            bundle + checksum SHA-256) đang được phát triển cho bản desktop và sẽ hoàn thiện ở đợt
-            tới.
-          </p>
-          <div className="text-right mt-3">
-            <button className="btn btn-outline-danger btn-round" onClick={() => V1fa(null)}>
-              Đóng
-            </button>
-          </div>
-        </Modal>
+        <PackDialog dossiers={V1es.filter((r) => V1eu.has(r.id))} thbqs={V1ed} onClose={() => V1fa(null)} />
       )}
     </div>
   );
