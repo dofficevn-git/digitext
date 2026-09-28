@@ -7,18 +7,7 @@ import { isTauri, V3xq } from "@/api/ipc";
 import type { V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
 import type { V3ym, V3yl, V3yo } from "@/domain/types";
-import {
-  V4cg,
-  V4c8,
-  V4c1,
-  V4c9,
-  V4br,
-  V4c7,
-  type V4bo,
-  type V4bm,
-  type V4c5,
-  type V4c6,
-} from "@/api/dossier";
+import { V4cg, V4br, type V4bm } from "@/api/dossier";
 import { V460 } from "@/state";
 import { bangTrongText, chuaChonPhong } from "./phongScope";
 import V4dy from "./VanBanPanel";
@@ -35,10 +24,19 @@ const V4ha = [
   { value: "khaithac", label: "Gói khai thác (DIP)" },
 ];
 
-type V4hb = "import" | "tinhchinh" | "dpi" | "pdfa" | "inpack" | null;
+type V4hb = "import" | "inpack" | null;
 type V4hc = { key: V4dk; dir: "asc" | "desc" };
 
-export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
+/** "taolap" = Tạo lập cơ sở dữ liệu; "donggoi" = cùng bảng hồ sơ nhưng chỉ để tích chọn và đóng gói
+ * (bỏ tìm kiếm / nhập / xuất / cột Mã hồ sơ, File đính kèm — theo đề nghị chỉnh sửa mục 7, 8). */
+export default function SoHoaPane({
+  phongs: V1e7,
+  mode = "taolap",
+}: {
+  phongs: V40v[];
+  mode?: "taolap" | "donggoi";
+}) {
+  const dg = mode === "donggoi";
   const { setScanTarget: V1e8, goto } = V460();
 
   const [V1e9, V1ea] = useState<V3yl[]>([]);
@@ -58,7 +56,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
   const [V1ew, V1ex] = useState<V4bm | null>(null);
   const [V1ey, V1ez] = useState<V4bm | null>(null);
 
-  const [cols, V1f0] = useState({ thbq: false, soTo: false, nbd: false, nkt: false });
+  const [cols, V1f0] = useState({ soTo: false, nbd: false, nkt: false });
 
   const [V1f1, V1f2] = useState(25);
   const [V1f3, V1f4] = useState(1);
@@ -66,10 +64,6 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
   const [V1f7, V1f8] = useState<V4hc>({ key: "id", dir: "asc" });
 
   const [V1f9, V1fa] = useState<V4hb>(null);
-  const [V1fb, V1fc] = useState<V4c5[]>([]);
-  const [V1fd, V1fe] = useState<Set<number>>(new Set());
-  const [V1ff, V1fg] = useState<V4c6[]>([]);
-  const [V1fh, V1fi] = useState(true);
   const [V1fj, V1fk] = useState("nop");
   const [V1fl, V1fm] = useState(false);
   const V1fn = useRef<HTMLInputElement>(null);
@@ -86,16 +80,6 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
   }, []);
   V41p(V1fp, { topics: ["catalog"], enabled: isTauri() });
 
-  const V1fq = useCallback(
-    (): V4bo => ({
-      maDa: maDa || undefined,
-      maDv: V1eg || undefined,
-      mangCvid: V1ei ? Number(V1ei) : undefined,
-      thbq: V1ek.find((x) => x !== "-1") ? Number(V1ek.find((x) => x !== "-1")) : undefined,
-      search: V1em.trim() || undefined,
-    }),
-    [maDa, V1eg, V1ei, V1ek, V1em],
-  );
 
   const V1fr = useCallback(() => {
     if (!isTauri()) return;
@@ -193,9 +177,7 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
         return;
       }
       const n = await V4cg(V1ga);
-      window.alert(
-        `Đã nhập ${n} văn bản${V1gb ? ` (bỏ qua ${V1gb} dòng thiếu dữ liệu)` : ""}.`,
-      );
+      window.alert(`Đã nhập ${n} văn bản${V1gb ? ` (bỏ qua ${V1gb} dòng thiếu dữ liệu)` : ""}.`);
       V1fa(null);
       V1fr();
     } catch (V1ge) {
@@ -230,104 +212,13 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
     }
   };
 
-  const V1gh = async () => {
-    V1fa("tinhchinh");
-    V1fe(new Set());
-    try {
-      V1fc(await V4c7(V1fq()));
-    } catch (V1gi) {
-      window.alert(V1g6(V1gi));
-    }
-  };
-  const V1gj = async () => {
-    try {
-      V1fc(await V4c7(V1fq()));
-    } catch (V1gk) {
-      window.alert(V1g6(V1gk));
-    }
-  };
-  const V1gl = async () => {
-    if (V1fd.size === 0) {
-      window.alert("Chưa chọn văn bản nào.");
-      return;
-    }
-    if (
-      !window.confirm(
-        "Dữ liệu bị xóa là các văn bản chưa hoàn thiện, chưa có file đính kèm, sau khi xóa sẽ bị mất, bạn có chắc chắn không?",
-      )
-    )
-      return;
-    V1fm(true);
-    try {
-      await Promise.all([...V1fd].map((V1gm) => V4c1(V1gm)));
-      V1fe(new Set());
-      await V1gj();
-      V1fr();
-    } catch (V1gn) {
-      window.alert(V1g6(V1gn));
-    } finally {
-      V1fm(false);
-    }
-  };
-  const V1go = async () => {
-    if (
-      !window.confirm(
-        "Xoá TOÀN BỘ văn bản chưa hoàn thiện theo bộ lọc hiện tại? Dữ liệu sẽ bị mất.",
-      )
-    )
-      return;
-    V1fm(true);
-    try {
-      const n = await V4c8(V1fq());
-      window.alert(`Đã xoá ${n} văn bản chưa hoàn thiện.`);
-      V1fe(new Set());
-      await V1gj();
-      V1fr();
-    } catch (V1gp) {
-      window.alert(V1g6(V1gp));
-    } finally {
-      V1fm(false);
-    }
-  };
-
-  const V1gq = async () => {
-    const V1gr = V1eu.size ? [...V1eu] : V1fs.map((r) => r.id);
-    if (V1gr.length === 0) {
-      window.alert(
-        "Không có hồ sơ nào để kiểm tra. Hãy chọn phông hoặc tích chọn hồ sơ.",
-      );
-      return;
-    }
-    V1fm(true);
-    try {
-      const files = await V4c9(V1gr);
-      V1fg(files);
-      V1fi(true);
-      V1fa("dpi");
-    } catch (V1gs) {
-      window.alert(V1g6(V1gs));
-    } finally {
-      V1fm(false);
-    }
-  };
-  const V1gt = V1fh ? V1ff.filter((f) => !f.isPass) : V1ff;
-
   const V1gu = () => {
     if (V1eu.size === 0) {
-      window.alert(
-        "Vui lòng chọn ít nhất một hồ sơ để đóng gói!",
-      );
+      window.alert("Vui lòng chọn ít nhất một hồ sơ để đóng gói!");
       return;
     }
     V1fa("inpack");
   };
-
-  const V1gv = (V1gw: number) =>
-    V1fe((s) => {
-      const n = new Set(s);
-      n.has(V1gw) ? n.delete(V1gw) : n.add(V1gw);
-      return n;
-    });
 
   const V1gx = (V1gy: V4dk) => {
     V1f8((V1gz) =>
@@ -373,14 +264,14 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
     return <V4h8 dossier={V1ey} onBack={() => V1ez(null)} />;
   }
 
-  const V1h5 = 8 + Number(cols.thbq) + Number(cols.soTo) + Number(cols.nbd) + Number(cols.nkt);
+  const V1h5 = (dg ? 6 : 8) + Number(cols.soTo) + Number(cols.nbd) + Number(cols.nkt);
 
   return (
     <div className="lhs">
       <div className="content-panel">
         <div className="center">
           <h4>
-            <b>SỐ HÓA TÀI LIỆU</b>
+            <b>{dg ? "ĐÓNG GÓI DỮ LIỆU" : "SỐ HÓA TÀI LIỆU"}</b>
           </h4>
         </div>
         <hr />
@@ -462,84 +353,88 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
               </select>
             </div>
           </div>
-          <div className="col-2">
-            <input
-              className="form-control solo searchInput"
-              value={V1em}
-              placeholder="Nhập ký tự tìm kiếm"
-              onChange={(V1hb) => V1en(V1hb.target.value)}
-              onKeyDown={(V1hc) => V1hc.key === "Enter" && V1fr()}
-            />
-          </div>
-          <div className="col-2">
-            <label className="labelEx">
-              <input
-                type="checkbox"
-                className="inputEx"
-                checked={V1eo}
-                onChange={(V1hd) => V1ep(V1hd.target.checked)}
-              />{" "}
-              Hết THBQ
-            </label>
-            <label className="labelEx ml-3">
-              <input
-                type="checkbox"
-                className="inputEx"
-                checked={V1eq}
-                onChange={(V1he) => V1er(V1he.target.checked)}
-              />{" "}
-              Giữ lại
-            </label>
-          </div>
-          <div className="col-4 text-right">
+          {!dg && (
+            <>
+              <div className="col-2">
+                <input
+                  className="form-control solo searchInput"
+                  value={V1em}
+                  placeholder="Nhập ký tự tìm kiếm"
+                  onChange={(V1hb) => V1en(V1hb.target.value)}
+                  onKeyDown={(V1hc) => V1hc.key === "Enter" && V1fr()}
+                />
+              </div>
+              <div className="col-2">
+                <label className="labelEx">
+                  <input
+                    type="checkbox"
+                    className="inputEx"
+                    checked={V1eo}
+                    onChange={(V1hd) => V1ep(V1hd.target.checked)}
+                  />{" "}
+                  Hết THBQ
+                </label>
+                <label className="labelEx ml-3">
+                  <input
+                    type="checkbox"
+                    className="inputEx"
+                    checked={V1eq}
+                    onChange={(V1he) => V1er(V1he.target.checked)}
+                  />{" "}
+                  Giữ lại
+                </label>
+              </div>
+            </>
+          )}
+          <div className={dg ? "col-8 text-right" : "col-4 text-right"}>
             <button className="btn btn-outline-success btn-round" onClick={() => V1fr()}>
               <Icon name="tim" /> Tìm kiếm
             </button>{" "}
-            <button className="btn btn-outline-success btn-round" onClick={() => V1fa("import")}>
-              <Icon name="tepPdf" /> Nhập tài liệu
-            </button>{" "}
-            <button className="btn btn-outline-secondary btn-round" onClick={() => void V1gf()}>
-              <Icon name="tepExcel" /> Xuất CSDL
-            </button>
+            {!dg && (
+              <>
+                <button
+                  className="btn btn-outline-success btn-round"
+                  onClick={() => V1fa("import")}
+                >
+                  <Icon name="tepPdf" /> Nhập tài liệu
+                </button>{" "}
+                <button className="btn btn-outline-secondary btn-round" onClick={() => void V1gf()}>
+                  <Icon name="tepExcel" /> Xuất CSDL
+                </button>
+              </>
+            )}
+            {dg && (
+              <button className="btn btn-success btn-round" onClick={V1gu}>
+                <Icon name="goi" /> Đóng gói
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {}
-      <div className="actionbar">
-        <div className="grp">
-          <input
-            ref={V1fo}
-            type="file"
-            className="form-control max-w-65"
-            accept=".xlsx,.xls,.csv"
-            onChange={(V1hf) => {
-              void V1g9(V1hf.target.files?.[0]);
-              V1hf.target.value = "";
-            }}
-          />
-          <button
-            className="btn btn-outline-primary btn-round"
-            onClick={() => V1fo.current?.click()}
-          >
-            <Icon name="taiLen" /> Import file PDF
-          </button>
+      {!dg && (
+        <div className="actionbar">
+          <div className="grp">
+            <input
+              ref={V1fo}
+              type="file"
+              className="form-control max-w-65"
+              accept=".xlsx,.xls,.csv"
+              onChange={(V1hf) => {
+                void V1g9(V1hf.target.files?.[0]);
+                V1hf.target.value = "";
+              }}
+            />
+            <button
+              className="btn btn-outline-primary btn-round"
+              onClick={() => V1fo.current?.click()}
+            >
+              <Icon name="taiLen" /> Import file PDF
+            </button>
+          </div>
         </div>
-        <div className="grp">
-          <button className="btn btn-warning btn-round" onClick={() => void V1gh()}>
-            <Icon name="tuDong" /> Tinh chỉnh
-          </button>
-          <button className="btn btn-warning btn-round" onClick={() => void V1gq()}>
-            <Icon name="tim" /> Kiểm tra DPI
-          </button>
-          <button className="btn btn-warning btn-round" onClick={() => V1fa("pdfa")}>
-            <Icon name="kiemTraPdfa" /> Kiểm tra PDF/A
-          </button>
-          <button className="btn btn-success btn-round" onClick={V1gu}>
-            <Icon name="goi" /> Đóng gói
-          </button>
-        </div>
-      </div>
+      )}
 
       {}
       <div className="content-panel pt-3">
@@ -550,21 +445,16 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                 <th className="w-2.5">
                   <input type="checkbox" checked={V1g4} onChange={V1g5} />
                 </th>
-                <V1h2 label="Mã hồ sơ" sortKey="maHoSo" className="w-32.5" />
+                {!dg && <V1h2 label="Mã hồ sơ" sortKey="maHoSo" className="w-32.5" />}
                 <V1h2 label="Hộp số" sortKey="hopSo" className="w-15" />
                 <V1h2 label="HS số" sortKey="soTam" className="w-15" />
                 <V1h2 label="Tiêu đề" sortKey="tieuDe" />
-                {cols.thbq && <V1h2 label="THBQ" sortKey="thbq" className="w-25" />}
                 {cols.soTo && <V1h2 label="Số tờ" sortKey="soTo" className="w-12.5" />}
-                {cols.nbd && (
-                  <V1h2 label="N. Bắt đầu" sortKey="ngayBatDau" className="w-20" />
-                )}
-                {cols.nkt && (
-                  <V1h2 label="N. Kết thúc" sortKey="ngayKetThuc" className="w-20" />
-                )}
-                <V1h2 label="Trạng thái" sortKey="trangThai" className="w-30" />
+                {cols.nbd && <V1h2 label="N. Bắt đầu" sortKey="ngayBatDau" className="w-20" />}
+                {cols.nkt && <V1h2 label="N. Kết thúc" sortKey="ngayKetThuc" className="w-20" />}
+                <V1h2 label="THBQ" sortKey="trangThai" className="w-30" />
                 <V1h2 label="Tài liệu" sortKey="soTaiLieuScan" className="w-22.5" />
-                <V1h2 label="File Đính kèm" sortKey="soFileScan" className="w-22.5" />
+                {!dg && <V1h2 label="File Đính kèm" sortKey="soFileScan" className="w-22.5" />}
               </tr>
             </thead>
             <tbody>
@@ -586,16 +476,17 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                           onChange={() => V1g2(r.id)}
                         />
                       </td>
-                      <td className="text-left">{r.maHoSo}</td>
+                      {!dg && <td className="text-left">{r.maHoSo}</td>}
                       <td className="text-center">{r.hopSo}</td>
                       <td className="text-center">{r.soTam}</td>
                       <td className="text-justify">{r.tieuDe}</td>
-                      {cols.thbq && <td className="text-center">{V4co(V1ed, r.thbq)}</td>}
                       {cols.soTo && <td className="text-center">{V4dt(r.soTo)}</td>}
                       {cols.nbd && <td className="text-center">{V4dr(r.ngayBatDau)}</td>}
                       {cols.nkt && <td className="text-center">{V4dr(r.ngayKetThuc)}</td>}
                       <td className="text-center">
-                        <span className={`badge-thbq ${V1hg.cls}`}>{V1hg.label}</span>
+                        <span className={`badge-thbq ${V1hg.cls}`} title={V4co(V1ed, r.thbq)}>
+                          {V1hg.label}
+                        </span>
                       </td>
                       <td className="text-center">
                         <a
@@ -605,24 +496,19 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                         >
                           <Icon name="tepPdf" />
                         </a>
-                        <b
-                          className="cnt-red"
-                          title="Số file PDF đã quét trong hồ sơ"
-                        >
+                        <b className="cnt-red" title="Số file PDF đã quét trong hồ sơ">
                           {" "}
                           ({r.soTaiLieuScan})
                         </b>
                       </td>
-                      <td className="text-center">
-                        {r.soFileScan}{" "}
-                        <a
-                          className="ic-word"
-                          onClick={() => V1g8(r)}
-                          title="Quét vào hồ sơ"
-                        >
-                          <Icon name="quet" />
-                        </a>
-                      </td>
+                      {!dg && (
+                        <td className="text-center">
+                          {r.soFileScan}{" "}
+                          <a className="ic-word" onClick={() => V1g8(r)} title="Quét vào hồ sơ">
+                            <Icon name="quet" />
+                          </a>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -634,15 +520,9 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
                   <a
                     className="toggle-vis"
                     title="Hiển thị toàn bộ cột"
-                    onClick={() => V1f0({ thbq: true, soTo: true, nbd: true, nkt: true })}
+                    onClick={() => V1f0({ soTo: true, nbd: true, nkt: true })}
                   >
                     <Icon name="luoi" />
-                  </a>{" "}
-                  <a
-                    className={`toggle-vis ${cols.thbq ? "on" : "off"}`}
-                    onClick={() => V1f0((c) => ({ ...c, thbq: !c.thbq }))}
-                  >
-                    THBQ
                   </a>{" "}
                   <a
                     className={`toggle-vis ${cols.soTo ? "on" : "off"}`}
@@ -742,151 +622,8 @@ export default function SoHoaPane({ phongs: V1e7 }: { phongs: V40v[] }) {
       )}
 
       {}
-      {V1f9 === "tinhchinh" && (
-        <Modal
-          title="THÔNG TIN VĂN BẢN CHƯA HOÀN THIỆN"
-          onClose={() => V1fa(null)}
-        >
-          <div className="text-right mb-2">
-            <button
-              className="btn btn-outline-danger btn-round"
-              disabled={V1fl}
-              onClick={() => void V1gl()}
-            >
-              <Icon name="tepZip" /> Hủy dữ liệu
-            </button>{" "}
-            <button
-              className="btn btn-outline-danger btn-round"
-              disabled={V1fl}
-              onClick={() => void V1go()}
-            >
-              <Icon name="dong" /> Hủy toàn bộ
-            </button>
-          </div>
-          <div className="tbl-scroll">
-            <table className="dataTable">
-              <thead>
-                <tr>
-                  <th className="w-2.5">
-                    <input
-                      type="checkbox"
-                      checked={V1fb.length > 0 && V1fb.every((v) => V1fd.has(v.vanBanId))}
-                      onChange={(V1hj) =>
-                        V1fe(V1hj.target.checked ? new Set(V1fb.map((v) => v.vanBanId)) : new Set())
-                      }
-                    />
-                  </th>
-                  <th className="w-22.5">Hồ sơ</th>
-                  <th className="w-15">STT</th>
-                  <th className="w-30">Ký hiệu</th>
-                  <th>Trích yếu</th>
-                  <th className="w-22.5">Ngày tháng</th>
-                </tr>
-              </thead>
-              <tbody>
-                {V1fb.length === 0 ? (
-                  <tr>
-                    <td className="dt-empty" colSpan={6}>
-                      {bangTrongText(maDa)}
-                    </td>
-                  </tr>
-                ) : (
-                  V1fb.map((v, i) => (
-                    <tr key={v.vanBanId} className={i % 2 === 0 ? "odd" : "even"}>
-                      <td className="text-center">
-                        <input
-                          type="checkbox"
-                          checked={V1fd.has(v.vanBanId)}
-                          onChange={() => V1gv(v.vanBanId)}
-                        />
-                      </td>
-                      <td className="text-center">{v.hoSo}</td>
-                      <td className="text-center">{v.thuTu}</td>
-                      <td className="text-left">{v.soKyHieu}</td>
-                      <td className="text-justify">{v.trichYeu}</td>
-                      <td className="text-center">{v.ngayThang}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Modal>
-      )}
-
-      {}
-      {V1f9 === "dpi" && (
-        <Modal title="Danh sách file kiểm tra DPI" onClose={() => V1fa(null)}>
-          <label className="labelEx">
-            <input
-              type="checkbox"
-              className="inputEx"
-              checked={V1fh}
-              onChange={(V1hk) => V1fi(V1hk.target.checked)}
-            />{" "}
-            Chỉ hiển thị file không đạt
-          </label>
-          <p className="muted">Ngưỡng đạt: DPI ≥ 200 (Thông tư 02/2019/TT-BNV).</p>
-          <div className="tbl-scroll">
-            <table className="dataTable">
-              <thead>
-                <tr>
-                  <th>Tên file</th>
-                  <th>Đường dẫn</th>
-                  <th className="w-17.5">Số DPI</th>
-                  <th className="w-27.5">Đạt/Không đạt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {V1gt.length === 0 ? (
-                  <tr>
-                    <td className="dt-empty" colSpan={4}>
-                      {V1ff.length === 0
-                        ? "Chưa số hoá — không có file scan để kiểm tra."
-                        : "Tất cả file đều đạt."}
-                    </td>
-                  </tr>
-                ) : (
-                  V1gt.map((f, i) => (
-                    <tr key={f.filePath + i} className={i % 2 === 0 ? "odd" : "even"}>
-                      <td className="text-left">{f.fileName}</td>
-                      <td className="text-left">{f.filePath}</td>
-                      <td className="text-center">{f.dpi}</td>
-                      <td
-                        className={`text-center ${f.isPass ? "text-success-700" : "text-danger-700"}`}
-                      >
-                        {f.isPass ? "Đạt" : "Không đạt"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Modal>
-      )}
-
-      {}
-      {V1f9 === "pdfa" && (
-        <Modal title="Kiểm tra PDF 2 lớp (PDF/A)" onClose={() => V1fa(null)}>
-          <p className="muted">
-            Chức năng kiểm tra PDF 2 lớp (ảnh + lớp văn bản OCR) đang được phát triển cho bản
-            desktop. Ở đợt tới sẽ đọc lớp text của PDF bằng lopdf để đối chiếu.
-          </p>
-          <div className="text-right mt-3">
-            <button className="btn btn-outline-danger btn-round" onClick={() => V1fa(null)}>
-              Đóng
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {}
       {V1f9 === "inpack" && (
-        <Modal
-          title="Chọn loại gói tin để đóng gói"
-          onClose={() => V1fa(null)}
-        >
+        <Modal title="Chọn loại gói tin để đóng gói" onClose={() => V1fa(null)}>
           <div className="input-group">
             <label className="input-group-addon">Loại gói</label>
             <select
