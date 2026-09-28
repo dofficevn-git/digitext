@@ -1,5 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-use cryptoki::context::{CInitializeArgs, Pkcs11};
+use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::mechanism::Mechanism;
 use cryptoki::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
 use cryptoki::session::{Session, UserType};
@@ -66,7 +66,7 @@ fn context(module: &str) -> Result<Pkcs11, String> {
     let pkcs11 = Pkcs11::new(module)
         .map_err(|e| format!("không nạp được module '{module}': {e}"))?;
     pkcs11
-        .initialize(CInitializeArgs::OsThreads)
+        .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
         .map_err(|e| format!("khởi tạo PKCS#11 lỗi: {e}"))?;
     Ok(pkcs11)
 }
@@ -880,7 +880,7 @@ fn f_15v(
 Nhập PIN token (ẩn): "#)
         .map_err(|e| format!("đọc PIN lỗi: {e}"))?;
     r_5lp
-        .login(UserType::User, Some(&AuthPin::new(r_5ll)))
+        .login(UserType::User, Some(&AuthPin::new(r_5ll.into())))
         .map_err(|_| "PIN không đúng hoặc token bị khoá".to_string())?;
     println!("Đăng nhập token: OK");
     let r_5lj = f_1cy(&r_5lp, &r_5lo.leaf_id)?;

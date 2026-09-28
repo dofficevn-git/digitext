@@ -40,7 +40,7 @@ image = { version = "0.25", default-features = false, features = [
 base64 = "0.22"
 ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
 x25519-dalek = "2"
-cryptoki = "0.8"
+cryptoki = "0.12"
 rusqlite = { version = "0.31", features = ["bundled"] }
 lopdf = "0.42.0"
 x509-cert = "0.2"
