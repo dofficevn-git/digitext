@@ -65,9 +65,16 @@ fn attr_bytes(r_5i8: &Session, r_5i7: ObjectHandle, r_5i9: AttributeType) -> Opt
 fn context(module: &str) -> Result<Pkcs11, String> {
     let pkcs11 = Pkcs11::new(module)
         .map_err(|e| format!("không nạp được module '{module}': {e}"))?;
-    pkcs11
-        .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
-        .map_err(|e| format!("khởi tạo PKCS#11 lỗi: {e}"))?;
+    match pkcs11.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK)) {
+        // Driver đã được khởi tạo trong tiến trình này (vd. "Dò token" trước đó) — chuẩn
+        // PKCS#11 coi là dùng tiếp được, không phải lỗi (iCA trả mã này, 28/9/2026).
+        Ok(())
+        | Err(cryptoki::error::Error::Pkcs11(
+            cryptoki::error::RvError::CryptokiAlreadyInitialized,
+            _,
+        )) => {}
+        Err(e) => return Err(format!("khởi tạo PKCS#11 lỗi: {e}")),
+    }
     Ok(pkcs11)
 }
 fn f_29c(pkcs11: &Pkcs11) -> Result<Vec<Slot>, String> {
