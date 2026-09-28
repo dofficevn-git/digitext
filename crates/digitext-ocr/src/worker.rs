@@ -436,6 +436,28 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
         self.fields_v2 = Some((extractor, engine_version_id));
         self
     }
+    /// Gợi ý "dạy bằng ví dụ" cho bóc trường v2: chữ OCR trang + ví dụ giống nhất trong kho.
+    async fn few_shot(&self, document_id: uuid::Uuid, page_no: i32) -> crate::vlm_prompt_v2::FewShot {
+        use digitext_db::kie_examples;
+        let text = match kie_examples::page_text(self.pool, document_id, page_no).await {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::warn!(error = %e, "bóc trường: không đọc được chữ OCR trang — bóc chỉ bằng ảnh");
+                None
+            }
+        };
+        let examples = match text.as_deref().filter(|t| !t.trim().is_empty()) {
+            Some(t) => kie_examples::similar(self.pool, t, 3, Some(document_id))
+                .await
+                .map_err(|e| tracing::warn!(error = %e, "bóc trường: tra ví dụ lỗi — bỏ ví dụ"))
+                .unwrap_or_default()
+                .into_iter()
+                .map(|e| (e.ocr_text, e.fields))
+                .collect(),
+            None => Vec::new(),
+        };
+        crate::vlm_prompt_v2::FewShot { ocr_text: text, examples }
+    }
     pub async fn run_once(&self) -> sqlx::Result<RunOutcome> {
         let lease = self.cfg.lease.as_secs() as i64;
         let r_3m7: &[&str] = if self.fields_v2.is_some() {
@@ -835,8 +857,11 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     }
                     Err(e) => return Err(ExtractV2Error::Source(e)),
                 };
+                // Dạy bằng ví dụ: chữ OCR của trang + 3 ví dụ đã duyệt giống nhất. Lỗi tra cứu thì
+                // vẫn bóc như cũ (chỉ ảnh), không làm hỏng việc.
+                let hint = self.few_shot(job.document_id, r_3mx).await;
                 let r_3ms = extractor
-                    .extract_v2(&img.jpeg)
+                    .extract_v2(&img.jpeg, &hint)
                     .await
                     .map_err(ExtractV2Error::Vlm)?;
                 per_page.push((r_3mx, r_3ms));

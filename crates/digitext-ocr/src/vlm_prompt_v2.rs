@@ -206,6 +206,86 @@ mod profile_tests {
         assert!(VlmProfile::parse("llava").is_err());
     }
 }
+/// "Dạy bằng ví dụ": chữ OCR của trang + vài ví dụ đã được người kiểm tra có chữ OCR giống nhất.
+/// Đo trên 47 ảnh plakie riêng (28/9/2026): đúng hoàn toàn 44% (chỉ ảnh) → 57% (+ chữ OCR) → 74%
+/// (+ chữ OCR + 3 ví dụ).
+#[derive(Debug, Clone, Default)]
+pub struct FewShot {
+    pub ocr_text: Option<String>,
+    /// (chữ OCR của ví dụ, {khoá trường: giá trị đúng})
+    pub examples: Vec<(String, Value)>,
+}
+/// Giới hạn ngữ cảnh của vLLM (`--max-model-len`). Đọc `DIGITEXT_VLM_MAX_LEN`, mặc định 4096 —
+/// PHẢI khớp máy chủ vLLM, lệch thì vLLM trả 400.
+pub fn model_max_len() -> u32 {
+    std::env::var("DIGITEXT_VLM_MAX_LEN")
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .filter(|&n: &u32| n >= 2048)
+        .unwrap_or(MODEL_MAX_LEN_V2)
+}
+/// Chừa tối thiểu ngần này token cho JSON 16 trường.
+const MIN_OUTPUT_V2: u32 = 700;
+const EXAMPLE_OCR_CHARS: usize = 600;
+const PAGE_OCR_CHARS: usize = 1500;
+/// Ước lượng token tiếng Việt (có dấu) cho Qwen: ~2 ký tự/token, cộng biên.
+fn est_tokens(s: &str) -> u32 {
+    (s.chars().count() as u32).div_ceil(2) + 16
+}
+fn clip(s: &str, n: usize) -> String {
+    s.chars().take(n).collect()
+}
+pub fn hint_text(h: &FewShot) -> String {
+    let mut out = String::new();
+    for (i, (ocr, fields)) in h.examples.iter().enumerate() {
+        let mut ans = serde_json::Map::new();
+        for f in VanBanField::ALL {
+            if let Some(v) = fields.get(f.as_str()).and_then(Value::as_str).filter(|v| !v.trim().is_empty()) {
+                ans.insert(f.as_str().to_owned(), Value::String(v.trim().to_owned()));
+            }
+        }
+        if ans.is_empty() {
+            continue;
+        }
+        out.push_str(&format!(
+            "\n\nVÍ DỤ {} (văn bản KHÁC đã được người kiểm tra — bắt chước cách lấy và cách viết, KHÔNG chép giá trị):\nChữ OCR:\n{}\nKết quả đúng (trường không ghi là rỗng):\n{}",
+            i + 1,
+            clip(ocr, EXAMPLE_OCR_CHARS),
+            Value::Object(ans)
+        ));
+    }
+    if let Some(t) = h.ocr_text.as_deref().filter(|t| !t.trim().is_empty()) {
+        out.push_str(&format!(
+            "\n\nCHỮ OCR CỦA TRANG CẦN BÓC (máy đọc, có thể sai dấu — đối chiếu với ảnh, ưu tiên chữ trên ảnh):\n{}",
+            clip(t, PAGE_OCR_CHARS)
+        ));
+    }
+    if !out.is_empty() {
+        out.push_str("\n\nTrả JSON cho TRANG trong ảnh đính kèm.");
+    }
+    out
+}
+/// Chọn phần gợi ý vừa ngân sách: bớt dần ví dụ, rồi bỏ chữ OCR, nếu không đủ chỗ.
+/// Trả (chữ gợi ý, max_tokens đầu ra).
+pub fn fit_hint(h: &FewShot, img_tokens: u32) -> Result<(String, u32), VlmError> {
+    let max_len = model_max_len() as i64;
+    let mut h = h.clone();
+    loop {
+        let text = hint_text(&h);
+        let budget = max_len - img_tokens as i64 - C_G2 as i64 - C_JE as i64 - est_tokens(&text) as i64;
+        if text.is_empty() || budget >= MIN_OUTPUT_V2 as i64 {
+            if budget <= 0 {
+                return Err(VlmError::Backend(format!(
+                    "ảnh {img_tokens} token không còn chỗ cho đầu ra (max_len={max_len}); phải thu nhỏ ảnh trước"
+                )));
+            }
+            return Ok((text, budget as u32));
+        }
+        if h.examples.pop().is_none() {
+            h.ocr_text = None;
+        }
+    }
+}
 pub fn output_budget(img_tokens: u32) -> Result<u32, VlmError> {
     let budget = MODEL_MAX_LEN_V2 as i64 - img_tokens as i64 - C_G2 as i64 - C_JE as i64;
     if budget <= 0 {
@@ -252,12 +332,12 @@ pub struct Tiz {
     max_tokens: u32,
     guided_json: Box<serde_json::value::RawValue>,
 }
-pub fn build_request_v2(model: &str, r_3k5: &str, max_tokens: u32) -> Tiz {
+pub fn build_request_v2(model: &str, r_3k5: &str, max_tokens: u32, hint: &str) -> Tiz {
     Tiz {
         model: model.to_owned(),
         messages: json!(
             [{ "role" : "user", "content" : [{ "type" : "image_url", "image_url" : {
-            "url" : r_3k5 } }, { "type" : "text", "text" : f_24a() },] },]
+            "url" : r_3k5 } }, { "type" : "text", "text" : format!("{}{hint}", f_24a()) },] },]
         ),
         temperature: 0.0,
         max_tokens,
@@ -297,4 +377,33 @@ pub fn parse_fields_v2(r_3ka: &Value) -> Vec<(VanBanField, String)> {
         r_3k9.push((r_3k6, digitext_vi::normalize(value)));
     }
     r_3k9
+}
+#[cfg(test)]
+mod few_shot_tests {
+    use super::*;
+    fn ex(n: usize) -> FewShot {
+        FewShot {
+            ocr_text: Some("UBND TỈNH BẮC NINH\nSố: 12/QĐ-UBND ".repeat(40)),
+            examples: (0..n)
+                .map(|i| ("SỞ TÀI CHÍNH ".repeat(50), serde_json::json!({"soKyHieu": format!("{i}/QĐ"), "khongCo": "x"})))
+                .collect(),
+        }
+    }
+    #[test]
+    fn du_cho_thi_giu_het_vi_du() {
+        std::env::set_var("DIGITEXT_VLM_MAX_LEN", "8192");
+        let (t, out) = fit_hint(&ex(3), 1850).unwrap();
+        assert_eq!(t.matches("VÍ DỤ").count(), 3);
+        assert!(t.contains("CHỮ OCR CỦA TRANG") && out >= MIN_OUTPUT_V2);
+        assert!(!t.contains("khongCo"), "chỉ đưa khoá thuộc 16 trường");
+    }
+    #[test]
+    fn thieu_cho_thi_bot_vi_du_roi_bo_ocr() {
+        std::env::set_var("DIGITEXT_VLM_MAX_LEN", "4096");
+        let (t, out) = fit_hint(&ex(3), 1850).unwrap();
+        assert!(t.matches("VÍ DỤ").count() < 3);
+        assert!(out >= MIN_OUTPUT_V2 || t.is_empty());
+        let (t0, _) = fit_hint(&FewShot::default(), 1850).unwrap();
+        assert!(t0.is_empty());
+    }
 }

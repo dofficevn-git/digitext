@@ -291,7 +291,7 @@ impl VlmFieldExtractorV2 {
     }
 }
 impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
-    fn extract_v2<'a>(&'a self, r_3hm: &'a [u8]) -> crate::fields_v2::T81<'a> {
+    fn extract_v2<'a>(&'a self, r_3hm: &'a [u8], hint: &'a crate::vlm_prompt_v2::FewShot) -> crate::fields_v2::T81<'a> {
         use crate::vlm_prompt_v2 as v2;
         Box::pin(async move {
             let (w, h) = crate::render::f_1hv(r_3hm).map_err(|e| {
@@ -302,7 +302,7 @@ impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
             let r_3hq = self.profile.fit_max_side(w, h, v2::MAX_IMAGE_TOKENS_V2)?;
             let r_3ho = f_23i(r_3hm, r_3hq.unwrap_or(0))?;
             let r_3hn = self.profile.image_tokens(r_3ho.width, r_3ho.height);
-            let max_tokens = v2::output_budget(r_3hn)?;
+            let (hint, max_tokens) = v2::fit_hint(hint, r_3hn)?;
             if r_3ho.scale < 1.0 {
                 tracing::debug!(
                     goc = format!("{w}x{h}"), gui = format!("{}x{}", r_3ho.width, r_3ho
@@ -310,7 +310,7 @@ impl crate::fields_v2::T80 for VlmFieldExtractorV2 {
                     "bóc trường v2: đã thu nhỏ ảnh cho vừa ngân sách token"
                 );
             }
-            let r_3hp = v2::build_request_v2(&self.model, &f_1ju(&r_3ho.jpeg), max_tokens);
+            let r_3hp = v2::build_request_v2(&self.model, &f_1ju(&r_3ho.jpeg), max_tokens, &hint);
             let resp = self
                 .client
                 .post(&self.endpoint)
