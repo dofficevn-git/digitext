@@ -215,13 +215,6 @@ export default function V4k5() {
   return (
     <div className="card mb-3">
       <h3 className="mt-0">Xử lý trên máy chủ</h3>
-      <p className="muted mt-0">
-        Sau khi <b>OCR toàn bộ</b> xong, bấm <b>PDF 2 lớp</b> để ghép bản PDF có lớp chữ tìm kiếm
-        được; bấm <b>Bóc tách 16 trường</b> để AI đọc thẳng ảnh trang và điền sẵn 16 trường thông
-        tin (ĐỘC LẬP, không cần OCR trước, kết quả luôn chờ người soát). Chọn phạm vi bên dưới để
-        chỉ chạy (và chỉ xem tiến độ) cho một phông / phòng ban / mảng CV / THBQ; không chọn gì là
-        toàn bộ kho máy chủ.
-      </p>
 
       {}
       <div className="kg-flt srv-scope">

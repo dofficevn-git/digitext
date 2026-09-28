@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { V41p } from "@/live/useLive";
 import { confirm, open } from "@tauri-apps/plugin-dialog";
 import { V460, useCollects, useUploads } from "@/state";
@@ -86,7 +86,8 @@ function V4qi({
   );
 }
 
-const V4qj = 5000;
+// Nạp đủ cả kho gom (dự án Bắc Ninh ~31k bản) — trước chỉ 5.000 bản mới nhất nên bảng thiếu ô.
+const V4qj = 200_000;
 
 const V4qk = 400;
 
@@ -107,9 +108,6 @@ export default function V4qm() {
         <h2>Đồng bộ dữ liệu</h2>
         <div className="sub">
           {V2ct?.projectName ? `· ${V2ct.projectName}` : ""}
-          {V2ct?.mode === "offline"
-            ? " · một số thao tác cần máy chủ"
-            : ""}
         </div>
       </div>
 
@@ -296,13 +294,38 @@ function V4qo() {
   const [V2em, V2en] = useState("");
   const V2eo = useRef<HTMLDivElement | null>(null);
 
+  // Danh sách kho gom có thể vài chục nghìn dòng: khi đang đẩy, sự kiện "collected" bắn liên tục —
+  // nạp lại tối đa 5 giây/lần (có lượt nạp bù ở cuối để số liệu cuối cùng luôn đúng).
+  const lanNapDs = useRef(0);
+  const henNapDs = useRef<number | null>(null);
+  const napDsRef = useRef<() => Promise<void>>(async () => {});
+  napDsRef.current = async () => {
+    const cho = 5000 - (Date.now() - lanNapDs.current);
+    if (cho > 0) {
+      if (henNapDs.current == null)
+        henNapDs.current = window.setTimeout(() => {
+          henNapDs.current = null;
+          void napDsRef.current().catch((e) => V2e0(V4ql(e)));
+        }, cho);
+      return;
+    }
+    lanNapDs.current = Date.now();
+    V2dp(await V43i(V4qj));
+  };
+  useEffect(
+    () => () => {
+      if (henNapDs.current != null) window.clearTimeout(henNapDs.current);
+    },
+    [],
+  );
+
   const V2ep = useCallback(async () => {
     if (!isTauri()) return;
     try {
       V2dm((await V432()) ?? "");
       V2do(await V431());
 
-      V2dp(await V43i(V4qj));
+      await napDsRef.current();
     } catch (V2eq) {
       V2e0(V4ql(V2eq));
     }
@@ -803,12 +826,6 @@ function V4qo() {
                 Đẩy lên máy chủ ngay sau khi thêm
               </label>
             </div>
-            <div className="muted text-sm">
-              Tệp được CHÉP vào Kho tài liệu rồi đi cùng một đường với dữ liệu thu thập từ nhân
-              viên: có nối lại khi đứt mạng, khử trùng theo nội dung và nằm trong đợt nộp để đối
-              soát. Tệp đã nằm sẵn trong Kho thì không bị chép nhân đôi. Thư mục được duyệt cả cấp
-              con, chỉ lấy .pdf.
-            </div>
           </div>
         )}
       </div>
@@ -1094,6 +1111,14 @@ function V4qp({
   onResend: (V2gp: number, V2gq: string) => void;
   onClearAll: () => void;
 }) {
+  const soSanh = new Intl.Collator("vi", { numeric: true, sensitivity: "base" }).compare;
+  const dsLoi = [...V2gm].sort(
+    (a, b) =>
+      soSanh(a.phongMa ?? "", b.phongMa ?? "") ||
+      soSanh(a.hoSoRef ?? "", b.hoSoRef ?? "") ||
+      soSanh(a.filename, b.filename) ||
+      a.id - b.id,
+  );
   return (
     <details className="kg-errs" open>
       <summary>
@@ -1115,7 +1140,7 @@ function V4qp({
           <thead>
             <tr>
               <th>Tên file</th>
-              <th>Hồ sơ</th>
+              <th>Phông / Hộp / Hồ sơ</th>
               <th>Lý do</th>
               <th>Đường dẫn trong Kho</th>
               <th>Thu thập lúc</th>
@@ -1123,10 +1148,10 @@ function V4qp({
             </tr>
           </thead>
           <tbody>
-            {V2gm.map((r) => (
+            {dsLoi.map((r) => (
               <tr key={r.id}>
                 <td>{r.filename}</td>
-                <td>{r.hoSoRef || "—"}</td>
+                <td>{[r.phongMa, r.hoSoRef].filter(Boolean).join(" / ") || "—"}</td>
                 <td className="kg-why">
                   {r.forwardFatal
                     ? "Máy chủ từ chối vĩnh viễn"

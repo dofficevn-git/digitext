@@ -7,7 +7,7 @@ import { V460 } from "@/state";
 import { V3xq, isTauri } from "@/api/ipc";
 import { V3zt } from "@/state/sessionCore";
 import { V3z9 } from "@/domain/permissions";
-import { V4et, V4fc, V4fb, V4f3, V4er, type V4f2, type V4f0, type V4f9 } from "@/api/docs";
+import { V4et, V4f3, V4er, type V4f2, type V4f0 } from "@/api/docs";
 import { V4ak, type V4a9 } from "@/api/users";
 import V4i7, { type V4i6 } from "../upload/OcrFieldsView";
 import V4k5 from "../server/ServerJobs";
@@ -17,14 +17,6 @@ import { V4hg, pdfaSummary, V4hi, V4hj, V4hh, type V4he } from "./ocrReport";
 import { Icon } from "@/components/Icon";
 
 const V4l7 = (n: number) => n.toLocaleString("vi-VN");
-
-const V4l8: Record<V4f9["state"], { label: string; tone: "ok" | "err" | "warn" | "gray" }> = {
-  ok: { label: "Đạt", tone: "ok" },
-  invalid: { label: "Cấu trúc sai", tone: "err" },
-  missing: { label: "Thiếu PDF", tone: "warn" },
-  rejected: { label: "Không đạt dpi — quét lại", tone: "err" },
-  pending: { label: "Chưa OCR xong", tone: "gray" },
-};
 
 function BocTachCell({ c }: { c: V4f0 }) {
   return (
@@ -80,116 +72,6 @@ function PdfaCell({ c }: { c: V4f0 }) {
   );
 }
 
-function V4l9({ rows: V1so, onClose: V1sp }: { rows: V4f9[]; onClose: () => void }) {
-  const V1sq = V1so.reduce<Record<string, number>>(
-    (m, r) => ((m[r.state] = (m[r.state] ?? 0) + 1), m),
-    {},
-  );
-  return (
-    <div className="card p-0 overflow-hidden mb-3">
-      <div className="flex items-center gap-3 py-3 px-4 flex-wrap">
-        <h3 className="m-0">Kiểm tra PDF A (PDF 2 lớp lưu trữ)</h3>
-        <span className="muted text-sm">
-          {(["ok", "invalid", "missing", "pending"] as const)
-            .filter((s) => V1sq[s])
-            .map((s) => `${V4l8[s].label}: ${V1sq[s]}`)
-            .join(" · ") || "không có tài liệu"}
-          {V1so.some((r) => (r.state === "ok" || r.state === "invalid") && !r.pdfa2b) &&
-            ` · chưa PDF/A: ${V1so.filter((r) => (r.state === "ok" || r.state === "invalid") && !r.pdfa2b).length}`}
-        </span>
-        <div className="flex-1" />
-        <button className="btn sm" onClick={V1sp}>
-          <Icon name="dong" />
-          Đóng
-        </button>
-      </div>
-      {V1so.length > 0 && (
-        <div className="tbl-scroll">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Tài liệu</th>
-                <th>Hồ sơ</th>
-                <th>Trạng thái</th>
-                <th className="num">Trang</th>
-                <th
-                  className="num"
-                  title="Số trang không có chữ trong lớp text"
-                >
-                  Không chữ
-                </th>
-                <th title="Đủ dấu hiệu PDF/A-2b (XMP pdfaid + OutputIntent + /ID + font nhúng)">
-                  PDF/A
-                </th>
-                <th>Ghi chú</th>
-              </tr>
-            </thead>
-            <tbody>
-              {V1so.map((r) => {
-                const V1sr = V4l8[r.state];
-                const V1ss =
-                  r.state === "ok" || r.state === "invalid"
-                    ? `${r.pages}${r.expectedPages != null ? `/${r.expectedPages}` : ""}`
-                    : (r.expectedPages ?? "—");
-                return (
-                  <tr key={r.id}>
-                    <td>{r.filename}</td>
-                    <td>{r.hoSoRef ?? "—"}</td>
-                    <td>
-                      <span className={`badge ${V1sr.tone}`} title={r.status}>
-                        {V1sr.label}
-                      </span>
-                    </td>
-                    <td className="num">{V1ss}</td>
-                    <td className="num">
-                      {r.state === "ok" || r.state === "invalid" ? (
-                        <span
-                          className={r.pagesWithoutText > 0 ? "text-warning-700" : undefined}
-                          title={`${r.pagesWithText} trang có chữ`}
-                        >
-                          {r.pagesWithoutText}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td>
-                      {r.state === "ok" || r.state === "invalid" ? (
-                        <span
-                          className={`badge ${r.pdfa2b ? "ok" : "warn"}`}
-                          title={
-                            r.pdfa2b
-                              ? "Đủ dấu hiệu PDF/A-2b"
-                              : "Ghép bởi bản cũ — bấm “Ghép lại PDF/A” để đạt Điều 8.2.a"
-                          }
-                        >
-                          {r.pdfa2b ? "2b" : "chưa"}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="muted text-sm">
-                      {r.reason ??
-                        (r.state === "ok" ? (
-                          <>
-                            <Icon name="duyet" size={13} /> có lớp text + ảnh nền
-                          </>
-                        ) : (
-                          ""
-                        ))}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function V4la({
   label: V1st,
   value: V1su,
@@ -231,9 +113,6 @@ export default function OcrPane() {
   const [V1t9, V1ta] = useState<V4i6 | null>(null);
 
   const [V1tb, V1tc] = useState(false);
-  const [V1td, V1te] = useState(false);
-  const [V1tf, V1tg] = useState(false);
-  const [V1th, V1ti] = useState<V4f9[] | null>(null);
 
   const [V1tj, V1tk] = useState<V4he>(() => V4hg());
   const [report, V1tl] = useState<V4f2 | null>(null);
@@ -344,40 +223,6 @@ export default function OcrPane() {
       V1t2(V4lb(V1u6));
     } finally {
       V1tc(false);
-    }
-  };
-
-  const V1u7 = async () => {
-    V1te(true);
-    V1t2(null);
-    V1t4(null);
-    try {
-      V1ti(await V4fc());
-    } catch (V1u8) {
-      V1t2(V4lb(V1u8));
-    } finally {
-      V1te(false);
-    }
-  };
-
-  const V1u9 = async () => {
-    V1tg(true);
-    V1t2(null);
-    V1t4(null);
-    try {
-      const r = await V4fb();
-      const V1ua =
-        r.skippedSigned > 0
-          ? ` ${r.skippedSigned} tài liệu ĐÃ KÝ chưa đạt PDF/A — phải ký lại theo quy trình.`
-          : "";
-      V1t4(
-        `Đã kiểm ${r.checked} tài liệu, xếp hàng ghép lại ${r.enqueued}.${V1ua}`,
-      );
-      if (V1th) V1ti(await V4fc());
-    } catch (V1ub) {
-      V1t2(V4lb(V1ub));
-    } finally {
-      V1tg(false);
     }
   };
 
@@ -630,8 +475,6 @@ export default function OcrPane() {
         text="Chọn tài liệu đã số hoá để bóc tách trường: sửa lại khung máy bóc, hoặc chọn trường rồi vẽ ô cho phần máy còn thiếu, rồi lưu làm dữ liệu chuẩn. Hoặc “Tải PDF lên” để gán nhãn trên tài liệu tự chọn."
       />
 
-      {V1th && <V4l9 rows={V1th} onClose={() => V1ti(null)} />}
-
       {}
       <V4k5 />
 
@@ -674,36 +517,6 @@ export default function OcrPane() {
                 <>
                   <Icon name="chay" />
                   OCR toàn bộ
-                </>
-              )}
-            </button>
-            <button
-              className="btn sm"
-              onClick={() => void V1u7()}
-              disabled={V1td}
-              title="Kiểm tra PDF 2 lớp (PDF A lưu trữ) đã sinh + đúng cấu trúc"
-            >
-              {V1td ? (
-                "Đang kiểm…"
-              ) : (
-                <>
-                  <Icon name="kiemTraPdfa" />
-                  Kiểm tra PDF A
-                </>
-              )}
-            </button>
-            <button
-              className="btn sm"
-              onClick={() => void V1u9()}
-              disabled={V1tf}
-              title="Ghép lại các tài liệu có PDF 2 lớp sinh bởi bản cũ (chưa đạt PDF/A theo Điều 8.2.a)"
-            >
-              {V1tf ? (
-                "Đang xếp hàng…"
-              ) : (
-                <>
-                  <Icon name="ghepLai" />
-                  Ghép lại PDF/A
                 </>
               )}
             </button>

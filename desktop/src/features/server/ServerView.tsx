@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useNavigation } from "@/state";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V3zt } from "@/state/sessionCore";
-import { V4el, V4fc, V4ek, type V4f9, type V4ej, type DownloadKind } from "@/api/docs";
+import { V4el, V4fc, V4fb, V4ek, type V4f9, type V4ej, type DownloadKind } from "@/api/docs";
 import {
   V4vz,
   V4vq,
@@ -272,6 +272,28 @@ export default function V4wh() {
     }
   };
 
+  // "Ghép lại PDF/A" (chuyển từ màn OCR sang đây — đề nghị chỉnh sửa mục 6): xếp hàng ghép lại các
+  // tài liệu có PDF 2 lớp do bản cũ sinh (chưa đạt PDF/A-2b).
+  const [ghepLai, setGhepLai] = useState(false);
+  const ghepLaiPdfa = async () => {
+    setGhepLai(true);
+    V344("");
+    try {
+      const r = await V4fb();
+      V344(
+        `Đã kiểm ${V4wc(r.checked)} tài liệu, xếp hàng ghép lại ${V4wc(r.enqueued)}.` +
+          (r.skippedSigned > 0
+            ? ` ${V4wc(r.skippedSigned)} tài liệu ĐÃ KÝ chưa đạt PDF/A — phải ký lại theo quy trình.`
+            : ""),
+      );
+      if (V33w) V33x(await V4fc());
+    } catch (e) {
+      V344(V4wa(e));
+    } finally {
+      setGhepLai(false);
+    }
+  };
+
   const V351 = (V352: string, V353: string) => {
     V33r((V354) => new Set([...V354, ...V4vz(V352)]));
     V345.current = true;
@@ -510,6 +532,21 @@ export default function V4wh() {
                   <>
                     <Icon name="kiemTraPdfa" />
                     Soát PDF/A lỗi
+                  </>
+                )}
+              </button>
+              <button
+                className="btn"
+                onClick={() => void ghepLaiPdfa()}
+                disabled={ghepLai}
+                title="Ghép lại các tài liệu có PDF 2 lớp sinh bởi bản cũ (chưa đạt PDF/A theo Điều 8.2.a)"
+              >
+                {ghepLai ? (
+                  "Đang xếp hàng…"
+                ) : (
+                  <>
+                    <Icon name="ghepLai" />
+                    Ghép lại PDF/A
                   </>
                 )}
               </button>
