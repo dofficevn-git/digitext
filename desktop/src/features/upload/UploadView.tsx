@@ -617,6 +617,10 @@ function V4qo() {
   }, [V2ee, V2eg]);
   const V2gaDest = useMemo(() => {
     const hoSo = !!(V2ek && V2ek !== V4qh);
+    if (!V2fn && !hoSo && V2g9) {
+      // Chọn thư mục → giữ nguyên cây thư mục ngay dưới dự án; tệp lẻ → "Chưa phân loại".
+      return `${V2g9}/‹tên thư mục đã chọn›/… (chọn tệp lẻ: ${V2g9}/Chưa phân loại)`;
+    }
     const tail = V2fn || "Chưa phân loại";
     return hoSo || !V2g9 ? tail : `${V2g9}/${tail}`;
   }, [V2ek, V2fn, V2g9]);
