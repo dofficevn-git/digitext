@@ -2891,6 +2891,16 @@ pub async fn collect_add_files(
             tracing::warn!(error = % e, path = % marker.display(), "không ghi được dấu thư mục dự án");
         }
     }
+    // Chọn CẢ THƯ MỤC mà không gắn hồ sơ danh mục và không gõ "Vị trí trong Kho": thư mục đã tự
+    // mang cây phân loại (PHONG/HOP/HO SO) → đặt thẳng dưới thư mục dự án, KHÔNG chèn tầng
+    // "Chưa phân loại" (28/9/2026: 30.729 tệp LTLSBN thừa tầng này). Tệp lẻ vẫn vào "Chưa phân loại".
+    let khong_danh_muc = args.phong_ma.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none();
+    let khong_vi_tri = args.dest_rel.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none();
+    let dir_folder = if khong_danh_muc && khong_vi_tri {
+        crate::storage::f_1jt(&root, &r_yw[..1], false)
+    } else {
+        folder.clone()
+    };
     let mut r_yy = Tg {
         project_id: r_yr.clone(),
         dest: r_yx.join("/"),
@@ -2951,7 +2961,7 @@ pub async fn collect_add_files(
                     .unwrap_or_default();
                 let sub = keep_selected_folder_name(&src, sub, chua_phan_loai);
                 let r_yt: Vec<&str> = sub.iter().map(String::as_str).collect();
-                r_yo.push((f, crate::storage::f_1jt(&folder, &r_yt, false)));
+                r_yo.push((f, crate::storage::f_1jt(&dir_folder, &r_yt, false)));
             }
         } else {
             let r_yn = src
