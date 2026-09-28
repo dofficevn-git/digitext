@@ -339,10 +339,14 @@ pub async fn sign_batch(
     let BatchArgs { job_ids, module_path, slot_index, pin, placement } = args;
     let module_path = f_290(&module_path, &f_14z(), |p| std::path::Path::new(p).exists())
         .map_err(AppError::validation)?;
+    tracing::info!(jobs = job_ids.len(), ?placement, "sign_batch: mở token");
     let tok = tauri::async_runtime::spawn_blocking(move || token::Thb::open(&module_path, slot_index, &pin))
         .await
         .map_err(|e| AppError::internal(format!("luồng token lỗi: {e}")))?
-        .map_err(AppError::validation)?;
+        .map_err(|e| {
+            tracing::warn!(error = % e, "sign_batch: mở token / PIN lỗi");
+            AppError::validation(e)
+        })?;
     let cert = tok.certificate().to_vec();
     let inters = tok.intermediates().to_vec();
     let mut out = BatchResult { total: job_ids.len(), ..Default::default() };
@@ -396,6 +400,9 @@ pub async fn sign_batch(
                 ("failed".to_string(), Some(e))
             }
         };
+        if let Some(e) = &error {
+            tracing::warn!(job = % job_id, error = % e, "sign_batch: tài liệu lỗi");
+        }
         let _ = app.emit(
             EV_BATCH,
             BatchProgress { done: i + 1, total: job_ids.len(), job_id: job_id.clone(), status, error },
