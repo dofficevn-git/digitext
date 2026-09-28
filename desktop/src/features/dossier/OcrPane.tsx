@@ -497,7 +497,13 @@ export default function OcrPane() {
           <span className="muted text-sm">Bấm một dự án để lọc danh sách tài liệu bên dưới</span>
           <div className="flex-1" />
           {V1to && (
-            <button className="btn sm" onClick={() => V1tp("")}>
+            <button
+              className="btn sm"
+              onClick={() => {
+                V1tp("");
+                V1t8("");
+              }}
+            >
               <Icon name="tuChoi" />
               Bỏ lọc dự án
             </button>
@@ -537,7 +543,12 @@ export default function OcrPane() {
                   return (
                     <tr
                       key={p.projectId}
-                      onClick={() => V1tp(V1ue ? "" : p.projectId)}
+                      onClick={() => {
+                        // Bấm dòng dự án = lọc bảng dưới + đặt luôn ô "Chọn dự án" (một nguồn lọc).
+                        const moi = V1ue ? "" : p.projectId;
+                        V1tp(moi);
+                        V1t8(moi);
+                      }}
                       style={{
                         cursor: "pointer",
                         background: V1ue ? "var(--line-2)" : undefined,
@@ -635,8 +646,12 @@ export default function OcrPane() {
               <select
                 className="inp sm max-w-55"
                 value={V1t7}
-                onChange={(V1uf) => V1t8(V1uf.target.value)}
-                title="Dự án đích để tải tài liệu lên"
+                onChange={(V1uf) => {
+                  // Chọn dự án = lọc bảng tài liệu chỉ còn dự án đó (và là dự án đích khi tải PDF lên).
+                  V1t8(V1uf.target.value);
+                  V1tp(V1uf.target.value);
+                }}
+                title="Lọc bảng theo dự án (cũng là dự án đích khi tải PDF lên)"
               >
                 <option value="">— Chọn dự án —</option>
                 {V1t5.map((p) => (

@@ -165,7 +165,15 @@ function V4ko(a: string, b: string): number {
 }
 
 function V4kp(a: V4kb, b: V4kb): number {
-  return V4ko(a.phong, b.phong) || V4ko(a.hopSo, b.hopSo) || V4ko(a.hoSoSo, b.hoSoSo);
+  // Phông → hộp → hồ sơ, sắp theo số. "HOP 1" và "HOP 01" bằng nhau về số nên phải tách
+  // bằng tên gốc — nếu không hồ sơ của hai hộp đó xếp xen kẽ ("hết hộp này mới sang hộp khác").
+  return (
+    V4ko(a.phong, b.phong) ||
+    V4ko(a.hopSo, b.hopSo) ||
+    (a.hopSo < b.hopSo ? -1 : a.hopSo > b.hopSo ? 1 : 0) ||
+    V4ko(a.hoSoSo, b.hoSoSo) ||
+    (a.hoSoSo < b.hoSoSo ? -1 : a.hoSoSo > b.hoSoSo ? 1 : 0)
+  );
 }
 
 export function V4kq(docs: V4ej[]): V4kc[] {

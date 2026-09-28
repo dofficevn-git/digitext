@@ -333,7 +333,8 @@ pub async fn f_1o0(
            AND NOT EXISTS ( \
                SELECT 1 FROM ocr_jobs j WHERE j.document_id = d.id AND j.kind = 'ocr' \
            ) \
-         ORDER BY d.uploaded_at ASC LIMIT $2"
+         ORDER BY d.project_id, d.rel_path COLLATE vi_so NULLS LAST, d.filename COLLATE vi_so, d.uploaded_at \
+         LIMIT $2"
     ))
     .bind(r_24j)
     .bind(r_24h)
