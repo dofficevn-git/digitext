@@ -3,7 +3,7 @@
 import type { V4f9, V4ej } from "@/api/docs";
 import { V4vp } from "./serverTree";
 
-export type V4w3 = "missing" | "invalid" | "not-pdfa";
+export type V4w3 = "rejected" | "missing" | "invalid" | "not-pdfa";
 
 export interface V4w4 {
   id: string;
@@ -19,6 +19,8 @@ export interface V4w4 {
 
 export function V4w5(V336: V4w3): string {
   switch (V336) {
+    case "rejected":
+      return "Không đạt dpi — cần quét lại";
     case "missing":
       return "Thiếu tệp PDF";
     case "invalid":
@@ -29,6 +31,7 @@ export function V4w5(V336: V4w3): string {
 }
 
 export function V4w6(r: V4f9): V4w3 | null {
+  if (r.state === "rejected") return "rejected";
   if (r.state === "missing") return "missing";
   if (r.state === "invalid") return "invalid";
   if (r.state === "ok" && !r.pdfa2b) return "not-pdfa";
@@ -54,7 +57,7 @@ export function V4w7(r: V4f9, V337: V4w3): string {
   return V338.join(" · ");
 }
 
-const V4w8: Record<V4w3, number> = { missing: 0, invalid: 1, "not-pdfa": 2 };
+const V4w8: Record<V4w3, number> = { rejected: 0, missing: 1, invalid: 2, "not-pdfa": 3 };
 
 export function V4w9(V339: readonly V4f9[], docs: readonly V4ej[]): V4w4[] {
   const V33a = new Map(docs.map((d) => [d.id, d]));
