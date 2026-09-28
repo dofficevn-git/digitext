@@ -20,6 +20,7 @@ import {
   pdfaState,
   V4kt,
   V4ks,
+  phongOf,
   type V4kg,
   type V4k8,
   type V4kb,
@@ -403,11 +404,28 @@ export default function ReviewHoSoTable({
 
   V41p(V1ru, { topics: ["docs", "ocr"] });
 
+  // Lọc theo dự án + phông TRƯỚC khi gom, để tổng số hồ sơ / tài liệu / tiến độ ở đầu bảng và
+  // ở dòng dự án tính đúng phần đang lọc.
+  const [phongLoc, setPhongLoc] = useState("");
+  const docsDuAn = useMemo(
+    () => (V1r9 ? docs.filter((d) => (d.projectId ?? "") === V1r9) : docs),
+    [docs, V1r9],
+  );
+  const dsPhong = useMemo(() => {
+    const s = new Set<string>();
+    for (const d of docsDuAn) {
+      const p = phongOf(d);
+      if (p) s.add(p);
+    }
+    return [...s].sort(new Intl.Collator("vi", { numeric: true }).compare);
+  }, [docsDuAn]);
+  useEffect(() => {
+    if (phongLoc && !dsPhong.includes(phongLoc)) setPhongLoc("");
+  }, [dsPhong, phongLoc]);
   const V1rw = useMemo(() => {
-    const V1rx = V4kq(V4kw(docs, { chiChoXacNhan: V1rn, q }));
-
-    return V1r9 ? V1rx.filter((g) => g.key === `p:${V1r9}`) : V1rx;
-  }, [docs, V1rn, q, V1r9]);
+    const src = phongLoc ? docsDuAn.filter((d) => phongOf(d) === phongLoc) : docsDuAn;
+    return V4kq(V4kw(src, { chiChoXacNhan: V1rn, q }));
+  }, [docsDuAn, phongLoc, V1rn, q]);
 
   useEffect(() => {
     V1rk((cu) => {
@@ -478,6 +496,21 @@ export default function ReviewHoSoTable({
           value={q}
           onChange={(V1sh) => V1rp(V1sh.target.value)}
         />
+        {dsPhong.length > 0 && (
+          <select
+            className="inp sm max-w-55"
+            value={phongLoc}
+            onChange={(e) => setPhongLoc(e.target.value)}
+            title="Chỉ hiện tài liệu của một phông"
+          >
+            <option value="">— Tất cả phông ({dsPhong.length}) —</option>
+            {dsPhong.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        )}
         <label className="flex items-center gap-1.5 text-sm">
           <input
             type="checkbox"
