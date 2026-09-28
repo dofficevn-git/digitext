@@ -70,6 +70,8 @@ export function pdfaState(f: V4k8): V4ka {
 
 export interface V4kb {
   key: string;
+  /** Phông = tầng đầu của relPath (cây Dự án/Phông/Hộp/Hồ sơ). "" nếu không xác định. */
+  phong: string;
   hopSo: string;
   hoSoSo: string;
   files: V4k8[];
@@ -98,6 +100,12 @@ export function V4kh(d: V4ej): V4eh {
   return d.reviewStatus === "approved" || d.reviewStatus === "rejected"
     ? d.reviewStatus
     : "pending";
+}
+
+/** Phông của tài liệu: tầng đầu relPath khi cây có đủ phông/hộp/hồ sơ (≥ 2 tầng). */
+export function phongOf(doc: V4ej): string {
+  const parts = (doc.relPath ?? "").split("/").filter((s) => s.trim() !== "");
+  return parts.length >= 2 ? parts[0].trim() : "";
 }
 
 export function V4ki(doc: V4ej): { hop: string; hoSo: string } {
@@ -157,7 +165,7 @@ function V4ko(a: string, b: string): number {
 }
 
 function V4kp(a: V4kb, b: V4kb): number {
-  return V4ko(a.hopSo, b.hopSo) || V4ko(a.hoSoSo, b.hoSoSo);
+  return V4ko(a.phong, b.phong) || V4ko(a.hopSo, b.hopSo) || V4ko(a.hoSoSo, b.hoSoSo);
 }
 
 export function V4kq(docs: V4ej[]): V4kc[] {
@@ -175,12 +183,15 @@ export function V4kq(docs: V4ej[]): V4kc[] {
       V1pi.set(V1pj, p);
     }
     const { hop, hoSo: V1pk } = V4ki(d);
+    // Phông phải nằm trong khoá: "HOP 01 / HO SO 5" có ở nhiều phông khác nhau.
+    const phong = phongOf(d);
 
-    const V1pl = JSON.stringify([V1pj, hop, V1pk]);
+    const V1pl = JSON.stringify([V1pj, phong, hop, V1pk]);
     let row = p.rows.get(V1pl);
     if (!row) {
       row = {
         key: V1pl,
+        phong,
         hopSo: hop,
         hoSoSo: V1pk,
         files: [],

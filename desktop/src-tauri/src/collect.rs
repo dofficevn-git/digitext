@@ -1352,6 +1352,15 @@ fn f_1km(root: &Path, file: &Path) -> Option<String> {
             _ => None,
         })
         .collect();
+    // Cây KHÔNG theo danh mục: <dự án (có dấu PROJECT_MARKER)>/<phông>/<hộp>/<hồ sơ> → mã hồ sơ
+    // là "hộp/hồ sơ" (tầng 3/4); phông lấy từ tầng 2 của relPath. Cây theo danh mục:
+    // <phông>/<hộp>/<hồ sơ> → "hộp/hồ sơ" (tầng 2/3) như cũ.
+    let project_dir = r_ut
+        .first()
+        .is_some_and(|d| root.join(d).join(PROJECT_MARKER).exists());
+    if project_dir && r_ut.len() >= 3 {
+        return Some(format!("{}/{}", r_ut[2], r_ut.get(3).map(String::as_str).unwrap_or("")));
+    }
     match r_ut.len() {
         0 | 1 => None,
         2 => Some(r_ut[1].clone()),
