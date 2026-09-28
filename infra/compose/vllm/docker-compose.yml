@@ -28,7 +28,8 @@ services:
       - "--gpu-memory-utilization"
       - "${VLLM_GPU_FRACTION:-0.55}"
       - "--max-model-len"
-      - "4096"
+      # 28/9/2026: 8192 để bóc trường kèm chữ OCR + ví dụ (dạy bằng ví dụ). Khớp DIGITEXT_VLM_MAX_LEN của worker.
+      - "${VLLM_MAX_MODEL_LEN:-4096}"
       - "--limit-mm-per-prompt"
       # vLLM mới (≥0.10) nhận dạng JSON: VLLM_LIMIT_MM='{"image":1}'
       - "${VLLM_LIMIT_MM:-image=1}"

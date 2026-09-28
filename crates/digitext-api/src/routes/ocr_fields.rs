@@ -167,6 +167,12 @@ async fn f_11n(
     };
     // Báo cáo nhân viên: ghi AI nhập / AI xác nhận trường này.
     digitext_db::progress::mark_field_edit(&r_l1.pool, r_l0.id, r_kv.user.id, r_kw.verified).await?;
+    // Dạy bằng ví dụ: trường đã DUYỆT → trang này thành (hoặc cập nhật) ví dụ cho lần bóc sau.
+    if r_kw.verified {
+        if let Err(e) = digitext_db::kie_examples::upsert_from_document(&r_l1.pool, r_kx.id, r_kw.page_no, r_kv.user.id).await {
+            tracing::warn!(error = %e, document = %r_kx.id, "không lưu được ví dụ bóc trường");
+        }
+    }
     digitext_db::audit::append(
         &r_l1.pool,
         digitext_db::audit::Tp {

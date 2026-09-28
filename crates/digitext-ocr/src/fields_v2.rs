@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub type T81<'a> =
     Pin<Box<dyn Future<Output = Result<Vec<(VanBanField, String)>, VlmError>> + Send + 'a>>;
 pub trait T80: Send + Sync {
-    fn extract_v2<'a>(&'a self, image_jpeg: &'a [u8]) -> T81<'a>;
+    fn extract_v2<'a>(&'a self, image_jpeg: &'a [u8], hint: &'a crate::vlm_prompt_v2::FewShot) -> T81<'a>;
 }
 #[derive(Debug)]
 pub enum ExtractV2Error {
