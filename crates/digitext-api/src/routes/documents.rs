@@ -486,6 +486,27 @@ async fn f_173(
     {
         return Err(ApiError::forbidden());
     }
+    if q.variant.as_deref() == Some("signed") {
+        // Bản ĐÃ KÝ SỐ (PAdES) — chỉ có khi tài liệu đã qua bước ký (signed/archived).
+        if !matches!(r_ev.status.as_str(), "signed" | "archived") {
+            return Err(ApiError::bad_request("tài liệu chưa ký số — ký ở mục “Ký số” trước"));
+        }
+        let key = digitext_storage::f_2fc(r_ev.project_id, id);
+        let store = state
+            .store
+            .as_ref()
+            .ok_or_else(|| ApiError::service_unavailable("kho lưu trữ chưa cấu hình"))?;
+        let bytes = store
+            .get(&key)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = % e, key, "lỗi đọc bản đã ký số từ kho object");
+                ApiError::service_unavailable("kho lưu trữ không sẵn sàng")
+            })?
+            .ok_or_else(ApiError::not_found)?;
+        let n = bytes.len() as u64;
+        return Ok((f_177(&r_ev.filename, Some(n)), Body::from(bytes)).into_response());
+    }
     if q.variant.as_deref() == Some("pdfa") {
         let key = documents::pdfa_key(&state.pool, id)
             .await?

@@ -55,9 +55,28 @@ impl Tpr {
 pub fn prepare(pdf: &[u8], r_4vi: &[u8], r_4vj: u64) -> Result<Thg, SignError> {
     f_23p(pdf, r_4vi, r_4vj, None)
 }
+/// Vị trí khối chữ ký hiển thị do người ký chọn (trên tệp đầu tiên, áp cho cả lô).
+/// `x`, `y`: góc TRÊN-TRÁI của khối, tính theo TỈ LỆ bề rộng/bề cao trang (0..1, `y` đo từ
+/// mép trên) — cùng một điểm trên mọi khổ giấy. `last_page`: đặt ở trang cuối thay vì trang đầu.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SignPlacement {
+    pub last_page: bool,
+    pub x: f32,
+    pub y: f32,
+}
 pub fn f_23p(pdf: &[u8], r_4vw: &[u8], r_4vx: u64, r_4vz: Option<&Tpv>) -> Result<Thg, SignError> {
+    prepare_at(pdf, r_4vw, r_4vx, r_4vz, None)
+}
+/// Như `f_23p` nhưng đặt khối chữ ký tại `placement` (None = góc trên-phải trang đầu như cũ).
+pub fn prepare_at(
+    pdf: &[u8],
+    r_4vw: &[u8],
+    r_4vx: u64,
+    r_4vz: Option<&Tpv>,
+    placement: Option<SignPlacement>,
+) -> Result<Thg, SignError> {
     let cert = Certificate::from_der(r_4vw).map_err(SignError::der)?;
-    let r_4w0 = f_1ig(pdf, r_4vz)?;
+    let r_4w0 = f_1ig(pdf, r_4vz, placement)?;
     let (r_4vv, r_4vu) = f_2f8(&r_4w0)?;
     let (r_4vr, r_4vq) = f_1cu(&r_4w0, r_4vv, r_4vu).ok_or_else(|| {
         SignError::Pdf("không thấy ô /Contents sau khi chèn".into())
@@ -435,14 +454,32 @@ fn f_1s2(r_4yd: &Document, r_4yi: lopdf::ObjectId) -> Option<[f32; 4]> {
     }
     None
 }
-fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>) -> Result<Vec<u8>, SignError> {
+/// Khung [x0, y0, x1, y1] cho khối rộng `w`, cao `h` trên trang có MediaBox `m`.
+fn place_rect(m: [f32; 4], w: f32, h: f32, placement: Option<SignPlacement>) -> [f32; 4] {
+    match placement {
+        None => {
+            let r_4z4 = m[2] - C_K5;
+            let r_4z5 = m[3] - C_K5;
+            [r_4z4 - w, r_4z5 - h, r_4z4, r_4z5]
+        }
+        Some(p) => {
+            let (pw, ph) = (m[2] - m[0], m[3] - m[1]);
+            let left = (m[0] + p.x.clamp(0.0, 1.0) * pw).clamp(m[0], (m[2] - w).max(m[0]));
+            let top = (m[3] - p.y.clamp(0.0, 1.0) * ph).clamp((m[1] + h).min(m[3]), m[3]);
+            [left, top - h, left + w, top]
+        }
+    }
+}
+fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>, placement: Option<SignPlacement>) -> Result<Vec<u8>, SignError> {
     let mut r_4yq =
         Document::load_mem(pdf).map_err(|e| SignError::Pdf(format!("nạp PDF: {e}")))?;
-    let r_4yw = *r_4yq
-        .get_pages()
-        .values()
-        .next()
-        .ok_or_else(|| SignError::Pdf("PDF không có trang".into()))?;
+    let pages = r_4yq.get_pages();
+    let chosen = if placement.is_some_and(|p| p.last_page) {
+        pages.values().next_back()
+    } else {
+        pages.values().next()
+    };
+    let r_4yw = *chosen.ok_or_else(|| SignError::Pdf("PDF không có trang".into()))?;
     let r_4ym = match r_4z2 {
         Some(r_4yn) => {
             let r_4yo = match &r_4yn.stamp {
@@ -459,11 +496,8 @@ fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>) -> Result<Vec<u8>, SignError> {
                 None => digitext_pdf::f_w0(&mut r_4yq, &r_4yn.lines, &r_4yn.font_ttf),
             };
             match r_4yo {
-                Ok((form_id, r_4z3, h)) => f_1s2(&r_4yq, r_4yw).map(|r_4yt| {
-                    let r_4z4 = r_4yt[2] - C_K5;
-                    let r_4z5 = r_4yt[3] - C_K5;
-                    (form_id, [r_4z4 - r_4z3, r_4z5 - h, r_4z4, r_4z5])
-                }),
+                Ok((form_id, r_4z3, h)) => f_1s2(&r_4yq, r_4yw)
+                    .map(|r_4yt| (form_id, place_rect(r_4yt, r_4z3, h, placement))),
                 Err(e) => {
                     tracing::warn!(
                         error = % e,
@@ -711,4 +745,27 @@ pub(crate) fn f_1gu(hex: &[u8]) -> Option<Vec<u8>> {
         r_513.push((f_1uw(r_514[0])? << 4) | f_1uw(r_514[1])?);
     }
     Some(r_513)
+}
+
+#[cfg(test)]
+mod placement_tests {
+    use super::{place_rect, SignPlacement};
+    const A4: [f32; 4] = [0.0, 0.0, 595.0, 842.0];
+    #[test]
+    fn mac_dinh_goc_tren_phai() {
+        let r = place_rect(A4, 200.0, 60.0, None);
+        assert_eq!(r, [595.0 - 14.0 - 200.0, 842.0 - 14.0 - 60.0, 595.0 - 14.0, 842.0 - 14.0]);
+    }
+    #[test]
+    fn theo_ti_le_tu_mep_tren() {
+        let r = place_rect(A4, 200.0, 60.0, Some(SignPlacement { last_page: false, x: 0.5, y: 0.25 }));
+        assert_eq!(r, [297.5, 842.0 * 0.75 - 60.0, 497.5, 842.0 * 0.75]);
+    }
+    #[test]
+    fn khong_tran_ra_ngoai_trang() {
+        let r = place_rect(A4, 200.0, 60.0, Some(SignPlacement { last_page: true, x: 0.99, y: 0.99 }));
+        assert!(r[0] >= 0.0 && r[2] <= 595.0 && r[1] >= 0.0 && r[3] <= 842.0, "{r:?}");
+        let r = place_rect([10.0, 20.0, 610.0, 862.0], 200.0, 60.0, Some(SignPlacement { last_page: false, x: 0.0, y: 0.0 }));
+        assert_eq!(r, [10.0, 862.0 - 60.0, 210.0, 862.0]);
+    }
 }

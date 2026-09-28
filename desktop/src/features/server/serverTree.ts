@@ -31,6 +31,21 @@ export interface V4vl {
   boxCount: number | null;
 
   dossierCount: number | null;
+
+  /** Số tệp ĐÃ KÝ SỐ trong nhánh. */
+  signedCount: number;
+  /** Số tệp mới có PDF/A (chưa ký). */
+  pdfaOnlyCount: number;
+}
+
+/** Đã ký số: đã qua bước ký (signed) hoặc đã lưu kho (archived). */
+export function isSignedDoc(d: V4ej): boolean {
+  return d.status === "signed" || d.status === "archived";
+}
+
+/** Mới chỉ có PDF/A (lớp chữ), chưa ký số. */
+export function isPdfaOnlyDoc(d: V4ej): boolean {
+  return !isSignedDoc(d) && (d.pdfaPages ?? 0) > 0;
 }
 
 export function V4vm(d: V4ej): string {
@@ -66,6 +81,8 @@ export function V4vq(docs: V4ej[]): V4vl {
     sizeBytes: 0,
     boxCount: null,
     dossierCount: null,
+    signedCount: 0,
+    pdfaOnlyCount: 0,
   };
   const V329 = new Map<string, V4vl>([["", root]]);
 
@@ -87,6 +104,8 @@ export function V4vq(docs: V4ej[]): V4vl {
           sizeBytes: 0,
           boxCount: null,
           dossierCount: null,
+          signedCount: 0,
+          pdfaOnlyCount: 0,
         };
         V329.set(V32d, V32f);
         V32c.folders.push(V32f);
@@ -116,6 +135,10 @@ export function V4vq(docs: V4ej[]): V4vl {
       f.folders.reduce((n, c) => n + c.pageCount, 0);
     f.sizeBytes =
       f.docs.reduce((n, d) => n + d.sizeBytes, 0) + f.folders.reduce((n, c) => n + c.sizeBytes, 0);
+    f.signedCount =
+      f.docs.filter(isSignedDoc).length + f.folders.reduce((n, c) => n + c.signedCount, 0);
+    f.pdfaOnlyCount =
+      f.docs.filter(isPdfaOnlyDoc).length + f.folders.reduce((n, c) => n + c.pdfaOnlyCount, 0);
 
     f.boxCount =
       f.depth === V4vi

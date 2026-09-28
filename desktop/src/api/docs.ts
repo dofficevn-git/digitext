@@ -58,9 +58,19 @@ export function V4ek(): Promise<V4ej[]> {
   return invoke<V4ej[]>("docs_tree");
 }
 
-export function V4el(V17h: string, V17i: string, V17j?: string, pdfa = false, destDir?: string): Promise<string> {
+/** Loại bản tải: bản gốc đã tải lên / PDF/A (lớp chữ, chưa ký) / bản đã ký số. */
+export type DownloadKind = "original" | "pdfa" | "signed";
+
+export function V4el(
+  V17h: string,
+  V17i: string,
+  V17j?: string,
+  pdfa = false,
+  destDir?: string,
+  variant?: DownloadKind,
+): Promise<string> {
   return invoke<string>("docs_download", {
-    args: { id: V17h, filename: V17i, relPath: V17j, pdfa, destDir: destDir ?? null },
+    args: { id: V17h, filename: V17i, relPath: V17j, pdfa, destDir: destDir ?? null, variant: variant ?? null },
   });
 }
 
