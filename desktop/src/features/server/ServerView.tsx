@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useNavigation } from "@/state";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V3zt } from "@/state/sessionCore";
-import { V4el, V4fc, V4ek, type V4f9, type V4ej } from "@/api/docs";
+import { V4el, V4fc, V4ek, type V4f9, type V4ej, type DownloadKind } from "@/api/docs";
 import {
   V4vz,
   V4vq,
@@ -21,6 +21,8 @@ import {
   type V4vu,
   type V4vl,
   type V4vx,
+  isPdfaOnlyDoc,
+  isSignedDoc,
 } from "./serverTree";
 import { V4w5, V4w9 } from "./pdfa";
 import { V4k1 } from "./progress";
@@ -105,8 +107,15 @@ export default function V4wh() {
   const [V340, V341] = useState<{ done: number; total: number } | null>(null);
   const V342 = useRef(false);
   const [V343, V344] = useState("");
-  // Tải bản PDF/A (lớp chữ, về Kho/_pdfa) thay vì bản gốc đã tải lên (về Kho/_nhan_ve).
-  const [taiPdfa, setTaiPdfa] = useState(false);
+  // Loại bản tải: bản gốc đã tải lên / PDF/A chưa ký số / bản ĐÃ KÝ SỐ. Mỗi loại chỉ tải
+  // đúng tệp thuộc loại đó (phân loại theo trạng thái tài liệu trên máy chủ).
+  const [loaiTai, setLoaiTai] = useState<DownloadKind>("original");
+  const taiPdfa = loaiTai === "pdfa";
+  const TEN_LOAI: Record<DownloadKind, string> = {
+    original: "bản gốc",
+    pdfa: "PDF/A chưa ký số",
+    signed: "đã ký số",
+  };
 
   const V345 = useRef(false);
 
@@ -193,7 +202,7 @@ export default function V4wh() {
         directory: true,
         multiple: false,
         defaultPath: nhoThuMuc(),
-        title: `Chọn thư mục lưu ${V4wc(V34s.length)} tệp ${taiPdfa ? "PDF/A" : "bản gốc"} (giữ nguyên cây thư mục)`,
+        title: `Chọn thư mục lưu tệp ${TEN_LOAI[loaiTai]} (giữ nguyên cây thư mục)`,
       });
       if (typeof r !== "string" || !r) return;
       destDir = r;
@@ -209,25 +218,36 @@ export default function V4wh() {
     let last = "";
     let V34v = "";
     let chuaPdfa = 0;
+    let khacLoai = 0;
     for (const [i, V34w] of V34s.entries()) {
       if (V342.current) break;
       V341({ done: i, total: V34s.length });
-      if (taiPdfa && !(V34w.doc.pdfaPages ?? 0)) {
-        chuaPdfa++;
+      if (loaiTai === "pdfa" && !isPdfaOnlyDoc(V34w.doc)) {
+        if (isSignedDoc(V34w.doc)) khacLoai++;
+        else chuaPdfa++;
+        continue;
+      }
+      if (loaiTai === "signed" && !isSignedDoc(V34w.doc)) {
+        khacLoai++;
         continue;
       }
       try {
-        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath, taiPdfa, destDir);
+        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath, taiPdfa, destDir, loaiTai);
         V34u++;
       } catch (V34x) {
         if (V34v === "") V34v = V4wa(V34x);
       }
     }
     V341(null);
-    const fail = V34s.length - V34u - chuaPdfa;
+    const fail = V34s.length - V34u - chuaPdfa - khacLoai;
     const dung = V342.current ? " (đã dừng giữa chừng)" : "";
     V344(
-      `Đã tải ${V4wc(V34u)}/${V4wc(V34s.length)} tệp ${taiPdfa ? "PDF/A " : ""}${V34t}${dung}.` +
+      `Đã tải ${V4wc(V34u)} tệp ${TEN_LOAI[loaiTai]} ${V34t}${dung}.` +
+        (khacLoai > 0
+          ? loaiTai === "signed"
+            ? ` — bỏ qua ${V4wc(khacLoai)} tệp chưa ký số`
+            : ` — bỏ qua ${V4wc(khacLoai)} tệp đã ký số (tải ở loại “Đã ký số”)`
+          : "") +
         (V34u > 0 ? ` Lưu tại: ${last}` : "") +
         (chuaPdfa > 0 ? ` — ${V4wc(chuaPdfa)} tệp chưa có bản PDF/A (chạy “PDF 2 lớp” trước)` : "") +
         (fail > 0 ? ` — ${V4wc(fail)} tệp lỗi: ${V34v}` : ""),
@@ -276,6 +296,11 @@ export default function V4wh() {
             <span className="srv-name" style={{ paddingLeft: V357 * V4we + V4we }}>
               <Icon name="taiLieu" /> {d.filename}
               <span className={`badge ${V4wd(d.status)}`}>{V4k1(d.status)}</span>
+              {isSignedDoc(d) ? (
+                <span className="badge ok" title="Đã ký số PAdES — tải ở loại “Đã ký số”">Đã ký số</span>
+              ) : isPdfaOnlyDoc(d) ? (
+                <span className="badge" title="Có PDF/A (lớp chữ), chưa ký số">PDF/A</span>
+              ) : null}
               {V35a && (
                 <span
                   className="badge err"
@@ -291,15 +316,16 @@ export default function V4wh() {
           <td className="num srv-count">—</td>
           <td className="num srv-count">—</td>
           <td className="num">{d.pageCount ?? "—"}</td>
+          <td className="num srv-count">{isSignedDoc(d) ? "Đã ký" : isPdfaOnlyDoc(d) ? "PDF/A" : "—"}</td>
           <td>
             <button
               className="btn"
               disabled={V340 !== null}
               onClick={() => void V34r([{ doc: d, folderPath: V358 }], `“${d.filename}”`)}
-              title={taiPdfa ? "Tải bản PDF/A" : "Tải bản gốc"}
+              title={`Tải ${TEN_LOAI[loaiTai]}`}
             >
               <Icon name="taiVe" />
-              {taiPdfa ? "Tải PDF/A" : "Tải"}
+              {loaiTai === "signed" ? "Tải bản ký" : taiPdfa ? "Tải PDF/A" : "Tải"}
             </button>
           </td>
         </tr>,
@@ -330,6 +356,9 @@ export default function V4wh() {
             <td className="num srv-count">{V35d.dossierCount ?? "—"}</td>
             <td className="num srv-count">{V4wc(V35d.docCount)}</td>
             <td className="num srv-count">{V4wc(V35d.pageCount)}</td>
+            <td className="num srv-count" title="Đã ký số · mới có PDF/A (chưa ký)">
+              {V4wc(V35d.signedCount)} · {V4wc(V35d.pdfaOnlyCount)}
+            </td>
             <td>
               <button
                 className="btn"
@@ -460,14 +489,14 @@ export default function V4wh() {
               </button>
               <label
                 className="flex items-center gap-1 text-sm"
-                title="Bật: tải bản PDF/A có lớp chữ. Tắt: tải bản gốc đã tải lên. Thư mục lưu được chọn khi bấm tải."
+                title="Chọn loại bản tải. Mỗi loại chỉ tải đúng tệp thuộc loại đó. Thư mục lưu được chọn khi bấm tải."
               >
-                <input
-                  type="checkbox"
-                  checked={taiPdfa}
-                  onChange={(e) => setTaiPdfa(e.target.checked)}
-                />
-                Bản PDF/A
+                Loại bản tải
+                <select value={loaiTai} onChange={(e) => setLoaiTai(e.target.value as DownloadKind)}>
+                  <option value="original">Bản gốc</option>
+                  <option value="pdfa">PDF/A chưa ký số</option>
+                  <option value="signed">Đã ký số</option>
+                </select>
               </label>
               <button
                 className="btn"
@@ -521,6 +550,7 @@ export default function V4wh() {
                   </th>
                   <th className="num">Số file</th>
                   <th className="num">Số trang</th>
+                  <th className="num" title="Đã ký số · mới có PDF/A (chưa ký)">Đã ký · PDF/A</th>
                   <th>Tải xuống</th>
                 </tr>
               </thead>

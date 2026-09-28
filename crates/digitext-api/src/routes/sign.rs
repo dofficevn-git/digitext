@@ -62,14 +62,34 @@ struct SignJob {
     page_count: Option<i32>,
     status: String,
 }
-async fn f_1np(State(r_qb): State<AppState>, r_q7: Ts) -> Result<Json<Vec<SignJob>>, ApiError> {
+/// Lọc hàng đợi ký theo MỘT dự án (ký hàng loạt theo dự án) và lấy nhiều hơn 200.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JobsQuery {
+    #[serde(default)]
+    project_id: Option<Uuid>,
+    #[serde(default)]
+    limit: Option<i64>,
+}
+async fn f_1np(
+    State(r_qb): State<AppState>,
+    r_q7: Ts,
+    axum::extract::Query(q): axum::extract::Query<JobsQuery>,
+) -> Result<Json<Vec<SignJob>>, ApiError> {
     r_q7.require_perm(Permission::SignView)?;
-    let r_q9 = match f_29a(&r_qb.pool, &r_q7.user).await? {
-        Scope::All => None,
-        Scope::Projects(r_q8) => Some(r_q8),
+    let r_q9 = match q.project_id {
+        Some(pid) => {
+            authorize_project(&r_qb, &r_q7, pid).await?;
+            Some(vec![pid])
+        }
+        None => match f_29a(&r_qb.pool, &r_q7.user).await? {
+            Scope::All => None,
+            Scope::Projects(r_q8) => Some(r_q8),
+        },
     };
+    let limit = q.limit.unwrap_or(200).clamp(1, 5000);
     let r_qa =
-        documents::f_1n8(&r_qb.pool, DocStatus::ToSign.as_str(), r_q9.as_deref(), 200).await?;
+        documents::f_1n8(&r_qb.pool, DocStatus::ToSign.as_str(), r_q9.as_deref(), limit).await?;
     Ok(Json(
         r_qa.into_iter()
             .map(|r| SignJob {
@@ -88,6 +108,17 @@ struct T19 {
     certificate: String,
     #[serde(default)]
     intermediates: Vec<String>,
+    /// Vị trí khối chữ ký (chọn trên tệp đầu tiên của lô). Không gửi = góc trên-phải trang đầu.
+    #[serde(default)]
+    placement: Option<PlacementIn>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PlacementIn {
+    #[serde(default)]
+    last_page: bool,
+    x: f32,
+    y: f32,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -160,8 +191,15 @@ async fn begin(
             "không tìm được font cho khối chữ ký hiển thị — ký VÔ HÌNH (lệch Điều 8.1.c)"
         );
     }
-    let r_qh =
-        digitext_sign_verify::pdf::f_23p(&r_qg, &r_qd, r_qm, r_qo.as_ref()).map_err(f_2f2)?;
+    let placement = match &r_qj.placement {
+        Some(p) if !(p.x.is_finite() && p.y.is_finite() && (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)) => {
+            return Err(ApiError::bad_request("vị trí chữ ký phải trong khoảng 0..1"));
+        }
+        Some(p) => Some(digitext_sign_verify::pdf::SignPlacement { last_page: p.last_page, x: p.x, y: p.y }),
+        None => None,
+    };
+    let r_qh = digitext_sign_verify::pdf::prepare_at(&r_qg, &r_qd, r_qm, r_qo.as_ref(), placement)
+        .map_err(f_2f2)?;
     let r_qi = digitext_storage::f_23q(r_qe.project_id, id);
     store.put(&r_qi, &r_qh.pdf).await.map_err(storage_err)?;
     sign_sessions::f_2ea(
