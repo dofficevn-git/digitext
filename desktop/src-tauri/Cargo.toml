@@ -1,6 +1,6 @@
 [package]
 name = "digitext-desktop"
-version = "0.15.14"
+version = "0.15.15"
 edition = "2021"
 publish = false
 
