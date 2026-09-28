@@ -165,6 +165,8 @@ async fn f_11n(
         }
         Err(e) => return Err(e.into()),
     };
+    // Báo cáo nhân viên: ghi AI nhập / AI xác nhận trường này.
+    digitext_db::progress::mark_field_edit(&r_l1.pool, r_l0.id, r_kv.user.id, r_kw.verified).await?;
     digitext_db::audit::append(
         &r_l1.pool,
         digitext_db::audit::Tp {
