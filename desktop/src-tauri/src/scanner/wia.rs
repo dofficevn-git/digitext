@@ -104,7 +104,7 @@ foreach($di in $dm.DeviceInfos){
   }
 }
 "#;
-const C_JH: &str = "\nparam([string]$DeviceID,[int]$Dpi,[int]$DataType,[string]$Adf,[int]$DocHandling,[string]$OutDir,[int]$StartIndex)\n$ErrorActionPreference='Stop'\n# UTF-8 stdout: nếu không, đường dẫn in ra dùng OEM codepage; %TEMP% chứa tên user tiếng\n# Việt → Rust đọc hỏng → mọi trang fail đọc file → lô \"hoàn thành\" 0 trang.\n[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n$FMT='{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}'   # wiaFormatBMP\n$dm = New-Object -ComObject WIA.DeviceManager\n$info = $dm.DeviceInfos | Where-Object { $_.DeviceID -eq $DeviceID } | Select-Object -First 1\nif(-not $info){ [Console]::Error.WriteLine('device-not-found'); exit 2 }\n$dev = $info.Connect()\n# DOCUMENT_HANDLING_SELECT (3088): 1=FEEDER, 5=FEEDER|DUPLEX (1|4); 0 = mặc định (kính phẳng).\nif($DocHandling -gt 0){ try { $dev.Properties.Item('3088').Value = $DocHandling } catch {} }\n$item = $dev.Items.Item(1)\nfunction SetP($id,$v){ try { $item.Properties.Item(\"$id\").Value = $v } catch {} }\nSetP 6147 $Dpi        # WIA_IPS_XRES\nSetP 6148 $Dpi        # WIA_IPS_YRES\nSetP 4103 $DataType   # WIA_IPA_DATATYPE (2=gray,3=color)\n$i = $StartIndex\nwhile($true){\n  try { $img = $item.Transfer($FMT) }\n  catch { [Console]::Error.WriteLine('end:'+$_.Exception.Message); break }\n  $p = Join-Path $OutDir ('page-{0:00000}.bmp' -f $i)\n  if(Test-Path $p){ Remove-Item -Force $p }\n  $img.SaveFile($p)\n  [Console]::Out.WriteLine($p)\n  try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($img) | Out-Null } catch {}\n  $i++\n  if($Adf -ne '1'){ break }   # kính phẳng: 1 trang\n}\n";
+const C_JH: &str = "\nparam([string]$DeviceID,[int]$Dpi,[int]$DataType,[string]$Adf,[int]$DocHandling,[string]$OutDir,[int]$StartIndex)\n$ErrorActionPreference='Stop'\n# UTF-8 stdout: nếu không, đường dẫn in ra dùng OEM codepage; %TEMP% chứa tên user tiếng\n# Việt → Rust đọc hỏng → mọi trang fail đọc file → lô \"hoàn thành\" 0 trang.\n[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n$FMT='{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}'   # wiaFormatBMP\n$dm = New-Object -ComObject WIA.DeviceManager\n$info = $dm.DeviceInfos | Where-Object { $_.DeviceID -eq $DeviceID } | Select-Object -First 1\nif(-not $info){ [Console]::Error.WriteLine('device-not-found'); exit 2 }\n# Máy đang bận (lô trước chưa nhả / driver đang khởi động) → thử lại 6 lần, cách 2 giây.\n$dev = $null\nfor($k = 0; $k -lt 6; $k++){\n  try { $dev = $info.Connect(); break }\n  catch { if($k -eq 5){ throw }; Start-Sleep -Seconds 2 }\n}\n# DOCUMENT_HANDLING_SELECT (3088): 1=FEEDER, 5=FEEDER|DUPLEX (1|4); 0 = mặc định (kính phẳng).\nif($DocHandling -gt 0){ try { $dev.Properties.Item('3088').Value = $DocHandling } catch {} }\n$item = $dev.Items.Item(1)\nfunction SetP($id,$v){ try { $item.Properties.Item(\"$id\").Value = $v } catch {} }\nSetP 6147 $Dpi        # WIA_IPS_XRES\nSetP 6148 $Dpi        # WIA_IPS_YRES\nSetP 4103 $DataType   # WIA_IPA_DATATYPE (2=gray,3=color)\n$i = $StartIndex\nwhile($true){\n  try { $img = $item.Transfer($FMT) }\n  catch {\n    $e = $_.Exception; while($e.InnerException){ $e = $e.InnerException }\n    # 0x80210003 WIA_ERROR_PAPER_EMPTY = hết giấy (kết thúc lô bình thường).\n    if($e.HResult -eq 0x80210003){ [Console]::Error.WriteLine('end:'+$e.Message) }\n    else { [Console]::Error.WriteLine(('fail:0x{0:X8}:' -f $e.HResult)+$e.Message) }\n    break\n  }\n  $p = Join-Path $OutDir ('page-{0:00000}.bmp' -f $i)\n  if(Test-Path $p){ Remove-Item -Force $p }\n  $img.SaveFile($p)\n  [Console]::Out.WriteLine($p)\n  try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($img) | Out-Null } catch {}\n  $i++\n  if($Adf -ne '1'){ break }   # kính phẳng: 1 trang\n}\n# Nhả đối tượng COM để lô sau không gặp \"The WIA device is busy\".\nforeach($o in @($item, $dev)){ try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($o) | Out-Null } catch {} }\n[GC]::Collect(); [GC]::WaitForPendingFinalizers()\n";
 pub struct Tq1;
 impl Tq1 {
     pub fn new() -> Self {
@@ -326,8 +326,13 @@ impl Tkv for Tq1 {
             r_2o7.ok().and_then(|s| s.code())
         ));
         let _ = std::fs::remove_dir_all(&r_2nz);
-        if produced == 0 && !err.is_empty() && !err.starts_with("end:") {
-            r_2o6.error(batch_id, &format!("WIA scan: {err}"));
+        // "end:" = hết giấy / xong bình thường. Còn lại (máy bận, kẹt giấy, rút cáp, lỗi driver giữa
+        // chừng) → báo MẤT KẾT NỐI để hiện "Tiếp tục từ trang …" — trước đây lỗi giữa lô bị coi là
+        // "xong" nên người quét không biết lô bị cắt.
+        let hong = err.lines().map(str::trim).find(|l| !l.is_empty() && !l.starts_with("end:"));
+        if let Some(line) = hong {
+            let why = line.strip_prefix("fail:").unwrap_or(line);
+            r_2o6.error(batch_id, &format!("WIA scan: {why}"));
             r_2o6.state(batch_id, BatchState::Disconnected { at_page: index });
             return;
         }

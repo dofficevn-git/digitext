@@ -465,12 +465,12 @@ export default function V4p9() {
             <Icon name="canhBao" size={18} />
           </span>
           <div className="bx">
-            <b>Mất kết nối máy quét giữa lô. Đã lưu {V291.atPage} trang.</b>
+            <b>Mất kết nối máy quét giữa lô. Đã lưu {V28t.length} trang.</b>
             Cắm lại máy quét rồi tiếp tục — không trang nào bị mất.
           </div>
           <div className="actions">
-            <button className="btn sm primary" onClick={() => void V2a9(V291.atPage + 1)}>
-              Tiếp tục từ trang {V291.atPage + 1}
+            <button className="btn sm primary" onClick={() => void V2a9(V28t.length + 1)}>
+              Tiếp tục từ trang {V28t.length + 1}
             </button>
             <button
               className="btn sm"

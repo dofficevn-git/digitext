@@ -9,7 +9,7 @@ pub mod paper;
 mod sane;
 #[cfg(all(windows, not(feature = "mock-scanner"), feature = "twain"))]
 mod twain;
-#[cfg(all(windows, not(feature = "mock-scanner"), not(feature = "twain")))]
+#[cfg(all(windows, not(feature = "mock-scanner")))]
 mod wia;
 use base64::Engine as _;
 use image::RgbImage;
@@ -120,6 +120,57 @@ pub trait Tkv: Send + Sync {
     fn list_devices(&self) -> Result<Vec<Tkw>, String>;
     fn scan_batch(&self, batch_id: &str, opts: &Tko, sink: &dyn Tkr, cancel: &CancelToken);
 }
+/// Windows: liệt kê máy quét qua CẢ WIA lẫn TWAIN (đề nghị chỉnh sửa mục 3 — nhiều dòng máy như
+/// Fujitsu fi-7140 / PaperStream chạy ổn định qua TWAIN hơn WIA). Mã TWAIN mang tiền tố "twain:".
+#[cfg(all(windows, not(feature = "mock-scanner"), feature = "twain"))]
+struct Dual {
+    wia: wia::Tq1,
+}
+#[cfg(all(windows, not(feature = "mock-scanner"), feature = "twain"))]
+const TWAIN_PREFIX: &str = "twain:";
+#[cfg(all(windows, not(feature = "mock-scanner"), feature = "twain"))]
+impl Tkv for Dual {
+    fn list_devices(&self) -> Result<Vec<Tkw>, String> {
+        // TWAIN chạy ở luồng riêng có hạn giờ: driver lỗi có thể treo khi dò.
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(twain::Tov::new().list_devices());
+        });
+        let wia = self.wia.list_devices();
+        let mut out: Vec<Tkw> = Vec::new();
+        let mut wia_err = None;
+        match wia {
+            Ok(v) => out.extend(v.into_iter().map(|mut d| {
+                d.name = format!("{} (WIA)", d.name);
+                d
+            })),
+            Err(e) => wia_err = Some(e),
+        }
+        match rx.recv_timeout(std::time::Duration::from_secs(8)) {
+            Ok(Ok(v)) => out.extend(v.into_iter().map(|mut d| {
+                d.id = format!("{TWAIN_PREFIX}{}", d.id);
+                d.name = format!("{} (TWAIN)", d.name);
+                d
+            })),
+            Ok(Err(e)) => tracing::info!(error = %e, "không dò được máy quét TWAIN (chưa cài TWAIN DSM 64-bit?)"),
+            Err(_) => tracing::warn!("dò máy quét TWAIN quá 8 giây — bỏ qua TWAIN"),
+        }
+        match (out.is_empty(), wia_err) {
+            (true, Some(e)) => Err(e),
+            _ => Ok(out),
+        }
+    }
+    fn scan_batch(&self, batch_id: &str, opts: &Tko, sink: &dyn Tkr, cancel: &CancelToken) {
+        match opts.device_id.as_deref().and_then(|d| d.strip_prefix(TWAIN_PREFIX)) {
+            Some(dev) => {
+                let mut o = opts.clone();
+                o.device_id = Some(dev.to_string());
+                twain::Tov::new().scan_batch(batch_id, &o, sink, cancel)
+            }
+            None => self.wia.scan_batch(batch_id, opts, sink, cancel),
+        }
+    }
+}
 fn backend() -> Box<dyn Tkv> {
     #[cfg(feature = "mock-scanner")]
     {
@@ -127,7 +178,7 @@ fn backend() -> Box<dyn Tkv> {
     }
     #[cfg(all(windows, not(feature = "mock-scanner"), feature = "twain"))]
     {
-        return Box::new(twain::Tov::new());
+        return Box::new(Dual { wia: wia::Tq1::new() });
     }
     #[cfg(all(windows, not(feature = "mock-scanner"), not(feature = "twain")))]
     {
