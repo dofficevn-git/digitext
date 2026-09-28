@@ -947,11 +947,17 @@ pub struct Tcw {
     pub project_id: Option<Uuid>,
     #[serde(default)]
     pub document_ids: Option<Vec<Uuid>>,
+    /// Gửi lại cả tài liệu đã bị từ chối vĩnh viễn (vd. < 200 dpi) — mặc định KHÔNG, vì kết
+    /// quả chắc chắn vẫn bị từ chối cho tới khi quét lại.
+    #[serde(default)]
+    pub retry_rejected: bool,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MakePdf2AllResult {
     pub documents: usize,
+    /// Bỏ qua vì đã bị từ chối vĩnh viễn trước đó (vd. bản quét < 200 dpi — cần quét lại).
+    pub skipped_rejected: usize,
 }
 const C_BF: i64 = 5000;
 const MAX_SCOPE_IDS: usize = 20_000;
@@ -996,8 +1002,22 @@ async fn make_pdf2_all(
         C_BF,
     )
     .await?;
+    let rejected: std::collections::HashSet<Uuid> = if r_gd.retry_rejected {
+        Default::default()
+    } else {
+        ocr_jobs::pdf2_rejected(&state.pool, projects.as_deref())
+            .await?
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect()
+    };
     let mut r_gb = 0usize;
+    let mut skipped_rejected = 0usize;
     for r in &r_ge {
+        if rejected.contains(&r.id) {
+            skipped_rejected += 1;
+            continue;
+        }
         ocr_jobs::f_19r(&state.pool, r.id).await?;
         r_gb += 1;
     }
@@ -1016,7 +1036,7 @@ async fn make_pdf2_all(
         },
     )
     .await?;
-    Ok(Json(MakePdf2AllResult { documents: r_gb }))
+    Ok(Json(MakePdf2AllResult { documents: r_gb, skipped_rejected }))
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1260,6 +1280,8 @@ pub struct ProgressDto {
     /// phủ dưới ngưỡng (còn chữ chưa có khung → chưa vào lớp text PDF/A).
     pub pages_ink_measured: i64,
     pub pages_ink_low: i64,
+    /// OCR xong nhưng ghép PDF 2 lớp bị từ chối vĩnh viễn (vd. < 200 dpi) — cần quét lại.
+    pub docs_pdf2_rejected: i64,
     pub by_status: std::collections::HashMap<String, i64>,
 }
 /// Cùng biến môi trường + mặc định với worker (`digitext-ocr/src/config.rs`).
@@ -1303,6 +1325,7 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
         docs_ocr_failed: r_gs.docs_failed,
         pages_ink_measured,
         pages_ink_low,
+        docs_pdf2_rejected: ocr_jobs::pdf2_rejected(&state.pool, projects.as_deref()).await?.len() as i64,
         by_status: std::collections::HashMap::new(),
     };
     for (status, docs, pages) in counts {
@@ -1364,6 +1387,10 @@ async fn f_21r(State(state): State<AppState>, r_gs: Ts) -> Result<Json<Vec<PdfaR
         Scope::All => documents::list_all(&state.pool, C_FV, 0).await?,
         Scope::Projects(ids) => documents::list_for_projects(&state.pool, &ids, C_FV, 0).await?,
     };
+    // Tài liệu ghép PDF 2 lớp bị từ chối vĩnh viễn (vd. < 200 dpi): báo đúng lý do + đường dẫn để
+    // quét lại, thay vì "thiếu tệp PDF" chung chung.
+    let rejected: std::collections::HashMap<Uuid, String> =
+        ocr_jobs::pdf2_rejected(&state.pool, None).await?.into_iter().collect();
     let mut r_gt = Vec::with_capacity(r_gv.len());
     for r in r_gv {
         if !f_1fz(&r.status) {
@@ -1386,6 +1413,21 @@ async fn f_21r(State(state): State<AppState>, r_gs: Ts) -> Result<Json<Vec<PdfaR
         }
         let r_9 = digitext_storage::f_2qs(r.project_id, r.id);
         let r_gu = match r_a.get(&r_9).await.map_err(storage_err)? {
+            None if rejected.contains_key(&r.id) => PdfaRow {
+                id: r.id,
+                filename: r.filename,
+                ho_so_ref: r.ho_so_ref,
+                status: r.status,
+                state: "rejected".into(),
+                pages: 0,
+                expected_pages: r.page_count,
+                has_text_layer: false,
+                has_image: false,
+                pages_with_text: 0,
+                pages_without_text: 0,
+                pdfa2b: false,
+                reason: rejected.get(&r.id).cloned(),
+            },
             None => PdfaRow {
                 id: r.id,
                 filename: r.filename,

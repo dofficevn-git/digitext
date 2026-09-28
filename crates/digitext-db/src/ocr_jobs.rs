@@ -258,6 +258,26 @@ pub struct OcrFailedCounts {
     pub pages_queued: i64,
     pub pages_running: i64,
 }
+/// Tài liệu OCR xong nhưng ghép PDF 2 lớp bị TỪ CHỐI VĨNH VIỄN (page_failed — vd. bản quét
+/// < 200 dpi, Điều 8.2.a TT05) và vẫn chưa có PDF/A. Trả (id, lỗi lần gần nhất). Bấm "PDF 2
+/// lớp" lại cũng bị từ chối y hệt — phải quét lại (28/9/2026: 83 tài liệu, 665 lần thử lại).
+pub async fn pdf2_rejected(
+    pool: &PgPool,
+    projects: Option<&[Uuid]>,
+) -> sqlx::Result<Vec<(Uuid, String)>> {
+    let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
+    sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT DISTINCT ON (j.document_id) j.document_id, COALESCE(j.last_error, '') \
+         FROM ocr_jobs j JOIN documents d ON d.id = j.document_id \
+         WHERE j.kind = 'make_pdf2' AND j.status = 'page_failed' \
+           AND d.pdfa_key IS NULL AND d.status = 'ocr_done' \
+           AND ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
+         ORDER BY j.document_id, j.updated_at DESC",
+    )
+    .bind(projects)
+    .fetch_all(pool)
+    .await
+}
 pub async fn ocr_failed_counts(
     r_27k: &PgPool,
     projects: Option<&[Uuid]>,

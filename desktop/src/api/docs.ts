@@ -124,6 +124,8 @@ export function V4et(V17r?: string): Promise<V4es> {
 
 export interface V4eu {
   documents: number;
+  /** Bỏ qua vì đã bị từ chối vĩnh viễn (vd. bản quét < 200 dpi — cần quét lại). */
+  skippedRejected?: number;
 }
 
 export function V4ev(V17s?: string, V17t?: string[]): Promise<V4eu> {
@@ -170,6 +172,9 @@ export interface V4ey {
   docsOcrPending: number;
   docsOcrDone: number;
   docsPdf2Done: number;
+
+  /** OCR xong nhưng ghép PDF 2 lớp bị từ chối vĩnh viễn (vd. < 200 dpi). */
+  docsPdf2Rejected?: number;
 
   docsFieldsDone?: number;
 
@@ -271,7 +276,7 @@ export interface V4f9 {
   hoSoRef: string | null;
   status: string;
 
-  state: "ok" | "invalid" | "missing" | "pending";
+  state: "ok" | "invalid" | "missing" | "pending" | "rejected";
   pages: number;
   expectedPages: number | null;
   hasTextLayer: boolean;

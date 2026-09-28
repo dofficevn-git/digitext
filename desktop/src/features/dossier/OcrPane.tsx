@@ -22,6 +22,7 @@ const V4l8: Record<V4f9["state"], { label: string; tone: "ok" | "err" | "warn" |
   ok: { label: "Đạt", tone: "ok" },
   invalid: { label: "Cấu trúc sai", tone: "err" },
   missing: { label: "Thiếu PDF", tone: "warn" },
+  rejected: { label: "Không đạt dpi — quét lại", tone: "err" },
   pending: { label: "Chưa OCR xong", tone: "gray" },
 };
 

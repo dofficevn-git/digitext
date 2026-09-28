@@ -40,6 +40,7 @@ function V4k4(p: V4ey): V4jt {
     docsOcrPending: p.docsOcrPending,
     docsOcrDone: p.docsOcrDone,
     docsPdf2Done: p.docsPdf2Done,
+    docsPdf2Rejected: p.docsPdf2Rejected ?? 0,
     docsFieldsDone: p.docsFieldsDone ?? 0,
     docsFieldsActive: p.docsFieldsActive ?? 0,
     docsFieldsFailed: p.docsFieldsFailed ?? 0,
@@ -152,6 +153,9 @@ export default function V4k5() {
         (r.documents > 0
           ? `Đã đưa ${fmtN(r.documents)} tài liệu đã OCR xong vào hàng đợi ghép PDF 2 lớp.`
           : "Không có tài liệu nào sẵn sàng ghép PDF 2 lớp (cần OCR xong trước).") +
+          ((r.skippedRejected ?? 0) > 0
+            ? ` Bỏ qua ${fmtN(r.skippedRejected ?? 0)} tài liệu đã bị từ chối (bản quét dưới 200 dpi — cần quét lại; xem danh sách ở “Soát PDF/A lỗi” màn Máy chủ).`
+            : "") +
           V1ox(),
       );
       await reload();
@@ -303,7 +307,10 @@ export default function V4k5() {
             <span className="srv-sub">
               {V1o0 === "pdf2" ? "Đang gửi…" : ""}
               {view
-                ? ` ${fmtN(view.docsPdf2Done)}/${fmtN(view.docsOcrDone)} tài liệu (${V1p3}%)`
+                ? ` ${fmtN(view.docsPdf2Done)}/${fmtN(view.docsOcrDone)} tài liệu (${V1p3}%)` +
+                  (view.docsPdf2Rejected > 0
+                    ? ` · ${fmtN(view.docsPdf2Rejected)} không đạt dpi, cần quét lại`
+                    : "")
                 : " …"}
             </span>
           </span>
@@ -377,7 +384,11 @@ export default function V4k5() {
         <div className="muted srv-meta">
           {V1ok ? "Phạm vi đang lọc: " : ""}
           {fmtN(view.docs)} tài liệu · chờ OCR {fmtN(view.docsOcrPending)} · OCR xong{" "}
-          {fmtN(view.docsOcrDone)} · có PDF 2 lớp {fmtN(view.docsPdf2Done)} · bóc 16 trường{" "}
+          {fmtN(view.docsOcrDone)} · có PDF 2 lớp {fmtN(view.docsPdf2Done)}
+          {view.docsPdf2Rejected > 0
+            ? ` (${fmtN(view.docsPdf2Rejected)} bị từ chối vì bản quét dưới 200 dpi — cần quét lại)`
+            : ""}{" "}
+          · bóc 16 trường{" "}
           {fmtN(view.docsFieldsDone)}
           {view.docsFieldsFailed > 0
             ? ` (${fmtN(view.docsFieldsFailed)} lỗi — bấm “Thử lại tài liệu hỏng” sau khi sửa nguyên nhân)`

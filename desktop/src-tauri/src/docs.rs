@@ -266,6 +266,8 @@ pub async fn docs_ocr_all(
 #[serde(rename_all = "camelCase")]
 pub struct MakePdf2AllResult {
     pub documents: u32,
+    #[serde(default)]
+    pub skipped_rejected: u32,
 }
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -396,6 +398,8 @@ pub struct ProgressDto {
     pub docs_ocr_pending: i64,
     pub docs_ocr_done: i64,
     pub docs_pdf2_done: i64,
+    #[serde(default)]
+    pub docs_pdf2_rejected: i64,
     #[serde(default)]
     pub docs_fields_done: i64,
     #[serde(default)]
