@@ -31,6 +31,7 @@ pub struct DocRow {
     pub review_status: String,
     pub reviewed_at: Option<DateTime<Utc>>,
     pub review_note: Option<String>,
+    pub rel_path: Option<String>,
 }
 #[derive(Debug)]
 pub struct Tdt<'a> {
@@ -117,7 +118,7 @@ pub async fn pdfa_key(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<String>> {
 }
 const DOC_COLS: &str = "d.id, d.project_id, d.filename, d.ho_so_ref, d.page_count, \
      d.size_bytes, d.status, u.display_name AS uploaded_by_name, d.uploaded_at, \
-     d.review_status, d.reviewed_at, d.review_note";
+     d.review_status, d.reviewed_at, d.review_note, d.rel_path";
 pub async fn transition(r_23p: &PgPool, id: Uuid, r_23q: DocStatus) -> sqlx::Result<bool> {
     let r_23o: Vec<String> = DocStatus::ALL
         .iter()
@@ -183,7 +184,7 @@ pub async fn f_1n9(
         "SELECT {DOC_COLS} FROM documents d LEFT JOIN users u ON u.id = d.uploaded_by \
          WHERE d.status = $1 AND ($2::uuid[] IS NULL OR d.project_id = ANY($2)) \
            AND ($4::uuid[] IS NULL OR d.id = ANY($4)) \
-         ORDER BY d.uploaded_at DESC LIMIT $3"
+         ORDER BY d.project_id, d.rel_path COLLATE vi_so NULLS LAST, d.filename COLLATE vi_so, d.uploaded_at LIMIT $3"
     ))
     .bind(status)
     .bind(r_241)

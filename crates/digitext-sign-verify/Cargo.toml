@@ -19,6 +19,7 @@ sha1 = { version = "0.10", features = ["oid"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 digitext-pdf = { path = "../digitext-pdf" }
 tracing = { workspace = true }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 
 [dev-dependencies]
 rand = "0.8"

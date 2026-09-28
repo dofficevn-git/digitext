@@ -16,6 +16,46 @@ pub fn router() -> Router<AppState> {
         .route("/sign/jobs", get(f_1np))
         .route("/sign/{id}/begin", post(begin))
         .route("/sign/{id}/complete", post(complete))
+        .route("/sign/retry", post(retry))
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RetryReq {
+    document_ids: Vec<Uuid>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RetryResp {
+    requeued: usize,
+    skipped: usize,
+}
+/// "Ký lại các file lỗi": đưa tài liệu bị máy chủ từ chối chữ ký, hoặc đang kẹt phiên ký mở của
+/// chính người này (lỗi giữa chừng), về lại hàng chờ ký.
+async fn retry(
+    State(st): State<AppState>,
+    ts: Ts,
+    Json(req): Json<RetryReq>,
+) -> Result<Json<RetryResp>, ApiError> {
+    ts.require_perm(Permission::SignExecute)?;
+    if req.document_ids.len() > 200_000 {
+        return Err(ApiError::bad_request("quá nhiều tài liệu trong một lần"));
+    }
+    let mut out = RetryResp { requeued: 0, skipped: 0 };
+    for id in req.document_ids {
+        let Some(doc) = documents::get(&st.pool, id).await? else {
+            out.skipped += 1;
+            continue;
+        };
+        authorize_project(&st, &ts, doc.project_id).await?;
+        let ok = sign_sessions::release_open_by_signer(&st.pool, id, ts.user.id).await?
+            || sign_sessions::f_29r(&st.pool, id).await?;
+        if ok {
+            out.requeued += 1;
+        } else {
+            out.skipped += 1;
+        }
+    }
+    Ok(Json(out))
 }
 fn f_13e(r_q2: &str, field: &str) -> Result<Vec<u8>, ApiError> {
     base64::engine::general_purpose::STANDARD
@@ -59,6 +99,8 @@ struct SignJob {
     project_id: Uuid,
     filename: String,
     ho_so_ref: Option<String>,
+    /// Thư mục phông/hộp/hồ sơ — để lưu bản đã ký ra thư mục đầu ra đúng cây và báo lỗi kèm đường dẫn.
+    rel_path: Option<String>,
     page_count: Option<i32>,
     status: String,
 }
@@ -87,7 +129,7 @@ async fn f_1np(
             Scope::Projects(r_q8) => Some(r_q8),
         },
     };
-    let limit = q.limit.unwrap_or(200).clamp(1, 5000);
+    let limit = q.limit.unwrap_or(200).clamp(1, 200_000);
     let r_qa =
         documents::f_1n8(&r_qb.pool, DocStatus::ToSign.as_str(), r_q9.as_deref(), limit).await?;
     Ok(Json(
@@ -97,6 +139,7 @@ async fn f_1np(
                 project_id: r.project_id,
                 filename: r.filename,
                 ho_so_ref: r.ho_so_ref,
+                rel_path: r.rel_path,
                 page_count: r.page_count,
                 status: r.status,
             })
@@ -111,7 +154,15 @@ struct T19 {
     /// Vị trí khối chữ ký (chọn trên tệp đầu tiên của lô). Không gửi = góc trên-phải trang đầu.
     #[serde(default)]
     placement: Option<PlacementIn>,
+    /// Ký có dấu (true) / không dấu (false). Không gửi = theo cấu hình máy chủ DIGITEXT_SIGN_STAMP.
+    #[serde(default, rename = "withStamp")]
+    with_stamp: Option<bool>,
+    /// Ảnh con dấu (PNG/JPEG, base64) — chỉ dùng khi ký có dấu.
+    #[serde(default, rename = "stampPng")]
+    stamp_png: Option<String>,
 }
+/// Ảnh dấu tối đa 500 KB (gửi kèm mỗi tài liệu trong lô).
+const STAMP_MAX_BYTES: usize = 500 * 1024;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PlacementIn {
@@ -182,9 +233,26 @@ async fn begin(
             ApiError::conflict("tài liệu không ở trạng thái chờ ký")
         })?;
     let r_qm = f_st();
+    let with_stamp = r_qj.with_stamp.unwrap_or(r_qn.sign_stamp);
+    let stamp_png = match r_qj.stamp_png.as_deref().filter(|s| with_stamp && !s.is_empty()) {
+        Some(b64) => {
+            let bytes = f_13e(b64, "stampPng")?;
+            if bytes.len() > STAMP_MAX_BYTES {
+                return Err(ApiError::bad_request("ảnh con dấu quá lớn (tối đa 500 KB)"));
+            }
+            Some(bytes)
+        }
+        None => None,
+    };
     let r_qo = r_qn
         .sign_visible
-        .then(|| digitext_sign_verify::pdf::f_2qb(&r_qd, r_qm, r_qn.sign_stamp))
+        .then(|| {
+            // Có ảnh dấu thì vẽ ảnh, không vẽ dấu đỏ dựng từ chứng thư.
+            digitext_sign_verify::pdf::f_2qb(&r_qd, r_qm, with_stamp && stamp_png.is_none()).map(|mut t| {
+                t.stamp_png = stamp_png;
+                t
+            })
+        })
         .flatten();
     if r_qn.sign_visible && r_qo.is_none() {
         tracing::warn!(
@@ -220,6 +288,9 @@ async fn begin(
 struct T31 {
     session_id: Uuid,
     signature: String,
+    /// Gắn dấu thời gian (TSA) hay không. Không gửi = có nếu máy chủ đã cấu hình DIGITEXT_TSA_URL.
+    #[serde(default)]
+    timestamp: Option<bool>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -270,7 +341,13 @@ async fn complete(
         .ok_or_else(|| {
             ApiError::conflict("PDF đã chuẩn bị không còn trong kho")
         })?;
-    let timestamp = match r_r1.tsa_url.as_deref() {
+    if r_qx.timestamp == Some(true) && r_r1.tsa_url.is_none() {
+        return Err(ApiError::bad_request(
+            "máy chủ chưa cấu hình dịch vụ cấp dấu thời gian (DIGITEXT_TSA_URL) — chọn ký không kèm dấu thời gian",
+        ));
+    }
+    let tsa_url = if r_qx.timestamp == Some(false) { None } else { r_r1.tsa_url.clone() };
+    let timestamp = match tsa_url.as_deref() {
         Some(url) => Some(fetch_timestamp(url, &signature).await?),
         None => None,
     };
@@ -291,7 +368,7 @@ async fn complete(
     let ok = match &r_r2 {
         Ok(r) if !r.is_valid() => false,
         Ok(r) if !r.signer_chain_ok => false,
-        Ok(_) if r_r1.tsa_url.is_none() => true,
+        Ok(_) if tsa_url.is_none() => true,
         Ok(r) if !r.timestamp_structural_ok => false,
         Ok(r) => r_r1.tsa_trust_roots.is_none() || r.timestamp_trusted,
         Err(_) => false,
@@ -334,7 +411,7 @@ async fn complete(
         (signed_pdf, false)
     };
     let signed_pdf = if r_r1.pades_lta && r_qs {
-        match r_r1.tsa_url.as_deref() {
+        match tsa_url.as_deref() {
             Some(url) => {
                 let r_qu = f_sn(url, &signed_pdf).await?;
                 let ok = matches!(

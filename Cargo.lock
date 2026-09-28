@@ -966,6 +966,7 @@ dependencies = [
  "const-oid 0.9.6",
  "der",
  "digitext-pdf",
+ "image",
  "lopdf",
  "rand 0.8.6",
  "rand_core 0.6.4",

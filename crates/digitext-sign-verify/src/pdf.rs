@@ -2,7 +2,7 @@
 use crate::cms;
 use crate::SignError;
 use der::Decode;
-use lopdf::{dictionary, Document, Object, StringFormat};
+use lopdf::{content::{Content, Operation}, dictionary, Document, Object, Stream, StringFormat};
 use sha2::{Digest, Sha256};
 use x509_cert::Certificate;
 const CONTENTS_LEN: usize = 16384;
@@ -413,6 +413,7 @@ pub fn f_2qb(r_4y8: &[u8], r_4y9: u64, stamp: bool) -> Option<Tpv> {
         lines,
         font_ttf,
         stamp: r_4yb,
+        stamp_png: None,
     })
 }
 #[derive(Debug, Clone)]
@@ -420,6 +421,88 @@ pub struct Tpv {
     pub lines: Vec<String>,
     pub font_ttf: Vec<u8>,
     pub stamp: Option<Tly>,
+    /// Ảnh con dấu (PNG/JPEG, nên nền trong) do người ký chọn — vẽ bên trái dòng chữ. Có ảnh thì
+    /// không vẽ dấu đỏ dựng từ chứng thư (`stamp`).
+    pub stamp_png: Option<Vec<u8>>,
+}
+/// Cạnh dài tối đa của ảnh dấu nhúng vào PDF (px) — đủ nét khi in, không làm phình tệp.
+const STAMP_MAX_PX: u32 = 600;
+/// Nhúng ảnh dấu thành Image XObject (RGB + SMask nếu có vùng trong suốt).
+fn add_stamp_image(doc: &mut Document, bytes: &[u8]) -> Result<(lopdf::ObjectId, u32, u32), String> {
+    let img = image::load_from_memory(bytes).map_err(|e| format!("ảnh dấu không đọc được: {e}"))?;
+    let img = if img.width().max(img.height()) > STAMP_MAX_PX {
+        img.resize(STAMP_MAX_PX, STAMP_MAX_PX, image::imageops::FilterType::Triangle)
+    } else {
+        img
+    };
+    let rgba = img.to_rgba8();
+    let (iw, ih) = rgba.dimensions();
+    if iw == 0 || ih == 0 {
+        return Err("ảnh dấu rỗng".into());
+    }
+    let mut rgb = Vec::with_capacity((iw * ih * 3) as usize);
+    let mut alpha = Vec::with_capacity((iw * ih) as usize);
+    for p in rgba.pixels() {
+        rgb.extend_from_slice(&p.0[..3]);
+        alpha.push(p.0[3]);
+    }
+    let mut dict = dictionary! {
+        "Type" => "XObject", "Subtype" => "Image", "Width" => iw as i64, "Height" => ih as i64,
+        "ColorSpace" => "DeviceRGB", "BitsPerComponent" => 8,
+    };
+    if alpha.iter().any(|&a| a != 255) {
+        let mut mask = Stream::new(
+            dictionary! {
+                "Type" => "XObject", "Subtype" => "Image", "Width" => iw as i64, "Height" => ih as i64,
+                "ColorSpace" => "DeviceGray", "BitsPerComponent" => 8,
+            },
+            alpha,
+        );
+        let _ = mask.compress();
+        dict.set("SMask", doc.add_object(mask));
+    }
+    let mut s = Stream::new(dict, rgb);
+    let _ = s.compress();
+    Ok((doc.add_object(s), iw, ih))
+}
+/// Khối mới = ảnh dấu (trái, cao bằng khối chữ, tối thiểu 60 pt) + khối chữ `form` (phải).
+fn wrap_with_stamp(
+    doc: &mut Document,
+    form: lopdf::ObjectId,
+    w: f32,
+    h: f32,
+    img: lopdf::ObjectId,
+    iw: u32,
+    ih: u32,
+) -> Result<(lopdf::ObjectId, f32, f32), String> {
+    let sh = h.max(60.0);
+    let sw = sh * iw as f32 / ih as f32;
+    let gap = 4.0;
+    let (bw, bh) = (sw + gap + w, sh);
+    let ops = vec![
+        Operation::new("q", vec![]),
+        Operation::new("cm", vec![sw.into(), 0.into(), 0.into(), sh.into(), 0.into(), 0.into()]),
+        Operation::new("Do", vec![Object::Name(b"Im0".to_vec())]),
+        Operation::new("Q", vec![]),
+        Operation::new("q", vec![]),
+        Operation::new(
+            "cm",
+            vec![1.into(), 0.into(), 0.into(), 1.into(), (sw + gap).into(), ((bh - h) / 2.0).into()],
+        ),
+        Operation::new("Do", vec![Object::Name(b"Fm0".to_vec())]),
+        Operation::new("Q", vec![]),
+    ];
+    let bytes = Content { operations: ops }.encode().map_err(|e| e.to_string())?;
+    let mut s = Stream::new(
+        dictionary! {
+            "Type" => "XObject", "Subtype" => "Form", "FormType" => 1,
+            "BBox" => vec![0.into(), 0.into(), bw.into(), bh.into()],
+            "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => img, "Fm0" => form } },
+        },
+        bytes,
+    );
+    let _ = s.compress();
+    Ok((doc.add_object(s), bw, bh))
 }
 #[derive(Debug, Clone)]
 pub struct Tly {
@@ -456,11 +539,16 @@ fn f_1s2(r_4yd: &Document, r_4yi: lopdf::ObjectId) -> Option<[f32; 4]> {
 }
 /// Khung [x0, y0, x1, y1] cho khối rộng `w`, cao `h` trên trang có MediaBox `m`.
 fn place_rect(m: [f32; 4], w: f32, h: f32, placement: Option<SignPlacement>) -> [f32; 4] {
+    // Khối lớn hơn trang (ảnh dấu to, trang nhỏ) → co đều cho vừa, chừa lề — không bao giờ tràn ra
+    // ngoài trang (đề nghị chỉnh sửa mục 5).
+    let (pw, ph) = ((m[2] - m[0] - 2.0 * C_K5).max(1.0), (m[3] - m[1] - 2.0 * C_K5).max(1.0));
+    let k = (pw / w).min(ph / h).min(1.0);
+    let (w, h) = (w * k, h * k);
     match placement {
         None => {
             let r_4z4 = m[2] - C_K5;
             let r_4z5 = m[3] - C_K5;
-            [r_4z4 - w, r_4z5 - h, r_4z4, r_4z5]
+            [(r_4z4 - w).max(m[0]), (r_4z5 - h).max(m[1]), r_4z4, r_4z5]
         }
         Some(p) => {
             let (pw, ph) = (m[2] - m[0], m[3] - m[1]);
@@ -481,6 +569,25 @@ fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>, placement: Option<SignPlacement>) -> R
     };
     let r_4yw = *chosen.ok_or_else(|| SignError::Pdf("PDF không có trang".into()))?;
     let r_4ym = match r_4z2 {
+        Some(r_4yn) if r_4yn.stamp_png.is_some() => {
+            let png = r_4yn.stamp_png.as_deref().unwrap_or_default();
+            let built = digitext_pdf::f_w0(&mut r_4yq, &r_4yn.lines, &r_4yn.font_ttf)
+                .map_err(|e| e.to_string())
+                .and_then(|(form, w, h)| match add_stamp_image(&mut r_4yq, png) {
+                    Ok((img, iw, ih)) => wrap_with_stamp(&mut r_4yq, form, w, h, img, iw, ih),
+                    Err(e) => {
+                        tracing::warn!(error = %e, "ảnh dấu lỗi — ký chỉ có dòng chữ");
+                        Ok((form, w, h))
+                    }
+                });
+            match built {
+                Ok((form_id, w, h)) => f_1s2(&r_4yq, r_4yw).map(|m| (form_id, place_rect(m, w, h, placement))),
+                Err(e) => {
+                    tracing::warn!(error = %e, "không dựng được khối chữ ký hiển thị — ký vô hình");
+                    None
+                }
+            }
+        }
         Some(r_4yn) => {
             let r_4yo = match &r_4yn.stamp {
                 Some(r_4z1) => digitext_pdf::f_w1(
@@ -762,10 +869,73 @@ mod placement_tests {
         assert_eq!(r, [297.5, 842.0 * 0.75 - 60.0, 497.5, 842.0 * 0.75]);
     }
     #[test]
+    fn khoi_to_hon_trang_thi_co_lai() {
+        for p in [None, Some(SignPlacement { last_page: false, x: 0.9, y: 0.9 })] {
+            let r = place_rect(A4, 900.0, 300.0, p);
+            assert!(r[0] >= 0.0 && r[2] <= 595.0 && r[1] >= 0.0 && r[3] <= 842.0, "{r:?}");
+            let (w, h) = (r[2] - r[0], r[3] - r[1]);
+            assert!((w / h - 3.0).abs() < 0.01, "giữ tỉ lệ: {w}x{h}");
+        }
+    }
+    #[test]
     fn khong_tran_ra_ngoai_trang() {
         let r = place_rect(A4, 200.0, 60.0, Some(SignPlacement { last_page: true, x: 0.99, y: 0.99 }));
         assert!(r[0] >= 0.0 && r[2] <= 595.0 && r[1] >= 0.0 && r[3] <= 842.0, "{r:?}");
         let r = place_rect([10.0, 20.0, 610.0, 862.0], 200.0, 60.0, Some(SignPlacement { last_page: false, x: 0.0, y: 0.0 }));
         assert_eq!(r, [10.0, 862.0 - 60.0, 210.0, 862.0]);
+    }
+}
+#[cfg(test)]
+mod stamp_tests {
+    use super::{f_1ig, SignPlacement, Tpv};
+    use lopdf::{dictionary, Document, Object, Stream};
+    fn one_page_pdf() -> Vec<u8> {
+        let mut doc = Document::with_version("1.7");
+        let pages_id = doc.new_object_id();
+        let content = doc.add_object(Stream::new(dictionary! {}, b"".to_vec()));
+        let page = doc.add_object(dictionary! {
+            "Type" => "Page", "Parent" => pages_id, "Contents" => content,
+            "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+        });
+        doc.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => vec![page.into()], "Count" => 1 }),
+        );
+        let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+        doc.trailer.set("Root", catalog);
+        let mut out = Vec::new();
+        doc.save_to(&mut out).unwrap();
+        out
+    }
+    fn png_trong_suot() -> Vec<u8> {
+        let img = image::RgbaImage::from_fn(120, 80, |x, _| image::Rgba([200, 0, 0, if x < 60 { 0 } else { 255 }]));
+        let mut out = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(img).write_to(&mut out, image::ImageFormat::Png).unwrap();
+        out.into_inner()
+    }
+    #[test]
+    fn nhung_anh_dau_co_smask_va_nam_trong_trang() {
+        let lines = vec!["Ký bởi: Nguyễn Văn A".to_string(), "Thời gian: 28/09/2026".to_string()];
+        let Some(font) = digitext_pdf::f_1cr(&lines.join(" ")).and_then(|p| std::fs::read(p).ok()) else {
+            eprintln!("bỏ qua: máy không có font tiếng Việt");
+            return;
+        };
+        let tpv = Tpv { lines, font_ttf: font, stamp: None, stamp_png: Some(png_trong_suot()) };
+        let out = f_1ig(&one_page_pdf(), Some(&tpv), Some(SignPlacement { last_page: false, x: 0.98, y: 0.98 })).unwrap();
+        let doc = Document::load_mem(&out).unwrap();
+        let widget = doc
+            .objects
+            .values()
+            .filter_map(|o| o.as_dict().ok())
+            .find(|d| d.get(b"Subtype").ok().and_then(|v| v.as_name().ok()) == Some(b"Widget".as_slice()))
+            .expect("có widget chữ ký");
+        let r: Vec<f32> = widget.get(b"Rect").unwrap().as_array().unwrap().iter().map(|o| o.as_float().unwrap()).collect();
+        assert!(r[0] >= 0.0 && r[1] >= 0.0 && r[2] <= 595.0 && r[3] <= 842.0 && r[2] > r[0], "{r:?}");
+        let ap = widget.get(b"AP").unwrap().as_dict().unwrap().get(b"N").unwrap().as_reference().unwrap();
+        let form = doc.get_object(ap).unwrap().as_stream().unwrap();
+        let xo = form.dict.get(b"Resources").unwrap().as_dict().unwrap().get(b"XObject").unwrap().as_dict().unwrap();
+        let im = doc.get_object(xo.get(b"Im0").unwrap().as_reference().unwrap()).unwrap().as_stream().unwrap();
+        assert_eq!(im.dict.get(b"Subtype").unwrap().as_name().unwrap(), b"Image");
+        assert!(im.dict.get(b"SMask").is_ok(), "ảnh nền trong phải có SMask");
     }
 }
