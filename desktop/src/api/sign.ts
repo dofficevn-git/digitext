@@ -9,8 +9,29 @@ export interface V4qr {
   projectId: string;
   filename: string;
   hoSoRef: string | null;
+  /** Thư mục phông/hộp/hồ sơ trên máy chủ. */
+  relPath?: string | null;
   pageCount: number | null;
   status: string;
+}
+
+/** Hình thức ký cho cả lô. */
+export interface SignStyle {
+  /** Ký có dấu (true) / không dấu (false). */
+  withStamp?: boolean;
+  /** Ảnh con dấu (base64) — chỉ dùng khi ký có dấu. */
+  stampPng?: string | null;
+  /** Gắn dấu thời gian (TSA) hay không. */
+  timestamp?: boolean;
+}
+
+export interface SignCertInfo {
+  subject: string;
+  organization: string;
+  issuer: string;
+  serial: string;
+  thumbprint: string;
+  notAfter: string;
 }
 
 export interface V4qs {
@@ -57,12 +78,32 @@ export function signBatch(args: {
   slotIndex: number;
   pin: string;
   placement: SignPlacement | null;
+  style?: SignStyle;
 }): Promise<SignBatchResult> {
   return invoke<SignBatchResult>("sign_batch", { args });
 }
 
 export function signBatchCancel(): Promise<void> {
   return invoke<void>("sign_batch_cancel");
+}
+
+export function signBatchPause(paused: boolean): Promise<void> {
+  return invoke<void>("sign_batch_pause", { paused });
+}
+
+/** Đọc ảnh con dấu trên máy → base64 (≤ 500 KB). */
+export function signLoadStamp(path: string): Promise<string> {
+  return invoke<string>("sign_load_stamp", { path });
+}
+
+/** Mở token bằng PIN, đọc chứng thư sẽ dùng để ký (thumbprint, tên đơn vị…). */
+export function signCertInfo(args: { modulePath: string; slotIndex: number; pin: string }): Promise<SignCertInfo> {
+  return invoke<SignCertInfo>("sign_cert_info", { args });
+}
+
+/** Trả các tài liệu ký lỗi về hàng chờ ký. */
+export function signRetry(documentIds: string[]): Promise<{ requeued: number; skipped: number }> {
+  return invoke<{ requeued: number; skipped: number }>("sign_retry", { documentIds });
 }
 
 export async function onSignBatchProgress(cb: (p: SignBatchProgress) => void): Promise<UnlistenFn> {

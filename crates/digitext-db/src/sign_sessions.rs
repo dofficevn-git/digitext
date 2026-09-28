@@ -143,6 +143,25 @@ pub async fn f_272(r_2c3: &PgPool) -> sqlx::Result<u64> {
     r_2c4.commit().await?;
     Ok(r_2c2.len() as u64)
 }
+/// Trả tài liệu đang kẹt phiên ký MỞ của chính người ký này về "chờ ký" (ký lỗi giữa chừng: rút
+/// token, mạng đứt…) — không phải đợi hết hạn phiên 30 phút mới ký lại được.
+pub async fn release_open_by_signer(pool: &PgPool, document_id: Uuid, signer: Uuid) -> sqlx::Result<bool> {
+    let mut tx = pool.begin().await?;
+    let released: Option<Uuid> = sqlx::query_scalar(
+        "UPDATE sign_sessions SET status = 'released', updated_at = now()          WHERE document_id = $1 AND status = 'open' AND signer_user_id = $2 RETURNING document_id",
+    )
+    .bind(document_id)
+    .bind(signer)
+    .fetch_optional(&mut *tx)
+    .await?;
+    if released.is_none() {
+        return Ok(false);
+    }
+    f_162(&mut tx, document_id, DocStatus::ToSign, DocStatus::Signing).await?;
+    f_2f6(&mut tx, document_id, "queued", "running").await?;
+    tx.commit().await?;
+    Ok(true)
+}
 pub async fn f_29r(r_2c5: &PgPool, document_id: Uuid) -> sqlx::Result<bool> {
     let r_2c6 = sqlx::query("UPDATE documents SET status = $2 WHERE id = $1 AND status = $3")
         .bind(document_id)

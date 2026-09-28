@@ -27,7 +27,18 @@ fn unb64(r_2oe: &str) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("base64 không hợp lệ: {e}"))
 }
 fn f_ug(r_2of: &[u8], r_2og: &[Vec<u8>]) -> serde_json::Value {
-    begin_body(r_2of, r_2og, None)
+    begin_body(r_2of, r_2og, None, &SignStyle::default())
+}
+/// Hình thức ký cho cả lô: có/không dấu, ảnh con dấu (base64), có/không dấu thời gian (TSA).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SignStyle {
+    #[serde(default)]
+    pub with_stamp: Option<bool>,
+    #[serde(default)]
+    pub stamp_png: Option<String>,
+    #[serde(default)]
+    pub timestamp: Option<bool>,
 }
 /// Vị trí khối chữ ký chọn trên tệp đầu tiên, áp cho cả lô: góc trên-trái theo TỈ LỆ trang
 /// (0..1, `y` từ mép trên); `last_page` = đặt ở trang cuối.
@@ -39,7 +50,12 @@ pub struct Placement {
     pub x: f32,
     pub y: f32,
 }
-fn begin_body(cert: &[u8], inters: &[Vec<u8>], placement: Option<&Placement>) -> serde_json::Value {
+fn begin_body(
+    cert: &[u8],
+    inters: &[Vec<u8>],
+    placement: Option<&Placement>,
+    style: &SignStyle,
+) -> serde_json::Value {
     let mut v = serde_json::json!({
         "certificate": b64(cert),
         "intermediates": inters.iter().map(|d| b64(d)).collect::<Vec<_>>(),
@@ -47,10 +63,23 @@ fn begin_body(cert: &[u8], inters: &[Vec<u8>], placement: Option<&Placement>) ->
     if let Some(p) = placement {
         v["placement"] = serde_json::json!({ "lastPage": p.last_page, "x": p.x, "y": p.y });
     }
+    if let Some(w) = style.with_stamp {
+        v["withStamp"] = serde_json::json!(w);
+    }
+    if let Some(png) = style.stamp_png.as_deref().filter(|s| !s.is_empty()) {
+        v["stampPng"] = serde_json::json!(png);
+    }
     v
 }
 fn f_10o(session_id: &str, signature: &[u8]) -> serde_json::Value {
-    serde_json::json!({ "sessionId" : session_id, "signature" : b64(signature) })
+    complete_body(session_id, signature, &SignStyle::default())
+}
+fn complete_body(session_id: &str, signature: &[u8], style: &SignStyle) -> serde_json::Value {
+    let mut v = serde_json::json!({ "sessionId" : session_id, "signature" : b64(signature) });
+    if let Some(t) = style.timestamp {
+        v["timestamp"] = serde_json::json!(t);
+    }
+    v
 }
 pub(crate) trait To9: Send {
     fn certificate(&self) -> &[u8];
@@ -65,6 +94,8 @@ pub struct SignJob {
     pub filename: String,
     #[serde(default)]
     pub ho_so_ref: Option<String>,
+    #[serde(default)]
+    pub rel_path: Option<String>,
     #[serde(default)]
     pub page_count: Option<i32>,
     pub status: String,
@@ -181,7 +212,7 @@ pub async fn sign_list_jobs(
 ) -> Result<Vec<SignJob>, AppError> {
     // Chọn dự án → lấy cả hàng đợi của dự án đó (tới 5.000) để ký hàng loạt.
     let path = match args.and_then(|a| a.project_id).filter(|p| !p.trim().is_empty()) {
-        Some(p) => format!("/sign/jobs?projectId={}&limit=5000", p.trim()),
+        Some(p) => format!("/sign/jobs?projectId={}&limit=200000", p.trim()),
         None => "/sign/jobs".to_string(),
     };
     f_2r8(
@@ -274,7 +305,7 @@ pub async fn sign_execute(
     let cert = r_2ow.certificate().to_vec();
     let inters = r_2ow.intermediates().to_vec();
     let begin: BeginResp = f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
-        let body = begin_body(&cert, &inters, placement.as_ref());
+        let body = begin_body(&cert, &inters, placement.as_ref(), &SignStyle::default());
         let path = format!("/sign/{job_id}/begin");
         async move { client::f_23d(&base, &token, &path, &body).await }
     })
@@ -291,6 +322,8 @@ pub async fn sign_execute(
     Ok(r_2ov.status)
 }
 static BATCH_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Tạm dừng lô: ký xong tài liệu đang dở thì chờ, GIỮ phiên token (không phải nhập lại PIN).
+static BATCH_PAUSE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 const EV_BATCH: &str = "sign://batch";
 /// Dừng liền N tài liệu lỗi thì dừng cả lô (token rút ra / mạng đứt / máy chủ từ chối hàng loạt).
 const BATCH_MAX_CONSECUTIVE_FAIL: usize = 5;
@@ -304,6 +337,8 @@ pub struct BatchArgs {
     pub pin: String,
     #[serde(default)]
     pub placement: Option<Placement>,
+    #[serde(default)]
+    pub style: SignStyle,
 }
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -336,7 +371,8 @@ pub async fn sign_batch(
     use tauri::Emitter;
     auth.require_perm(Permission::SignExecute)?;
     BATCH_CANCEL.store(false, std::sync::atomic::Ordering::SeqCst);
-    let BatchArgs { job_ids, module_path, slot_index, pin, placement } = args;
+    BATCH_PAUSE.store(false, std::sync::atomic::Ordering::SeqCst);
+    let BatchArgs { job_ids, module_path, slot_index, pin, placement, style } = args;
     let module_path = f_290(&module_path, &f_14z(), |p| std::path::Path::new(p).exists())
         .map_err(AppError::validation)?;
     tracing::info!(jobs = job_ids.len(), ?placement, "sign_batch: mở token");
@@ -352,6 +388,11 @@ pub async fn sign_batch(
     let mut out = BatchResult { total: job_ids.len(), ..Default::default() };
     let mut consecutive_fail = 0usize;
     for (i, job_id) in job_ids.iter().enumerate() {
+        while BATCH_PAUSE.load(std::sync::atomic::Ordering::SeqCst)
+            && !BATCH_CANCEL.load(std::sync::atomic::Ordering::SeqCst)
+        {
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        }
         if BATCH_CANCEL.load(std::sync::atomic::Ordering::SeqCst) {
             out.cancelled = job_ids.len() - i;
             out.stopped_reason = Some("người dùng dừng".into());
@@ -360,7 +401,7 @@ pub async fn sign_batch(
         // Không bọc trong async block: phiên token (cryptoki Session) không Sync nên không được
         // giữ tham chiếu qua các điểm await — chỉ gọi C_Sign giữa hai lần gọi máy chủ.
         let begin: Result<BeginResp, String> = f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
-            let body = begin_body(&cert, &inters, placement.as_ref());
+            let body = begin_body(&cert, &inters, placement.as_ref(), &style);
             let path = format!("/sign/{job_id}/begin");
             async move { client::f_23d(&base, &token, &path, &body).await }
         })
@@ -374,7 +415,7 @@ pub async fn sign_batch(
         };
         let result: Result<String, String> = match signed {
             Ok((session_id, signature)) => f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
-                let body = f_10o(&session_id, &signature);
+                let body = complete_body(&session_id, &signature, &style);
                 let path = format!("/sign/{job_id}/complete");
                 async move { client::f_23d::<CompleteResp>(&base, &token, &path, &body).await }
             })
@@ -425,6 +466,113 @@ pub async fn sign_batch_cancel(auth: State<'_, AuthState>) -> Result<(), AppErro
     BATCH_CANCEL.store(true, std::sync::atomic::Ordering::SeqCst);
     Ok(())
 }
+#[tauri::command]
+pub async fn sign_batch_pause(auth: State<'_, AuthState>, paused: bool) -> Result<(), AppError> {
+    auth.require_perm(Permission::SignExecute)?;
+    BATCH_PAUSE.store(paused, std::sync::atomic::Ordering::SeqCst);
+    Ok(())
+}
+/// Đọc ảnh con dấu trên máy (PNG/JPEG ≤ 500 KB) → base64 để xem trước và gửi kèm khi ký.
+#[tauri::command]
+pub async fn sign_load_stamp(auth: State<'_, AuthState>, path: String) -> Result<String, AppError> {
+    auth.require_perm(Permission::SignExecute)?;
+    let bytes = tokio::fs::read(&path)
+        .await
+        .map_err(|e| AppError::validation(format!("không đọc được ảnh con dấu: {e}")))?;
+    if bytes.len() > 500 * 1024 {
+        return Err(AppError::validation(
+            "ảnh con dấu quá lớn (tối đa 500 KB) — thu nhỏ ảnh rồi chọn lại",
+        ));
+    }
+    image::load_from_memory(&bytes)
+        .map_err(|e| AppError::validation(format!("tệp không phải ảnh PNG/JPEG hợp lệ: {e}")))?;
+    Ok(b64(&bytes))
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CertInfo {
+    pub subject: String,
+    pub organization: String,
+    pub issuer: String,
+    pub serial: String,
+    /// SHA-1 của chứng thư (hex in hoa) — "Thumbprint" như Windows hiển thị.
+    pub thumbprint: String,
+    pub not_after: String,
+}
+fn rdn_value(name: &x509_cert::name::Name, oid: der::asn1::ObjectIdentifier) -> Option<String> {
+    name.0
+        .iter()
+        .flat_map(|rdn| rdn.0.iter())
+        .find(|a| a.oid == oid)
+        .and_then(|a| {
+            let v = &a.value;
+            der::asn1::Utf8StringRef::try_from(v)
+                .map(|s| s.as_str().to_string())
+                .or_else(|_| der::asn1::PrintableStringRef::try_from(v).map(|s| s.as_str().to_string()))
+                .ok()
+        })
+}
+pub(crate) fn cert_info(der_bytes: &[u8]) -> Result<CertInfo, String> {
+    use sha1::Digest as _;
+    let cert = Certificate::from_der(der_bytes).map_err(|e| format!("chứng thư không đọc được: {e}"))?;
+    let tbs = &cert.tbs_certificate;
+    const CN: der::asn1::ObjectIdentifier = der::asn1::ObjectIdentifier::new_unwrap("2.5.4.3");
+    const O: der::asn1::ObjectIdentifier = der::asn1::ObjectIdentifier::new_unwrap("2.5.4.10");
+    let thumbprint: String = sha1::Sha1::digest(der_bytes).iter().map(|b| format!("{b:02X}")).collect();
+    Ok(CertInfo {
+        subject: rdn_value(&tbs.subject, CN).unwrap_or_else(|| tbs.subject.to_string()),
+        organization: rdn_value(&tbs.subject, O).unwrap_or_default(),
+        issuer: rdn_value(&tbs.issuer, CN).unwrap_or_else(|| tbs.issuer.to_string()),
+        serial: tbs.serial_number.as_bytes().iter().map(|b| format!("{b:02X}")).collect(),
+        thumbprint,
+        not_after: tbs.validity.not_after.to_string(),
+    })
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CertArgs {
+    #[serde(default)]
+    pub module_path: String,
+    pub slot_index: usize,
+    pub pin: String,
+}
+/// Mở token bằng PIN và đọc chứng thư sẽ dùng để ký (kiểm tra PIN trước khi chạy lô).
+#[tauri::command]
+pub async fn sign_cert_info(auth: State<'_, AuthState>, args: CertArgs) -> Result<CertInfo, AppError> {
+    auth.require_perm(Permission::SignExecute)?;
+    let module_path = f_290(&args.module_path, &f_14z(), |p| std::path::Path::new(p).exists())
+        .map_err(AppError::validation)?;
+    let (slot, pin) = (args.slot_index, args.pin);
+    let cert = tauri::async_runtime::spawn_blocking(move || {
+        token::Thb::open(&module_path, slot, &pin).map(|t| t.certificate().to_vec())
+    })
+    .await
+    .map_err(|e| AppError::internal(format!("luồng token lỗi: {e}")))?
+    .map_err(AppError::validation)?;
+    cert_info(&cert).map_err(AppError::validation)
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RetryResp {
+    pub requeued: usize,
+    pub skipped: usize,
+}
+/// "Ký lại các file lỗi": trả các tài liệu ký lỗi về hàng chờ ký trên máy chủ.
+#[tauri::command]
+pub async fn sign_retry(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+    document_ids: Vec<String>,
+) -> Result<RetryResp, AppError> {
+    auth.require_perm(Permission::SignExecute)?;
+    let body = serde_json::json!({ "documentIds": document_ids });
+    f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
+        let body = body.clone();
+        async move { client::f_23d(&base, &token, "/sign/retry", &body).await }
+    })
+    .await
+}
+
 use der::{oid::AssociatedOid, Decode, Encode};
 use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};
 use x509_cert::Certificate;
