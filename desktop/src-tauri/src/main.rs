@@ -23,6 +23,7 @@ mod lan_session;
 mod live;
 mod ocr;
 mod packaging;
+mod progress_report;
 mod extimport;
 mod records;
 mod report;
@@ -175,6 +176,10 @@ fn main() {
             signing::sign_load_stamp,
             signing::sign_cert_info,
             signing::sign_retry,
+            progress_report::report_project_progress,
+            progress_report::report_set_contract,
+            progress_report::report_staff,
+            progress_report::report_set_target,
             data_share::data_share_status,
             data_share::data_share_restart,
             data_share::lan_site_code_get,

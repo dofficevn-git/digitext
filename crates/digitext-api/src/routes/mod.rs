@@ -11,6 +11,7 @@ pub mod notifications;
 pub mod ocr_fields;
 pub mod ops;
 pub mod packages;
+pub mod progress;
 pub mod projects;
 pub mod records;
 pub mod sign;

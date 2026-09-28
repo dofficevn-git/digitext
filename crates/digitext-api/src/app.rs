@@ -125,6 +125,7 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::projects::router())
         .merge(crate::routes::devices::router())
         .merge(crate::routes::stats::router())
+        .merge(crate::routes::progress::router())
         .merge(crate::routes::documents::router())
         .merge(crate::routes::ocr_fields::router())
         .merge(crate::routes::packages::router())

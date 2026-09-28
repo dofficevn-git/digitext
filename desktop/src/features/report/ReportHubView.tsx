@@ -7,9 +7,23 @@ import { isTauri } from "@/api/ipc";
 import { V40w, type V40v } from "@/api/archive";
 import { V4ny, V4o0, V4nz, V4nx } from "@/api/report";
 import V4o9 from "./ReportView";
+import ProjectProgressView from "./ProjectProgressView";
+import StaffReportView from "./StaffReportView";
 import { V4o4, V4o5, V4o6, V4o3 } from "./reportLogic";
 
 function V4oa() {
+  return (
+    <>
+      <ProjectProgressView />
+      <details className="mt-3.5">
+        <summary className="muted text-sm cursor-pointer">Chi tiết khổ giấy theo phông (dữ liệu trên máy này)</summary>
+        <V4oaCu />
+      </details>
+    </>
+  );
+}
+
+function V4oaCu() {
   return (
     <V4o9
       title="Tổng kết số hoá"
@@ -23,6 +37,18 @@ function V4oa() {
 }
 
 function V4ob() {
+  return (
+    <>
+      <StaffReportView />
+      <details className="mt-3.5">
+        <summary className="muted text-sm cursor-pointer">Thao tác trên máy này (hồ sơ, văn bản, thêm/sửa)</summary>
+        <V4obCu />
+      </details>
+    </>
+  );
+}
+
+function V4obCu() {
   return (
     <V4o9
       title="Tổng kết theo nhân viên"
