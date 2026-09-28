@@ -15,7 +15,7 @@ import V4qm from "@/features/upload/UploadView";
 import V4qy from "@/features/sign/SignView";
 import V4ra from "@/features/users/UsersView";
 import V4rs from "@/features/settings/SettingsView";
-import V4sx from "@/features/package/PackageView";
+import DongGoiView from "@/features/package/DongGoiView";
 import V4t9 from "@/features/submission/SubmissionView";
 import V4tk from "@/features/records/RecordsView";
 import V4u7 from "@/features/access/AccessView";
@@ -55,7 +55,7 @@ export default function V4wx() {
         {V382 && view === "sign" && <V4qy />}
         {V382 && view === "users" && <V4ra />}
         {V382 && view === "settings" && <V4rs />}
-        {V382 && view === "package" && <V4sx />}
+        {V382 && view === "package" && <DongGoiView />}
         {V382 && view === "submission" && <V4t9 />}
         {V382 && view === "records" && <V4tk />}
         {V382 && view === "access" && <V4u7 />}
