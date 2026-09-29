@@ -5,7 +5,7 @@ export type V3xs = "super_admin" | "admin" | "user" | "customer";
 export type V3xt =
   | "home"
   | "drive"
-  | "catalog"
+  | "tree"
   | "dossier"
   | "khogia"
   | "scan"
@@ -27,8 +27,6 @@ export type V3xt =
   | "workManage";
 
 export type V3xu = "danhmuccl" | "laphoso" | "hethonghoa" | "dongbo" | "sohoa" | "ocr";
-
-export type V3xv = "phong" | "phongban" | "mang" | "thbq" | "ngonngu" | "loai" | "hoso";
 
 export type V3xw = "khogia" | "khaithac" | "muontra";
 

@@ -10,7 +10,7 @@ use digitext_core::{Perm, Permission};
 use std::path::Path;
 use tauri::{AppHandle, State};
 type T89 = (String, String, String);
-fn f_225(
+pub(crate) fn f_225(
     r_2s: &rusqlite::Transaction<'_>,
     r_2q: &PhongIn,
     r_2n: &[T97],

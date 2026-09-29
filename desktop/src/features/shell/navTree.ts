@@ -35,7 +35,7 @@ export const NAV_TREE: V46s[] = [
     children: [
       { id: "drive", label: "Kho tài liệu", gate: "drive", leaf: { kind: "view", view: "drive" }, keywords: "thu muc tep" },
       { id: "scan", label: "Quét", gate: "scan", leaf: { kind: "view", view: "scan" }, keywords: "may quet scan" },
-      { id: "tree", label: "Cây thư mục", gate: "catalog", leaf: { kind: "view", view: "catalog" }, keywords: "phat cay ho so muc luc" },
+      { id: "tree", label: "Cây thư mục", gate: "tree", leaf: { kind: "view", view: "tree" }, keywords: "phat cay ho so muc luc" },
       { id: "taolap", label: "Tài liệu đã quét", gate: "dossier", leaf: { kind: "hoso", pane: "sohoa" }, keywords: "tao lap co so du lieu pdf" },
       { id: "upload", label: "Đưa lên máy chủ", gate: "upload", leaf: { kind: "view", view: "upload" }, keywords: "dong bo tai len gom lan" },
       { id: "server", label: "Kho máy chủ", gate: "server", leaf: { kind: "view", view: "server" }, keywords: "may chu tai ve pdf/a" },

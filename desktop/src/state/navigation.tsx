@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { V3xv, V3xu, V3xw, V3xx, V3xt } from "@/domain/types";
+import type { V3xu, V3xw, V3xx, V3xt } from "@/domain/types";
 import type { V40m, V409, V408 } from "@/api/archive";
 
 export interface V41a {
@@ -24,10 +24,6 @@ interface V41c {
   hoSoPane: V3xu;
 
   gotoHoSo: (p: V3xu) => void;
-
-  catalogTab: V3xv;
-
-  gotoCatalog: (t: V3xv) => void;
 
   khoGiaTab: V3xw;
 
@@ -59,7 +55,6 @@ const V41g = createContext<V41c | null>(null);
 export function V41h({ children: V2s }: { children: ReactNode }) {
   const [view, V2t] = useState<V3xt>("home");
   const [V2u, V2v] = useState<V3xu>("laphoso");
-  const [V2w, V2x] = useState<V3xv>("phong");
   const [V2y, V2z] = useState<V3xw>("khogia");
   const [V30, V31] = useState<V3xx>("sohoa");
   const [V32, V33] = useState<V41b | null>(null);
@@ -106,18 +101,6 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
       if (!V3e()) return;
       V2v(p);
       V2t("dossier");
-      V37(null);
-      V39(null);
-      V3b();
-    },
-    [V3e],
-  );
-
-  const V3h = useCallback(
-    (t: V3xv) => {
-      if (!V3e()) return;
-      V2x(t);
-      V2t("catalog");
       V37(null);
       V39(null);
       V3b();
@@ -176,8 +159,6 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
       goto,
       hoSoPane: V2u,
       gotoHoSo: V3g,
-      catalogTab: V2w,
-      gotoCatalog: V3h,
       khoGiaTab: V2y,
       gotoKhoGia: V3i,
       reportTab: V30,
@@ -192,7 +173,7 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
       openEditor: V3m,
       setEditorDirty: V3c,
     }),
-    [view, goto, V2u, V3g, V2w, V3h, V2y, V3i, V30, V3j, V32, V34, V3k, V3l, V36, V38, V3m, V3c],
+    [view, goto, V2u, V3g, V2y, V3i, V30, V3j, V32, V34, V3k, V3l, V36, V38, V3m, V3c],
   );
   return <V41g.Provider value={V3p}>{V2s}</V41g.Provider>;
 }

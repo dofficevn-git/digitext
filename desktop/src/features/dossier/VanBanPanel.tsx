@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { V41p } from "@/live/useLive";
 import V49a from "@/ui/DataTable";
-import { V49o, V49n } from "@/features/catalog/tables/shared";
+import { V49o, V49n } from "./rowActions";
 import { V4bz, V4c1, V4by, V4c0, type V4bm, type V4bp, type V4bq } from "@/api/dossier";
 import { V3xq } from "@/api/ipc";
 import Banner from "./Banner";

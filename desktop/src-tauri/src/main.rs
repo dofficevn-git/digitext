@@ -249,6 +249,7 @@ fn main() {
             driver::install_scanner_driver,
             archive::import_ho_so,
             archive::create_folder_tree,
+            chinhly::tree::tree_seed_from_cl,
             archive::finalize_ho_so,
             archive::merge_scanned_pages_pdf,
             archive::open_ho_so_for_edit,

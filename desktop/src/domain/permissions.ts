@@ -396,7 +396,7 @@ export function V3z6(Vj: V3xs): V3yx[] {
 const V3z7: Record<V3xt, V3yx> = {
   home: "drive.view",
   drive: "drive.view",
-  catalog: "catalog.read",
+  tree: "tree.view",
   dossier: "dossier.read",
   khogia: "dossier.read",
   scan: "scan.view",
