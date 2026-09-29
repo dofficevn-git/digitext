@@ -1,274 +1,197 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Đưa lên máy chủ. Máy nhân viên: bật chia sẻ để quản trị gom qua mạng nội bộ. Máy quản trị: ba tab
+// "Gom từ máy nhân viên" · "Thêm từ ổ đĩa" · "Đối soát" (ma trận hồ sơ × máy, tệp lỗi), nút "Đẩy lên máy chủ" ở đầu.
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { V41p } from "@/live/useLive";
-import { confirm, open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { V460, useCollects, useUploads } from "@/state";
-import { isTauri, V3xq } from "@/api/ipc";
+import { isTauri } from "@/api/ipc";
 import { V3yw } from "@/domain/permissions";
-import { V3zt } from "@/state/sessionCore";
 import V4pp from "./BatchesPanel";
 import { V4ps } from "./addFilesMessage";
 import { V4pt } from "./collectMessage";
 import { V4pu } from "./forwardMessage";
-import { V4iv, V4it, V4iy, V4iw, V4ix, V4ia, type V4ij, type V4ii } from "./syncMatrix";
-import { V4jf, V4j9, V4j4, V4j0, V4jg, V4j2, V4j3, type V4iz } from "./khoFilter";
-import { V4pw, V4q6, V4q2, V4px, V4q0, V4q4, type V4pv } from "./collectedFilter";
+import { V4ia, V4it, V4iv, V4iw, V4ix, V4iy, type V4ii, type V4ij } from "./syncMatrix";
+import { V4j0, V4j2, V4j3, V4j4, V4j9, V4jf, V4jg, type V4iz } from "./khoFilter";
+import { V4pw, V4px, V4q0, V4q2, V4q4, V4q6, type V4pv } from "./collectedFilter";
 import { listHoSo, V40w, type V40d, type V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
 import { V4br, type V4bm } from "@/api/dossier";
-import { V4cm, V4cl } from "@/features/dossier/logic";
-import type { V3ym, V3yl, V3yo } from "@/domain/types";
+import { V4cl, V4cm } from "@/features/dossier/logic";
+import type { V3yl, V3ym, V3yo } from "@/domain/types";
 import "./khogom.css";
 import { V4ak, type V4a9 } from "@/api/users";
-import {
-  V43i,
-  V43j,
-  collectedClearErrors,
-  collectedWipeAll,
-  V431,
-  V435,
-  V436,
-  V434,
-  V432,
-  V433,
-  type V43g,
-  type V43h,
-  type V42z,
-} from "@/api/lansync";
+import { V431, V432, V433, V434, V435, V436, V43i, V43j, collectedClearErrors, collectedWipeAll, type V42z, type V43g, type V43h } from "@/api/lansync";
 import { V4qa } from "./siteCodeWidth";
 import { V4qb, V4qc } from "./sharePort";
 import { Icon } from "@/components/Icon";
+import { useProject } from "@/state/project";
+import { V462 as cn } from "@/lib/utils";
+import { Badge, Banner, Button, Card, Checkbox, confirm, ErrorBanner, Field, Help, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Tabs, Tip, toast, Toolbar } from "@/ui";
 
-const V4qd = "Dán mã site (hoặc bấm “Sinh mã mạnh”)";
-
-const V4qe = {
-  flex: "0 0 auto",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-} as const;
-
-function V4qf({ isAdmin: V2cn }: { isAdmin: boolean }) {
-  return (
-    <div className="kg-blocked">
-      <b>
-        <Icon name="canhBao" /> Mã site LAN hiện tại YẾU
-      </b>{" "}
-      — kiểu mã ngắn/6 số dò được trong vài giây trên mạng nội bộ. Hệ thống vẫn chạy bình thường để
-      không gián đoạn công việc, nhưng nên đổi sớm:{" "}
-      {V2cn
-        ? "bấm “Sinh mã mạnh” rồi phát lại cây thư mục — các máy nhân viên sẽ tự nhận mã mới."
-        : "báo quản trị bấm “Sinh mã mạnh” rồi phát lại cây thư mục cho bạn."}
-    </div>
-  );
-}
-
-const V4qg = (b: number) => (b / 1_048_576).toFixed(1);
+const SITE_PLACEHOLDER = "Dán mã site hoặc bấm Sinh mã mạnh";
+const MONO = { flex: "0 0 auto", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" } as const;
+const mb = (b: number) => (b / 1_048_576).toFixed(1);
 const fmtN = (n: number) => n.toLocaleString("vi-VN");
+const UNSORTED = "__unsorted__";
+const LOAD_MAX = 200_000;
+const AUTO_HIDE_ROWS = 400;
 
-const V4qh = "__unsorted__";
-
-function V4qi({
-  value: V2co,
-  label: V2cp,
-  tone: V2cq,
-  title: V2cr,
-}: {
-  value: number;
-  label: string;
-  tone?: "ok" | "warn" | "err";
-  title?: string;
-}) {
+function MaSiteYeu({ isAdmin }: { isAdmin: boolean }) {
   return (
-    <div className={`kg-stat${V2cq ? ` ${V2cq}` : ""}`} title={V2cr}>
-      <b>{fmtN(V2co)}</b>
-      <span>{V2cp}</span>
-    </div>
+    <Banner tone="warning" title="Mã site mạng nội bộ đang yếu" className="mb-3">
+      Mã ngắn hoặc 6 số có thể bị dò trong vài giây trên mạng nội bộ. Hệ thống vẫn chạy, nhưng nên đổi sớm:{" "}
+      {isAdmin ? "bấm Sinh mã mạnh rồi phát lại cây thư mục, các máy nhân viên sẽ tự nhận mã mới." : "báo quản trị sinh mã mạnh rồi phát lại cây thư mục cho bạn."}
+    </Banner>
   );
 }
-
-// Nạp đủ cả kho gom (dự án Bắc Ninh ~31k bản) — trước chỉ 5.000 bản mới nhất nên bảng thiếu ô.
-const V4qj = 200_000;
-
-const V4qk = 400;
-
-const V4ql = (V2cs: unknown) =>
-  V3zt(
-    V2cs instanceof V3xq ? V2cs.code : "error",
-    V2cs instanceof Error ? V2cs.message : String(V2cs),
-  );
 
 export default function V4qm() {
-  const { session: V2ct } = V460();
-  const V2cu = !!V2ct && V3yw(V2ct.role, "admin");
-  const V2cv = !!V2ct && V3yw(V2ct.role, "operate");
-
+  const { session } = V460();
+  const isAdmin = !!session && V3yw(session.role, "admin");
+  const isOperate = !!session && V3yw(session.role, "operate");
   return (
     <section className="view active">
-      <div className="page-head">
-        <h2>Đồng bộ dữ liệu</h2>
-        <div className="sub">
-          {V2ct?.projectName ? `· ${V2ct.projectName}` : ""}
-        </div>
-      </div>
-
-      {V2cu ? <V4qo /> : V2cv ? <V4qn /> : <p className="muted">Không có gì để đồng bộ.</p>}
+      {isAdmin ? <MayQuanTri /> : isOperate ? <MayNhanVien /> : <PageHeader title="Đưa lên máy chủ" description="Tài khoản này không có gì để đồng bộ." />}
     </section>
   );
 }
 
-function V4qn() {
-  const [V2cw, V2cx] = useState<V42z | null>(null);
-  const [V2cy, V2cz] = useState("");
-  const [V2d0, V2d1] = useState("");
-  const [V2d2, V2d3] = useState(false);
-  const [V2d4, V2d5] = useState("");
+// ---------------- Máy nhân viên
+function MayNhanVien() {
+  const [status, setStatus] = useState<V42z | null>(null);
+  const [code, setCode] = useState("");
+  const [port, setPort] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [nangCao, setNangCao] = useState(false);
 
-  const V2d6 = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!isTauri()) return;
     try {
-      V2cx(await V431());
-      V2cz((await V432()) ?? "");
-      V2d1(String((await V435()) ?? ""));
-    } catch (V2d7) {
-      V2d5(V4ql(V2d7));
+      setStatus(await V431());
+      setCode((await V432()) ?? "");
+      setPort(String((await V435()) ?? ""));
+    } catch (e) {
+      notifyError(e, "đọc trạng thái chia sẻ");
     }
   }, []);
+  V41p(load, { topics: ["lan", "settings", "tree"] });
 
-  V41p(V2d6, { topics: ["lan", "settings", "tree"] });
-
-  const V2d8 = async () => {
-    const V2d9 = V4qc(V2d0);
-    if (V2d9) {
-      V2d5(V2d9);
+  const luu = async () => {
+    const err = V4qc(port);
+    if (err) {
+      toast.error(err);
       return;
     }
-    V2d3(true);
-    V2d5("");
+    setBusy(true);
     try {
-      await V436(V2d0.trim());
-      await V433(V2cy.trim());
-      await V2d6();
-      V2d5(
-        V2cy.trim()
-          ? "Đã lưu mã site và bật chia sẻ."
-          : "Đã tắt chia sẻ.",
-      );
-    } catch (V2da) {
-      V2d5(V4ql(V2da));
+      await V436(port.trim());
+      await V433(code.trim());
+      await load();
+      toast.success(code.trim() ? "Đã lưu mã site và bật chia sẻ." : "Đã tắt chia sẻ.");
+    } catch (e) {
+      notifyError(e, "lưu mã site");
     } finally {
-      V2d3(false);
+      setBusy(false);
     }
   };
 
   return (
-    <div className="card max-w-155">
-      <h3 className="mt-0">Chia sẻ dữ liệu với quản trị (LAN)</h3>
-      {V2cw?.sharing ? (
-        <p className="mt-0 mx-0 mb-1.5">
-          <Icon name="thanhCong" /> Đang chia sẻ <b>{V2cw.fileCount}</b> tài liệu cho máy quản trị
-          {V2cw.port != null ? (
-            <>
-              {" "}
-              (cổng <b>{V2cw.port}</b>
-              {V2cw.port === V4qb ? " — cổng chung" : ""})
-            </>
-          ) : null}
-          . Máy quản trị sẽ <b>tự thu thập</b> — bạn không cần gửi thủ công.
-        </p>
-      ) : (
-        <p className="muted mt-0">
-          {V2cw && !V2cw.hasSiteCode
-            ? "Chưa bật — mã site thường TỰ đến khi bạn “Nhận cây thư mục”. Hoặc nhập tay bên dưới."
-            : "Chưa chia sẻ."}
-        </p>
-      )}
-      {V2cw?.siteCodeWeak && <V4qf isAdmin={false} />}
-      <div className="field">
-        <label>Mã site LAN (tự nhận khi nhận cây thư mục — hoặc dán tay)</label>
-        <div className="flex gap-2 flex-wrap items-center">
-          <input
-            className="inp"
-            style={{ ...V4qe, width: V4qa(V2cy) }}
-            value={V2cy}
-            placeholder={V4qd}
-            onChange={(V2db) => V2cz(V2db.target.value)}
-          />
-          <button className="btn primary" onClick={() => void V2d8()} disabled={V2d2}>
-            {V2d2 ? "Đang lưu…" : "Lưu & bật"}
+    <>
+      <PageHeader title="Đưa lên máy chủ" description="Máy này chia sẻ tài liệu đã đóng gói cho máy quản trị gom qua mạng nội bộ. Quản trị tự thu thập, bạn không phải gửi tay." />
+      <div className="max-w-2xl space-y-4">
+        {status?.siteCodeWeak && <MaSiteYeu isAdmin={false} />}
+        <Card
+          title={
+            <span className="flex items-center gap-2">
+              <span className={cn("dot", status?.sharing ? "ok" : "")} />
+              {status?.sharing ? "Đang chia sẻ" : "Chưa chia sẻ"}
+            </span>
+          }
+        >
+          {status?.sharing ? (
+            <p className="text-sm">
+              Đang chia sẻ <b>{fmtN(status.fileCount)}</b> tài liệu cho máy quản trị
+              {status.port != null && (
+                <>
+                  {" "}
+                  qua cổng <b>{status.port}</b>
+                  {status.port === V4qb ? " (cổng chung)" : ""}
+                </>
+              )}
+              .
+            </p>
+          ) : (
+            <p className="text-sm text-fg-muted">{status && !status.hasSiteCode ? "Mã site thường tự đến khi bạn nhận cây thư mục. Nếu chưa có, dán mã quản trị đưa vào ô bên dưới." : "Chưa bật chia sẻ."}</p>
+          )}
+          {status?.deviceFingerprint && (
+            <p className="mt-2 text-sm text-fg-subtle">
+              Vân tay máy này: <code className="rounded bg-gray-100 px-1">{status.deviceFingerprint}</code>. Quản trị đối chiếu chuỗi này khi gom lần đầu.
+            </p>
+          )}
+          {status && status.blocked.length > 0 && (
+            <Banner tone="warning" className="mt-3" title={`${fmtN(status.blocked.length)} hồ sơ chưa chia sẻ được`}>
+              <ul className="list-disc pl-4">
+                {status.blocked.slice(0, 8).map((b) => (
+                  <li key={b.hoSoRef}>
+                    Hộp/hồ sơ <b>{b.hoSoRef}</b>: {b.reason}
+                  </li>
+                ))}
+              </ul>
+              {status.blocked.length > 8 && <p>…và {fmtN(status.blocked.length - 8)} hồ sơ khác.</p>}
+            </Banner>
+          )}
+        </Card>
+        <Card title="Mã site mạng nội bộ">
+          <Field label="Mã site" hint="Để trống rồi Lưu = xoá mã và tắt chia sẻ (dùng khi máy nhận nhầm mã của site khác).">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input style={{ ...MONO, width: V4qa(code) }} value={code} placeholder={SITE_PLACEHOLDER} onChange={(e) => setCode(e.target.value)} className="w-auto" />
+              <Button variant="primary" loading={busy} onClick={() => void luu()}>
+                Lưu và bật
+              </Button>
+            </div>
+          </Field>
+          <button type="button" className="mt-3 text-sm text-fg-link hover:underline" onClick={() => setNangCao((v) => !v)}>
+            {nangCao ? "Ẩn nâng cao" : "Nâng cao"}
           </button>
-        </div>
-        <div className="muted text-sm">
-          Để TRỐNG rồi bấm “Lưu &amp; bật” = xoá mã và tắt chia sẻ — dùng khi máy lỡ nhận nhầm mã
-          của site khác, sau đó nhận lại cây thư mục để lấy mã đúng.
-        </div>
+          {nangCao && (
+            <div className="mt-2">
+              <Field label="Cổng chia sẻ cố định" hint={`Để trống = cổng chung ${V4qb}. Chỉ ghim cổng khác khi cổng chung bị chiếm hoặc tường lửa riêng.`}>
+                <Input value={port} placeholder={String(V4qb)} onChange={(e) => setPort(e.target.value)} className="w-40" />
+              </Field>
+            </div>
+          )}
+        </Card>
       </div>
-      {V2cw?.deviceFingerprint && (
-        <div className="muted text-sm mb-2">
-          Vân tay máy này: <code>{V2cw.deviceFingerprint}</code> — quản trị đối chiếu chuỗi này khi
-          gom lần đầu.
-        </div>
-      )}
-      <div className="field">
-        <label>
-          Cổng chia sẻ cố định (tuỳ chọn — bỏ trống = cổng chung {V4qb}, máy quản trị tự quét thấy;
-          chỉ ghim khác khi cổng chung bị chiếm/firewall riêng)
-        </label>
-        <input
-          className="inp max-w-40"
-          value={V2d0}
-          placeholder={`VD: ${V4qb}`}
-          onChange={(V2dc) => V2d1(V2dc.target.value)}
-        />
-      </div>
-      {V2cw && V2cw.blocked.length > 0 && (
-        <div className="kg-blocked">
-          <b>
-            <Icon name="canhBao" /> {V2cw.blocked.length} hồ sơ CHƯA chia sẻ được
-          </b>{" "}
-          — máy quản trị sẽ không gom được những hồ sơ này:
-          <ul>
-            {V2cw.blocked.slice(0, 8).map((b) => (
-              <li key={b.hoSoRef}>
-                Hộp/HS <b>{b.hoSoRef}</b>: {b.reason}
-              </li>
-            ))}
-          </ul>
-          {V2cw.blocked.length > 8 && <div>…và {V2cw.blocked.length - 8} hồ sơ khác.</div>}
-        </div>
-      )}
-      {V2d4 && <div className="muted text-sm">{V2d4}</div>}
-    </div>
+    </>
   );
 }
 
-function V4qo() {
-  const { session: V2dd } = V460();
+// ---------------- Máy quản trị
+type Tab = "gom" | "them" | "doisoat";
 
-  const { startForward: V2de, retry: V2df, running: V2dg } = useUploads();
-
-  const { startCollect: V2dh, startAddFiles: V2di, running: V2dj } = useCollects();
-  const V2dk = V2dd?.role === "super_admin";
-  const [V2dl, V2dm] = useState("");
-  const [V2dn, V2do] = useState<V42z | null>(null);
-  const [collected, V2dp] = useState<V43h | null>(null);
-  const [V2dq, V2dr] = useState<V40v[]>([]);
-  const [V2ds, V2dt] = useState<V40d[]>([]);
-  const [V2du, V2dv] = useState(false);
-
-  const V2dw = useRef(false);
-  const [V2dx, V2dy] = useState<"" | "collect" | "forward" | "code" | "retry" | "add">("");
-  const [V2dz, V2e0] = useState("");
-
-  const [V2e1, V2e2] = useState<V4pv>(V4pw);
-
-  const [flt, V2e3] = useState<V4iz>(V4j0);
-  const [V2e4, V2e5] = useState<V3yl[]>([]);
-  const [V2e6, V2e7] = useState<V3ym[]>([]);
-  const [V2e8, V2e9] = useState<V3yo[]>([]);
-  const [V2ea, V2eb] = useState<V4bm[]>([]);
-
-  const [V2ec, V2ed] = useState(false);
-  // "Thêm xong đẩy lên luôn": bỏ bước ② thủ công. Nhớ lựa chọn trên máy này.
+function MayQuanTri() {
+  const { session } = V460();
+  const project = useProject();
+  const { startForward, retry, running: forwarding } = useUploads();
+  const { startCollect, startAddFiles, running: collecting } = useCollects();
+  const isSuper = session?.role === "super_admin";
+  const [tab, setTab] = useState<Tab>("gom");
+  const [siteCode, setSiteCode] = useState("");
+  const [share, setShare] = useState<V42z | null>(null);
+  const [collected, setCollected] = useState<V43h | null>(null);
+  const [phongs, setPhongs] = useState<V40v[]>([]);
+  const [hoSos, setHoSos] = useState<V40d[]>([]);
+  const [hideEmpty, setHideEmpty] = useState(false);
+  const hideTouched = useRef(false);
+  const [busy, setBusy] = useState<"" | "collect" | "forward" | "code" | "retry" | "add">("");
+  const [dateF, setDateF] = useState<V4pv>(V4pw);
+  const [flt, setFlt] = useState<V4iz>(V4j0);
+  const [phongBans, setPhongBans] = useState<V3yl[]>([]);
+  const [mangs, setMangs] = useState<V3ym[]>([]);
+  const [thbqs, setThbqs] = useState<V3yo[]>([]);
+  const [dossiers, setDossiers] = useState<V4bm[]>([]);
   const [tuDongDay, setTuDongDayState] = useState<boolean>(() => {
     try {
       return localStorage.getItem("upload.autoForward") !== "0";
@@ -281,866 +204,502 @@ function V4qo() {
     try {
       localStorage.setItem("upload.autoForward", v ? "1" : "0");
     } catch {
-      /* chỉ là tiện ích nhớ */
+      /* tiện ích nhớ */
     }
   };
-  const [V2ee, V2ef] = useState<V4a9[]>([]);
-  const [V2eg, V2eh] = useState("");
+  const [projects, setProjects] = useState<V4a9[]>([]);
+  const [projectId, setProjectId] = useState("");
+  const [themPhong, setThemPhong] = useState("");
+  const [themHoSo, setThemHoSo] = useState("");
+  const [themViTri, setThemViTri] = useState("");
+  const [ketQua, setKetQua] = useState<{ tone: "info" | "success" | "warning" | "danger"; text: string } | null>(null);
 
-  const [V2ei, V2ej] = useState("");
-
-  const [V2ek, V2el] = useState("");
-
-  const [V2em, V2en] = useState("");
-  const V2eo = useRef<HTMLDivElement | null>(null);
-
-  // Danh sách kho gom có thể vài chục nghìn dòng: khi đang đẩy, sự kiện "collected" bắn liên tục —
-  // nạp lại tối đa 5 giây/lần (có lượt nạp bù ở cuối để số liệu cuối cùng luôn đúng).
-  const lanNapDs = useRef(0);
-  const henNapDs = useRef<number | null>(null);
-  const napDsRef = useRef<() => Promise<void>>(async () => {});
-  napDsRef.current = async () => {
-    const cho = 5000 - (Date.now() - lanNapDs.current);
-    if (cho > 0) {
-      if (henNapDs.current == null)
-        henNapDs.current = window.setTimeout(() => {
-          henNapDs.current = null;
-          void napDsRef.current().catch((e) => V2e0(V4ql(e)));
-        }, cho);
+  // Kho gom có thể vài chục nghìn dòng: khi đang đẩy, sự kiện bắn liên tục → nạp lại tối đa 5 s/lần.
+  const lastLoad = useRef(0);
+  const scheduled = useRef<number | null>(null);
+  const loadCollectedRef = useRef<() => Promise<void>>(async () => {});
+  loadCollectedRef.current = async () => {
+    const wait = 5000 - (Date.now() - lastLoad.current);
+    if (wait > 0) {
+      if (scheduled.current == null)
+        scheduled.current = window.setTimeout(() => {
+          scheduled.current = null;
+          void loadCollectedRef.current().catch((e) => notifyError(e, "nạp kho gom"));
+        }, wait);
       return;
     }
-    lanNapDs.current = Date.now();
-    V2dp(await V43i(V4qj));
+    lastLoad.current = Date.now();
+    setCollected(await V43i(LOAD_MAX));
   };
   useEffect(
     () => () => {
-      if (henNapDs.current != null) window.clearTimeout(henNapDs.current);
+      if (scheduled.current != null) window.clearTimeout(scheduled.current);
     },
     [],
   );
 
-  const V2ep = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!isTauri()) return;
     try {
-      V2dm((await V432()) ?? "");
-      V2do(await V431());
-
-      await napDsRef.current();
-    } catch (V2eq) {
-      V2e0(V4ql(V2eq));
+      setSiteCode((await V432()) ?? "");
+      setShare(await V431());
+      await loadCollectedRef.current();
+    } catch (e) {
+      notifyError(e, "nạp kho gom");
     }
-
     try {
-      const [V2er, V2es] = await Promise.all([V40w(), listHoSo()]);
-      V2dr(V2er);
-      V2dt(V2es);
-
-      if (!V2dw.current) V2dv(V2es.length > V4qk);
+      const [ps, hs] = await Promise.all([V40w(), listHoSo()]);
+      setPhongs(ps);
+      setHoSos(hs);
+      if (!hideTouched.current) setHideEmpty(hs.length > AUTO_HIDE_ROWS);
     } catch {
-      V2dr([]);
-      V2dt([]);
+      setPhongs([]);
+      setHoSos([]);
     }
-
     try {
-      const [cat, V2et] = await Promise.all([V48j(), V4br()]);
-      V2e5(cat.phongBans);
-      V2e7(cat.mangs);
-      V2e9(cat.thbqs);
-      V2eb(V2et);
+      const [cat, ds] = await Promise.all([V48j(), V4br()]);
+      setPhongBans(cat.phongBans);
+      setMangs(cat.mangs);
+      setThbqs(cat.thbqs);
+      setDossiers(ds);
     } catch {
-      V2e5([]);
-      V2e7([]);
-      V2e9([]);
-      V2eb([]);
+      setPhongBans([]);
+      setMangs([]);
+      setThbqs([]);
+      setDossiers([]);
     }
   }, []);
+  V41p(load, { topics: ["collected", "lan", "hoso", "catalog", "dossier", "settings"] });
 
-  V41p(V2ep, {
-    topics: ["collected", "lan", "hoso", "catalog", "dossier", "settings"],
-  });
+  useEffect(() => {
+    if (!isTauri()) return;
+    V4ak()
+      .then((ps) => {
+        setProjects(ps);
+        setProjectId((cur) => cur || project.projectId || session?.projectId || (ps.length === 1 ? ps[0].id : ""));
+      })
+      .catch(() => setProjects([]));
+  }, [project.projectId, session?.projectId]);
 
-  const V2eu = async () => {
-    V2dy("code");
-    V2e0("");
+  const run = async (kind: typeof busy, ctx: string, f: () => Promise<void>) => {
+    setBusy(kind);
     try {
-      await V433(V2dl.trim());
-      await V2ep();
-      V2e0(
-        "Đã lưu mã site LAN. Phổ biến mã này cho các máy nhân viên (hoặc phát lại cây thư mục để họ tự nhận).",
-      );
-    } catch (V2ev) {
-      V2e0(V4ql(V2ev));
+      await f();
+      await load();
+    } catch (e) {
+      notifyError(e, ctx);
     } finally {
-      V2dy("");
+      setBusy("");
     }
   };
 
-  const V2ew = async () => {
-    V2dy("code");
-    V2e0("");
-    try {
+  const luuMa = () =>
+    run("code", "lưu mã site", async () => {
+      await V433(siteCode.trim());
+      toast.success("Đã lưu mã site. Phổ biến mã cho máy nhân viên, hoặc phát lại cây thư mục để họ tự nhận.");
+    });
+  const sinhMa = () =>
+    run("code", "sinh mã site", async () => {
       const c = await V434();
-      V2dm(c);
-      await V2ep();
-      V2e0(
-        `Đã sinh mã site mới: ${c}. Hãy PHÁT LẠI cây thư mục để các máy nhân viên tự nhận mã ` +
-          "mới — máy nào chưa nhận sẽ tạm thời không gom được.",
-      );
-    } catch (V2ex) {
-      V2e0(V4ql(V2ex));
-    } finally {
-      V2dy("");
-    }
-  };
-  const V2ey = async () => {
-    V2dy("collect");
-    V2e0("");
-    try {
-      V2e0(V4pt(await V2dh()));
-      await V2ep();
-    } catch (V2ez) {
-      V2e0(V4ql(V2ez));
-    } finally {
-      V2dy("");
-    }
-  };
-  const V2f0 = async () => {
-    V2dy("forward");
-    V2e0("");
-    try {
-      V2e0(V4pu(await V2de()));
-      await V2ep();
-    } catch (V2f1) {
-      V2e0(V4ql(V2f1));
-    } finally {
-      V2dy("");
-    }
-  };
-
-  const xoaSachKhoGom = async () => {
-    const n = collected?.total ?? 0;
-    if (n === 0) return;
-    let ok = false;
-    try {
-      ok = await confirm(
-        `Xoá SẠCH kho gom trên máy này: ${n.toLocaleString("vi-VN")} bản (cả bản đã đẩy lên) và các tệp của chúng trong thư mục Kho. ` +
-          "Dữ liệu đã đẩy lên máy chủ KHÔNG bị ảnh hưởng. Không hoàn tác được. Tiếp tục?",
-        { title: "Xoá sạch kho gom", kind: "warning", okLabel: "Xoá", cancelLabel: "Huỷ" },
-      );
-    } catch {
-      ok = window.confirm(`Xoá sạch ${n} bản trong kho gom và tệp của chúng trong Kho? Không hoàn tác được.`);
-    }
+      setSiteCode(c);
+      toast.success("Đã sinh mã site mới.", { description: "Phát lại cây thư mục để máy nhân viên tự nhận mã mới; máy chưa nhận sẽ tạm không gom được." });
+    });
+  const thuThap = () =>
+    run("collect", "thu thập", async () => {
+      const r = await startCollect();
+      setKetQua({ tone: r.collected > 0 ? "success" : "info", text: V4pt(r) });
+    });
+  const dayLen = () =>
+    run("forward", "đẩy lên máy chủ", async () => {
+      const r = await startForward();
+      setKetQua({ tone: r.failed > 0 || r.rejected > 0 ? "warning" : "success", text: V4pu(r) });
+    });
+  const xoaSach = async () => {
+    const total = collected?.total ?? 0;
+    if (total === 0) return;
+    const ok = await confirm({ title: "Xoá sạch kho gom trên máy này?", body: `${fmtN(total)} bản (kể cả bản đã đẩy) và tệp của chúng trong thư mục Kho sẽ bị xoá. Dữ liệu đã lên máy chủ không bị ảnh hưởng. Không hoàn tác được.`, confirmLabel: "Xoá sạch", danger: true, typeToConfirm: "XOA" });
     if (!ok) return;
-    V2dy("retry");
-    V2e0("");
-    try {
+    await run("retry", "xoá kho gom", async () => {
       const r = await collectedWipeAll();
-      V2e0(
-        `Đã xoá ${fmtN(r.rows)} bản khỏi kho gom · xoá ${fmtN(r.filesRemoved)} tệp trong Kho` +
-          (r.filesMissing > 0 ? ` · ${fmtN(r.filesMissing)} tệp đã không còn` : "") +
-          (r.filesFailed > 0 ? ` · ${fmtN(r.filesFailed)} tệp không xoá được (ngoài Kho hoặc đang mở)` : "") +
-          ".",
-      );
-      await V2ep();
+      toast.success(`Đã xoá ${fmtN(r.rows)} bản và ${fmtN(r.filesRemoved)} tệp.`, { description: [r.filesMissing > 0 ? `${fmtN(r.filesMissing)} tệp đã không còn` : "", r.filesFailed > 0 ? `${fmtN(r.filesFailed)} tệp không xoá được` : ""].filter(Boolean).join(" · ") || undefined });
+    });
+  };
+  const xoaLoi = () =>
+    run("retry", "xoá dấu lỗi", async () => {
+      const k = await collectedClearErrors();
+      toast.success(k > 0 ? `Đã xoá dấu lỗi của ${fmtN(k)} bản. Bấm Đẩy lên máy chủ để gửi lại.` : "Không có bản nào đang lỗi.");
+    });
+  const gomLaiTuChoi = () =>
+    run("retry", "gom lại bản bị từ chối", async () => {
+      const k = await V43j();
+      toast.success(k > 0 ? `Đã bỏ ${fmtN(k)} bản bị từ chối. Bấm Thu thập để lấy lại từ máy nhân viên.` : "Không có bản nào bị từ chối.");
+    });
+  const guiLai = async (ids: number[], label?: string) => {
+    try {
+      await retry(ids);
+      await load();
     } catch (e) {
-      V2e0(V4ql(e));
-    } finally {
-      V2dy("");
+      notifyError(e, `gửi lại ${label ?? `${ids.length} tài liệu`}`);
     }
   };
 
-  const xoaLoi = async () => {
-    V2dy("retry");
-    V2e0("");
+  const themTep = async (thuMuc: boolean) => {
+    let paths: string[] = [];
     try {
-      const n = await collectedClearErrors();
-      V2e0(
-        n > 0
-          ? `Đã xoá dấu lỗi của ${fmtN(n)} bản. Bấm “② Đẩy lên máy chủ” để gửi lại từ đầu.`
-          : "Không có bản nào đang lỗi.",
-      );
-      await V2ep();
+      const r = await open({ multiple: true, directory: thuMuc, title: thuMuc ? "Chọn thư mục tài liệu" : "Chọn tệp PDF để thêm vào Kho", filters: thuMuc ? undefined : [{ name: "PDF", extensions: ["pdf"] }] });
+      paths = typeof r === "string" ? [r] : Array.isArray(r) ? r : [];
     } catch (e) {
-      V2e0(V4ql(e));
-    } finally {
-      V2dy("");
-    }
-  };
-
-  const V2f2 = async () => {
-    V2dy("retry");
-    V2e0("");
-    try {
-      const n = await V43j();
-      V2e0(
-        n > 0
-          ? `Đã bỏ ${n} bản bị từ chối khỏi kho gom. Bấm “① Thu thập” để lấy lại từ máy nhân viên.`
-          : "Không có bản nào bị từ chối.",
-      );
-      await V2ep();
-    } catch (V2f3) {
-      V2e0(V4ql(V2f3));
-    } finally {
-      V2dy("");
-    }
-  };
-
-  const V2f4 = async (V2f5: number, V2f6: string) => {
-    V2e0("");
-    try {
-      await V2df(V2f5);
-      await V2ep();
-    } catch (V2f7) {
-      V2e0(`Gửi lại “${V2f6}” lỗi: ${V4ql(V2f7)}`);
-    }
-  };
-
-  const V2f8 = async (V2f9: number[]) => {
-    V2e0("");
-    try {
-      await V2df(V2f9);
-      await V2ep();
-    } catch (V2fa) {
-      V2e0(`Gửi lại ${V2f9.length} tài liệu lỗi: ${V4ql(V2fa)}`);
-    }
-  };
-
-  const V2fb = useCallback(async () => {
-    V2ed(true);
-    if (V2ee.length) return;
-    try {
-      const V2fc = await V4ak();
-      V2ef(V2fc);
-      V2eh((V2fd) => V2fd || V2dd?.projectId || (V2fc.length === 1 ? V2fc[0].id : ""));
-    } catch {
-      V2ef([]);
-    }
-  }, [V2ee.length, V2dd?.projectId]);
-
-  const V2fe = async () => {
-    if (V2ec) {
-      V2ed(false);
+      notifyError(e, "mở hộp chọn tệp");
       return;
     }
-    await V2fb();
-  };
-
-  const V2ff = async (V2fg: string, V2fh: string, V2fi: string) => {
-    await V2fb();
-    V2ej(V2fg);
-    V2el(`${V2fh}/${V2fi}`);
-    V2e0("");
-    requestAnimationFrame(() => V2eo.current?.scrollIntoView({ block: "center" }));
-  };
-
-  const V2fj = async (V2fk: boolean) => {
-    let V2fl: string[] = [];
-    try {
-      const r = await open({
-        multiple: true,
-        directory: V2fk,
-        title: V2fk
-          ? "Chọn thư mục tài liệu"
-          : "Chọn tệp PDF để thêm vào Kho",
-        filters: V2fk ? undefined : [{ name: "PDF", extensions: ["pdf"] }],
-      });
-      V2fl = typeof r === "string" ? [r] : Array.isArray(r) ? r : [];
-    } catch (V2fm) {
-      V2e0(V4ql(V2fm));
-      return;
-    }
-    if (!V2fl.length) return;
-    V2dy("add");
-    V2e0("");
-    try {
-      const r = await V2di({
-        paths: V2fl,
-        projectId: V2eg.trim() || undefined,
-        destRel: V2fn || undefined,
-
-        phongMa: V2ek && V2ek !== V4qh ? V2ei || undefined : undefined,
-        projectLabel: V2g9 || undefined,
-      });
-      V2e0(V4ps(r));
-      await V2ep();
-      // Thêm xong → đẩy lên máy chủ luôn (nếu bật và có bản mới). Lỗi mạng thì bản vẫn nằm
-      // trong kho gom, bấm "② Đẩy lên máy chủ" sau.
-      if (tuDongDay && r.added > 0 && !V2dg) {
-        V2dy("forward");
+    if (!paths.length) return;
+    await run("add", "thêm tệp", async () => {
+      const r = await startAddFiles({ paths, projectId: projectId.trim() || undefined, destRel: destRel || undefined, phongMa: themHoSo && themHoSo !== UNSORTED ? themPhong || undefined : undefined, projectLabel: projectLabel || undefined });
+      setKetQua({ tone: r.added > 0 ? "success" : "info", text: V4ps(r) });
+      if (tuDongDay && r.added > 0 && !forwarding) {
+        setBusy("forward");
         try {
-          V2e0(`${V4ps(r)} → đang đẩy lên máy chủ…`);
-          const f = await V2de();
-          V2e0(`${V4ps(r)} ${V4pu(f)}`);
-          await V2ep();
+          const f = await startForward();
+          setKetQua({ tone: f.failed > 0 ? "warning" : "success", text: `${V4ps(r)} ${V4pu(f)}` });
         } catch (e) {
-          V2e0(`${V4ps(r)} — đẩy lên lỗi: ${V4ql(e)}. Bản vẫn ở kho gom, bấm “② Đẩy lên máy chủ” để gửi lại.`);
+          notifyError(e, "đẩy lên máy chủ");
+          setKetQua({ tone: "warning", text: `${V4ps(r)} Bản vẫn ở kho gom, bấm Đẩy lên máy chủ để gửi lại.` });
         }
       }
-    } catch (V2fo) {
-      V2e0(V4ql(V2fo));
-    } finally {
-      V2dy("");
-    }
+    });
   };
 
-  const V2fp = collected?.pending ?? 0;
-  const V2fq = collected?.rejected ?? 0;
-
-  const tree = useMemo(() => V4it(V2ds), [V2ds]);
-  const V2fr = useMemo(() => V4j9(V2ea, V2ds, V2e8), [V2ea, V2ds, V2e8]);
-
-  const V2fs = useMemo(() => V4q2(collected?.rows ?? [], V2e1), [collected, V2e1]);
-
-  const V2ft = useMemo(() => V4jf(V2fs, flt, tree, V2fr), [V2fs, flt, tree, V2fr]);
-  const V2fu = V2ft.rows;
-  const V2fv = V4px(V2e1) || V4j2(flt);
-
-  const V2fw = useMemo(() => {
-    if (V2fv || !collected) return V4q4(V2fu);
-    return {
-      collected: collected.total,
-      forwarded: collected.forwarded,
-      notForwarded: collected.total - collected.forwarded,
-      rejected: collected.rejected,
-    };
-  }, [V2fv, collected, V2fu]);
-
-  const V2fx = useMemo(() => V4q6(V2fu), [V2fu]);
-
-  const V2fy = useMemo(() => V4jg(V2ds, flt, V2fr), [V2ds, flt, V2fr]);
-
-  const V2fz = useMemo(
-    () =>
-      V4iv({
-        phong: V2dq,
-        hoSo: V2fy,
-        collected: V2fu,
-        adminUsername: V2dd?.username ?? null,
-        hideEmptyRows: V2du,
-      }),
-    [V2dq, V2fy, V2fu, V2dd, V2du],
-  );
-
-  const V2g0 = (collected?.rows.length ?? 0) >= V4qj;
-
-  const V2g1 = useMemo(() => V2ds.filter((h) => (h.phongId ?? "") === V2ei), [V2ds, V2ei]);
-  const V2fn = useMemo(() => {
-    if (!V2dq.length) return V2em.trim();
-    if (!V2ei || !V2ek || V2ek === V4qh) return "";
-    const ten = V2dq.find((p) => p.maDuAn === V2ei)?.tenDuAn || V2ei;
-    return `${ten}/${V2ek}`;
-  }, [V2dq, V2ei, V2ek, V2em]);
-
-  const V2g2 = V2dq.length > 0 && !V2ek;
-
-  // Nhãn dự án máy chủ đã chọn (hoặc dự án duy nhất của tài khoản) — thư mục cấp 1 trong Kho.
-  const V2g9 = useMemo(() => {
-    const p = V2ee.find((x) => x.id === V2eg.trim()) ?? (V2ee.length === 1 ? V2ee[0] : undefined);
+  const pending = collected?.pending ?? 0;
+  const rejected = collected?.rejected ?? 0;
+  const tree = useMemo(() => V4it(hoSos), [hoSos]);
+  const dossierIndex = useMemo(() => V4j9(dossiers, hoSos, thbqs), [dossiers, hoSos, thbqs]);
+  const byDate = useMemo(() => V4q2(collected?.rows ?? [], dateF), [collected, dateF]);
+  const filtered = useMemo(() => V4jf(byDate, flt, tree, dossierIndex), [byDate, flt, tree, dossierIndex]);
+  const rows = filtered.rows;
+  const filtering = V4px(dateF) || V4j2(flt);
+  const stats = useMemo(() => {
+    if (filtering || !collected) return V4q4(rows);
+    return { collected: collected.total, forwarded: collected.forwarded, notForwarded: collected.total - collected.forwarded, rejected: collected.rejected };
+  }, [filtering, collected, rows]);
+  const errRows = useMemo(() => V4q6(rows), [rows]);
+  const hoSoFiltered = useMemo(() => V4jg(hoSos, flt, dossierIndex), [hoSos, flt, dossierIndex]);
+  const matrix = useMemo(() => V4iv({ phong: phongs, hoSo: hoSoFiltered, collected: rows, adminUsername: session?.username ?? null, hideEmptyRows: hideEmpty }), [phongs, hoSoFiltered, rows, session, hideEmpty]);
+  const truncated = (collected?.rows.length ?? 0) >= LOAD_MAX;
+  const hoSoCuaPhong = useMemo(() => hoSos.filter((h) => (h.phongId ?? "") === themPhong), [hoSos, themPhong]);
+  const destRel = useMemo(() => {
+    if (!phongs.length) return themViTri.trim();
+    if (!themPhong || !themHoSo || themHoSo === UNSORTED) return "";
+    const ten = phongs.find((p) => p.maDuAn === themPhong)?.tenDuAn || themPhong;
+    return `${ten}/${themHoSo}`;
+  }, [phongs, themPhong, themHoSo, themViTri]);
+  const thieuHoSo = phongs.length > 0 && !themHoSo;
+  const projectLabel = useMemo(() => {
+    const p = projects.find((x) => x.id === projectId.trim()) ?? (projects.length === 1 ? projects[0] : undefined);
     return p ? `${p.code} · ${p.name}`.split("/").join("-").split("\\").join("-") : "";
-  }, [V2ee, V2eg]);
-  const V2gaDest = useMemo(() => {
-    const hoSo = !!(V2ek && V2ek !== V4qh);
-    if (!V2fn && !hoSo && V2g9) {
-      // Chọn thư mục → giữ nguyên cây thư mục ngay dưới dự án; tệp lẻ → "Chưa phân loại".
-      return `${V2g9}/‹tên thư mục đã chọn›/… (chọn tệp lẻ: ${V2g9}/Chưa phân loại)`;
-    }
-    const tail = V2fn || "Chưa phân loại";
-    return hoSo || !V2g9 ? tail : `${V2g9}/${tail}`;
-  }, [V2ek, V2fn, V2g9]);
-
-  const V2g3 = useMemo(() => V4cl(V2e4, flt.maDa), [V2e4, flt.maDa]);
-  const V2g4 = useMemo(() => V4cm(V2e6, flt.maDv), [V2e6, flt.maDv]);
-
-  const V2g5 = (v: string) => V2e3((f) => ({ ...f, maDa: v, maDv: "", mangCvid: "" }));
-  const V2g6 = (v: string) => V2e3((f) => ({ ...f, maDv: v, mangCvid: "" }));
+  }, [projects, projectId]);
+  const dest = useMemo(() => {
+    const hoSo = !!(themHoSo && themHoSo !== UNSORTED);
+    if (!destRel && !hoSo && projectLabel) return `${projectLabel}/‹tên thư mục đã chọn›/… (tệp lẻ vào ${projectLabel}/Chưa phân loại)`;
+    const tail = destRel || "Chưa phân loại";
+    return hoSo || !projectLabel ? tail : `${projectLabel}/${tail}`;
+  }, [themHoSo, destRel, projectLabel]);
+  const pbCuaPhong = useMemo(() => V4cl(phongBans, flt.maDa), [phongBans, flt.maDa]);
+  const mangCuaPb = useMemo(() => V4cm(mangs, flt.maDv), [mangs, flt.maDv]);
+  const busyAny = busy !== "" || forwarding || collecting;
 
   return (
     <>
-      <div className="card mb-4">
-        {V2dn?.siteCodeWeak && <V4qf isAdmin />}
-        <div className="field">
-          <label>Mã site LAN</label>
-          <div className="flex gap-2 flex-wrap items-center">
-            <input
-              className="inp"
-              style={{ ...V4qe, width: V4qa(V2dl) }}
-              value={V2dl}
-              placeholder={V4qd}
-              onChange={(V2g7) => V2dm(V2g7.target.value)}
+      <PageHeader
+        title="Đưa lên máy chủ"
+        description={session?.projectName ? `Gom tài liệu từ máy nhân viên hoặc ổ đĩa vào Kho rồi đẩy lên máy chủ. ${session.projectName}.` : "Gom tài liệu từ máy nhân viên hoặc ổ đĩa vào Kho rồi đẩy lên máy chủ."}
+        actions={
+          <>
+            {pending > 0 && (
+              <Button variant="primary" icon="taiLen" loading={busy === "forward" || forwarding} disabled={busyAny} onClick={() => void dayLen()}>
+                Đẩy lên máy chủ ({fmtN(pending)})
+              </Button>
+            )}
+            <Menu
+              items={[
+                { label: `Gom lại bản bị từ chối${rejected ? ` (${fmtN(rejected)})` : ""}`, icon: "lamMoi", onSelect: () => void gomLaiTuChoi(), disabled: rejected === 0 || busyAny },
+                { label: "Xoá dấu lỗi, thử lại tất cả", icon: "lamMoi", onSelect: () => void xoaLoi(), disabled: errRows.length === 0 || busyAny },
+                "-",
+                { label: `Xoá sạch kho gom${collected?.total ? ` (${fmtN(collected.total)})` : ""}`, icon: "xoa", danger: true, onSelect: () => void xoaSach(), disabled: !collected?.total || busyAny },
+              ]}
             />
-            <button className="btn" onClick={() => void V2eu()} disabled={V2dx !== ""}>
-              Lưu mã
-            </button>
-            <button className="btn" onClick={() => void V2ew()} disabled={V2dx !== ""}>
-              Sinh mã mạnh
-            </button>
-          </div>
-        </div>
+          </>
+        }
+      />
+      {share?.siteCodeWeak && <MaSiteYeu isAdmin />}
+      {ketQua && (
+        <Banner tone={ketQua.tone} className="mb-3" onClose={() => setKetQua(null)}>
+          {ketQua.text}
+        </Banner>
+      )}
 
-        <div className="flex gap-3 flex-wrap items-center mt-3">
-          <button
-            className="btn primary"
-            onClick={() => void V2ey()}
-            disabled={V2dx !== "" || V2dg || V2dj}
-          >
-            {V2dx === "collect" || V2dj
-              ? "Đang thu thập…"
-              : "① Thu thập từ máy user (LAN)"}
-          </button>
-          <button
-            className="btn"
-            onClick={() => void V2f0()}
-            disabled={V2dx !== "" || V2dg || V2dj || V2fp === 0}
-          >
-            {V2dx === "forward" || V2dg
-              ? "Đang đẩy…"
-              : "② Đẩy lên máy chủ"}
-          </button>
-          <button className="btn" onClick={() => void V2fe()} disabled={V2dx !== "" || V2dj}>
-            {V2dx === "add"
-              ? "Đang thêm…"
-              : "③ Thêm tài liệu từ ổ cứng"}
-          </button>
-          {V2fq > 0 && (
-            <button className="btn" onClick={() => void V2f2()} disabled={V2dx !== ""}>
-              {V2dx === "retry"
-                ? "Đang gom lại…"
-                : `Gom lại bản bị từ chối (${V2fq})`}
-            </button>
-          )}
-          {(collected?.total ?? 0) > 0 && (
-            <button
-              className="btn"
-              onClick={() => void xoaSachKhoGom()}
-              disabled={V2dx !== "" || V2dg}
-              title="Xoá mọi bản đã thu thập trên máy này (bản ghi + tệp trong Kho), kể cả bản đã đẩy lên. Không đụng máy chủ."
-            >
-              <Icon name="xoa" /> Xoá sạch kho gom ({fmtN(collected?.total ?? 0)})
-            </button>
-          )}
-          {V2dz && <span className="muted text-sm">{V2dz}</span>}
-        </div>
+      <Tabs<Tab>
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "gom", label: "Gom từ máy nhân viên", icon: "phatLan" },
+          { value: "them", label: "Thêm từ ổ đĩa", icon: "nhapTep" },
+          { value: "doisoat", label: "Đối soát", icon: "kiemTra", count: collected?.total },
+        ]}
+      />
 
-        {V2ec && (
-          <div ref={V2eo} className="field kg-add mt-3 border-t border-border-subtle pt-3">
-            <label>
-              Thêm PDF có sẵn (ổ cứng, USB, thư mục scan cũ) vào Kho rồi đẩy lên máy chủ
-            </label>
-            {}
-            <div className="kg-declare">
-              <label className="kg-dfield">
-                <span>Dự án</span>
-                <select className="inp" value={V2eg} onChange={(V2g8) => V2eh(V2g8.target.value)}>
-                  <option value="">
-                    {V2ee.length
-                      ? "— Chọn dự án đích —"
-                      : "Dự án của tài khoản này"}
-                  </option>
-                  {V2ee.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code} · {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {V2dq.length > 0 ? (
+      {tab === "gom" && (
+        <div className="mt-3 max-w-3xl space-y-4">
+          <Card title="Thu thập qua mạng nội bộ" description="Máy nhân viên đã bật chia sẻ và cùng mã site sẽ được gom tự động.">
+            <Toolbar>
+              <Button variant="primary" icon="phatLan" loading={busy === "collect" || collecting} disabled={busyAny} onClick={() => void thuThap()}>
+                Thu thập
+              </Button>
+              <span className="text-sm text-fg-subtle">
+                Chờ đẩy: <b>{fmtN(pending)}</b>
+                {rejected > 0 && (
+                  <>
+                    {" "}
+                    · bị từ chối: <b className="text-danger-700">{fmtN(rejected)}</b>
+                  </>
+                )}
+              </span>
+            </Toolbar>
+          </Card>
+          <Card title="Mã site mạng nội bộ" description="Mọi máy trong site phải cùng một mã. Máy nhân viên tự nhận mã khi nhận cây thư mục.">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input style={{ ...MONO, width: V4qa(siteCode) }} value={siteCode} placeholder={SITE_PLACEHOLDER} onChange={(e) => setSiteCode(e.target.value)} className="w-auto" aria-label="Mã site" />
+              <Button loading={busy === "code"} disabled={busyAny} onClick={() => void luuMa()}>
+                Lưu mã
+              </Button>
+              <Button icon="tuDong" disabled={busyAny} onClick={() => void sinhMa()}>
+                Sinh mã mạnh
+              </Button>
+            </div>
+            {share?.deviceFingerprint && (
+              <p className="mt-2 text-sm text-fg-subtle">
+                Vân tay máy này: <code className="rounded bg-gray-100 px-1">{share.deviceFingerprint}</code>
+              </p>
+            )}
+          </Card>
+          <Help title="Không thấy máy nhân viên nào?">
+            <ul>
+              <li>Máy nhân viên đã đăng nhập và màn Đưa lên máy chủ hiện "Đang chia sẻ".</li>
+              <li>Hai máy cùng một dải mạng (cùng switch / wifi); mạng nhiều lớp (VLAN) hoặc wifi bật cách ly thiết bị sẽ không thấy nhau.</li>
+              <li>Tường lửa cho phép DigiText: Windows chọn hồ sơ mạng "Riêng tư"; macOS bật Local Network cho DigiText.</li>
+              <li>Cả hai máy cùng phiên bản DigiText. Máy chạy bản cũ không trả lời quảng bá.</li>
+              <li>Cổng chung là 45817; máy nhân viên ghim cổng khác thì nhập thẳng địa chỉ ở màn Cây thư mục.</li>
+            </ul>
+          </Help>
+        </div>
+      )}
+
+      {tab === "them" && (
+        <div className="mt-3 max-w-3xl space-y-4">
+          <Card title="Thêm PDF có sẵn vào Kho" description="Từ ổ cứng, USB hoặc thư mục quét cũ. Tệp được chép vào Kho máy này rồi đẩy lên máy chủ.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Dự án đích">
+                <Select value={projectId} onChange={setProjectId} placeholder={projects.length ? "— Chọn dự án —" : "Dự án của tài khoản này"} options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} />
+              </Field>
+              {phongs.length > 0 ? (
                 <>
-                  <label className="kg-dfield">
-                    <span>Phông (mục lục)</span>
-                    <select
-                      className="inp"
-                      value={V2ei}
-                      onChange={(V2g9) => {
-                        V2ej(V2g9.target.value);
-                        V2el("");
+                  <Field label="Phông">
+                    <Select
+                      value={themPhong}
+                      onChange={(v) => {
+                        setThemPhong(v);
+                        setThemHoSo("");
                       }}
-                    >
-                      <option value="">— Chọn phông —</option>
-                      {V2dq.map((p) => (
-                        <option key={p.maDuAn} value={p.maDuAn}>
-                          {p.tenDuAn || p.maDuAn}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="kg-dfield kg-dwide">
-                    <span>Hộp số · Hồ sơ số</span>
-                    <select
-                      className="inp"
-                      value={V2ek}
-                      disabled={!V2ei}
-                      onChange={(V2ga) => V2el(V2ga.target.value)}
-                    >
-                      <option value="">
-                        {V2ei
-                          ? "— Chọn hồ sơ theo danh mục —"
-                          : "— Chọn phông trước —"}
-                      </option>
-                      {V2g1.map((h) => (
+                      placeholder="— Chọn phông —"
+                      options={phongs.map((p) => ({ value: p.maDuAn, label: p.tenDuAn || p.maDuAn }))}
+                    />
+                  </Field>
+                  <Field label="Hộp · hồ sơ" className="sm:col-span-2">
+                    <Select value={themHoSo} disabled={!themPhong} onChange={setThemHoSo} placeholder={themPhong ? "— Chọn hồ sơ theo danh mục —" : "— Chọn phông trước —"}>
+                      {hoSoCuaPhong.map((h) => (
                         <option key={h.id} value={`${h.hopSo}/${h.hoSoSo}`}>
                           Hộp {h.hopSo || "—"} · Hồ sơ {h.hoSoSo || "—"}
                           {h.tieuDe ? ` — ${h.tieuDe}` : ""}
                         </option>
                       ))}
-                      <option value={V4qh}>— Chưa phân loại (không kê khai) —</option>
-                    </select>
-                  </label>
+                      <option value={UNSORTED}>Chưa phân loại (không kê khai)</option>
+                    </Select>
+                  </Field>
                 </>
               ) : (
-                <label className="kg-dfield kg-dwide">
-                  <span>Vị trí trong Kho</span>
-                  <input
-                    className="inp"
-                    value={V2em}
-                    placeholder="VD: Sở Tài chính/01/007"
-                    onChange={(V2gb) => V2en(V2gb.target.value)}
-                  />
-                </label>
+                <Field label="Vị trí trong Kho" className="sm:col-span-2" hint="Ví dụ: Sở Tài chính/01/007">
+                  <Input value={themViTri} onChange={(e) => setThemViTri(e.target.value)} />
+                </Field>
               )}
             </div>
-            <div className="flex gap-2 flex-wrap items-center">
-              <button
-                className="btn primary"
-                onClick={() => void V2fj(false)}
-                disabled={V2dx !== "" || V2g2}
-              >
-                {V2dx === "add" ? "Đang thêm…" : "Chọn tệp PDF…"}
-              </button>
-              <button
-                className="btn"
-                onClick={() => void V2fj(true)}
-                disabled={V2dx !== "" || V2g2}
-              >
-                Chọn thư mục…
-              </button>
-              <span className="muted text-sm">
-                {V2g2
-                  ? "Chọn phông + hồ sơ theo danh mục rồi mới chọn tệp."
-                  : `Sẽ lưu vào Kho: ${V2gaDest}`}
-              </span>
-              <label
-                className="flex items-center gap-1.5 text-sm"
-                title="Bật: thêm xong là đẩy lên máy chủ ngay, không cần bấm ② nữa. Tệp vẫn được chép vào Kho máy này để nối lại khi đứt mạng."
-              >
-                <input type="checkbox" checked={tuDongDay} onChange={(e) => setTuDongDay(e.target.checked)} disabled={V2dx !== ""} />
-                Đẩy lên máy chủ ngay sau khi thêm
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {collected && (
-        <div className="card kg-card p-0 overflow-hidden mb-4">
-          {}
-          <div className="kg-flt">
-            <label className="kg-dfield">
-              <span>Phông</span>
-              <select className="inp" value={flt.maDa} onChange={(V2gc) => V2g5(V2gc.target.value)}>
-                <option value="">— Tất cả phông —</option>
-                {V2dq.map((p) => (
-                  <option key={p.maDuAn} value={p.maDuAn}>
-                    {p.tenDuAn || p.maDuAn}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="kg-dfield">
-              <span>Phòng ban</span>
-              <select
-                className="inp"
-                value={flt.maDv}
-                disabled={!flt.maDa || V2g3.length === 0}
-                onChange={(V2gd) => V2g6(V2gd.target.value)}
-              >
-                <option value="">{V4j4("phongBan", !!flt.maDa, V2g3.length)}</option>
-                {V2g3.map((V2ge) => (
-                  <option key={V2ge.maDv} value={V2ge.maDv}>
-                    {V2ge.tenDonVi || V2ge.maDonVi || V2ge.maDv}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="kg-dfield">
-              <span>Mảng CV</span>
-              <select
-                className="inp"
-                value={flt.mangCvid}
-                disabled={!flt.maDv || V2g4.length === 0}
-                onChange={(V2gf) => V2e3((f) => ({ ...f, mangCvid: V2gf.target.value }))}
-              >
-                <option value="">{V4j4("mang", !!flt.maDv, V2g4.length)}</option>
-                {V2g4.map((m) => (
-                  <option key={m.mangCvid} value={String(m.mangCvid)}>
-                    {m.tenMang || m.maMang}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="kg-dfield">
-              <span>THBQ</span>
-              <select
-                className="inp"
-                value={flt.thbq}
-                disabled={V2e8.length === 0}
-                onChange={(V2gg) => V2e3((f) => ({ ...f, thbq: V2gg.target.value }))}
-              >
-                <option value="">
-                  {V2e8.length
-                    ? "— Tất cả THBQ —"
-                    : "— Danh mục chưa có THBQ —"}
-                </option>
-                {V2e8.map((t) => (
-                  <option key={t.thbqid} value={String(t.thbqid)}>
-                    {t.tenThbq}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="kg-dfield kg-dwide">
-              <span>Tìm kiếm</span>
-              <input
-                className="inp"
-                value={flt.search}
-                placeholder="Tên tệp · số hồ sơ · người quét · tiêu đề hồ sơ"
-                onChange={(V2gh) => V2e3((f) => ({ ...f, search: V2gh.target.value }))}
-              />
-            </label>
-          </div>
-
-          <div className="kg-bar">
-            <div className="kg-stats">
-              <V4qi value={V2fw.collected} label="Tổng file đã thu thập" />
-              <V4qi
-                value={V2fw.forwarded}
-                label="Đã đồng bộ lên máy chủ"
-                tone="ok"
-              />
-              <V4qi
-                value={V2fw.notForwarded}
-                label="Chưa đồng bộ lên máy chủ"
-                tone="warn"
-                title={`Đang chờ đẩy ${fmtN(V2fp)}${V2fq > 0 ? ` · máy chủ từ chối ${fmtN(V2fq)}` : ""}`}
-              />
-              <V4qi
-                value={V2fx.length}
-                label="File lỗi"
-                tone={V2fx.length > 0 ? "err" : undefined}
-                title="Bản máy chủ từ chối, hoặc đã đẩy lỗi ít nhất một lần mà vẫn chưa lên"
-              />
-            </div>
-            <span className="kg-spacer" />
-            <div className="kg-filter">
-              <span className="muted">Ngày thu thập</span>
-              <input
-                type="date"
-                className="inp"
-                aria-label="Từ ngày thu thập"
-                value={V2e1.from}
-                max={V2e1.to || undefined}
-                onChange={(V2gi) => V2e2((r) => ({ ...r, from: V2gi.target.value }))}
-              />
-              <span className="muted">→</span>
-              <input
-                type="date"
-                className="inp"
-                aria-label="Đến ngày thu thập"
-                value={V2e1.to}
-                min={V2e1.from || undefined}
-                onChange={(V2gj) => V2e2((r) => ({ ...r, to: V2gj.target.value }))}
-              />
-              {}
-              {V4px(V2e1) && (
-                <button className="btn" onClick={() => V2e2(V4pw)}>
-                  Xoá lọc ngày
-                </button>
-              )}
-            </div>
-            <label className="kg-toggle">
-              <input
-                type="checkbox"
-                checked={V2du}
-                onChange={(V2gk) => {
-                  V2dw.current = true;
-                  V2dv(V2gk.target.checked);
-                }}
-              />{" "}
-              Chỉ hiện hồ sơ đã có dữ liệu
-            </label>
-          </div>
-
-          {V2fz.groups.length === 0 ? (
-            <p className="kg-note">
-              {V4j2(flt)
-                ? "Không có tài liệu nào khớp bộ lọc đang chọn — chọn lại “Tất cả phông” hoặc bỏ bớt tiêu chí."
-                : V2fv
-                  ? "Không có bản nào thu thập trong khoảng ngày đã chọn — nới khoảng hoặc bấm “Xoá lọc ngày”."
-                  : "Chưa có hồ sơ nào trong mục lục và kho gom cũng trống — bấm “① Thu thập từ máy user (LAN)” để lấy tài liệu nhân viên đã đóng gói."}
-            </p>
-          ) : (
-            <div className="tbl-scroll kg-matrix">
-              <table className="tbl kg-table">
-                <thead>
-                  <tr>
-                    <th className="kg-corner kg-c1">Hộp số</th>
-                    <th className="kg-corner kg-c2">Hồ sơ số</th>
-                    <th className="kg-corner kg-c3">Tổng số file</th>
-                    {V2fz.columns.map((c) => (
-                      <th key={c.key} className="kg-colhead">
-                        <div className="kg-colname">
-                          <Icon name={c.isAdmin ? "mayTram" : "nguoi"} size={15} /> <b>{c.label}</b>
-                        </div>
-                        <div className="muted">
-                          {c.tally.total} tài liệu · {V4qg(c.tally.sizeBytes)} MB
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {V2fz.groups.map((g) => (
-                    <Fragment key={g.key}>
-                      <tr className="kg-grouprow">
-                        <th className="kg-rowhead kg-groupname" colSpan={3}>
-                          <Icon name={g.key === V4ia ? "canhBao" : "thuMuc"} size={15} /> Dự án:{" "}
-                          {g.label}
-                        </th>
-                        <td colSpan={V2fz.columns.length}>
-                          <span className="muted">
-                            {g.key === V4ia
-                              ? "Không ghép được vào hồ sơ nào trong mục lục — kiểm tra phông/số hồ sơ."
-                              : `${g.rows.length} hồ sơ · ${g.tally.total} tài liệu đã gom`}
-                          </span>
-                        </td>
-                      </tr>
-                      {g.rows.map((r) => (
-                        <tr key={r.key}>
-                          <th className="kg-rowhead kg-c1 kg-hoso">{r.hopSo || "—"}</th>
-                          <th className="kg-rowhead kg-c2 kg-hoso">
-                            <div>{r.hoSoSo || "—"}</div>
-                            {r.tieuDe && <div className="muted">{r.tieuDe}</div>}
-                          </th>
-                          <th className="kg-rowhead kg-c3">
-                            <div className="kg-count">
-                              <span>{r.tally.total}</span>
-                              {}
-                              {r.inTree && g.key !== V4ia && g.key !== "" && (
-                                <button
-                                  className="kg-add-btn"
-                                  title={`Bổ sung tài liệu vào hộp ${r.hopSo || "—"} · hồ sơ ${r.hoSoSo || "—"}`}
-                                  onClick={() => void V2ff(g.key, r.hopSo, r.hoSoSo)}
-                                >
-                                  <Icon name="them" size={13} />
-                                </button>
-                              )}
-                            </div>
-                          </th>
-                          {V2fz.columns.map((c) => (
-                            <td key={c.key} className="kg-cell">
-                              <V4qq
-                                cell={r.cells.get(c.key)}
-                                col={c}
-                                queued={V2dg}
-                                onResend={(V2gl) => void V2f8(V2gl)}
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {V2fx.length > 0 && <V4qp rows={V2fx} queued={V2dg} onResend={V2f4} onClearAll={xoaLoi} />}
-
-          {(V2g0 || V2fz.hiddenRows > 0 || V2fz.unmatched > 0 || V2fv) && (
-            <p className="kg-note">
-              {V2fv && (
-                <>
-                  Đang lọc: hiện {fmtN(V2fu.length)}/{fmtN(collected.rows.length)} bản đã nạp.{" "}
-                </>
-              )}
-              {}
-              {V2ft.unknown > 0 && V4j3(flt) && (
-                <>
-                  Đã loại {fmtN(V2ft.unknown)} tài liệu chưa có trong mục lục (không xét được phòng
-                  ban / mảng CV / THBQ) — chạy “Đồng bộ từ Kho tài liệu” ở màn Khai thác rồi lọc
-                  lại.{" "}
-                </>
-              )}
-              {V2g0 && (
-                <>
-                  Kho có {collected.total.toLocaleString("vi-VN")} bản, bảng chỉ nạp{" "}
-                  {V4qj.toLocaleString("vi-VN")} bản mới nhất — các ô chưa liệt kê đủ.{" "}
-                </>
-              )}
-              {V2fz.hiddenRows > 0 && (
-                <>
-                  Đang ẩn {V2fz.hiddenRows} hồ sơ chưa có dữ liệu
-                  {!V2dw.current
-                    ? " (mục lục lớn nên tự ẩn — bỏ tick để xem cả cây)"
-                    : ""}
-                  .{" "}
-                </>
-              )}
-              {V2fz.unmatched > 0 && (
-                <>{V2fz.unmatched} tài liệu chưa khớp cây thư mục (xem nhóm cuối bảng).</>
-              )}
-            </p>
-          )}
+            <Toolbar className="mt-4">
+              <Button variant="primary" icon="tepPdf" loading={busy === "add"} disabled={busyAny || thieuHoSo} onClick={() => void themTep(false)}>
+                Chọn tệp PDF
+              </Button>
+              <Button icon="thuMuc" disabled={busyAny || thieuHoSo} onClick={() => void themTep(true)}>
+                Chọn thư mục
+              </Button>
+              <Field label="Đẩy lên máy chủ ngay sau khi thêm" inline>
+                <Checkbox checked={tuDongDay} onChange={setTuDongDay} disabled={busyAny} />
+              </Field>
+            </Toolbar>
+            <p className="mt-2 text-sm text-fg-subtle">{thieuHoSo ? "Chọn phông và hồ sơ theo danh mục rồi mới chọn tệp." : `Sẽ lưu vào Kho: ${dest}`}</p>
+          </Card>
         </div>
       )}
 
-      {}
-      <V4pp isSuper={V2dk} />
+      {tab === "doisoat" && collected && (
+        <div className="mt-3 space-y-4">
+          <KpiRow>
+            <KpiTile label="Đã thu thập" value={stats.collected} />
+            <KpiTile label="Đã lên máy chủ" value={stats.forwarded} tone="ok" />
+            <KpiTile label="Chưa lên máy chủ" value={stats.notForwarded} tone={stats.notForwarded > 0 ? "warn" : undefined} sub={rejected > 0 ? `máy chủ từ chối ${fmtN(rejected)}` : undefined} />
+            <KpiTile label="Tệp lỗi" value={errRows.length} tone={errRows.length > 0 ? "err" : undefined} />
+          </KpiRow>
+
+          <Card padding="none">
+            <div className="border-b border-border-subtle p-3">
+              <Toolbar>
+                <Select size="sm" value={flt.maDa} onChange={(v) => setFlt((f) => ({ ...f, maDa: v, maDv: "", mangCvid: "" }))} placeholder="Tất cả phông" options={phongs.map((p) => ({ value: p.maDuAn, label: p.tenDuAn || p.maDuAn }))} className="w-52" aria-label="Phông" />
+                <Select size="sm" value={flt.maDv} disabled={!flt.maDa || pbCuaPhong.length === 0} onChange={(v) => setFlt((f) => ({ ...f, maDv: v, mangCvid: "" }))} placeholder={V4j4("phongBan", !!flt.maDa, pbCuaPhong.length)} options={pbCuaPhong.map((x) => ({ value: x.maDv, label: x.tenDonVi || x.maDonVi || x.maDv }))} className="w-44" aria-label="Phòng ban" />
+                <Select size="sm" value={flt.mangCvid} disabled={!flt.maDv || mangCuaPb.length === 0} onChange={(v) => setFlt((f) => ({ ...f, mangCvid: v }))} placeholder={V4j4("mang", !!flt.maDv, mangCuaPb.length)} options={mangCuaPb.map((m) => ({ value: String(m.mangCvid), label: m.tenMang || m.maMang }))} className="w-40" aria-label="Mảng" />
+                <Select size="sm" value={flt.thbq} disabled={thbqs.length === 0} onChange={(v) => setFlt((f) => ({ ...f, thbq: v }))} placeholder={thbqs.length ? "Tất cả THBQ" : "Chưa có THBQ"} options={thbqs.map((t) => ({ value: String(t.thbqid), label: t.tenThbq }))} className="w-36" aria-label="Thời hạn bảo quản" />
+                <Input size="sm" prefix="tim" value={flt.search} placeholder="Tên tệp, số hồ sơ, người quét" onChange={(e) => setFlt((f) => ({ ...f, search: e.target.value }))} className="w-60" aria-label="Tìm" />
+                <Toolbar.Spacer />
+                <Input size="sm" type="date" aria-label="Từ ngày thu thập" value={dateF.from} max={dateF.to || undefined} onChange={(e) => setDateF((r) => ({ ...r, from: e.target.value }))} className="w-36" />
+                <Input size="sm" type="date" aria-label="Đến ngày thu thập" value={dateF.to} min={dateF.from || undefined} onChange={(e) => setDateF((r) => ({ ...r, to: e.target.value }))} className="w-36" />
+                {V4px(dateF) && <IconButton label="Bỏ lọc ngày" icon="dong" size="sm" onClick={() => setDateF(V4pw)} />}
+                <Field label="Chỉ hồ sơ có dữ liệu" inline>
+                  <Checkbox
+                    checked={hideEmpty}
+                    onChange={(v) => {
+                      hideTouched.current = true;
+                      setHideEmpty(v);
+                    }}
+                  />
+                </Field>
+              </Toolbar>
+            </div>
+
+            {matrix.groups.length === 0 ? (
+              <p className="p-4 text-sm text-fg-subtle">
+                {V4j2(flt) ? "Không có tài liệu nào khớp bộ lọc. Chọn lại Tất cả phông hoặc bỏ bớt tiêu chí." : filtering ? "Không có bản nào thu thập trong khoảng ngày đã chọn." : "Chưa có hồ sơ trong mục lục và kho gom còn trống. Bấm Thu thập ở tab Gom từ máy nhân viên."}
+              </p>
+            ) : (
+              <div className="tbl-scroll kg-matrix">
+                <table className="tbl kg-table">
+                  <thead>
+                    <tr>
+                      <th className="kg-corner kg-c1">Hộp</th>
+                      <th className="kg-corner kg-c2">Hồ sơ</th>
+                      <th className="kg-corner kg-c3">Tổng tệp</th>
+                      {matrix.columns.map((c) => (
+                        <th key={c.key} className="kg-colhead">
+                          <div className="kg-colname">
+                            <Icon name={c.isAdmin ? "mayTram" : "nguoi"} size={15} /> <b>{c.label}</b>
+                          </div>
+                          <div className="text-fg-subtle">
+                            {fmtN(c.tally.total)} tài liệu · {mb(c.tally.sizeBytes)} MB
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.groups.map((g) => (
+                      <Fragment key={g.key}>
+                        <tr className="kg-grouprow">
+                          <th className="kg-rowhead kg-groupname" colSpan={3}>
+                            <Icon name={g.key === V4ia ? "canhBao" : "thuMuc"} size={15} /> {g.label}
+                          </th>
+                          <td colSpan={matrix.columns.length}>
+                            <span className="text-fg-subtle">{g.key === V4ia ? "Không ghép được vào hồ sơ nào trong mục lục. Kiểm tra phông và số hồ sơ." : `${fmtN(g.rows.length)} hồ sơ · ${fmtN(g.tally.total)} tài liệu đã gom`}</span>
+                          </td>
+                        </tr>
+                        {g.rows.map((r) => (
+                          <tr key={r.key}>
+                            <th className="kg-rowhead kg-c1 kg-hoso">{r.hopSo || "—"}</th>
+                            <th className="kg-rowhead kg-c2 kg-hoso">
+                              <div>{r.hoSoSo || "—"}</div>
+                              {r.tieuDe && <div className="text-fg-subtle">{r.tieuDe}</div>}
+                            </th>
+                            <th className="kg-rowhead kg-c3">
+                              <div className="kg-count">
+                                <span>{fmtN(r.tally.total)}</span>
+                                {r.inTree && g.key !== V4ia && g.key !== "" && (
+                                  <IconButton
+                                    label={`Bổ sung tài liệu vào hộp ${r.hopSo || "—"}, hồ sơ ${r.hoSoSo || "—"}`}
+                                    icon="them"
+                                    size="sm"
+                                    onClick={() => {
+                                      setThemPhong(g.key);
+                                      setThemHoSo(`${r.hopSo}/${r.hoSoSo}`);
+                                      setTab("them");
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </th>
+                            {matrix.columns.map((c) => (
+                              <td key={c.key} className="kg-cell">
+                                <MatrixCell cell={r.cells.get(c.key)} col={c} queued={forwarding} onResend={(ids) => void guiLai(ids)} />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {(truncated || matrix.hiddenRows > 0 || matrix.unmatched > 0 || filtering || (filtered.unknown > 0 && V4j3(flt))) && (
+              <p className="border-t border-border-subtle px-4 py-2 text-xs text-fg-subtle">
+                {filtering && <>Đang lọc: hiện {fmtN(rows.length)}/{fmtN(collected.rows.length)} bản đã nạp. </>}
+                {filtered.unknown > 0 && V4j3(flt) && <>Đã loại {fmtN(filtered.unknown)} tài liệu chưa có trong mục lục chỉnh lý (không xét được phòng ban, mảng, THBQ). </>}
+                {truncated && <>Kho có {fmtN(collected.total)} bản, bảng chỉ nạp {fmtN(LOAD_MAX)} bản mới nhất. </>}
+                {matrix.hiddenRows > 0 && <>Đang ẩn {fmtN(matrix.hiddenRows)} hồ sơ chưa có dữ liệu{!hideTouched.current ? " (mục lục lớn nên tự ẩn)" : ""}. </>}
+                {matrix.unmatched > 0 && <>{fmtN(matrix.unmatched)} tài liệu chưa khớp cây thư mục (nhóm cuối bảng).</>}
+              </p>
+            )}
+          </Card>
+
+          {errRows.length > 0 && <BangLoi rows={errRows} queued={forwarding} onResend={(id, name) => void guiLai([id], name)} onClearAll={() => void xoaLoi()} />}
+
+          <Card title="Đợt đã đẩy" padding="sm">
+            <V4pp isSuper={!!isSuper} />
+          </Card>
+        </div>
+      )}
+      {tab === "doisoat" && !collected && (
+        <Card className="mt-3">
+          <ErrorBanner error="Chưa nạp được kho gom." onRetry={() => void load()} />
+        </Card>
+      )}
     </>
   );
 }
 
-function V4qp({
-  rows: V2gm,
-  queued: V2gn,
-  onResend: V2go,
-  onClearAll,
-}: {
-  rows: V43g[];
-  queued: boolean;
-  onResend: (V2gp: number, V2gq: string) => void;
-  onClearAll: () => void;
-}) {
-  const soSanh = new Intl.Collator("vi", { numeric: true, sensitivity: "base" }).compare;
-  const dsLoi = [...V2gm].sort(
-    (a, b) =>
-      soSanh(a.phongMa ?? "", b.phongMa ?? "") ||
-      soSanh(a.hoSoRef ?? "", b.hoSoRef ?? "") ||
-      soSanh(a.filename, b.filename) ||
-      a.id - b.id,
-  );
+function BangLoi({ rows, queued, onResend, onClearAll }: { rows: V43g[]; queued: boolean; onResend: (id: number, name: string) => void; onClearAll: () => void }) {
+  const cmp = new Intl.Collator("vi", { numeric: true, sensitivity: "base" }).compare;
+  const sorted = [...rows].sort((a, b) => cmp(a.phongMa ?? "", b.phongMa ?? "") || cmp(a.hoSoRef ?? "", b.hoSoRef ?? "") || cmp(a.filename, b.filename) || a.id - b.id);
   return (
-    <details className="kg-errs" open>
-      <summary>
-        <Icon name="canhBao" /> {fmtN(V2gm.length)} file lỗi — chưa lên được máy chủ{" "}
-        <button
-          className="btn sm"
-          disabled={V2gn}
-          onClick={(e) => {
-            e.preventDefault();
-            onClearAll();
-          }}
-          title="Xoá dấu lỗi của tất cả các bản này (không xoá bản trong kho). Sau đó bấm “② Đẩy lên máy chủ” để gửi lại từ đầu."
-        >
-          <Icon name="lamMoi" /> Xoá lỗi, thử lại tất cả ({fmtN(V2gm.length)})
-        </button>
-      </summary>
-      <div className="tbl-scroll">
+    <Card
+      tone="danger"
+      padding="none"
+      title={`${fmtN(rows.length)} tệp lỗi chưa lên được máy chủ`}
+      actions={
+        <Button size="sm" icon="lamMoi" disabled={queued} onClick={onClearAll}>
+          Xoá lỗi, thử lại tất cả
+        </Button>
+      }
+    >
+      <div className="tbl-scroll max-h-80">
         <table className="tbl kg-errtbl">
           <thead>
             <tr>
-              <th>Tên file</th>
-              <th>Phông / Hộp / Hồ sơ</th>
+              <th>Tệp</th>
+              <th>Phông / hộp / hồ sơ</th>
               <th>Lý do</th>
               <th>Đường dẫn trong Kho</th>
               <th>Thu thập lúc</th>
@@ -1148,87 +707,51 @@ function V4qp({
             </tr>
           </thead>
           <tbody>
-            {dsLoi.map((r) => (
+            {sorted.map((r) => (
               <tr key={r.id}>
                 <td>{r.filename}</td>
                 <td>{[r.phongMa, r.hoSoRef].filter(Boolean).join(" / ") || "—"}</td>
                 <td className="kg-why">
-                  {r.forwardFatal
-                    ? "Máy chủ từ chối vĩnh viễn"
-                    : `Lỗi ${r.forwardTries}×`}
-                  {r.forwardError ? ` — ${r.forwardError}` : ""}
+                  {r.forwardFatal ? <Badge tone="err">Máy chủ từ chối</Badge> : <Badge tone="warn">Lỗi {r.forwardTries} lần</Badge>}
+                  {r.forwardError ? <span className="ml-1 text-fg-subtle">{r.forwardError}</span> : ""}
                 </td>
                 <td>
-                  <code className="kg-path" title={r.storagePath}>
-                    {r.storagePath}
-                  </code>
+                  <Tip text={r.storagePath}>
+                    <code className="kg-path">{r.storagePath}</code>
+                  </Tip>
                 </td>
                 <td>{V4q0(r.collectedAt)}</td>
                 <td>
-                  <button
-                    className="kg-resend"
-                    onClick={() => V2go(r.id, r.filename)}
-                    title={
-                      V2gn
-                        ? `Xếp hàng gửi lại “${r.filename}” — chạy khi phiên hiện tại xong`
-                        : `Gửi lại “${r.filename}” lên máy chủ`
-                    }
-                  >
-                    <Icon name="lamMoi" size={13} />
-                  </button>
+                  <IconButton label={queued ? "Xếp hàng gửi lại, chạy khi phiên hiện tại xong" : "Gửi lại lên máy chủ"} icon="lamMoi" size="sm" onClick={() => onResend(r.id, r.filename)} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </details>
+    </Card>
   );
 }
 
-function V4qq({
-  cell,
-  col: V2gr,
-  queued: V2gs,
-  onResend: V2gt,
-}: {
-  cell: V4ij | undefined;
-  col: V4ii;
-
-  queued: boolean;
-  onResend: (V2gu: number[]) => void;
-}) {
+function MatrixCell({ cell, col, queued, onResend }: { cell: V4ij | undefined; col: V4ii; queued: boolean; onResend: (ids: number[]) => void }) {
   if (!cell || cell.files.length === 0) {
     return (
-      <span
-        className="kg-empty"
-        title={`${V2gr.label}: chưa có tài liệu trong hồ sơ này`}
-      >
+      <span className="kg-empty" aria-label={`${col.label}: chưa có tài liệu`}>
         ·
       </span>
     );
   }
   const t = cell.tally;
-  const V2gv = V4iy(cell);
+  const retryIds = V4iy(cell);
   return (
-    <div className="kg-files" title={`${V2gr.label} — ${V4ix(t)} · ${V4qg(t.sizeBytes)} MB`}>
-      <span className={`kg-dot ${V4iw(t)}`} />
-      <span className="kg-fcount">
-        <Icon name="taiLieu" /> ({fmtN(t.total)})
-      </span>
-      {V2gv.length > 0 && (
-        <button
-          className="kg-resend"
-          onClick={() => V2gt(V2gv)}
-          title={
-            V2gs
-              ? `Xếp hàng gửi lại ${V2gv.length} tài liệu — chạy khi phiên hiện tại xong`
-              : `Gửi lại ${V2gv.length} tài liệu của ô này lên máy chủ`
-          }
-        >
-          <Icon name="lamMoi" size={13} />
-        </button>
-      )}
-    </div>
+    <Tip text={`${col.label}: ${V4ix(t)} · ${mb(t.sizeBytes)} MB`}>
+      <div className="kg-files">
+        <span className={`kg-dot ${V4iw(t)}`} />
+        <span className="kg-fcount">
+          <Icon name="taiLieu" /> ({fmtN(t.total)})
+        </span>
+        {retryIds.length > 0 && <IconButton label={queued ? `Xếp hàng gửi lại ${retryIds.length} tài liệu` : `Gửi lại ${retryIds.length} tài liệu`} icon="lamMoi" size="sm" onClick={() => onResend(retryIds)} />}
+      </div>
+    </Tip>
   );
 }

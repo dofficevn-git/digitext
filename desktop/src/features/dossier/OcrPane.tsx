@@ -12,7 +12,7 @@ import { inMetadata, layTruongNhieuTaiLieu, tenTepAnToan, xuatMetadataExcel, typ
 import { V4ak, type V4a9 } from "@/api/users";
 import V4i7, { type V4i6 } from "../upload/OcrFieldsView";
 import V4k5 from "../server/ServerJobs";
-import Banner from "./Banner";
+import { Banner } from "@/ui";
 import ReviewHoSoTable from "./ReviewHoSoTable";
 import { V4hg, pdfaSummary, V4hi, V4hj, V4hh, type V4he } from "./ocrReport";
 import { Icon } from "@/components/Icon";
@@ -283,8 +283,8 @@ export default function OcrPane() {
 
   return (
     <>
-      {V1t1 && <Banner tone="err" text={V1t1} onClose={() => V1t2(null)} />}
-      {V1t3 && <Banner tone="ok" text={V1t3} onClose={() => V1t4(null)} />}
+      {V1t1 && <Banner tone="danger" className="mb-3" onClose={() => V1t2(null)}>{V1t1}</Banner>}
+      {V1t3 && <Banner tone="success" className="mb-3" onClose={() => V1t4(null)}>{V1t3}</Banner>}
 
       {}
       <div className="card mb-3">

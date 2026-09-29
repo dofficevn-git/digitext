@@ -14,6 +14,7 @@ import { V3z9 } from "@/domain/permissions";
 import V4oq from "@/ui/Seg";
 import V4p4 from "@/features/editor/EditorView";
 import { Icon } from "@/components/Icon";
+import { Badge, Banner, Button, Card, Checkbox, Field, IconButton, Kbd, PageHeader, Select, Stepper, Tip } from "@/ui";
 
 const V4p7 = (V27q: number) => V27q === 300 || V27q === 600;
 
@@ -423,79 +424,72 @@ export default function V4p9() {
 
   return (
     <section className="view active">
-      <div className="page-head">
-        <h2>Quét tài liệu</h2>
-        {V280 && <div className="sub">· {V280}</div>}
-        <div className="spacer" />
-      </div>
+      <PageHeader
+        title="Quét tài liệu"
+        description={V27s ? `Quét vào hồ sơ: ${V27s.label}` : V280 ? `Quét vào thư mục: ${V280}` : "Chưa chọn nơi lưu. Mở hồ sơ ở Kho tài liệu hoặc Cây thư mục rồi bấm Quét vào hồ sơ."}
+        actions={
+          !V27s && (
+            <>
+              <Button icon="kho" onClick={() => goto("drive")}>
+                Kho tài liệu
+              </Button>
+              <Button icon="cayThuMuc" onClick={() => goto("tree")}>
+                Cây thư mục
+              </Button>
+            </>
+          )
+        }
+      />
+      <Stepper className="mb-4" current={V27w === "review" ? 2 : V28v || V28t.length > 0 ? 1 : 0} steps={[{ key: "thietlap", label: "Thiết lập" }, { key: "quet", label: "Quét" }, { key: "soat", label: "Soát và lưu" }]} />
 
       {V28x && !V28v && (
-        <div className="banner info">
-          <span className="bi">
-            <Icon name="dangCho" size={18} />
-          </span>
-          <div className="bx">
-            <b>Đang khởi động máy quét…</b>
-            Lần quét đầu với thiết bị này phải dò cấu hình (nguồn giấy/màu) nên hơi lâu; các lô sau
-            sẽ nhanh hơn.
-          </div>
-        </div>
+        <Banner tone="info" className="mb-3" title="Đang khởi động máy quét…">
+          Lần quét đầu với thiết bị này phải dò cấu hình nên hơi lâu, các lô sau sẽ nhanh hơn.
+        </Banner>
       )}
 
       {V293 && (
-        <div className="banner warn">
-          <span className="bi">
-            <Icon name="canhBao" size={18} />
-          </span>
-          <div className="bx">
-            <b>Lỗi máy quét</b>
-            {V293}
-          </div>
-          <div className="actions">
-            <button className="btn sm" onClick={() => V294(null)}>
-              Bỏ qua
-            </button>
-          </div>
-        </div>
+        <Banner tone="danger" className="mb-3" title="Lỗi máy quét" onClose={() => V294(null)}>
+          {V293}
+        </Banner>
       )}
 
       {V291 && (
-        <div className="banner warn">
-          <span className="bi">
-            <Icon name="canhBao" size={18} />
-          </span>
-          <div className="bx">
-            <b>Mất kết nối máy quét giữa lô. Đã lưu {V28t.length} trang.</b>
-            Cắm lại máy quét rồi tiếp tục — không trang nào bị mất.
-          </div>
-          <div className="actions">
-            <button className="btn sm primary" onClick={() => void V2a9(V28t.length + 1)}>
-              Tiếp tục từ trang {V28t.length + 1}
-            </button>
-            <button
-              className="btn sm"
-              onClick={() => {
-                V292(null);
-                V27x("review");
-              }}
-            >
-              Kết thúc lô tại đây
-            </button>
-          </div>
-        </div>
+        <Banner
+          tone="warning"
+          className="mb-3"
+          title={`Mất kết nối máy quét giữa lô. Đã lưu ${V28t.length} trang.`}
+          actions={
+            <>
+              <Button size="sm" variant="primary" onClick={() => void V2a9(V28t.length + 1)}>
+                Tiếp tục từ trang {V28t.length + 1}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  V292(null);
+                  V27x("review");
+                }}
+              >
+                Kết thúc lô
+              </Button>
+            </>
+          }
+        >
+          Cắm lại máy quét rồi tiếp tục, không trang nào bị mất.
+        </Banner>
       )}
 
       {V27w === "capture" && (
         <>
-          <div className="card mb-4">
-            <h3>Thiết lập máy quét</h3>
+          <Card className="mb-4" title="Thiết lập máy quét">
             <div className="setup-grid">
               <div className="setup-row">
                 <label>Quét vào</label>
-                <span className="badge gray">
-                  <Icon name="thuMuc" />
+                <Badge tone={target ? "info" : "gray"}>
+                  <Icon name="thuMuc" size={13} />
                   {target || "Chưa chọn thư mục"}
-                </span>
+                </Badge>
               </div>
               <div className="setup-row">
                 <label>Độ phân giải</label>
@@ -510,48 +504,26 @@ export default function V4p9() {
               </div>
               <div className="setup-row">
                 <label>Máy quét</label>
-                <div className="flex gap-2 items-center">
-                  <select
-                    className="inp"
-                    value={V284 ?? ""}
-                    onChange={(V2b4) => V285(V2b4.target.value)}
-                    disabled={V286}
-                  >
-                    {V286 && <option>Đang tìm máy quét…</option>}
-                    {!V286 && V282.length === 0 && <option>Chưa phát hiện máy quét</option>}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select size="sm" value={V284 ?? ""} onChange={(v) => V285(v)} disabled={V286} className="w-64" aria-label="Máy quét">
+                    {V286 && <option value="">Đang tìm máy quét…</option>}
+                    {!V286 && V282.length === 0 && <option value="">Chưa phát hiện máy quét</option>}
                     {V282.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                         {s.connected ? "" : " (mất kết nối)"}
                       </option>
                     ))}
-                  </select>
-                  <button className="btn sm" onClick={V29o} disabled={V286}>
-                    {V286 ? (
-                      "Đang tìm…"
-                    ) : (
-                      <>
-                        <Icon name="lamMoi" />
-                        Tìm lại
-                      </>
-                    )}
-                  </button>
+                  </Select>
+                  <Button size="sm" icon="lamMoi" loading={V286} onClick={V29o}>
+                    Tìm lại
+                  </Button>
                   {isTauri() && (
-                    <button
-                      className="btn sm"
-                      onClick={() => void V29r()}
-                      disabled={V28a}
-                      title="Có máy quét mới? Chọn bộ cài driver tải từ web hãng — app sẽ chạy bộ cài kèm quyền quản trị, rồi tự tìm lại."
-                    >
-                      {V28a ? (
-                        "Đang mở bộ cài…"
-                      ) : (
-                        <>
-                          <Icon name="taiVe" />
-                          Cài driver…
-                        </>
-                      )}
-                    </button>
+                    <Tip text="Chọn bộ cài driver tải từ trang hãng, ứng dụng chạy bộ cài rồi tự tìm lại">
+                      <Button size="sm" icon="taiVe" loading={V28a} onClick={() => void V29r()}>
+                        Cài driver
+                      </Button>
+                    </Tip>
                   )}
                 </div>
               </div>
@@ -624,56 +596,29 @@ export default function V4p9() {
                   <label />
                   <div className="enhance-steps">
                     {V4p8.map((s) => (
-                      <label key={s.key} className="enhance-step" title={s.hint}>
-                        <input
-                          type="checkbox"
-                          checked={V28n[s.key]}
-                          onChange={(V2b5) =>
-                            V28o((V2b6) => ({ ...V2b6, [s.key]: V2b5.target.checked }))
-                          }
-                        />
-                        {s.label}
-                      </label>
+                      <Tip key={s.key} text={s.hint}>
+                        <span>
+                          <Field label={s.label} inline>
+                            <Checkbox checked={V28n[s.key]} onChange={(v) => V28o((V2b6) => ({ ...V2b6, [s.key]: v }))} />
+                          </Field>
+                        </span>
+                      </Tip>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            <div className="flex gap-2.5 mt-4 items-center">
-              <button
-                className="btn lg primary"
-                disabled={!V27y || V28v || V28x || V286 || !V284}
-                onClick={() => void V2a6()}
-              >
-                <Icon name="quet" />
-                Bắt đầu quét lô (F2)
-              </button>
-              <button
-                className="btn lg"
-                disabled={!V27y || V28v || V28x || V286 || !V284}
-                onClick={() => void V2a6({ maxPages: 1 })}
-              >
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+              <Button variant="primary" icon="quet" disabled={!V27y || V28v || V28x || V286 || !V284} onClick={() => void V2a6()}>
+                Bắt đầu quét lô <Kbd keys={["F2"]} className="ml-1" />
+              </Button>
+              <Button disabled={!V27y || V28v || V28x || V286 || !V284} onClick={() => void V2a6({ maxPages: 1 })}>
                 Quét thử 1 trang
-              </button>
-              {!V27y && (
-                <span className="muted text-sm">
-                  <Icon name="canhBao" /> Tài khoản của bạn không có quyền “Thực hiện quét” — liên
-                  hệ quản trị dự án.
-                </span>
-              )}
-              {!V286 && !V284 && (
-                <span className="muted text-sm">
-                  {V288 ? (
-                    <>
-                      <Icon name="canhBao" /> Lỗi tìm máy quét: {V288}
-                    </>
-                  ) : (
-                    "Chưa phát hiện máy quét — cắm thiết bị rồi bấm “Tìm lại”."
-                  )}
-                </span>
-              )}
+              </Button>
+              {!V27y && <span className="text-sm text-warning-700">Tài khoản của bạn không có quyền quét. Liên hệ quản trị dự án.</span>}
+              {!V286 && !V284 && <span className="text-sm text-fg-subtle">{V288 ? `Lỗi tìm máy quét: ${V288}` : "Chưa phát hiện máy quét. Cắm thiết bị rồi bấm Tìm lại."}</span>}
             </div>
-          </div>
+          </Card>
 
           {(V28v || V28t.length > 0) && (
             <div className="card">
@@ -708,26 +653,17 @@ export default function V4p9() {
                 )}
                 <div className="spacer flex-1" />
                 {V28z ? (
-                  <button
-                    className="btn sm primary"
-                    disabled={!V27y || V28x}
-                    onClick={() => void V2ac()}
-                  >
-                    <Icon name="chay" />
-                    Tiếp tục quét (F3)
-                  </button>
+                  <Button size="sm" variant="primary" icon="chay" disabled={!V27y || V28x} onClick={() => void V2ac()}>
+                    Tiếp tục quét <Kbd keys={["F3"]} />
+                  </Button>
                 ) : (
-                  <button className="btn sm" disabled={!V28v} onClick={() => void V2ab()}>
-                    ‖ Tạm dừng (F3)
-                  </button>
+                  <Button size="sm" icon="tamDung" disabled={!V28v} onClick={() => void V2ab()}>
+                    Tạm dừng <Kbd keys={["F3"]} />
+                  </Button>
                 )}
-                <button
-                  className="btn sm primary"
-                  disabled={V28t.length === 0}
-                  onClick={() => void V2ad()}
-                >
-                  Kết thúc lô (F4)
-                </button>
+                <Button size="sm" variant="primary" disabled={V28t.length === 0} onClick={() => void V2ad()}>
+                  Kết thúc lô <Kbd keys={["F4"]} />
+                </Button>
               </div>
               <div className="thumbs">
                 {V28t.map((p) => {
@@ -796,23 +732,12 @@ export default function V4p9() {
               {V29g.size > 0 && (
                 <div className="flex items-center gap-2.5 mt-2.5 flex-wrap">
                   <span className="badge info">{V29g.size} ảnh đã chọn</span>
-                  <button
-                    className="btn sm primary"
-                    disabled={V29k || !V27s}
-                    onClick={() => void V2aj()}
-                  >
-                    {V29k ? (
-                      "Đang gộp…"
-                    ) : (
-                      <>
-                        <Icon name="gop" />
-                        Gộp thành PDF
-                      </>
-                    )}
-                  </button>
-                  <button className="btn sm" onClick={() => V29h(new Set())}>
+                  <Button size="sm" variant="primary" icon="gop" loading={V29k} disabled={!V27s} onClick={() => void V2aj()}>
+                    Gộp thành PDF
+                  </Button>
+                  <Button size="sm" onClick={() => V29h(new Set())}>
                     Bỏ chọn
-                  </button>
+                  </Button>
                   {!V27s && (
                     <span className="muted text-sm">Cần quét vào một hồ sơ để gộp PDF.</span>
                   )}
@@ -823,9 +748,9 @@ export default function V4p9() {
                   <span className={`muted text-sm${V29m.tone === "err" ? " text-danger-700" : ""}`}>
                     <Icon size={13} name={V29m.tone === "ok" ? "duyet" : "canhBao"} /> {V29m.text}{" "}
                     {V29m.pdfPath && (
-                      <button className="btn sm" onClick={() => void V40y(V29m.pdfPath as string)}>
+                      <Button size="sm" onClick={() => void V40y(V29m.pdfPath as string)}>
                         Mở PDF
-                      </button>
+                      </Button>
                     )}
                   </span>
                 </div>
@@ -889,18 +814,9 @@ export default function V4p9() {
 
       {V27w === "review" && (
         <>
-          <div className="banner info">
-            <span className="bi">
-              <Icon name="goi" size={18} />
-            </span>
-            <div className="bx">
-              <b>
-                Rà soát lô{target ? ` · ${target}` : ""} · {V28t.length} trang · {V2b2.length} cảnh
-                báo
-              </b>
-              Sửa cờ, xử lý ảnh, rồi đóng gói.
-            </div>
-          </div>
+          <Banner tone="info" className="mb-3" title={`Soát lô${target ? ` ${target}` : ""}: ${V28t.length} trang, ${V2b2.length} cảnh báo`}>
+            Xem lại trang có cảnh báo, sửa ảnh nếu cần, rồi lưu PDF vào hồ sơ.
+          </Banner>
           <div className="review">
             <div className="preview-pane">
               <div
@@ -919,34 +835,25 @@ export default function V4p9() {
                     : undefined
                 }
               />
-              <div className="pager">
-                <span className="pg" onClick={() => V296((c) => Math.max(1, c - 1))}>
-                  <Icon name="truoc" size={14} label="Trang trước" />
-                </span>
-                <span className="pg cur">{V295}</span>
-                <span className="pg" onClick={() => V296((c) => Math.min(V28t.length, c + 1))}>
-                  <Icon name="sau" size={14} label="Trang sau" />
-                </span>
-                <span className="muted ml-2">
+              <div className="mt-2 flex items-center gap-2">
+                <IconButton label="Trang trước" icon="truoc" size="sm" variant="secondary" disabled={V295 <= 1} onClick={() => V296((c) => Math.max(1, c - 1))} />
+                <span className="text-sm tabular-nums">
                   Trang {V295} / {V28t.length}
                 </span>
+                <IconButton label="Trang sau" icon="sau" size="sm" variant="secondary" disabled={V295 >= V28t.length} onClick={() => V296((c) => Math.min(V28t.length, c + 1))} />
               </div>
             </div>
             <div>
-              <div className="card mb-3.5">
-                <h3>Cảnh báo ({V2b2.length})</h3>
+              <Card className="mb-3.5" title={`Cảnh báo (${V2b2.length})`}>
                 {V2b2.length === 0 ? (
-                  <p className="muted my-2 mx-0">
-                    Không có cảnh báo — mọi trang đúng khổ và DPI ∈ {"{300, 600}"}.
-                  </p>
+                  <p className="text-sm text-fg-subtle">Không có cảnh báo. Mọi trang đúng khổ và đạt 300 hoặc 600 DPI.</p>
                 ) : (
                   <>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
+                    <div className="mb-2 flex flex-wrap gap-1.5">
                       {V2b2.map((p) => (
-                        <button key={p.index} className="badge warn" onClick={() => V296(p.index)}>
-                          <Icon name="canhBao" />
+                        <Button key={p.index} size="sm" icon="canhBao" onClick={() => V296(p.index)} className={V295 === p.index ? "border-warning-300 bg-warning-50 text-warning-800" : undefined}>
                           Trang {p.index}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                     {V2b3 && V2az.has(V2b3.index) && (
@@ -954,133 +861,72 @@ export default function V4p9() {
                         Trang {V2b3.index}: khổ {V2b3.paper}
                         {V2b3.paper !== V2av ? ` (lệch khỏi ${V2av})` : ""} · DPI{" "}
                         {V2b3.dpi}
-                        {V2b3.dpiOk ? "" : ` — ngoài {300, 600}`}.
+                        {V2b3.dpiOk ? "" : ", không phải 300 hay 600"}.
                       </p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button className="btn sm primary" onClick={() => goto("editor")}>
-                        <Icon name="anh" />
-                        Mở trình xử lý ảnh
-                      </button>
-                      <button className="btn sm">Quét lại trang</button>
-                      <button className="btn sm">Giữ nguyên</button>
-                      <button className="btn sm">Xóa trang</button>
-                    </div>
+                    <Button size="sm" variant="primary" icon="anh" onClick={() => V2b3 && V298(V2b3.index)}>
+                      Sửa ảnh trang này
+                    </Button>
                   </>
                 )}
-              </div>
+              </Card>
               {V27s ? (
                 V29c ? (
-                  <div className="banner ok items-start">
-                    <span className="bi">
-                      <Icon name="thanhCong" size={18} />
-                    </span>
-                    <div className="bx">
-                      <b>
-                        Đã lưu {V4oj(V29c.pdfPath) && <>văn bản số {V4oj(V29c.pdfPath)} · </>}
-                        {V29c.pageCount} trang · {(V29c.pdfSize / 1024 / 1024).toFixed(2)} MB
-                      </b>
-                      <span className="muted text-sm break-all">{V29c.pdfPath}</span>
-                      <div className="actions mt-2.5">
-                        <button className="btn sm primary" onClick={() => void V2ai()}>
-                          <Icon name="them" />
-                          Lưu &amp; quét văn bản tiếp
-                        </button>
-                        <button className="btn sm" onClick={() => void V40y(V29c.pdfPath)}>
-                          <Icon name="xem" />
-                          Mở PDF
-                        </button>
-                        <button
-                          className="btn sm"
-                          onClick={() => {
-                            V27t(null);
-                            goto("drive");
-                          }}
-                        >
-                          <Icon name="kho" />
-                          Xem trong Kho
-                        </button>
-                        <button
-                          className="btn sm"
-                          onClick={() => {
-                            V27t(null);
-                            goto("tree");
-                          }}
-                        >
-                          Xong, về Cây thư mục
-                        </button>
-                      </div>
+                  <Card tone="info" title={`Đã lưu ${V4oj(V29c.pdfPath) ? `văn bản số ${V4oj(V29c.pdfPath)}, ` : ""}${V29c.pageCount} trang, ${(V29c.pdfSize / 1024 / 1024).toFixed(2)} MB`}>
+                    <p className="mb-3 break-all text-sm text-fg-subtle">{V29c.pdfPath}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="primary" icon="them" onClick={() => void V2ai()}>
+                        Quét văn bản tiếp
+                      </Button>
+                      <Button size="sm" icon="xem" onClick={() => void V40y(V29c.pdfPath)}>
+                        Mở PDF
+                      </Button>
+                      <Button
+                        size="sm"
+                        icon="kho"
+                        onClick={() => {
+                          V27t(null);
+                          goto("drive");
+                        }}
+                      >
+                        Xem trong Kho
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          V27t(null);
+                          goto("tree");
+                        }}
+                      >
+                        Về Cây thư mục
+                      </Button>
                     </div>
-                  </div>
+                  </Card>
                 ) : (
                   <>
-                    <div className="banner info mb-2.5">
-                      <span className="bi">
-                        <Icon name="hoSo" size={18} />
-                      </span>
-                      <div className="bx">
-                        <b>Lưu vào hồ sơ: {V27s.label}</b>
-                        PDF + ảnh JPEG sẽ lưu vào thư mục theo cơ quan / hộp / hồ sơ số.
-                      </div>
-                    </div>
+                    <Banner tone="info" className="mb-2.5" title={`Lưu vào hồ sơ: ${V27s.label}`}>
+                      PDF và ảnh JPEG lưu vào thư mục theo cơ quan, hộp, hồ sơ số.
+                    </Banner>
                     {V29e && (
-                      <div className="banner err mb-2.5">
-                        <span className="bi">
-                          <Icon name="canhBao" size={18} />
-                        </span>
-                        <div className="bx">
-                          <b>Đóng gói lỗi</b>
-                          {V29e}
-                        </div>
-                      </div>
+                      <Banner tone="danger" className="mb-2.5" title="Lưu PDF lỗi">
+                        {V29e}
+                      </Banner>
                     )}
-                    <button
-                      className="btn primary lg w-full justify-center"
-
-                      disabled={V29a || V28t.length === 0 || !!V28p}
-                      onClick={() => void V2ae()}
-                    >
-                      {V29a ? (
-                        "Đang đóng gói…"
-                      ) : V28p ? (
-                        <>
-                          <Icon name="tuDong" />
-                          Đang làm sạch ảnh {V28p.done}/{V28p.total}…
-                        </>
-                      ) : (
-                        <>
-                          <Icon name="luu" />
-                          Đóng gói & lưu PDF vào hồ sơ {V27s.hoSo.hoSoSo}
-                        </>
-                      )}
-                    </button>
+                    <Button variant="primary" icon="luu" className="w-full" loading={V29a} disabled={V28t.length === 0 || !!V28p} onClick={() => void V2ae()}>
+                      {V28p ? `Đang làm sạch ảnh ${V28p.done}/${V28p.total}…` : `Lưu PDF vào hồ sơ ${V27s.hoSo.hoSoSo}`}
+                    </Button>
                   </>
                 )
               ) : (
-                <button
-                  className="btn primary lg w-full justify-center"
-                  disabled={!!V28p}
-                  onClick={() => goto("upload")}
-                >
-                  {V28p ? (
-                    <>
-                      <Icon name="tuDong" />
-                      Đang làm sạch ảnh {V28p.done}/{V28p.total}…
-                    </>
-                  ) : (
-                    <>
-                      <Icon name="duyet" />
-                      Đóng gói & đưa vào hàng tải lên
-                    </>
-                  )}
-                </button>
+                <Button variant="primary" icon="duyet" className="w-full" disabled={!!V28p} onClick={() => goto("upload")}>
+                  {V28p ? `Đang làm sạch ảnh ${V28p.done}/${V28p.total}…` : "Đưa vào hàng tải lên"}
+                </Button>
               )}
             </div>
           </div>
-          <div className="sep" />
-          <button className="btn" onClick={() => V27x("capture")}>
-            ← Quay lại lô đang quét
-          </button>
+          <Button className="mt-3" icon="truoc" onClick={() => V27x("capture")}>
+            Quay lại lô đang quét
+          </Button>
         </>
       )}
 

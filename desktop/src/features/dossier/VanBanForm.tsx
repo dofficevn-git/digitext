@@ -1,152 +1,61 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Hộp thoại thêm / sửa văn bản trong hồ sơ (bảng SQLite trên máy, tự đẩy sang chỉnh lý).
 
-import Modal, { V49j } from "@/ui/Modal";
 import type { V4bp } from "@/api/dossier";
+import { Button, Dialog, Field, FormGrid, Input, Textarea } from "@/ui";
 
-export default function V4ck({
-  mode: Vwa,
-  draft: Vwb,
-  onChange: Vwc,
-  onClose: Vwd,
-  onSave: Vwe,
-}: {
-  mode: "add" | "edit";
-  draft: V4bp;
-  onChange: (Vwf: Partial<V4bp>) => void;
-  onClose: () => void;
-  onSave: () => void;
-}) {
-  const Vwg = (v: string): number | undefined => {
+export default function V4ck({ mode, draft, onChange, onClose, onSave, busy }: { mode: "add" | "edit"; draft: V4bp; onChange: (p: Partial<V4bp>) => void; onClose: () => void; onSave: () => void; busy?: boolean }) {
+  const num = (v: string): number | undefined => {
     const t = v.trim();
     if (t === "") return undefined;
-    const n = Number.parseInt(t, 10);
-    return Number.isNaN(n) ? undefined : n;
+    const k = Number.parseInt(t, 10);
+    return Number.isNaN(k) ? undefined : k;
   };
-
+  const text = (key: keyof V4bp, label: string, span?: boolean) => (
+    <Field label={label} className={span ? "col-span-2" : undefined}>
+      <Input value={(draft[key] as string | undefined) ?? ""} onChange={(e) => onChange({ [key]: e.target.value } as Partial<V4bp>)} />
+    </Field>
+  );
   return (
-    <Modal
-      title={Vwa === "add" ? "Thêm văn bản" : "Sửa văn bản"}
-      onClose={Vwd}
-      onSave={Vwe}
-    >
-      <V49j label="Số thứ tự (bỏ trống = tự đánh số)">
-        <input
-          className="inp"
-          type="number"
-          value={Vwb.thuTu ? Vwb.thuTu : ""}
-          onChange={(Vwh) => Vwc({ thuTu: Vwg(Vwh.target.value) ?? 0 })}
-        />
-      </V49j>
-      <V49j label="Loại văn bản">
-        <input
-          className="inp"
-          value={Vwb.loaiVanBan ?? ""}
-          onChange={(Vwi) => Vwc({ loaiVanBan: Vwi.target.value })}
-        />
-      </V49j>
-      <V49j label="Số/ký hiệu">
-        <input
-          className="inp"
-          value={Vwb.soKyHieu ?? ""}
-          onChange={(Vwj) => Vwc({ soKyHieu: Vwj.target.value })}
-        />
-      </V49j>
-      <V49j label="Ngày tháng">
-        <input
-          className="inp"
-          type="date"
-          value={Vwb.ngayThang ?? ""}
-          onChange={(Vwk) => Vwc({ ngayThang: Vwk.target.value })}
-        />
-      </V49j>
-      <V49j label="Cơ quan ban hành">
-        <input
-          className="inp"
-          value={Vwb.coQuanBanHanh ?? ""}
-          onChange={(Vwl) => Vwc({ coQuanBanHanh: Vwl.target.value })}
-        />
-      </V49j>
-      <V49j label="Trích yếu nội dung">
-        <input
-          className="inp"
-          value={Vwb.trichYeu ?? ""}
-          onChange={(Vwm) => Vwc({ trichYeu: Vwm.target.value })}
-        />
-      </V49j>
-      <V49j label="Tờ số / Trang bắt đầu / Số trang">
-        <div className="flex gap-2">
-          <input
-            className="inp"
-            type="number"
-            placeholder="Tờ số"
-            value={Vwb.toSo ?? ""}
-            onChange={(Vwn) => Vwc({ toSo: Vwg(Vwn.target.value) })}
-          />
-          <input
-            className="inp"
-            type="number"
-            placeholder="Trang BĐ"
-            value={Vwb.trangSo ?? ""}
-            onChange={(Vwo) => Vwc({ trangSo: Vwg(Vwo.target.value) })}
-          />
-          <input
-            className="inp"
-            type="number"
-            placeholder="Số trang"
-            value={Vwb.soTrang ?? ""}
-            onChange={(Vwp) => Vwc({ soTrang: Vwg(Vwp.target.value) })}
-          />
-        </div>
-      </V49j>
-      <V49j label="Ngôn ngữ">
-        <input
-          className="inp"
-          value={Vwb.ngonNgu ?? ""}
-          onChange={(Vwq) => Vwc({ ngonNgu: Vwq.target.value })}
-        />
-      </V49j>
-      <V49j label="Chế độ sử dụng">
-        <input
-          className="inp"
-          value={Vwb.cheDoSuDung ?? ""}
-          onChange={(Vwr) => Vwc({ cheDoSuDung: Vwr.target.value })}
-        />
-      </V49j>
-      <V49j label="Độ tin cậy">
-        <input
-          className="inp"
-          value={Vwb.doTinCay ?? ""}
-          onChange={(Vws) => Vwc({ doTinCay: Vws.target.value })}
-        />
-      </V49j>
-      <V49j label="Bút tích">
-        <input
-          className="inp"
-          value={Vwb.butTich ?? ""}
-          onChange={(Vwt) => Vwc({ butTich: Vwt.target.value })}
-        />
-      </V49j>
-      <V49j label="Tình trạng vật lý">
-        <input
-          className="inp"
-          value={Vwb.tinhTrangVatLy ?? ""}
-          onChange={(Vwu) => Vwc({ tinhTrangVatLy: Vwu.target.value })}
-        />
-      </V49j>
-      <V49j label="Tài liệu số">
-        <input
-          className="inp"
-          value={Vwb.taiLieuSo ?? ""}
-          onChange={(Vwv) => Vwc({ taiLieuSo: Vwv.target.value })}
-        />
-      </V49j>
-      <V49j label="Ghi chú">
-        <input
-          className="inp"
-          value={Vwb.ghiChu ?? ""}
-          onChange={(Vww) => Vwc({ ghiChu: Vww.target.value })}
-        />
-      </V49j>
-    </Modal>
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={mode === "add" ? "Thêm văn bản" : "Sửa văn bản"} size="lg" footer={<><Button onClick={onClose}>Huỷ</Button><Button variant="primary" loading={busy} onClick={onSave}>Lưu</Button></>}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave();
+        }}
+      >
+        <FormGrid cols={2}>
+          <Field label="Số thứ tự" hint="Để trống thì tự đánh số">
+            <Input type="number" value={draft.thuTu ? draft.thuTu : ""} onChange={(e) => onChange({ thuTu: num(e.target.value) ?? 0 })} autoFocus />
+          </Field>
+          {text("loaiVanBan", "Loại văn bản")}
+          {text("soKyHieu", "Số, ký hiệu")}
+          <Field label="Ngày tháng" hint="dd/mm/yyyy">
+            <Input value={draft.ngayThang ?? ""} onChange={(e) => onChange({ ngayThang: e.target.value })} placeholder="dd/mm/yyyy" />
+          </Field>
+          {text("coQuanBanHanh", "Cơ quan ban hành", true)}
+          <Field label="Trích yếu" className="col-span-2">
+            <Textarea rows={3} value={draft.trichYeu ?? ""} onChange={(e) => onChange({ trichYeu: e.target.value })} />
+          </Field>
+          <Field label="Tờ số">
+            <Input type="number" value={draft.toSo ?? ""} onChange={(e) => onChange({ toSo: num(e.target.value) })} />
+          </Field>
+          <Field label="Số trang">
+            <Input type="number" value={draft.soTrang ?? ""} onChange={(e) => onChange({ soTrang: num(e.target.value) })} />
+          </Field>
+          <Field label="Trang số">
+            <Input type="number" value={draft.trangSo ?? ""} onChange={(e) => onChange({ trangSo: num(e.target.value) })} />
+          </Field>
+          {text("ngonNgu", "Ngôn ngữ")}
+          {text("cheDoSuDung", "Chế độ sử dụng")}
+          {text("doTinCay", "Độ tin cậy")}
+          {text("butTich", "Bút tích")}
+          {text("tinhTrangVatLy", "Tình trạng vật lý")}
+          {text("taiLieuSo", "Tài liệu số")}
+          {text("ghiChu", "Ghi chú", true)}
+        </FormGrid>
+        <button type="submit" className="hidden" />
+      </form>
+    </Dialog>
   );
 }

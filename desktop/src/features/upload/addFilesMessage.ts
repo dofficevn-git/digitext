@@ -16,7 +16,7 @@ export function V4ps(r: V43e): string {
 
   let m = `Đã thêm ${V2c3.join(", ")} — dự án ${r.projectId}.`;
   if (r.added > 0)
-    m += " Bấm “② Đẩy lên máy chủ” để gửi đi.";
+    m += " Bấm Đẩy lên máy chủ để gửi đi.";
   if (r.notes.length) m += ` (${r.notes.join("; ")})`;
   return m;
 }
