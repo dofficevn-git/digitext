@@ -84,10 +84,13 @@ const ITEM_SELECT: &str = "SELECT i.id, i.package_id, i.document_id, i.ord, i.st
 pub struct Candidate {
     pub id: Uuid,
     pub rel_path: Option<String>,
+    /// Đã có trường bóc máy chưa (chưa có → tạo gói sẽ tự xếp hàng bóc).
+    pub has_fields: bool,
 }
 
-/// Tài liệu trong dự án ĐÃ bóc trường, CHƯA nằm trong gói xác nhận dang dở, trong phạm vi
-/// `prefixes` (tiền tố rel_path; rỗng = cả dự án). Sắp theo đường dẫn để chia liền mạch theo hồ sơ.
+/// Tài liệu trong dự án ĐÃ OCR xong (có chữ để bóc trường), CHƯA nằm trong gói xác nhận dang dở,
+/// trong phạm vi `prefixes` (tiền tố rel_path; rỗng = cả dự án). Sắp theo đường dẫn để chia liền
+/// mạch theo hồ sơ.
 pub async fn candidates(pool: &PgPool, project_id: Uuid, prefixes: &[String]) -> sqlx::Result<Vec<Candidate>> {
     let pats: Vec<String> = prefixes
         .iter()
@@ -95,9 +98,9 @@ pub async fn candidates(pool: &PgPool, project_id: Uuid, prefixes: &[String]) ->
         .filter(|p| !p.is_empty())
         .collect();
     sqlx::query_as::<_, Candidate>(
-        "SELECT d.id, d.rel_path FROM documents d \
-         WHERE d.project_id = $1 AND d.status <> 'disposed' \
-           AND EXISTS (SELECT 1 FROM ocr_fields f WHERE f.document_id = d.id) \
+        "SELECT d.id, d.rel_path, EXISTS (SELECT 1 FROM ocr_fields f WHERE f.document_id = d.id) AS has_fields \
+         FROM documents d \
+         WHERE d.project_id = $1 AND d.status NOT IN ('uploaded', 'ocr_pending', 'disposed') \
            AND NOT EXISTS (SELECT 1 FROM work_items i WHERE i.document_id = d.id AND i.kind = 'xac_nhan' \
                            AND i.status NOT IN ('approved', 'cancelled')) \
            AND (cardinality($2::text[]) = 0 OR EXISTS (SELECT 1 FROM unnest($2::text[]) p \
@@ -113,7 +116,7 @@ pub async fn candidates(pool: &PgPool, project_id: Uuid, prefixes: &[String]) ->
 /// Mục đã xác nhận (done/redone/checked/approved) của một gói xác nhận — ứng viên cho gói kiểm tra.
 pub async fn done_candidates(pool: &PgPool, source_package: Uuid) -> sqlx::Result<Vec<Candidate>> {
     sqlx::query_as::<_, Candidate>(
-        "SELECT d.id, d.rel_path FROM work_items i JOIN documents d ON d.id = i.document_id \
+        "SELECT d.id, d.rel_path, true AS has_fields FROM work_items i JOIN documents d ON d.id = i.document_id \
          WHERE i.package_id = $1 AND i.status IN ('done', 'redone', 'checked_ok', 'checked_err', 'approved') \
          ORDER BY i.ord",
     )
@@ -649,7 +652,7 @@ pub async fn staff_work(pool: &PgPool, projects: Option<&[Uuid]>, from: Option<D
 mod tests {
     use super::*;
     fn c(id: u128, hs: &str) -> Candidate {
-        Candidate { id: Uuid::from_u128(id), rel_path: Some(hs.to_owned()) }
+        Candidate { id: Uuid::from_u128(id), rel_path: Some(hs.to_owned()), has_fields: true }
     }
     #[test]
     fn chia_theo_ho_so_khong_cat_giua_ho_so() {

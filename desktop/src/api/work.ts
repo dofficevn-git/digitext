@@ -86,6 +86,8 @@ export interface CreatePackageReq {
 export interface CreatePackageResp {
   available: number;
   sizes: number[];
+  /** Tài liệu chưa bóc trường trong số được giao — máy tự xếp hàng bóc khi tạo gói. */
+  toExtract: number;
   packageIds: string[];
 }
 
