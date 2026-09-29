@@ -1,18 +1,21 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Lập hồ sơ điện tử (chỉnh lý, bản sao đồng bộ): lọc như bản cũ (phông, phòng ban, mảng, THBQ đa chọn,
-// vĩnh viễn / giữ lại / hết THBQ, trùng thừa, tìm), lưới 50 dòng, thêm / sửa / xoá, văn bản của hồ sơ.
+// Lập hồ sơ điện tử (chỉnh lý, bản sao đồng bộ): lọc theo phông / phòng ban / mảng / THBQ / trạng thái / trùng thừa,
+// tìm, bảng 50 dòng sắp xếp phía máy chủ, thêm / sửa / xoá, nhập Excel, văn bản của hồ sơ.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isTauri } from "@/api/ipc";
-import { V41p } from "@/live/useLive";
+import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
 import { clDelete, clHoSoList, clRemote, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
-import { ChuaChonDuAn, errText, Field, n, Select, SyncDot, syncLabel, THBQ_BADGE, useClCatalog, useClSync } from "./common";
+import { CanMayChu, Chip, ChuaChonDuAn, n, Select, SyncBadge, SyncBadgeRow, tenPhong, THBQ_BADGE, useClCatalog, useClSync } from "./common";
 import HoSoForm from "./HoSoForm";
 import VanBanPanel from "./VanBanPanel";
 import { docMauLapHoSo, xuatMauLapHoSo } from "./excel";
+import { Badge, Banner, Button, Card, confirm, ErrorBanner, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type SortState } from "@/ui";
 
 const PAGE = 50;
+const SORT_KEYS: Record<string, ClHoSoFilter["sort"]> = { so_tam: "so_tam", ho_so_so: "ho_so_so", ten_mang: "mang", ten_thbq: "thbq", ngay_ket_thuc: "ngay_kt" };
+const AN_MAC_DINH = ["ma_ho_so", "so_to"];
 
 export default function LapHoSoView() {
   const { session } = V460();
@@ -32,20 +35,26 @@ export default function LapHoSoView() {
   const [trungThua, setTrungThua] = useState(false);
   const [q, setQ] = useState("");
   const [qApplied, setQApplied] = useState("");
-  const [page, setPage] = useState(0);
-  const [sort, setSort] = useState<ClHoSoFilter["sort"]>("so_tam");
-  const [desc, setDesc] = useState(false);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState | null>({ key: "so_tam", dir: "asc" });
+  const [anCot, setAnCot] = useState<Set<string>>(() => new Set(AN_MAC_DINH));
 
-  const [rows, setRows] = useState<ClRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [err, setErr] = useState<string | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [form, setForm] = useState<{ row: ClRow | null } | null>(null);
   const [open, setOpen] = useState<ClRow | null>(null);
+  const [nhapKq, setNhapKq] = useState<{ text: string; errors: string[] } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!phongId && cat.phong.length > 0) setPhongId(str(cat.phong[0], "id"));
   }, [cat.phong, phongId]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setQApplied(q.trim());
+      setPage(1);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
   const phongBans = useMemo(() => cat.phong_ban.filter((p) => str(p, "phong_id") === phongId), [cat.phong_ban, phongId]);
   const mangs = useMemo(() => cat.mang.filter((m) => str(m, "phong_ban_id") === phongBanId), [cat.mang, phongBanId]);
@@ -60,203 +69,231 @@ export default function LapHoSoView() {
       status: status || undefined,
       trungThua: trungThua ? true : undefined,
       q: qApplied || undefined,
-      sort,
-      desc,
+      sort: (sort && SORT_KEYS[sort.key]) || "so_tam",
+      desc: sort?.dir === "desc",
       limit: PAGE,
-      offset: page * PAGE,
+      offset: (page - 1) * PAGE,
     }),
-    [phongId, phongBanId, mangId, thbqIds, coThoiHan, status, trungThua, qApplied, sort, desc, page],
+    [phongId, phongBanId, mangId, thbqIds, coThoiHan, status, trungThua, qApplied, sort, page],
   );
 
-  const load = useCallback(async () => {
-    try {
-      const r = await clHoSoList(filter);
-      setRows(r.rows);
-      setTotal(r.total);
-      setErr(null);
-      if (open) {
-        const again = r.rows.find((x) => x.id === open.id);
-        if (again) setOpen(again);
-      }
-    } catch (e) {
-      setErr(errText(e));
+  const loader = useCallback(() => (isTauri() ? clHoSoList(filter) : Promise.resolve({ rows: [] as ClRow[], total: 0 })), [filter]);
+  const { data, error, loading, reload } = V41t(loader, { topics: ["chinhLy"], errorText: () => "Không tải được danh sách hồ sơ." });
+  const rows = useMemo(() => data?.rows ?? [], [data]);
+  const total = data?.total ?? 0;
+  useEffect(() => {
+    if (open) {
+      const again = rows.find((x) => x.id === open.id);
+      if (again && again !== open) setOpen(again);
     }
-  }, [filter, open]);
-  const { reload } = V41p(load, { topics: ["chinhLy"], enabled: isTauri() });
+  }, [rows, open]);
+
+  const datLoc = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPage(1);
+  };
 
   const xoaChon = async () => {
     if (sel.size === 0) return;
-    if (!window.confirm(`Xoá ${sel.size} hồ sơ đã chọn (kèm văn bản bên trong)? Có thể khôi phục trên máy chủ.`)) return;
+    const ok = await confirm({ title: `Xoá ${n(sel.size)} hồ sơ đã chọn?`, body: "Văn bản bên trong bị xoá theo. Có thể khôi phục trên máy chủ.", confirmLabel: "Xoá", danger: true });
+    if (!ok) return;
     try {
       for (const id of sel) await clDelete("ho_so", id);
       setSel(new Set());
+      toast.success(`Đã xoá ${n(sel.size)} hồ sơ.`);
       reload();
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "xoá hồ sơ");
     }
   };
 
-  const pages = Math.max(1, Math.ceil(total / PAGE));
-  const sl = syncLabel(sync);
-  const [importMsg, setImportMsg] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const phong = cat.phong.find((p) => p.id === phongId);
   const nhapExcel = async (f: File) => {
-    setImportMsg(null);
+    setNhapKq(null);
     try {
       const d = await docMauLapHoSo(f);
       if (d.maPhong && phong && d.maPhong.toLowerCase() !== str(phong, "ma_du_an").toLowerCase()) {
-        if (!window.confirm(`Ô A1 của tệp ghi mã phông “${d.maPhong}” khác phông đang chọn (${str(phong, "ma_du_an")}). Vẫn nhập vào phông đang chọn?`)) return;
+        const ok = await confirm({ title: "Mã phông trong tệp khác phông đang chọn", body: `Ô A1 ghi "${d.maPhong}", phông đang chọn là ${str(phong, "ma_du_an")}. Vẫn nhập vào phông đang chọn?`, confirmLabel: "Nhập" });
+        if (!ok) return;
       }
       if (d.rows.length === 0) {
-        setImportMsg(d.errors[0]?.message ?? "Tệp không có dòng dữ liệu (dữ liệu từ dòng 5).");
+        toast.warning(d.errors[0]?.message ?? "Tệp không có dòng dữ liệu, dữ liệu bắt đầu từ dòng 5.");
         return;
       }
-      const r = await clRemote<{ created: number; updated: number; skipped: number; errors: { row: number; field?: string; message: string }[] }>("POST", "/cl/ho-so/import", {
-        projectId: session?.projectId,
-        phongId,
-        mode: "upsert",
-        rows: d.rows,
-      });
+      const r = await clRemote<{ created: number; updated: number; skipped: number; errors: { row: number; field?: string; message: string }[] }>("POST", "/cl/ho-so/import", { projectId: session?.projectId, phongId, mode: "upsert", rows: d.rows });
       const errs = [...d.errors, ...r.errors.map((e) => ({ row: e.row + 4, message: `${e.field ? e.field + ": " : ""}${e.message}` }))];
-      setImportMsg(`Đã thêm ${n(r.created)}, cập nhật ${n(r.updated)}, bỏ qua ${n(r.skipped)}${errs.length ? ` · ${errs.length} dòng lỗi: ${errs.slice(0, 5).map((e) => `dòng ${e.row} ${e.message}`).join("; ")}` : ""}`);
+      setNhapKq({ text: `Đã thêm ${n(r.created)}, cập nhật ${n(r.updated)}, bỏ qua ${n(r.skipped)}${errs.length ? `, ${errs.length} dòng lỗi` : ""}.`, errors: errs.map((e) => `Dòng ${e.row}: ${e.message}`) });
       reload();
     } catch (e) {
-      setImportMsg(errText(e));
+      notifyError(e, "nhập Excel");
     }
   };
-  const toggleThbq = (id: string) => setThbqIds((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+  const toggleThbq = (id: string) => {
+    setThbqIds((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+    setPage(1);
+  };
 
-  const th = (label: string, key: ClHoSoFilter["sort"], cls = "") => (
-    <th
-      className={`${cls} cursor-pointer select-none`}
-      onClick={() => {
-        if (sort === key) setDesc((d) => !d);
-        else {
-          setSort(key);
-          setDesc(false);
-        }
-        setPage(0);
-      }}
-      title="Bấm để sắp xếp"
-    >
-      {label}
-      {sort === key ? (desc ? " ▾" : " ▴") : ""}
-    </th>
-  );
+  const cols: Column<ClRow>[] = [
+    { key: "_s", header: "", width: 80, cell: (r) => <SyncBadgeRow sync={str(r, "sync")} /> },
+    { key: "ma_ho_so", header: "Mã hồ sơ", className: "text-xs text-fg-subtle", cell: (r) => str(r, "ma_ho_so") },
+    { key: "so_tam", header: "Số tạm", sortable: true, cell: (r) => str(r, "so_tam") },
+    { key: "ho_so_so", header: "Hồ sơ số", sortable: true, align: "right", width: 90, cell: (r) => str(r, "ho_so_so") },
+    {
+      key: "tieu_de",
+      header: "Tiêu đề",
+      className: "max-w-[460px] whitespace-normal",
+      cell: (r) => (
+        <>
+          {str(r, "tieu_de") || <span className="text-fg-subtle">Chưa có tiêu đề</span>}
+          {r.trung_thua === true && (
+            <Badge tone="gray" className="ml-1">
+              trùng thừa
+            </Badge>
+          )}
+        </>
+      ),
+    },
+    { key: "ten_mang", header: "Mảng", sortable: true, className: "text-sm", cell: (r) => str(r, "ten_mang") },
+    { key: "ten_thbq", header: "THBQ", sortable: true, className: "text-sm", cell: (r) => str(r, "ten_thbq") },
+    { key: "so_to", header: "Số tờ", align: "right", width: 70, cell: (r) => str(r, "so_to") },
+    { key: "ngay_bat_dau", header: "Bắt đầu", width: 100, cell: (r) => str(r, "ngay_bat_dau") },
+    { key: "ngay_ket_thuc", header: "Kết thúc", sortable: true, width: 100, cell: (r) => str(r, "ngay_ket_thuc") },
+    {
+      key: "thbq_status",
+      header: "Trạng thái",
+      width: 110,
+      cell: (r) => {
+        const st = str(r, "thbq_status");
+        return st ? <Badge tone={THBQ_BADGE[st] ?? "gray"}>{THBQ_STATUS_LABEL[st] ?? st}</Badge> : null;
+      },
+    },
+    { key: "so_van_ban", header: "Văn bản", align: "right", width: 80, cell: (r) => str(r, "so_van_ban") },
+  ];
+  const colsHien = cols.filter((c) => !anCot.has(c.key));
+  const TEN_COT: Record<string, string> = { ma_ho_so: "Mã hồ sơ", so_to: "Số tờ", ngay_bat_dau: "Bắt đầu", so_van_ban: "Văn bản", ten_mang: "Mảng" };
 
   return (
-    <>
-      <div className="page-head">
-        <h2>Lập hồ sơ điện tử</h2>
-        <div className="sub">
-          · hồ sơ tạm trong dự án {session?.projectName ?? ""} · làm được khi mất mạng, tự đồng bộ ·{" "}
-          <span className={sl.dot === "ok" ? "text-success-700" : sl.dot === "err" ? "text-danger" : "text-warning-700"} title={sl.title}>
-            {sl.text}
-          </span>
-        </div>
-      </div>
-      <ChuaChonDuAn />
-      {catErr && <div className="card mt-3.5 text-danger">{catErr}</div>}
-      {sync?.phase === "offline" && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — thay đổi được giữ ở máy và sẽ tự đẩy lên máy chủ khi có mạng.</div>}
-      {cat.phong.length === 0 && !catErr && (
-        <div className="card mt-3.5 muted">
-          Chưa có phông nào trong dự án. Quản trị tạo phông ở Quản lý danh mục (khi có kết nối máy chủ), hoặc chờ đồng bộ kéo danh mục về.
-        </div>
-      )}
-      <div className="card mt-3.5">
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
-          <Field label="Phông">
-            <Select value={phongId} onChange={(v) => { setPhongId(v); setPhongBanId(""); setMangId(""); setPage(0); }} rows={cat.phong} render={(r) => `${str(r, "ma_du_an")} — ${str(r, "ten")}`} empty="— Tất cả phông —" />
-          </Field>
-          <Field label="Phòng ban">
-            <Select value={phongBanId} onChange={(v) => { setPhongBanId(v); setMangId(""); setPage(0); }} rows={phongBans} empty="— Tất cả —" />
-          </Field>
-          <Field label="Mảng công việc">
-            <Select value={mangId} onChange={(v) => { setMangId(v); setPage(0); }} rows={mangs} empty="— Tất cả —" disabled={!phongBanId} />
-          </Field>
-          <Field label="Trạng thái THBQ">
-            <select className="w-full" value={status} onChange={(e) => { setStatus(e.target.value as typeof status); setPage(0); }}>
-              <option value="">— Tất cả —</option>
-              <option value="VV">Vĩnh viễn</option>
-              <option value="GL">Giữ lại</option>
-              <option value="HET">Hết thời hạn bảo quản</option>
-            </select>
-          </Field>
-          <Field label="Tìm (số tạm, tiêu đề, số HS, mã HS)">
+    <section className="view active">
+      <PageHeader
+        title="Lập hồ sơ điện tử"
+        description={`Hồ sơ tạm trong dự án ${session?.projectName ?? ""}. Làm được khi mất mạng, tự đồng bộ khi có máy chủ.`}
+        meta={<SyncBadge sync={sync} />}
+        actions={
+          <>
+            {canCreate && (
+              <Button variant="primary" icon="them" disabled={!phongId} onClick={() => setForm({ row: null })}>
+                Thêm hồ sơ
+              </Button>
+            )}
+            <Menu
+              items={[
+                { label: sel.size > 0 ? `Xoá ${n(sel.size)} hồ sơ đã chọn` : "Xoá hồ sơ đã chọn", icon: "xoa", danger: true, disabled: !canDelete || sel.size === 0, onSelect: () => void xoaChon() },
+                "-",
+                { label: "Tải mẫu Excel lập hồ sơ", icon: "tepExcel", disabled: !phong, onSelect: () => void xuatMauLapHoSo(str(phong, "ma_du_an"), cat.thbq).catch((e) => notifyError(e, "tải mẫu")) },
+                { label: "Nhập hồ sơ từ Excel", icon: "nhapTep", hint: "Cần máy chủ", disabled: !canCreate || !phongId || sync?.phase === "offline", onSelect: () => fileRef.current?.click() },
+                "-",
+                ...Object.entries(TEN_COT).map(([k, l]) => ({ label: `${anCot.has(k) ? "Hiện" : "Ẩn"} cột ${l}`, onSelect: () => setAnCot((s) => { const x = new Set(s); if (!x.delete(k)) x.add(k); return x; }) })),
+              ]}
+            />
             <input
-              className="inp w-full"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setQApplied(q.trim());
-                  setPage(0);
-                }
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              hidden
+              aria-hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void nhapExcel(f);
               }}
-              placeholder="gõ rồi Enter"
+            />
+          </>
+        }
+      />
+      <ChuaChonDuAn />
+      {catErr && <ErrorBanner error={catErr} className="mb-4" />}
+      <CanMayChu sync={sync} viec="Thay đổi được giữ ở máy và tự đẩy lên máy chủ khi có mạng." />
+      {cat.phong.length === 0 && !catErr && <Banner tone="info" className="mb-4">Chưa có phông nào trong dự án. Quản trị tạo phông ở Danh mục khi có máy chủ, hoặc chờ đồng bộ kéo danh mục về.</Banner>}
+      {nhapKq && (
+        <Banner tone={nhapKq.errors.length ? "warning" : "success"} className="mb-4" onClose={() => setNhapKq(null)} detail={nhapKq.errors.length ? nhapKq.errors.join("\n") : undefined}>
+          {nhapKq.text}
+        </Banner>
+      )}
+
+      <Card className="mb-4" padding="sm">
+        <FormGrid cols={4}>
+          <Field label="Phông">
+            <Select
+              size="sm"
+              value={phongId}
+              onChange={(v) => {
+                setPhongId(v);
+                setPhongBanId("");
+                setMangId("");
+                setPage(1);
+              }}
+              rows={cat.phong}
+              render={tenPhong}
+              empty="Tất cả phông"
             />
           </Field>
-        </div>
-        <div className="flex gap-2 flex-wrap mt-2 items-center text-sm">
-          <span className="muted">THBQ:</span>
-          <label className="flex items-center gap-1 border border-border-subtle rounded px-2 py-0.5">
-            <input type="checkbox" checked={coThoiHan} onChange={(e) => { setCoThoiHan(e.target.checked); setPage(0); }} /> Từ 5 tới 70 năm (có thời hạn)
-          </label>
+          <Field label="Phòng ban">
+            <Select
+              size="sm"
+              value={phongBanId}
+              onChange={(v) => {
+                setPhongBanId(v);
+                setMangId("");
+                setPage(1);
+              }}
+              rows={phongBans}
+              empty="Tất cả"
+            />
+          </Field>
+          <Field label="Mảng công việc">
+            <Select size="sm" value={mangId} onChange={datLoc(setMangId)} rows={mangs} empty="Tất cả" disabled={!phongBanId} />
+          </Field>
+          <Field label="Trạng thái THBQ">
+            <UiSelect size="sm" value={status} onChange={(v) => datLoc(setStatus)(v as typeof status)} placeholder="Tất cả" options={[{ value: "VV", label: "Vĩnh viễn" }, { value: "GL", label: "Giữ lại" }, { value: "HET", label: "Hết thời hạn bảo quản" }]} />
+          </Field>
+        </FormGrid>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Input size="sm" prefix="tim" className="w-72" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm số tạm, tiêu đề, số hoặc mã hồ sơ" aria-label="Tìm hồ sơ" />
+          <span className="text-sm text-fg-subtle">THBQ:</span>
+          <Chip on={coThoiHan} onClick={() => datLoc(setCoThoiHan)(!coThoiHan)}>
+            Có thời hạn (5 đến 70 năm)
+          </Chip>
           {cat.thbq.map((t) => (
-            <label key={t.id} className={`flex items-center gap-1 border rounded px-2 py-0.5 ${thbqIds.includes(t.id) ? "border-brand-500" : "border-border-subtle"}`}>
-              <input type="checkbox" checked={thbqIds.includes(t.id)} onChange={() => { toggleThbq(t.id); setPage(0); }} /> {str(t, "ten")}
-            </label>
+            <Chip key={t.id} on={thbqIds.includes(t.id)} onClick={() => toggleThbq(t.id)}>
+              {str(t, "ten")}
+            </Chip>
           ))}
-          <label className="flex items-center gap-1 border border-border-subtle rounded px-2 py-0.5 ml-2">
-            <input type="checkbox" checked={trungThua} onChange={(e) => { setTrungThua(e.target.checked); setPage(0); }} /> Chỉ hồ sơ trùng thừa
-          </label>
+          <Chip on={trungThua} onClick={() => datLoc(setTrungThua)(!trungThua)}>
+            Chỉ trùng thừa
+          </Chip>
         </div>
-        <div className="flex gap-2 flex-wrap mt-3 items-center">
-          {canCreate && (
-            <button className="btn primary" disabled={!phongId} onClick={() => setForm({ row: null })} title={phongId ? "" : "Chọn phông trước"}>
-              + Thêm hồ sơ
-            </button>
-          )}
-          {canDelete && (
-            <button className="btn" disabled={sel.size === 0} onClick={() => void xoaChon()}>
-              Xoá ({sel.size})
-            </button>
-          )}
-          <button className="btn" disabled={!phong} onClick={() => void xuatMauLapHoSo(str(phong, "ma_du_an"), cat.thbq).catch((e) => setImportMsg(errText(e)))} title="Tải mẫu Excel lập hồ sơ (bố cục như bản cũ)">
-            Mẫu H.Sơ
-          </button>
-          {canCreate && (
-            <>
-              <button className="btn" disabled={!phongId || sync?.phase === "offline"} onClick={() => fileRef.current?.click()} title="Nhập hồ sơ từ Excel theo mẫu (cần máy chủ)">
-                Nhập Excel
-              </button>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void nhapExcel(f); }} />
-            </>
-          )}
-          <div className="flex-1" />
-          <span className="muted text-sm">
-            {n(total)} hồ sơ · trang {page + 1}/{pages}
-          </span>
-          <button className="btn sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-            ‹
-          </button>
-          <input
-            className="inp w-16 text-center"
-            type="number"
-            min={1}
-            max={pages}
-            value={page + 1}
-            onChange={(e) => setPage(Math.min(pages - 1, Math.max(0, Number(e.target.value) - 1)))}
-            title="Tới trang"
-          />
-          <button className="btn sm" disabled={page >= pages - 1} onClick={() => setPage((p) => p + 1)}>
-            ›
-          </button>
-        </div>
-        {err && <div className="text-danger text-sm mt-2">{err}</div>}
-        {importMsg && <div className="text-sm mt-2">{importMsg}</div>}
-      </div>
+      </Card>
+
+      <Card padding="none">
+        <Table
+          columns={colsHien}
+          rows={rows}
+          getRowId={(r) => r.id}
+          dense
+          sort={sort}
+          onSortChange={(s) => {
+            setSort(s);
+            setPage(1);
+          }}
+          clientSort={false}
+          selection={canDelete ? { selected: sel, onChange: setSel } : undefined}
+          onRowClick={(r) => setOpen(r)}
+          rowClassName={(r) => (open?.id === r.id ? "bg-brand-50" : undefined)}
+          rowActions={canEdit ? (r) => <Menu size="sm" items={[{ label: "Sửa", icon: "sua", onSelect: () => setForm({ row: r }) }, { label: "Xem văn bản", icon: "taiLieu", onSelect: () => setOpen(r) }]} /> : undefined}
+          pagination={{ page, pageSize: PAGE, total, onChange: setPage }}
+          state={{ loading: loading && !data, error, onRetry: reload, empty: { title: qApplied || thbqIds.length || status || trungThua ? "Không có hồ sơ nào khớp bộ lọc" : "Chưa có hồ sơ nào", action: canCreate && phongId ? <Button icon="them" onClick={() => setForm({ row: null })}>Thêm hồ sơ</Button> : undefined } }}
+        />
+      </Card>
 
       {form && (
         <HoSoForm
@@ -266,99 +303,12 @@ export default function LapHoSoView() {
           onClose={() => setForm(null)}
           onSaved={(_id, keepOpen) => {
             if (!keepOpen) setForm(null);
+            toast.success("Đã lưu hồ sơ.");
             reload();
           }}
         />
       )}
-
-      <div className="card mt-3.5">
-        <div className="tbl-scroll">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th style={{ width: 28 }}>
-                  <input
-                    type="checkbox"
-                    checked={rows.length > 0 && rows.every((r) => sel.has(r.id))}
-                    onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
-                  />
-                </th>
-                <th style={{ width: 24 }} title="Đồng bộ: ✓ khớp máy chủ · ● chờ đẩy · ⚠ xung đột" />
-                <th>Mã hồ sơ</th>
-                {th("Số tạm", "so_tam")}
-                {th("HS số", "ho_so_so", "num")}
-                <th>Tiêu đề</th>
-                {th("Mảng", "mang")}
-                {th("THBQ", "thbq")}
-                <th className="num">Số tờ</th>
-                <th>Bắt đầu</th>
-                {th("Kết thúc", "ngay_kt")}
-                <th>Trạng thái</th>
-                <th className="num">VB</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={14} className="muted">
-                    Không có hồ sơ khớp bộ lọc.
-                  </td>
-                </tr>
-              )}
-              {rows.map((r) => {
-                const st = str(r, "thbq_status");
-                return (
-                  <tr key={r.id} className={open?.id === r.id ? "bg-surface-sunken" : ""}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={sel.has(r.id)}
-                        onChange={(e) =>
-                          setSel((s) => {
-                            const x = new Set(s);
-                            if (e.target.checked) x.add(r.id);
-                            else x.delete(r.id);
-                            return x;
-                          })
-                        }
-                      />
-                    </td>
-                    <td>
-                      <SyncDot sync={str(r, "sync")} />
-                    </td>
-                    <td className="muted text-xs">{str(r, "ma_ho_so")}</td>
-                    <td>{str(r, "so_tam")}</td>
-                    <td className="num">{str(r, "ho_so_so")}</td>
-                    <td className="max-w-[460px]">
-                      <button className="link text-left" onClick={() => setOpen(r)} title="Xem văn bản trong hồ sơ">
-                        {str(r, "tieu_de") || <span className="muted">(chưa có tiêu đề)</span>}
-                      </button>
-                      {r.trung_thua === true && <span className="badge gray ml-1">trùng thừa</span>}
-                    </td>
-                    <td className="text-sm">{str(r, "ten_mang")}</td>
-                    <td className="text-sm">{str(r, "ten_thbq")}</td>
-                    <td className="num">{str(r, "so_to")}</td>
-                    <td>{str(r, "ngay_bat_dau")}</td>
-                    <td>{str(r, "ngay_ket_thuc")}</td>
-                    <td>{st && <span className={`badge ${THBQ_BADGE[st] ?? "gray"}`}>{THBQ_STATUS_LABEL[st] ?? st}</span>}</td>
-                    <td className="num">{str(r, "so_van_ban")}</td>
-                    <td className="whitespace-nowrap">
-                      {canEdit && (
-                        <button className="btn sm" onClick={() => setForm({ row: r })}>
-                          Sửa
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {open && <VanBanPanel cat={cat} hoSo={open} canEdit={canEdit} onClose={() => setOpen(null)} />}
-    </>
+    </section>
   );
 }

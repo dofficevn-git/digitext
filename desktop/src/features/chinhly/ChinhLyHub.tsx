@@ -8,7 +8,7 @@ import MuonTraView from "./MuonTraView";
 
 export default function ChinhLyHub() {
   const { khoGiaTab } = V460();
-  if (khoGiaTab === "khogia") return <KhoGiaView tab="kho" />;
+  if (khoGiaTab === "khogia") return <KhoGiaView />;
   if (khoGiaTab === "muontra") return <MuonTraView />;
   return <KhaiThacView />;
 }

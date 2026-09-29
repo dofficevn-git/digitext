@@ -1,15 +1,16 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Dùng chung cho các màn chỉnh lý: danh mục (bản sao), trạng thái đồng bộ, tiện ích hiển thị.
+// Dùng chung cho các màn chỉnh lý: danh mục (bản sao), trạng thái đồng bộ, ô chọn danh mục, tiện ích hiển thị.
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { isTauri, V3xq } from "@/api/ipc";
+import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { CL_SYNC_EVENT, clCatalogList, clSyncStatus, str, type ClCatalog, type ClRow, type ClSyncStatus } from "@/api/chinhly";
 import { useProject } from "@/state/project";
-import { Banner } from "@/ui";
+import { Badge, Banner, errorText, Select as UiSelect, Tip } from "@/ui";
+import type { V3y0 } from "@/domain/types";
 
-export const errText = (e: unknown) => (e instanceof V3xq || e instanceof Error ? e.message : String(e));
+export const errText = (e: unknown) => errorText(e);
 export const n = (v: number) => v.toLocaleString("vi-VN");
 
 const EMPTY: ClCatalog = { khoi_phong: [], phong: [], phong_ban: [], mang: [], thbq: [], ngon_ngu: [], loai_van_ban: [], kho: [], gia: [], hop: [], bo_tap: [] };
@@ -35,8 +36,8 @@ export function ChuaChonDuAn() {
   const p = useProject();
   if (p.fromAccount || p.projectId || p.loading) return null;
   return (
-    <Banner tone="warning" className="mb-3.5">
-      Chưa chọn dự án đang làm. Chọn dự án ở ô bên cạnh tên bạn trên thanh trên cùng để nạp và đồng bộ dữ liệu chỉnh lý.
+    <Banner tone="warning" className="mb-4">
+      Chưa chọn dự án đang làm. Chọn dự án ở ô cạnh tên bạn trên thanh trên cùng để nạp và đồng bộ dữ liệu chỉnh lý.
     </Banner>
   );
 }
@@ -47,7 +48,9 @@ export function useClSync(): ClSyncStatus | null {
   useEffect(() => {
     if (!isTauri()) return;
     let alive = true;
-    clSyncStatus().then((v) => alive && setS(v)).catch(() => {});
+    clSyncStatus()
+      .then((v) => alive && setS(v))
+      .catch(() => {});
     const un = listen<ClSyncStatus>(CL_SYNC_EVENT, (ev) => {
       if (alive) setS(ev.payload);
     });
@@ -83,6 +86,29 @@ export function syncLabel(s: ClSyncStatus | null): { text: string; dot: "ok" | "
   }
 }
 
+/** Badge trạng thái đồng bộ dùng ở đầu màn. */
+export function SyncBadge({ sync }: { sync: ClSyncStatus | null }) {
+  const sl = syncLabel(sync);
+  const tone: V3y0 = sl.dot === "ok" ? "ok" : sl.dot === "err" ? "err" : sl.dot === "warn" ? "warn" : "gray";
+  return (
+    <Tip text={sl.title.length > 80 ? sl.title.slice(0, 77) + "…" : sl.title}>
+      <span>
+        <Badge tone={tone}>{sl.text}</Badge>
+      </span>
+    </Tip>
+  );
+}
+
+/** Dải nhắc ngoại tuyến cho màn chỉ làm được khi có máy chủ. */
+export function CanMayChu({ sync, viec }: { sync: ClSyncStatus | null; viec: string }) {
+  if (sync?.phase !== "offline" && sync?.phase !== "error") return null;
+  return (
+    <Banner tone="warning" className="mb-4">
+      Đang ngoại tuyến. {viec}
+    </Banner>
+  );
+}
+
 export function fmtTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso.includes("T") || iso.includes("Z") ? iso : iso.replace(" ", "T") + "Z");
@@ -90,60 +116,79 @@ export function fmtTime(iso: string | null | undefined): string {
   return d.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
 }
 
-export function Field({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
-  return (
-    <label className={`grid gap-1 text-sm min-w-0 ${className ?? ""}`}>
-      <span className="muted truncate">{label}</span>
-      {children}
-    </label>
-  );
+export function fmtNgay(s: string): string {
+  if (!s) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
 }
 
-/** `<select>` danh mục: option từ mảng dòng, giá trị = cột `valueKey`. */
+/** `<select>` danh mục chỉnh lý: option từ mảng dòng, giá trị = cột `valueKey`. Bọc mỏng trên ui/Select. */
 export function Select({
   value,
   onChange,
   rows,
   valueKey = "id",
   labelKey = "ten",
-  empty = "— Chọn —",
+  empty = "Chọn",
   disabled,
   render,
+  size,
+  className,
 }: {
   value: string;
   onChange: (v: string) => void;
   rows: ClRow[];
   valueKey?: string;
   labelKey?: string;
-  empty?: string;
+  /** Nhãn option rỗng; null = không có option rỗng. */
+  empty?: string | null;
   disabled?: boolean;
   render?: (r: ClRow) => string;
+  size?: "md" | "sm";
+  className?: string;
 }) {
   return (
-    <select className="w-full min-w-0" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{empty}</option>
-      {rows.map((r) => (
-        <option key={str(r, valueKey)} value={str(r, valueKey)}>
-          {render ? render(r) : str(r, labelKey)}
-        </option>
-      ))}
-    </select>
+    <UiSelect
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      size={size}
+      className={className}
+      placeholder={empty ?? undefined}
+      options={rows.map((r) => ({ value: str(r, valueKey), label: render ? render(r) : str(r, labelKey) }))}
+    />
   );
 }
 
-export function SyncDot({ sync }: { sync: string }) {
-  const m: Record<string, [string, string]> = {
-    clean: ["✓", "Đã đồng bộ với máy chủ"],
-    pending: ["●", "Chờ đẩy lên máy chủ"],
-    conflict: ["⚠", "Xung đột — vào Đồng bộ & xung đột để chọn"],
-  };
-  const [t, title] = m[sync] ?? ["", ""];
-  const cls = sync === "conflict" ? "text-danger" : sync === "pending" ? "text-warning-700" : "text-success-700";
+/** Nhãn phông dạng "MÃ — Tên". */
+export const tenPhong = (r: ClRow) => `${str(r, "ma_du_an")} — ${str(r, "ten")}`;
+
+const SYNC_TONE: Record<string, { tone: V3y0; text: string }> = {
+  clean: { tone: "ok", text: "Khớp" },
+  pending: { tone: "warn", text: "Chờ đẩy" },
+  conflict: { tone: "err", text: "Xung đột" },
+};
+
+/** Trạng thái đồng bộ của một dòng, dạng Badge ngắn. */
+export function SyncBadgeRow({ sync }: { sync: string }) {
+  const s = SYNC_TONE[sync];
+  if (!s) return null;
+  return <Badge tone={s.tone}>{s.text}</Badge>;
+}
+
+export const THBQ_BADGE: Record<string, V3y0> = { VV: "err", HET: "gray", GL: "ok" };
+
+/** Chip bật / tắt dùng cho bộ lọc THBQ. */
+export function Chip({ on, onClick, children, disabled }: { on: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
   return (
-    <span className={cls} title={title}>
-      {t}
-    </span>
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={`h-7 rounded-full border px-2.5 text-sm transition-colors disabled:opacity-50 ${on ? "border-brand-500 bg-brand-50 text-brand-700" : "border-border-subtle bg-surface text-fg-muted hover:bg-surface-hover"}`}
+    >
+      {children}
+    </button>
   );
 }
-
-export const THBQ_BADGE: Record<string, string> = { VV: "err", HET: "gray", GL: "ok" };
