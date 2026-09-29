@@ -3,7 +3,7 @@
 // Quản trị: "Giao việc xác nhận" — tạo gói (theo hồ sơ liền mạch / ngẫu nhiên, chia thành K gói), giao
 // CTV, theo dõi tiến độ, duyệt / từ chối từng mục hoặc cả gói. Kế hoạch 29/9/2026 (từ doc_extract_pla).
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V4ek, type V4ej } from "@/api/docs";
 import { V4ac, V4ak, type V4a8, type V4a9 } from "@/api/users";
@@ -174,10 +174,11 @@ function TaoGoi({
   };
 
   const dsUser = users.filter((u) => !q || `${u.displayName} ${u.username}`.toLowerCase().includes(q.toLowerCase()));
-  const f = (label: string, el: React.ReactNode) => (
-    <label className="grid gap-1 text-sm">
-      <span className="muted">{label}</span>
-      {el}
+  // Ô nhập luôn co theo cột lưới (min-w-0) — select không có min-width:0 sẽ giãn theo option dài nhất và đè lên ô bên.
+  const f = (label: string, el: React.ReactElement<{ className?: string }>) => (
+    <label className="grid gap-1 text-sm min-w-0">
+      <span className="muted truncate">{label}</span>
+      {React.cloneElement(el, { className: `${el.type === "select" ? "" : "inp "}w-full min-w-0 ${el.props.className ?? ""}`.trim() })}
     </label>
   );
 
@@ -195,13 +196,17 @@ function TaoGoi({
           Đóng
         </button>
       </div>
-      <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+      <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
         {f("Tên gói (để trống = tự đặt)", <input value={name} onChange={(e) => setName(e.target.value)} />)}
         {f(
           "Loại gói",
-          <select value={kind} onChange={(e) => setKind(e.target.value as WorkKind)}>
-            <option value="xac_nhan">{KIND_LABEL.xac_nhan} — CTV sửa và xác nhận 18 trường</option>
-            <option value="kiem_tra">{KIND_LABEL.kiem_tra} — CTV khác soát mẫu gói đã xác nhận</option>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as WorkKind)}
+            title={kind === "kiem_tra" ? "CTV khác soát lại một phần mẫu của gói đã xác nhận" : "CTV sửa và xác nhận 18 trường của từng tài liệu"}
+          >
+            <option value="xac_nhan">{KIND_LABEL.xac_nhan}</option>
+            <option value="kiem_tra">{KIND_LABEL.kiem_tra}</option>
           </select>,
         )}
         {kind === "kiem_tra" ? (
@@ -225,8 +230,12 @@ function TaoGoi({
           <>
             {f(
               "Cách chia",
-              <select value={mode} onChange={(e) => setMode(e.target.value as WorkMode)}>
-                <option value="hoso">{MODE_LABEL.hoso} (lấy trọn hồ sơ)</option>
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as WorkMode)}
+                title={mode === "hoso" ? "Lấy tài liệu theo thứ tự hồ sơ, không cắt giữa hồ sơ" : "Bốc ngẫu nhiên trong phạm vi đã chọn"}
+              >
+                <option value="hoso">{MODE_LABEL.hoso}</option>
                 <option value="ngau_nhien">{MODE_LABEL.ngau_nhien}</option>
               </select>,
             )}
@@ -268,7 +277,7 @@ function TaoGoi({
       <div className="mt-3">
         <div className="flex items-center gap-2 text-sm">
           <span className="muted">Cộng tác viên ({members.size} đã chọn)</span>
-          <input className="max-w-60" placeholder="tìm tên / tài khoản" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="inp max-w-60" placeholder="tìm tên / tài khoản" value={q} onChange={(e) => setQ(e.target.value)} />
           <button className="btn sm" onClick={() => setMembers(new Set(dsUser.map((u) => u.id)))}>
             Chọn tất cả
           </button>

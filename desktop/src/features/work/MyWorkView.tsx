@@ -210,7 +210,7 @@ function LamViec({ pkg, startItem, onBack }: { pkg: WorkPackage; startItem?: Wor
                 </button>
               ) : (
                 <>
-                  <input className="max-w-60" placeholder="ghi lỗi (nếu có)" value={note} onChange={(e) => setNote(e.target.value)} />
+                  <input className="inp max-w-60" placeholder="ghi lỗi (nếu có)" value={note} onChange={(e) => setNote(e.target.value)} />
                   <button className="btn primary" onClick={() => void cham(true)} disabled={busy} title="Ctrl+Enter">
                     Đạt
                   </button>
