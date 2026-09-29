@@ -5,6 +5,9 @@
 
 use std::cmp::Ordering;
 
+/// Mô tả 15 bảng cl_* (cột ghi được, cột chỉ online, cha → con, quyền) — dùng chung máy chủ + desktop.
+pub mod spec;
+
 // ------------------------------------------------------------------ ngày tháng
 
 /// Ngày của hồ sơ / văn bản có thể thiếu ngày hoặc tháng ("3/2021", "2021").

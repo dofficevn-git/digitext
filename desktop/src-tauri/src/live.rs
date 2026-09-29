@@ -43,10 +43,14 @@ pub enum Topic {
     Ops,
     Settings,
     UploadBatches,
+    /// Chỉnh lý (cl_*): mirror đổi sau ghi cục bộ / đồng bộ.
+    ChinhLy,
+    /// Trạng thái đồng bộ chỉnh lý (outbox, xung đột).
+    ClSync,
 }
 impl Topic {
     #[allow(dead_code)]
-    pub const ALL: [Topic; 27] = [
+    pub const ALL: [Topic; 29] = [
         Topic::Session,
         Topic::Users,
         Topic::Devices,
@@ -74,6 +78,8 @@ impl Topic {
         Topic::Ops,
         Topic::Settings,
         Topic::UploadBatches,
+        Topic::ChinhLy,
+        Topic::ClSync,
     ];
 }
 #[derive(Debug, Clone, Serialize)]

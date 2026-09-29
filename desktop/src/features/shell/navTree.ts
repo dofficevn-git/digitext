@@ -51,6 +51,12 @@ export const NAV_TREE: V46s[] = [
         })),
       },
       {
+        id: "danhmuccl",
+        label: "Danh mục chỉnh lý (máy chủ)",
+        gate: "catalog",
+        leaf: { kind: "hoso", pane: "danhmuccl" },
+      },
+      {
         id: "laphoso",
         label: "Lập hồ sơ điện tử",
         gate: "dossier",
@@ -67,6 +73,12 @@ export const NAV_TREE: V46s[] = [
         label: "Cập nhật cơ sở dữ liệu",
         gate: "dossier",
         leaf: { kind: "hoso", pane: "capnhat" },
+      },
+      {
+        id: "dongbo",
+        label: "Đồng bộ & xung đột",
+        gate: "dossier",
+        leaf: { kind: "hoso", pane: "dongbo" },
       },
     ],
   },

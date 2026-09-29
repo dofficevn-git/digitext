@@ -14,10 +14,12 @@
 //! - `GET  /cl/lich-su?…`
 //! - `GET  /cl/sync?projectId&since&limit`, `POST /cl/sync/push` — đồng bộ offline
 
+pub mod he_thong_hoa;
 pub mod import;
 pub mod read;
 pub mod rows;
 pub mod sync;
+pub mod thong_ke;
 
 use crate::app::AppState;
 use crate::error::ApiError;
@@ -31,7 +33,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router())
+    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router())
 }
 
 /// Người gọi phải thuộc dự án (admin quản dự án, thành viên, hoặc tài khoản gắn dự án).

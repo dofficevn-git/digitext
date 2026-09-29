@@ -10,6 +10,7 @@ import V4o9 from "./ReportView";
 import ProjectProgressView from "./ProjectProgressView";
 import StaffReportView from "./StaffReportView";
 import { V4o4, V4o5, V4o6, V4o3 } from "./reportLogic";
+import ThongKeView from "@/features/chinhly/ThongKeView";
 
 function V4oa() {
   return (
@@ -40,6 +41,10 @@ function V4ob() {
   return (
     <>
       <StaffReportView />
+      <details className="mt-3.5" open>
+        <summary className="muted text-sm cursor-pointer">Chỉnh lý (máy chủ): hồ sơ, văn bản, số trường thêm mới / sửa theo lịch sử</summary>
+        <ThongKeView kind="nhan-vien" />
+      </details>
       <details className="mt-3.5">
         <summary className="muted text-sm cursor-pointer">Thao tác trên máy này (hồ sơ, văn bản, thêm/sửa)</summary>
         <V4obCu />
@@ -131,8 +136,27 @@ function V4od() {
 
 export default function V4oe() {
   const { reportTab: V22o } = V460();
-  if (V22o === "chinhly") return <V4oc />;
+  if (V22o === "chinhly")
+    return (
+      <>
+        <ThongKeView kind="chinh-ly" />
+        <details className="mt-3.5">
+          <summary className="muted text-sm cursor-pointer">Số liệu chỉnh lý cũ trên máy này</summary>
+          <V4oc />
+        </details>
+      </>
+    );
   if (V22o === "nhanvien") return <V4ob />;
-  if (V22o === "phanmem") return <V4od />;
+  if (V22o === "phanmem")
+    return (
+      <>
+        <ThongKeView kind="phan-mem" />
+        <details className="mt-3.5">
+          <summary className="muted text-sm cursor-pointer">Số liệu cũ trên máy này</summary>
+          <V4od />
+        </details>
+      </>
+    );
+  if (V22o === "muontra") return <ThongKeView kind="muon-tra" />;
   return <V4oa />;
 }

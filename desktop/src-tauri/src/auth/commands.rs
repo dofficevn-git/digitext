@@ -604,7 +604,7 @@ pub async fn server_ping(db: State<'_, Db>) -> Result<bool, AppError> {
     };
     Ok(client::f_22y(&url).await)
 }
-pub(super) fn server_url(r_jy: &State<'_, Db>) -> Result<String, AppError> {
+pub(crate) fn server_url(r_jy: &State<'_, Db>) -> Result<String, AppError> {
     let r_jz = r_jy.0.lock().map_err(|_| AppError::DbPoisoned)?;
     db::f_1ew(&r_jz, C_K0)?
         .filter(|r_k0| !r_k0.trim().is_empty())

@@ -28,13 +28,13 @@ export type V3xt =
   | "khogiaManage"
   | "loan";
 
-export type V3xu = "laphoso" | "hethonghoa" | "capnhat" | "sohoa" | "kyso" | "ocr";
+export type V3xu = "danhmuccl" | "laphoso" | "hethonghoa" | "capnhat" | "dongbo" | "sohoa" | "kyso" | "ocr";
 
 export type V3xv = "phong" | "phongban" | "mang" | "thbq" | "ngonngu" | "loai" | "hoso";
 
-export type V3xw = "kho" | "gia" | "khaithac";
+export type V3xw = "kho" | "gia" | "khaithac" | "muontra";
 
-export type V3xx = "sohoa" | "chinhly" | "nhanvien" | "phanmem";
+export type V3xx = "sohoa" | "chinhly" | "nhanvien" | "phanmem" | "muontra";
 
 export type V3xy = "root" | "folder" | "doc";
 
