@@ -20,3 +20,4 @@ pub mod submissions;
 pub mod updates;
 pub mod upload_batches;
 pub mod users;
+pub mod work;

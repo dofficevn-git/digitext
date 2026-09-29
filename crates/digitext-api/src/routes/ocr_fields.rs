@@ -50,10 +50,11 @@ async fn f_sv(r_kl: &AppState, r_kj: &Ts, id: Uuid) -> Result<documents::Documen
     let r_kk = documents::get(&r_kl.pool, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
-    if !f_29a(&r_kl.pool, &r_kj.user)
-        .await?
-        .allows_project(r_kk.project_id)
-    {
+    let ok = f_29a(&r_kl.pool, &r_kj.user).await?.allows_project(r_kk.project_id)
+        // CTV (work.execute) được đọc / sửa trường của tài liệu trong gói việc mình được giao.
+        || (r_kj.has_perm(Permission::WorkExecute)
+            && digitext_db::work_packages::can_work_on(&r_kl.pool, r_kj.user.id, id).await?);
+    if !ok {
         return Err(ApiError::forbidden());
     }
     Ok(r_kk)
@@ -63,7 +64,9 @@ async fn f_1ne(
     r_km: Ts,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<FieldDto>>, ApiError> {
-    r_km.require_perm(Permission::DocumentList)?;
+    if !r_km.has_perm(Permission::DocumentList) {
+        r_km.require_perm(Permission::WorkExecute)?;
+    }
     let r_kn = f_sv(&r_kp, &r_km, id).await?;
     let r_ko = ocr_fields::f_1nh(&r_kp.pool, r_kn.id).await?;
     Ok(Json(r_ko.into_iter().map(FieldDto::from).collect()))
@@ -100,7 +103,9 @@ async fn f_11n(
     Path(id): Path<Uuid>,
     Json(r_kw): Json<T34>,
 ) -> Result<Json<FieldDto>, ApiError> {
-    r_kv.require_perm(Permission::DocumentList)?;
+    if !r_kv.has_perm(Permission::DocumentList) {
+        r_kv.require_perm(Permission::WorkExecute)?;
+    }
     let r_kx = f_sv(&r_l1, &r_kv, id).await?;
     if r_kw.page_no < 1 {
         return Err(ApiError::bad_request("page_no phải ≥ 1"));
@@ -167,8 +172,9 @@ async fn f_11n(
     };
     // Báo cáo nhân viên: ghi AI nhập / AI xác nhận trường này.
     digitext_db::progress::mark_field_edit(&r_l1.pool, r_l0.id, r_kv.user.id, r_kw.verified).await?;
-    // Dạy bằng ví dụ: trường đã DUYỆT → trang này thành (hoặc cập nhật) ví dụ cho lần bóc sau.
-    if r_kw.verified {
+    // Dạy bằng ví dụ: chỉ khi QUẢN TRỊ duyệt tài liệu (document.review / work.review) — người có quyền
+    // duyệt sửa trường thì ghi ví dụ ngay; CTV sửa thì đợi quản trị duyệt (routes/work.rs).
+    if r_kw.verified && r_kv.has_perm(Permission::DocumentReview) {
         if let Err(e) = digitext_db::kie_examples::upsert_from_document(&r_l1.pool, r_kx.id, r_kw.page_no, r_kv.user.id).await {
             tracing::warn!(error = %e, document = %r_kx.id, "không lưu được ví dụ bóc trường");
         }

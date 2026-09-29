@@ -1,5 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-use crate::auth::admin::f_2r8;
+use crate::auth::admin::f_2r8_any;
 use crate::auth::client;
 use crate::auth::AuthState;
 use crate::db::Db;
@@ -51,7 +51,7 @@ pub async fn ocr_fields_list(
     if id.is_empty() {
         return Err(AppError::validation("Thiếu mã tài liệu."));
     }
-    f_2r8(&db, &auth, Permission::DocumentList, move |r_29n, r_29o| {
+    f_2r8_any(&db, &auth, &[Permission::DocumentList, Permission::WorkExecute], move |r_29n, r_29o| {
         let id = id.clone();
         async move {
             client::f_1eo::<Vec<Tfc>>(&r_29n, &r_29o, &format!("/documents/{id}/fields")).await
@@ -90,7 +90,7 @@ pub async fn ocr_field_correct(
     if let Some(r_29u) = args.verified {
         body["verified"] = serde_json::Value::Bool(r_29u);
     }
-    f_2r8(&db, &auth, Permission::DocumentList, move |r_29q, r_29t| {
+    f_2r8_any(&db, &auth, &[Permission::DocumentList, Permission::WorkExecute], move |r_29q, r_29t| {
         let (id, body) = (id.clone(), body.clone());
         async move {
             client::f_20e::<Tfc>(&r_29q, &r_29t, &format!("/documents/{id}/fields"), &body).await

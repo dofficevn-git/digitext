@@ -84,6 +84,26 @@ where
     r_bs.require_perm(r_bv)?;
     f_2r9(r_bu, r_bs, r_bt).await
 }
+/// Như `f_2r8` nhưng chỉ cần MỘT trong các quyền (vd. document.list HOẶC work.execute).
+pub(crate) async fn f_2r8_any<T, F, Fut>(
+    db: &State<'_, Db>,
+    auth: &State<'_, AuthState>,
+    perms: &[Permission],
+    f: F,
+) -> Result<T, AppError>
+where
+    F: Fn(String, String) -> Fut,
+    Fut: Future<Output = Result<T, ClientError>>,
+{
+    let mut last = None;
+    for p in perms {
+        match auth.require_perm(*p) {
+            Ok(_) => return f_2r9(db, auth, f).await,
+            Err(e) => last = Some(e),
+        }
+    }
+    Err(last.unwrap_or_else(|| AppError::validation("thiếu quyền")))
+}
 async fn f_2r9<T, F, Fut>(
     r_by: &State<'_, Db>,
     r_bw: &State<'_, AuthState>,

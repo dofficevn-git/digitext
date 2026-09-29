@@ -126,7 +126,7 @@ pub async fn staff_report(
     to: Option<DateTime<Utc>>,
 ) -> sqlx::Result<Vec<StaffRow>> {
     let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
-    sqlx::query_as::<_, StaffRow>(
+    let mut rows = sqlx::query_as::<_, StaffRow>(
         "WITH d AS ( \
              SELECT * FROM documents \
              WHERE status <> 'disposed' AND ($1::uuid[] IS NULL OR project_id = ANY($1)) \
@@ -164,11 +164,45 @@ pub async fn staff_report(
          JOIN users u ON u.id = COALESCE(w.user_id, t.user_id) \
          ORDER BY u.display_name, u.username, task",
     )
-    .bind(projects)
+    .bind(projects.clone())
     .bind(from)
     .bind(to)
     .fetch_all(pool)
-    .await
+    .await?;
+    // Gói việc: "xác nhận" đếm theo mục CTV xác nhận (thay cho reviewed_by khi có gói), "kiểm tra
+    // nhập liệu" đếm theo mục CTV chấm chéo. Gộp vào dòng cùng người × việc, hoặc thêm dòng mới.
+    let work = crate::work_packages::staff_work(pool, projects.as_deref(), from, to).await?;
+    if !work.is_empty() {
+        let names: Vec<(Uuid, String, String)> = sqlx::query_as(
+            "SELECT id, username, display_name FROM users WHERE id = ANY($1)",
+        )
+        .bind(work.iter().map(|w| w.user_id).collect::<Vec<_>>())
+        .fetch_all(pool)
+        .await?;
+        for w in work {
+            if let Some(r) = rows.iter_mut().find(|r| r.user_id == w.user_id && r.task == w.task) {
+                r.done += w.done;
+                r.files += w.done;
+                r.days = r.days.max(w.days);
+                r.errors += w.errors;
+            } else if let Some((_, username, display_name)) = names.iter().find(|n| n.0 == w.user_id) {
+                rows.push(StaffRow {
+                    user_id: w.user_id,
+                    username: username.clone(),
+                    display_name: display_name.clone(),
+                    task: w.task,
+                    done: w.done,
+                    files: w.done,
+                    fields: 0,
+                    days: w.days,
+                    errors: w.errors,
+                    target: None,
+                });
+            }
+        }
+        rows.sort_by(|a, b| (&a.display_name, &a.username, &a.task).cmp(&(&b.display_name, &b.username, &b.task)));
+    }
+    Ok(rows)
 }
 
 pub const TASKS: [&str; 6] = ["scan", "kiem_tra_scan", "nhap_lieu", "kiem_tra_nhap_lieu", "xac_nhan", "kiem_tra_xac_nhan"];

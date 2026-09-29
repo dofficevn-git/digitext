@@ -75,7 +75,9 @@ export type V3yx =
   | "settings.view"
   | "settings.update"
   | "device.view"
-  | "device.revoke";
+  | "device.revoke"
+  | "work.execute"
+  | "work.manage";
 
 export interface V3yy {
   perm: V3yx;
@@ -159,6 +161,14 @@ export const V3z0: V3yz[] = [
         perm: "document.review",
         label: "Duyệt / từ chối kết quả bóc tách",
       },
+    ],
+  },
+  {
+    key: "work",
+    label: "Gói việc xác nhận trường (cộng tác viên)",
+    perms: [
+      { perm: "work.execute", label: "Làm gói việc được giao (xác nhận / kiểm tra chéo)" },
+      { perm: "work.manage", label: "Tạo, giao và duyệt gói việc" },
     ],
   },
   {
@@ -353,6 +363,8 @@ const V3z4: Record<V3yx, number> = {
   "device.view": 2,
   "device.revoke": 2,
   "project.assign_admin": 3,
+  "work.execute": 1,
+  "work.manage": 2,
 };
 
 export function V3z5(Vh: V3xs, Vi: V3yx): boolean {
@@ -392,6 +404,10 @@ const V3z7: Record<V3xt, V3yx> = {
   server: "document.list",
 
   report: "stats.view_project",
+
+  work: "work.execute",
+
+  workManage: "work.manage",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

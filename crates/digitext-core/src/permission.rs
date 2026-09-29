@@ -65,9 +65,13 @@ pub enum Permission {
     SettingsUpdate,
     DeviceView,
     DeviceRevoke,
+    /// Làm mục trong gói việc xác nhận trường được giao (CTV).
+    WorkExecute,
+    /// Tạo / giao / duyệt gói việc xác nhận trường.
+    WorkManage,
 }
 impl Permission {
-    pub const ALL: [Permission; 58] = [
+    pub const ALL: [Permission; 60] = [
         Permission::DossierRead,
         Permission::DossierCreate,
         Permission::DossierUpdate,
@@ -126,6 +130,8 @@ impl Permission {
         Permission::SettingsUpdate,
         Permission::DeviceView,
         Permission::DeviceRevoke,
+        Permission::WorkExecute,
+        Permission::WorkManage,
     ];
     pub fn as_str(self) -> &'static str {
         match self {
@@ -187,6 +193,8 @@ impl Permission {
             Permission::SettingsUpdate => "settings.update",
             Permission::DeviceView => "device.view",
             Permission::DeviceRevoke => "device.revoke",
+            Permission::WorkExecute => "work.execute",
+            Permission::WorkManage => "work.manage",
         }
     }
     pub fn min_perm(self) -> Perm {
@@ -222,7 +230,8 @@ impl Permission {
             | Permission::SubmissionCreate
             | Permission::RecordView
             | Permission::RecordCreate
-            | Permission::DisposalView => Perm::Operate,
+            | Permission::DisposalView
+            | Permission::WorkExecute => Perm::Operate,
             Permission::SubmissionReview
             | Permission::SubmissionApprove
             | Permission::AccessReview
@@ -247,7 +256,8 @@ impl Permission {
             | Permission::ProjectCreate
             | Permission::ProjectUpdate
             | Permission::DeviceView
-            | Permission::DeviceRevoke => Perm::Admin,
+            | Permission::DeviceRevoke
+            | Permission::WorkManage => Perm::Admin,
             Permission::ProjectAssignAdmin => Perm::Super,
         }
     }

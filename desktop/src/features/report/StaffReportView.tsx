@@ -298,7 +298,8 @@ export default function StaffReportView() {
         </div>
         <div className="muted text-sm mt-2">
           Scan tính theo trang người đó quét (tệp đẩy lên máy chủ đứng tên người quét). Lỗi = tài liệu của người đó bị
-          từ chối khi xác nhận. Nhập dữ liệu trường và các bước kiểm tra chỉ tính từ bản 0.15.21 trở đi. KPI: Xuất sắc
+          từ chối khi xác nhận hoặc bị kiểm tra chéo chấm có lỗi. Xác nhận dữ liệu và kiểm tra nhập liệu lấy từ gói việc (màn
+          Giao việc xác nhận); kiểm tra scan và kiểm tra xác nhận chưa có nơi ghi nhận. KPI: Xuất sắc
           (hoàn thành ≥ {KPI.xuatSac.hoanThanh}%, lỗi ≤ {KPI.xuatSac.loi}%) · Đạt (≥ {KPI.dat.hoanThanh}%, lỗi ≤{" "}
           {KPI.dat.loi}%) · còn lại Cảnh báo lỗi.
         </div>
