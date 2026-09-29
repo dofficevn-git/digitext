@@ -7,7 +7,7 @@ import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { V460 } from "@/state";
 import { clDelete, clHoSoList, clRemote, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
-import { errText, Field, n, Select, SyncDot, THBQ_BADGE, useClCatalog, useClSync, syncLabel } from "./common";
+import { ChonDuAn, errText, Field, n, Select, SyncDot, syncLabel, THBQ_BADGE, useClCatalog, useClSync } from "./common";
 import HoSoForm from "./HoSoForm";
 import VanBanPanel from "./VanBanPanel";
 import { docMauLapHoSo, xuatMauLapHoSo } from "./excel";
@@ -156,6 +156,7 @@ export default function LapHoSoView() {
           </span>
         </div>
       </div>
+      <ChonDuAn />
       {catErr && <div className="card mt-3.5 text-danger">{catErr}</div>}
       {sync?.phase === "offline" && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — thay đổi được giữ ở máy và sẽ tự đẩy lên máy chủ khi có mạng.</div>}
       {cat.phong.length === 0 && !catErr && (

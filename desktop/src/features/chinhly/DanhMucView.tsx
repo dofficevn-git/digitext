@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import Modal, { V49j } from "@/ui/Modal";
 import { V460 } from "@/state";
 import { clDelete, clSave, str, type ClCatalog, type ClRow, type ClTable } from "@/api/chinhly";
-import { errText, n, Select, SyncDot, useClCatalog } from "./common";
+import { ChonDuAn, errText, n, Select, SyncDot, useClCatalog } from "./common";
 
 type Tab = "phong" | "phong_ban" | "mang" | "thbq" | "ngon_ngu" | "loai_van_ban" | "khoi_phong";
 const TABS: [Tab, string][] = [
@@ -161,6 +161,7 @@ export default function DanhMucView() {
         <h2>Danh mục chỉnh lý</h2>
         <div className="sub">· dùng chung toàn dự án, đồng bộ với máy chủ · dòng có dấu ★ là bảng mã chuẩn TT05 (chỉ super admin sửa)</div>
       </div>
+      <ChonDuAn />
       {error && <div className="card mt-3.5 text-danger">{error}</div>}
       <div className="card mt-3.5">
         <div className="flex gap-2 flex-wrap items-center">

@@ -8,7 +8,7 @@ import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { V460 } from "@/state";
 import { clHoSoList, clRows, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
-import { errText, Field, n, Select, THBQ_BADGE, useClCatalog } from "./common";
+import { ChonDuAn, errText, Field, n, Select, THBQ_BADGE, useClCatalog } from "./common";
 import { inHtml, inMucLucHoSo, inMucLucVanBan, inNhanHop, inPhuLuc, inSanPham } from "./print";
 import { KIEU_MLHS, xuatLichSu, xuatMucLucHoanThien, xuatMucLucVanBan, xuatPhuLuc, xuatTT02, xuatTT05, type KieuMLHS } from "./excelXuat";
 import VanBanPanel from "./VanBanPanel";
@@ -96,6 +96,7 @@ export default function KhaiThacView() {
         <h2>Khai thác dữ liệu chỉnh lý</h2>
         <div className="sub">· tìm hồ sơ theo phông / phòng ban / mảng / THBQ / kho / giá · xuất & in mục lục, nhãn hộp, sản phẩm, phụ lục, metadata TT02 / TT05</div>
       </div>
+      <ChonDuAn />
       <div className="card mt-3.5">
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))" }}>
           <Field label="Phông">

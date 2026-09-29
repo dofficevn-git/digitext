@@ -11,27 +11,25 @@ const C_EG: &str = "ocr_url";
 const C_EF: &str = "http://113.190.252.175:5002/login";
 
 /// Cầu nối sang bản sao cl_* (đồng bộ máy chủ): chỉ khi phiên gắn dự án.
-fn cl_who(auth: &AuthState) -> Option<(String, String)> {
-    let s = auth.snapshot()?;
-    let p = s.project_id.clone().filter(|p| !p.trim().is_empty())?;
-    Some((p, s.user_id))
+fn cl_who(conn: &rusqlite::Connection, auth: &AuthState) -> Option<(String, String)> {
+    crate::chinhly::project::effective_with(conn, auth)
 }
 fn cl_forward_dossier(conn: &rusqlite::Connection, auth: &AuthState, id: i64) {
-    if let Some((p, u)) = cl_who(auth) {
+    if let Some((p, u)) = cl_who(conn, auth) {
         if let Err(e) = crate::chinhly::legacy::forward_dossier(conn, id, &crate::chinhly::store::Who { project_id: &p, user_id: &u }) {
             tracing::warn!(error = %e, id, "không đẩy được hồ sơ cũ sang cl_ho_so");
         }
     }
 }
 fn cl_forward_van_ban(conn: &rusqlite::Connection, auth: &AuthState, id: i64) {
-    if let Some((p, u)) = cl_who(auth) {
+    if let Some((p, u)) = cl_who(conn, auth) {
         if let Err(e) = crate::chinhly::legacy::forward_van_ban(conn, id, &crate::chinhly::store::Who { project_id: &p, user_id: &u }) {
             tracing::warn!(error = %e, id, "không đẩy được văn bản cũ sang cl_van_ban");
         }
     }
 }
 fn cl_after_bulk(conn: &rusqlite::Connection, auth: &AuthState) {
-    if let Some((p, u)) = cl_who(auth) {
+    if let Some((p, u)) = cl_who(conn, auth) {
         let who = crate::chinhly::store::Who { project_id: &p, user_id: &u };
         if let Err(e) = crate::chinhly::legacy::push_unmigrated(conn, &who) {
             tracing::warn!(error = %e, "không đẩy được dữ liệu cũ sang cl_*");
@@ -383,7 +381,7 @@ pub fn dossier_bulk_upsert(
     r_1nm.commit()?;
     tracing::info!(count = n, nguoi = % r_1nn.username, "dossier_bulk_upsert");
     // Excel có thể sửa dòng đã có cl_id → đẩy lại toàn bộ hồ sơ của phông (write_local bỏ qua dòng không đổi).
-    if let Some((p, u)) = cl_who(&auth) {
+    if let Some((p, u)) = cl_who(&r_1nl, &auth) {
         let who = crate::chinhly::store::Who { project_id: &p, user_id: &u };
         let ids: Vec<i64> = {
             let mut st = r_1nl.prepare("SELECT id FROM dossier WHERE (?1 IS NULL OR ma_da = ?1)")?;

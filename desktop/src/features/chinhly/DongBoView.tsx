@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { clConflictResolve, clConflicts, clMigratePreview, clMigrateRun, clOutbox, clOutboxDiscard, clOutboxRetry, clSyncNow, str, type ClConflict, type ClMigrateReport, type ClOutboxRow } from "@/api/chinhly";
-import { errText, fmtTime, n, syncLabel, useClSync } from "./common";
+import { ChonDuAn, errText, fmtTime, n, syncLabel, useClSync } from "./common";
 
 const TEN_BANG: Record<string, string> = {
   cl_ho_so: "Hồ sơ",
@@ -219,6 +219,7 @@ export default function DongBoView() {
         <h2>Đồng bộ & xung đột</h2>
         <div className="sub">· dữ liệu chỉnh lý giữa máy này và máy chủ</div>
       </div>
+      <ChonDuAn />
       <div className="card mt-3.5">
         <div className="flex items-center gap-3 flex-wrap">
           <span className={`badge ${sl.dot === "ok" ? "ok" : sl.dot === "err" ? "err" : sl.dot === "warn" ? "warn" : "gray"}`} title={sl.title}>

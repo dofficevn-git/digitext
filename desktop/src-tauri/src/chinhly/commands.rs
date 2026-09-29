@@ -15,10 +15,8 @@ use tauri::{AppHandle, Manager, State};
 
 type J = Value;
 
-fn project_of(auth: &AuthState) -> Result<(String, String), AppError> {
-    let s = auth.snapshot().ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?;
-    let p = s.project_id.clone().filter(|p| !p.trim().is_empty()).ok_or_else(|| AppError::new("no_project", "Tài khoản chưa gắn dự án nào — liên hệ quản trị."))?;
-    Ok((p, s.user_id))
+fn project_of(db: &Db, auth: &AuthState) -> Result<(String, String), AppError> {
+    super::project::resolve(db, auth)
 }
 
 fn require_read(auth: &AuthState) -> Result<(), AppError> {
@@ -38,7 +36,7 @@ fn table_of(s: &str) -> Result<&'static spec::TableSpec, AppError> {
 #[tauri::command]
 pub fn cl_catalog_list(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<J, AppError> {
     require_read(&auth)?;
-    let (project, _) = project_of(&auth)?;
+    let (project, _) = project_of(&db, &auth)?;
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     let mut out = serde_json::Map::new();
     for t in ["cl_khoi_phong", "cl_phong", "cl_phong_ban", "cl_mang", "cl_thbq", "cl_ngon_ngu", "cl_loai_van_ban", "cl_kho", "cl_gia", "cl_hop", "cl_bo_tap"] {
@@ -51,7 +49,7 @@ pub fn cl_catalog_list(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<
 #[tauri::command]
 pub fn cl_rows(db: State<'_, Db>, auth: State<'_, AuthState>, table: String, filter: Option<ListFilter>) -> Result<J, AppError> {
     require_read(&auth)?;
-    let (project, _) = project_of(&auth)?;
+    let (project, _) = project_of(&db, &auth)?;
     let sp_name = if table == "lich_su" || table == "cl_lich_su" { store::LICH_SU.to_owned() } else { table_of(&table)?.name.to_owned() };
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     let (rows, total) = store::list(&g, &sp_name, &project, &filter.unwrap_or_default())?;
@@ -69,7 +67,7 @@ pub fn cl_row(db: State<'_, Db>, auth: State<'_, AuthState>, table: String, id: 
 #[tauri::command]
 pub fn cl_ho_so_list(db: State<'_, Db>, auth: State<'_, AuthState>, filter: Option<HoSoFilter>) -> Result<J, AppError> {
     require_read(&auth)?;
-    let (project, _) = project_of(&auth)?;
+    let (project, _) = project_of(&db, &auth)?;
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     let (rows, total) = store::ho_so_list(&g, &project, &filter.unwrap_or_default())?;
     Ok(json!({"rows": rows, "total": total}))
@@ -78,7 +76,7 @@ pub fn cl_ho_so_list(db: State<'_, Db>, auth: State<'_, AuthState>, filter: Opti
 #[tauri::command]
 pub fn cl_van_ban_list(db: State<'_, Db>, auth: State<'_, AuthState>, ho_so_id: String) -> Result<Vec<Row>, AppError> {
     require_read(&auth)?;
-    let (project, _) = project_of(&auth)?;
+    let (project, _) = project_of(&db, &auth)?;
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     Ok(store::van_ban_list(&g, &project, &ho_so_id)?)
 }
@@ -107,7 +105,7 @@ pub fn cl_save(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, ta
     if !sp.offline_write {
         return Err(AppError::new("online_only", "Bảng này chỉ sửa được khi có kết nối máy chủ."));
     }
-    let (project, user) = project_of(&auth)?;
+    let (project, user) = project_of(&db, &auth)?;
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     let id = id.map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()).unwrap_or_else(|| uuid::Uuid::now_v7().to_string());
     let exists = store::get(&g, sp.name, &id)?.is_some();
@@ -160,7 +158,7 @@ pub fn cl_delete(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, 
         return Err(AppError::new("online_only", "Bảng này chỉ sửa được khi có kết nối máy chủ."));
     }
     auth.require_perm(sp.perm_for(WriteOp::Delete))?;
-    let (project, user) = project_of(&auth)?;
+    let (project, user) = project_of(&db, &auth)?;
     let n = {
         let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
         let n = store::delete_local(&g, sp, &id, &store::Who { project_id: &project, user_id: &user })?;
@@ -183,7 +181,7 @@ pub async fn cl_sync_now(app: AppHandle) -> Result<sync::Status, AppError> {
 pub fn cl_sync_status(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<sync::Status, AppError> {
     let st = app.state::<SyncState>();
     let mut s = st.status();
-    if let Ok((project, _)) = project_of(&auth) {
+    if let Ok((project, _)) = project_of(&db, &auth) {
         if let Ok(g) = db.0.lock() {
             let (p, f, c) = store::pending_count(&g, &project).unwrap_or((0, 0, 0));
             s.pending = p;
@@ -200,7 +198,7 @@ pub fn cl_sync_status(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthSta
 #[tauri::command]
 pub fn cl_conflicts(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<Vec<store::Conflict>, AppError> {
     require_read(&auth)?;
-    let (project, _) = project_of(&auth)?;
+    let (project, _) = project_of(&db, &auth)?;
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     Ok(store::conflicts_open(&g, &project)?)
 }
@@ -208,7 +206,7 @@ pub fn cl_conflicts(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<Vec
 #[tauri::command]
 pub fn cl_conflict_resolve(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, id: i64, choice: String, merged: Option<Row>) -> Result<(), AppError> {
     auth.require_perm(Permission::DossierUpdate)?;
-    let (_, user) = project_of(&auth)?;
+    let (_, user) = project_of(&db, &auth)?;
     {
         let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
         sync::resolve_conflict(&g, id, &choice, merged, &user)?;
@@ -221,7 +219,7 @@ pub fn cl_conflict_resolve(app: AppHandle, db: State<'_, Db>, auth: State<'_, Au
 #[tauri::command]
 pub fn cl_outbox(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<Vec<store::OutboxRow>, AppError> {
     require_read(&auth)?;
-    let (project, _) = project_of(&auth)?;
+    let (project, _) = project_of(&db, &auth)?;
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     Ok(store::outbox_all(&g, &project)?)
 }
@@ -262,7 +260,7 @@ pub fn cl_migrate_preview(db: State<'_, Db>, auth: State<'_, AuthState>) -> Resu
 #[tauri::command]
 pub fn cl_migrate_run(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<super::legacy::MigrateReport, AppError> {
     auth.require_perm(Permission::DossierCreate)?;
-    let (project, user) = project_of(&auth)?;
+    let (project, user) = project_of(&db, &auth)?;
     let rep = {
         let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
         let rep = super::legacy::push_unmigrated(&g, &store::Who { project_id: &project, user_id: &user })?;
@@ -303,4 +301,19 @@ pub async fn cl_remote(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthSt
         sync::request_soon(&app);
     }
     Ok(out)
+}
+
+// ---- dự án đang làm (tài khoản quản trị không gắn dự án)
+
+#[tauri::command]
+pub async fn cl_project_get(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<super::project::ProjectInfo, AppError> {
+    super::project::info(&db, &auth).await
+}
+
+#[tauri::command]
+pub fn cl_project_set(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, project_id: String) -> Result<(), AppError> {
+    super::project::set(&db, &auth, &project_id)?;
+    live::touch(&app, &[Topic::ChinhLy, Topic::ClSync, Topic::Dossier, Topic::Catalog]);
+    sync::request_soon(&app);
+    Ok(())
 }

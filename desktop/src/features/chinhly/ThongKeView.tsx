@@ -7,7 +7,7 @@ import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { V460 } from "@/state";
 import { clRemote, qs, str, num, type ClRow } from "@/api/chinhly";
-import { errText, fmtTime, n, Select, useClCatalog, useClSync } from "./common";
+import { ChonDuAn, errText, fmtTime, n, Select, useClCatalog, useClSync } from "./common";
 import { writeXlsx } from "./excel";
 
 type Kind = "chinh-ly" | "nhan-vien" | "phan-mem" | "muon-tra";
@@ -98,6 +98,7 @@ export default function ThongKeView({ kind }: { kind: Kind }) {
         <h2>{TEN[kind]}</h2>
         <div className="sub">· số liệu từ máy chủ (dữ liệu chỉnh lý đồng bộ) {kind === "nhan-vien" && "· tính từ lịch sử sửa từng trường"}</div>
       </div>
+      <ChonDuAn />
       {!online && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — thống kê cần máy chủ.</div>}
       <div className="card mt-3.5">
         <div className="flex gap-2 items-center flex-wrap">
