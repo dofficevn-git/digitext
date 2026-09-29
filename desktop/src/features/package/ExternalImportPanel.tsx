@@ -1,36 +1,17 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Đóng gói KHO TÀI LIỆU TỪ BÊN NGOÀI: chọn thư mục đã quét + tệp Excel metadata →
-// kiểm khớp (mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu/thừa tệp, số trang, Điều 8 TT05)
-// → CHỈ KHI khớp hết mới đóng gói, mỗi hồ sơ một gói SIP/AIP.
+// Đóng gói kho tài liệu từ bên ngoài: thư mục đã quét (Phông / Hộp / Hồ sơ) + tệp Excel metadata → kiểm khớp
+// (mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu thừa tệp, số trang, điều kiện Điều 8) → khớp mới đóng gói,
+// mỗi hồ sơ một gói. Không tải gì lên máy chủ.
 
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-
-import {
-  extimportCheck,
-  extimportPack,
-  onExtimportProgress,
-  pdfaVerapdfAvailable,
-  type ExtCheckSummary,
-  type ExtPackSummary,
-  type ExtProgress,
-} from "@/api/extimport";
+import { extimportCheck, extimportPack, onExtimportProgress, pdfaVerapdfAvailable, type ExtCheckSummary, type ExtPackSummary, type ExtProgress } from "@/api/extimport";
 import { isTauri } from "@/api/ipc";
+import { Badge, Banner, Button, Card, Checkbox, ErrorBanner, Field, FormGrid, Help, Input, Select, Stepper, Table, Tip, Toolbar } from "@/ui";
 
-const PHASE_LABEL: Record<ExtProgress["phase"], string> = {
-  excel: "Đang đọc Excel…",
-  check: "Đang kiểm tra",
-  precheck: "Kiểm tra trước khi đóng gói",
-  pack: "Đang đóng gói",
-  pdfa: "Đang kiểm PDF/A",
-};
-
-function gb(n: number): string {
-  return n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${(n / 1e6).toFixed(0)} MB`;
-}
-function fmt(n: number): string {
-  return n.toLocaleString("vi-VN");
-}
+const PHASE_LABEL: Record<ExtProgress["phase"], string> = { excel: "Đang đọc Excel…", check: "Đang kiểm tra", precheck: "Kiểm tra trước khi đóng gói", pack: "Đang đóng gói", pdfa: "Đang kiểm PDF/A" };
+const gb = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${(n / 1e6).toFixed(0)} MB`);
+const fmt = (n: number) => n.toLocaleString("vi-VN");
 
 export default function ExternalImportPanel() {
   const [root, setRoot] = useState("");
@@ -40,8 +21,6 @@ export default function ExternalImportPanel() {
   const [agreement, setAgreement] = useState("");
   const [orgCode, setOrgCode] = useState("");
   const [deep, setDeep] = useState(true);
-  // "Dự án này có yêu cầu đạt chuẩn ISO 19005 không?" — quyết định theo từng dự án, nhớ theo
-  // tệp Excel. Mặc định KHÔNG: TT05 chỉ ghi "PDF/A hai lớp", không dẫn chiếu ISO.
   const [useVera, setUseVeraState] = useState(false);
   const [veraOk, setVeraOk] = useState<boolean | null>(null);
   const isoKey = (x: string) => `extimport.iso.${x.toLowerCase()}`;
@@ -50,7 +29,7 @@ export default function ExternalImportPanel() {
     try {
       if (excel) localStorage.setItem(isoKey(excel), v ? "1" : "0");
     } catch {
-      /* localStorage có thể bị chặn — chỉ là tiện ích nhớ lựa chọn */
+      /* tiện ích nhớ */
     }
   };
   useEffect(() => {
@@ -68,7 +47,7 @@ export default function ExternalImportPanel() {
   const [lastNote, setLastNote] = useState("");
   const [check, setCheck] = useState<ExtCheckSummary | null>(null);
   const [pack, setPack] = useState<ExtPackSummary | null>(null);
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState<unknown>(null);
 
   useEffect(() => {
     if (isTauri()) pdfaVerapdfAvailable().then(setVeraOk).catch(() => setVeraOk(false));
@@ -87,53 +66,36 @@ export default function ExternalImportPanel() {
     if (typeof r === "string") set(r);
   };
   const pickExcel = async () => {
-    const r = await open({
-      multiple: false,
-      title: "Chọn tệp Excel metadata",
-      filters: [{ name: "Excel", extensions: ["xlsx", "xlsm", "xls"] }],
-    });
+    const r = await open({ multiple: false, title: "Chọn tệp Excel metadata", filters: [{ name: "Excel", extensions: ["xlsx", "xlsm", "xls"] }] });
     if (typeof r === "string") {
       setExcel(r);
-      // Thư mục kho thường nằm cạnh tệp Excel — điền sẵn cho nhanh.
       if (!root) setRoot(r.replace(/[\\/][^\\/]+$/, ""));
     }
   };
-
   const runCheck = async () => {
-    setErr("");
+    setErr(null);
     setPack(null);
     setBusy("check");
     setProgress(null);
     try {
       setCheck(await extimportCheck({ root, excel, deep, useVerapdf: useVera && veraOk === true }));
     } catch (e) {
-      setErr(String((e as { message?: string })?.message ?? e));
+      setErr(e);
     } finally {
       setBusy("");
     }
   };
-
   const runPack = async () => {
-    setErr("");
+    setErr(null);
     setBusy("pack");
     setProgress(null);
     setLastNote("");
     try {
-      const r = await extimportPack({
-        root,
-        excel,
-        outDir,
-        kind,
-        agreement: agreement.trim() || null,
-        orgCode: orgCode.trim() || null,
-        allowPartial,
-        force: false,
-        useVerapdf: useVera && veraOk === true,
-      });
+      const r = await extimportPack({ root, excel, outDir, kind, agreement: agreement.trim() || null, orgCode: orgCode.trim() || null, allowPartial, force: false, useVerapdf: useVera && veraOk === true });
       setPack(r);
       setCheck(r.check);
     } catch (e) {
-      setErr(String((e as { message?: string })?.message ?? e));
+      setErr(e);
     } finally {
       setBusy("");
     }
@@ -142,206 +104,157 @@ export default function ExternalImportPanel() {
   const ready = isTauri() && !!root && !!excel && !busy;
   const clean = check != null && check.errors === 0;
   const canPack = ready && !!outDir && check != null && (clean || allowPartial) && (kind !== "sip_hoso" || !!agreement.trim());
+  const step = pack ? 3 : check ? 2 : root && excel ? 1 : 0;
 
   return (
-    <div className="card p-4 mb-4">
-      <h3 className="mt-0">Đóng gói kho tài liệu từ bên ngoài</h3>
-      <p className="muted mt-0">
-        Dùng cho tài liệu đã quét sẵn ở nơi khác: một thư mục chia theo Phông / Hộp / Hồ sơ và một tệp Excel
-        metadata (mỗi dòng một tài liệu). Hệ thống đối chiếu thư mục với Excel; <b>khớp hết mới đóng gói</b>,
-        mỗi hồ sơ một gói tin. Không tải gì lên máy chủ.
-      </p>
+    <div className="space-y-4">
+      <Stepper current={step} steps={[{ key: "chon", label: "Chọn Excel và thư mục" }, { key: "kiem", label: "Kiểm khớp" }, { key: "goi", label: "Đóng gói" }, { key: "xong", label: "Kết quả" }]} />
 
-      <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
-        <div className="field">
-          <label>① Tệp Excel metadata</label>
-          <div className="flex gap-2">
-            <input className="inp flex-1" value={excel} onChange={(e) => setExcel(e.target.value)} placeholder="…\Metadata.xlsx" />
-            <button className="btn" onClick={() => void pickExcel()} disabled={!!busy}>Chọn…</button>
-          </div>
-        </div>
-        <div className="field">
-          <label>② Thư mục kho (chứa đường dẫn ghi trong Excel)</label>
-          <div className="flex gap-2">
-            <input className="inp flex-1" value={root} onChange={(e) => setRoot(e.target.value)} placeholder="E:\…" />
-            <button className="btn" onClick={() => void pickDir("Chọn thư mục kho tài liệu", setRoot)} disabled={!!busy}>Chọn…</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 mt-3 flex-wrap">
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={deep} onChange={(e) => setDeep(e.target.checked)} disabled={!!busy} />
-          Mở từng PDF (số trang, PDF/A hai lớp, dpi, màu, chữ ký số — Điều 8 TT05). Kho lớn mất vài chục phút.
-        </label>
-        <label
-          className="flex items-center gap-1.5"
-          title="Bật: từng tệp được veraPDF kiểm đúng chuẩn ISO 19005 theo loại nó tự khai (1b, 2b, 2u, 3b, 3u…), ở bước kiểm và ngay trước khi đóng gói; tệp không đạt là LỖI. Tắt: chỉ đòi tệp khai PDF/A và có hồ sơ màu (TT05 không dẫn chiếu ISO). Lựa chọn được nhớ theo tệp Excel."
-        >
-          <input
-            type="checkbox"
-            checked={useVera && veraOk === true}
-            onChange={(e) => setUseVera(e.target.checked)}
-            disabled={!!busy || veraOk !== true}
-          />
-          <b>Dự án này yêu cầu đạt chuẩn ISO 19005</b> (kiểm bằng veraPDF, không đạt là lỗi)
-          {veraOk === false ? " — máy này chưa có Docker nên không bật được" : ""}
-          {veraOk === true ? ". Kho lớn: vài giờ." : ""}
-        </label>
-        <button className="btn primary" onClick={() => void runCheck()} disabled={!ready}>
-          {busy === "check" ? "Đang kiểm tra…" : "③ Kiểm tra khớp với Excel"}
-        </button>
-      </div>
+      <Card title="Nguồn dữ liệu" description="Một thư mục chia theo Phông / Hộp / Hồ sơ và một tệp Excel metadata, mỗi dòng một tài liệu.">
+        <FormGrid cols={2}>
+          <Field label="Tệp Excel metadata">
+            <div className="flex gap-2">
+              <Input value={excel} onChange={(e) => setExcel(e.target.value)} placeholder="…\Metadata.xlsx" />
+              <Button onClick={() => void pickExcel()} disabled={!!busy}>
+                Chọn
+              </Button>
+            </div>
+          </Field>
+          <Field label="Thư mục kho" hint="Chứa các đường dẫn ghi trong Excel">
+            <div className="flex gap-2">
+              <Input value={root} onChange={(e) => setRoot(e.target.value)} placeholder="E:\…" />
+              <Button onClick={() => void pickDir("Chọn thư mục kho tài liệu", setRoot)} disabled={!!busy}>
+                Chọn
+              </Button>
+            </div>
+          </Field>
+        </FormGrid>
+        <Toolbar className="mt-3">
+          <Field label="Mở từng PDF để kiểm số trang, PDF/A, dpi, màu, chữ ký" inline>
+            <Checkbox checked={deep} onChange={setDeep} disabled={!!busy} />
+          </Field>
+          <Tip text={veraOk === false ? "Máy này chưa có Docker nên không chạy được veraPDF" : "Kiểm đúng chuẩn ISO 19005 bằng veraPDF, tệp không đạt là lỗi"}>
+            <span>
+              <Field label="Dự án yêu cầu đạt chuẩn ISO 19005" inline>
+                <Checkbox checked={useVera && veraOk === true} onChange={setUseVera} disabled={!!busy || veraOk !== true} />
+              </Field>
+            </span>
+          </Tip>
+          <Toolbar.Spacer />
+          <Button variant="primary" icon="kiemTra" loading={busy === "check"} disabled={!ready} onClick={() => void runCheck()}>
+            Kiểm tra khớp với Excel
+          </Button>
+        </Toolbar>
+        <p className="mt-2 text-xs text-fg-subtle">Kho lớn: mở từng PDF mất vài chục phút, kiểm veraPDF mất vài giờ.</p>
+      </Card>
 
       {busy && progress && (
-        <div className="banner mt-3">
+        <Banner tone="info">
           {PHASE_LABEL[progress.phase]}
           {progress.total > 0 ? `: ${fmt(progress.done)}/${fmt(progress.total)} hồ sơ` : ""}
-          {lastNote ? ` · gần nhất hỏng — ${lastNote}` : ""}
-        </div>
+          {lastNote ? `. Gần nhất hỏng: ${lastNote}` : ""}
+        </Banner>
       )}
-      {err && <div className="err-banner mt-3">{err}</div>}
+      {err !== null && <ErrorBanner error={err} />}
 
       {check && (
-        <div className="mt-4">
-          <div className={`banner ${clean ? "" : "warn"}`}>
-            <b>{clean ? "ĐÃ KHỚP — được phép đóng gói." : "CHƯA KHỚP — chưa được đóng gói."}</b>{" "}
-            {fmt(check.rows)} dòng Excel · {fmt(check.filesOnDisk)} tệp PDF trên đĩa · {fmt(check.dossiers)} hồ sơ ·{" "}
-            {gb(check.bytes)} · <b>{fmt(check.dossiersOk)}</b> hồ sơ đạt ·{" "}
-            <b>{fmt(check.dossiers - check.dossiersOk)}</b> hồ sơ có lỗi · {fmt(check.errors)} lỗi · {fmt(check.warnings)} cảnh báo
-            {check.deep ? (check.verapdf ? " · ISO 19005: YÊU CẦU (đã xác minh veraPDF)" : " · ISO 19005: không yêu cầu") : ""}
-            {check.deep && check.pdfa != null
-              ? ` · PDF/A ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)}/${fmt(check.rows)} · ${fmt(check.pages ?? 0)} trang`
-              : " · (chưa mở từng PDF)"}
-            {check.deep && Object.keys(check.pdfaFlavours ?? {}).length > 0
-              ? ` · Loại tệp: ${Object.entries(check.pdfaFlavours).map(([k, v]) => `${k} ${fmt(v)}`).join(", ")}`
-              : ""}
-          </div>
+        <Card
+          tone={clean ? undefined : "warning"}
+          title={clean ? "Đã khớp, được phép đóng gói" : "Chưa khớp, chưa được đóng gói"}
+          description={`${fmt(check.rows)} dòng Excel · ${fmt(check.filesOnDisk)} tệp PDF · ${fmt(check.dossiers)} hồ sơ · ${gb(check.bytes)} · ${fmt(check.dossiersOk)} hồ sơ đạt · ${fmt(check.dossiers - check.dossiersOk)} hồ sơ lỗi · ${fmt(check.errors)} lỗi · ${fmt(check.warnings)} cảnh báo${check.deep ? (check.verapdf ? " · ISO 19005: đã xác minh" : " · ISO 19005: không yêu cầu") : " · chưa mở từng PDF"}${check.deep && check.pdfa != null ? ` · PDF/A ${fmt(check.pdfa)}/${fmt(check.rows)} · đã ký ${fmt(check.signed ?? 0)} · ${fmt(check.pages ?? 0)} trang` : ""}`}
+          padding="none"
+        >
           {check.byCode.length > 0 && (
-            <div className="tbl-scroll mt-2.5">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Mức độ</th>
-                    <th>Loại vấn đề</th>
-                    <th>Số lần</th>
-                    <th>Số hồ sơ</th>
-                    <th>Ví dụ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {check.byCode.map((c) => (
-                    <tr key={`${c.severity}-${c.code}`}>
-                      <td>
-                        <span className={`badge ${c.severity === "error" ? "err" : c.severity === "warning" ? "warn" : "info"}`}>
-                          {c.severity === "error" ? "LỖI" : c.severity === "warning" ? "Cảnh báo" : "Thông tin"}
-                        </span>
-                      </td>
-                      <td>{c.code}</td>
-                      <td>{fmt(c.count)}</td>
-                      <td>{fmt(c.dossiers)}</td>
-                      <td>{c.example}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table
+              columns={[
+                { key: "severity", header: "Mức", width: 100, cell: (c) => <Badge tone={c.severity === "error" ? "err" : c.severity === "warning" ? "warn" : "info"}>{c.severity === "error" ? "Lỗi" : c.severity === "warning" ? "Cảnh báo" : "Thông tin"}</Badge> },
+                { key: "code", header: "Vấn đề", width: 220 },
+                { key: "count", header: "Số lần", align: "right", width: 80, cell: (c) => fmt(c.count) },
+                { key: "dossiers", header: "Hồ sơ", align: "right", width: 80, cell: (c) => fmt(c.dossiers) },
+                { key: "example", header: "Ví dụ", className: "whitespace-normal text-sm" },
+              ]}
+              rows={check.byCode}
+              getRowId={(c) => `${c.severity}-${c.code}`}
+              maxHeight={320}
+              dense
+            />
           )}
-          <p className="muted mt-2">
-            Báo cáo chi tiết từng hồ sơ / từng dòng Excel (mở bằng Excel): <code>{check.reportDir}</code> —{" "}
-            <code>kiem-tra-ho-so.csv</code>, <code>kiem-tra-van-de.csv</code>. Sửa Excel hoặc thư mục theo báo cáo rồi bấm kiểm tra lại.
+          <p className="px-4 py-2 text-xs text-fg-subtle">
+            Báo cáo từng hồ sơ và từng dòng Excel: <code>{check.reportDir}</code> (kiem-tra-ho-so.csv, kiem-tra-van-de.csv). Sửa Excel hoặc thư mục theo báo cáo rồi kiểm tra lại.
           </p>
-        </div>
+        </Card>
       )}
 
       {check && (
-        <div className="mt-4">
-          <h4 className="mt-0">④ Đóng gói</h4>
-          <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-            <div className="field">
-              <label>Loại gói</label>
-              <select className="inp" value={kind} onChange={(e) => setKind(e.target.value as "aip_hoso" | "sip_hoso")} disabled={!!busy}>
-                <option value="aip_hoso">AIP hồ sơ — bảo quản</option>
-                <option value="sip_hoso">SIP hồ sơ — nộp lưu</option>
-              </select>
-            </div>
+        <Card title="Đóng gói">
+          <FormGrid cols={3}>
+            <Field label="Loại gói">
+              <Select value={kind} onChange={(v) => setKind(v as "aip_hoso" | "sip_hoso")} disabled={!!busy} options={[{ value: "aip_hoso", label: "AIP hồ sơ (bảo quản)" }, { value: "sip_hoso", label: "SIP hồ sơ (nộp lưu)" }]} />
+            </Field>
             {kind === "sip_hoso" && (
-              <div className="field">
-                <label>Mã thoả thuận nộp lưu (bắt buộc với SIP)</label>
-                <input className="inp" value={agreement} onChange={(e) => setAgreement(e.target.value)} />
-              </div>
+              <Field label="Mã thoả thuận nộp lưu" required>
+                <Input value={agreement} onChange={(e) => setAgreement(e.target.value)} />
+              </Field>
             )}
-            <div className="field">
-              <label>Mã cơ quan lưu trữ (bỏ trống = đoạn đầu mã phông)</label>
-              <input className="inp" value={orgCode} onChange={(e) => setOrgCode(e.target.value)} placeholder="H49" />
-            </div>
-            <div className="field">
-              <label>Thư mục ghi gói tin</label>
+            <Field label="Mã cơ quan lưu trữ" hint="Để trống thì lấy đoạn đầu mã phông">
+              <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} placeholder="H49" />
+            </Field>
+            <Field label="Thư mục ghi gói tin" required className="sm:col-span-3">
               <div className="flex gap-2">
-                <input className="inp flex-1" value={outDir} onChange={(e) => setOutDir(e.target.value)} />
-                <button className="btn" onClick={() => void pickDir("Chọn thư mục ghi gói tin", setOutDir)} disabled={!!busy}>Chọn…</button>
+                <Input value={outDir} onChange={(e) => setOutDir(e.target.value)} />
+                <Button onClick={() => void pickDir("Chọn thư mục ghi gói tin", setOutDir)} disabled={!!busy}>
+                  Chọn
+                </Button>
               </div>
-            </div>
-          </div>
+            </Field>
+          </FormGrid>
           {!clean && (
-            <label className="flex items-center gap-1.5 mt-2.5">
-              <input type="checkbox" checked={allowPartial} onChange={(e) => setAllowPartial(e.target.checked)} disabled={!!busy} />
-              Kho còn lỗi — vẫn đóng gói trước {fmt(check.dossiersOk)} hồ sơ đã khớp (hồ sơ lỗi bị giữ lại, không đóng).
-            </label>
+            <div className="mt-3">
+              <Field label={`Kho còn lỗi, vẫn đóng gói trước ${fmt(check.dossiersOk)} hồ sơ đã khớp (hồ sơ lỗi giữ lại)`} inline>
+                <Checkbox checked={allowPartial} onChange={setAllowPartial} disabled={!!busy} />
+              </Field>
+            </div>
           )}
-          <div className="mt-3">
-            <button className="btn primary" onClick={() => void runPack()} disabled={!canPack}>
-              {busy === "pack" ? "Đang đóng gói…" : "Bắt đầu đóng gói"}
-            </button>
-            <span className="muted ml-3">
-              Ngay trước khi dựng, từng PDF được mở soi lại: số trang phải khớp Excel và tệp phải đạt Điều 8.2.a TT05
-              (PDF/A hai lớp, ≥ 200 dpi, màu 24 bit, có chữ ký số). Chạy lại được — hồ sơ đã có gói thì bỏ qua.
-            </span>
-          </div>
-        </div>
+          <Toolbar className="mt-3">
+            <Button variant="primary" icon="goi" loading={busy === "pack"} disabled={!canPack} onClick={() => void runPack()}>
+              Bắt đầu đóng gói
+            </Button>
+            <span className="text-sm text-fg-subtle">Trước khi dựng, từng PDF được soi lại số trang và điều kiện Điều 8.2.a. Chạy lại được, hồ sơ đã có gói thì bỏ qua.</span>
+          </Toolbar>
+        </Card>
       )}
 
       {pack && (
-        <div className="mt-4">
-          <div className={`banner ${pack.started && pack.failed === 0 && pack.held === 0 ? "" : "warn"}`}>
-            {pack.started ? (
-              <>
-                <b>Đóng gói xong.</b> Dựng mới {fmt(pack.built)} gói ({gb(pack.bytes)}) · đã có từ trước {fmt(pack.existing)} ·
-                giữ lại vì lỗi bước kiểm {fmt(pack.held)} · dựng hỏng {fmt(pack.failed)}. Thư mục: <code>{pack.outDir}</code>
-              </>
-            ) : (
-              <b>Chưa đóng gói: dữ liệu chưa khớp với Excel — xem bảng lỗi phía trên.</b>
-            )}
-          </div>
+        <Card tone={pack.started && pack.failed === 0 && pack.held === 0 ? "info" : "warning"} title={pack.started ? "Đóng gói xong" : "Chưa đóng gói: dữ liệu chưa khớp với Excel"} padding="none">
+          {pack.started && (
+            <p className="px-4 py-2 text-sm">
+              Dựng mới {fmt(pack.built)} gói ({gb(pack.bytes)}) · đã có từ trước {fmt(pack.existing)} · giữ lại vì lỗi {fmt(pack.held)} · dựng hỏng {fmt(pack.failed)}. Thư mục: <code>{pack.outDir}</code>
+            </p>
+          )}
           {pack.failures.length > 0 && (
-            <div className="tbl-scroll mt-2.5">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Mã hồ sơ</th>
-                    <th>Thư mục</th>
-                    <th>Lý do không đóng gói</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pack.failures.slice(0, 100).map((f) => (
-                    <tr key={f.dir}>
-                      <td>{f.hsCode}</td>
-                      <td>{f.dir}</td>
-                      <td>{f.error}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table
+              columns={[
+                { key: "hsCode", header: "Mã hồ sơ", width: 160 },
+                { key: "dir", header: "Thư mục", className: "whitespace-normal text-sm" },
+                { key: "error", header: "Lý do", className: "whitespace-normal text-sm" },
+              ]}
+              rows={pack.failures.slice(0, 100)}
+              getRowId={(f) => f.dir}
+              maxHeight={320}
+              dense
+            />
           )}
           {pack.resultFile && (
-            <p className="muted mt-2">
+            <p className="px-4 py-2 text-xs text-fg-subtle">
               Bảng kết quả từng hồ sơ: <code>{pack.resultFile}</code>
             </p>
           )}
-        </div>
+        </Card>
       )}
+
+      <Help title="Điều kiện tệp theo TT05">
+        <p>Điều 8.2.a: PDF/A hai lớp, độ phân giải từ 200 dpi (bản đồ, bản vẽ từ 300 dpi), màu 24 bit, có chữ ký số. TT05 không dẫn chiếu ISO 19005; chỉ bật kiểm veraPDF khi dự án yêu cầu.</p>
+      </Help>
     </div>
   );
 }

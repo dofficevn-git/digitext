@@ -3,34 +3,19 @@
  
 
  
-.oh-wrap {
-  overflow-y: auto;
-  max-height: min(62vh, 640px);
-}
-
- 
-.tbl.oh-table th,
-.tbl.oh-table td {
+.oh-table th,
+.oh-table td {
   border-bottom: 1px solid var(--line-2);
   border-right: 1px solid var(--line-2);
   vertical-align: top;
   font-size: var(--do-text-base);
 }
 
-.tbl.oh-table tr > *:last-child {
+.oh-table tr > *:last-child {
   border-right: none;
 }
 
  
-.oh-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--do-surface-card);
-  text-align: left;
-  padding: 8px 12px;
-}
-
 .oh-table td,
 .oh-table tbody th {
   padding: 8px 12px;
