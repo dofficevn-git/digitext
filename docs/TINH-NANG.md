@@ -1,6 +1,6 @@
 # DigiText — Mô tả tính năng
 
-Cập nhật: 21/09/2026 · Phiên bản ứng dụng 0.15.2
+Cập nhật: 01/10/2026 · Phiên bản ứng dụng 0.17.1
 
 DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** theo nghiệp vụ lưu trữ nhà nước Việt Nam, bám Thông tư 05/2025/TT-BNV. Phủ trọn vòng đời: quét → thu thập → OCR → PDF/A → bóc tách thông tin → duyệt → ký số → đóng gói → bảo quản → khai thác → tiêu huỷ.
 
@@ -41,9 +41,10 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 
 ## 6. Chỉnh lý và lập hồ sơ
 
-- Quản lý danh mục: phông, mục lục, hộp, hồ sơ, thời hạn bảo quản, loại văn bản, ngôn ngữ.
-- Lập hồ sơ điện tử, hệ thống hoá hồ sơ, cập nhật cơ sở dữ liệu; nhập/xuất Excel.
-- Lịch sử chỉnh sửa hồ sơ.
+- Danh mục chỉnh lý (phông, phòng ban, mảng công việc, thời hạn bảo quản, loại văn bản, ngôn ngữ, khối phông) là **bản sao đồng bộ với máy chủ**: sửa được khi mất mạng, có mạng tự đẩy; xung đột cùng trường được hỏi và chọn theo từng trường.
+- Lập hồ sơ điện tử (bảng 50 dòng, lọc theo phông / phòng ban / mảng / THBQ, nhập Excel theo mẫu), văn bản của hồ sơ, hệ thống hoá 4 bước (xem trước → đánh số → xuất mục lục tạm → nhập tệp đã điền hộp / bó / tập), kho và giá, mượn trả hồ sơ giấy (in phiếu).
+- Tra cứu và kết xuất: metadata TT05 / TT02, mục lục hồ sơ 6 kiểu (Excel và in), mục lục văn bản, nhãn hộp, sản phẩm có bìa, phụ lục tra tìm, lịch sử thay đổi.
+- Cây thư mục quét (Cơ quan › Hộp › Hồ sơ) lấy từ mục lục chỉnh lý hoặc Excel, phát cho máy nhân viên qua máy chủ hoặc mạng LAN (mã 6 số).
 
 ## 7. Ký số
 
@@ -67,6 +68,7 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 
 ## 10. Quản trị và vận hành
 
+- Giao diện 0.17.1: menu hai cấp theo vòng đời (Tổng quan · Số hoá · Xử lý · Chỉnh lý · Lưu trữ số · Báo cáo · Quản trị), trang Tổng quan theo quyền, ô **Dự án đang làm** dùng chung, tìm nhanh Ctrl+K, chuông thông báo, dùng được hoàn toàn bằng bàn phím và trình đọc màn hình (nhãn ô, hộp thoại chuẩn, bảng sắp xếp được).
 - Phân quyền theo vai trò và **theo từng dự án**; quản lý thiết bị; **nhật ký kiểm toán** mọi thao tác.
 - Bảng tiến độ theo dự án: số tệp, đã OCR, đã PDF/A, đã bóc trường, đã duyệt; cập nhật thời gian thực.
 - Máy chủ chạy dạng **dịch vụ tự khởi động, tự hồi** khi lỗi hoặc mất điện.
