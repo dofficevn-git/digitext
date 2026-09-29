@@ -36,6 +36,7 @@ export default tseslint.config(
     rules: {
       ...Object.fromEntries(Object.entries(jsxA11y.flatConfigs.recommended.rules ?? {}).map(([k]) => [k, "warn"])),
       "jsx-a11y/no-autofocus": "off",
+      "jsx-a11y/label-has-for": "off",
     },
   },
   {

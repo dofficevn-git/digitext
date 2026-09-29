@@ -1,3 +1,4 @@
+/* Đóng băng từ 0.17.1: KHÔNG dùng biến --do-* trong mã mới (dùng token trong theme.css). Chỉ còn phục vụ digitext.css và CSS cũ; sẽ xoá ở 0.18. */
  
 
 :root {

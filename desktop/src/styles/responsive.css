@@ -20,7 +20,7 @@
 }
 @media (max-width: 1152px) {
   :root {
-    --ui-scale: 0.88;
+    --ui-scale: 0.92;
   }
 }
 
@@ -49,7 +49,7 @@
 }
 @media (max-height: 760px) {
   :root {
-    --ui-density: 0.8;
+    --ui-density: 0.85;
   }
 }
 
