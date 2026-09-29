@@ -30,6 +30,8 @@ pub struct AppState {
     pub sign_visible: bool,
     pub sign_stamp: bool,
     pub change_prune: Arc<Mutex<Option<std::time::Instant>>>,
+    /// Lần dọn tombstone chỉnh lý (cl_*) gần nhất — xem routes::chinh_ly::sync.
+    pub cl_prune: Arc<Mutex<Option<std::time::Instant>>>,
 }
 impl AppState {
     pub fn new(pool: PgPool, keys: Arc<JwtKeys>, data_dir: impl Into<std::path::PathBuf>) -> Self {
@@ -51,6 +53,7 @@ impl AppState {
             sign_visible: true,
             sign_stamp: false,
             change_prune: Arc::new(Mutex::new(None)),
+            cl_prune: Arc::new(Mutex::new(None)),
         }
     }
     pub fn with_updates_dir(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
@@ -140,4 +143,5 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::ops::router())
         .merge(crate::routes::upload_batches::router())
         .merge(crate::routes::changes::router())
+        .merge(crate::routes::chinh_ly::router())
 }

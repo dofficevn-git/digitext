@@ -77,7 +77,11 @@ export type V3yx =
   | "device.view"
   | "device.revoke"
   | "work.execute"
-  | "work.manage";
+  | "work.manage"
+  | "dossier.systematize"
+  | "khogia.manage"
+  | "loan.view"
+  | "loan.manage";
 
 export interface V3yy {
   perm: V3yx;
@@ -169,6 +173,16 @@ export const V3z0: V3yz[] = [
     perms: [
       { perm: "work.execute", label: "Làm gói việc được giao (xác nhận / kiểm tra chéo)" },
       { perm: "work.manage", label: "Tạo, giao và duyệt gói việc" },
+    ],
+  },
+  {
+    key: "chinhly",
+    label: "Chỉnh lý (máy chủ)",
+    perms: [
+      { perm: "dossier.systematize", label: "Hệ thống hoá: đánh số hồ sơ, gán hộp/bó/tập, xuất/nhập mục lục tạm" },
+      { perm: "khogia.manage", label: "Quản lý kho / giá lưu trữ, xếp hồ sơ lên giá" },
+      { perm: "loan.view", label: "Xem phiếu mượn / trả hồ sơ giấy" },
+      { perm: "loan.manage", label: "Lập phiếu mượn, ghi trả hồ sơ giấy" },
     ],
   },
   {
@@ -365,6 +379,10 @@ const V3z4: Record<V3yx, number> = {
   "project.assign_admin": 3,
   "work.execute": 1,
   "work.manage": 2,
+  "dossier.systematize": 2,
+  "khogia.manage": 2,
+  "loan.view": 1,
+  "loan.manage": 1,
 };
 
 export function V3z5(Vh: V3xs, Vi: V3yx): boolean {
@@ -408,6 +426,12 @@ const V3z7: Record<V3xt, V3yx> = {
   work: "work.execute",
 
   workManage: "work.manage",
+
+  chinhlyAdmin: "dossier.systematize",
+
+  khogiaManage: "khogia.manage",
+
+  loan: "loan.view",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {
