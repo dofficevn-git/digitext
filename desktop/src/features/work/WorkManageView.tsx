@@ -28,6 +28,7 @@ import {
   type WorkPackageDetail,
 } from "@/api/work";
 import V4i7 from "@/features/upload/OcrFieldsView";
+import { inMetadata, layTruongNhieuTaiLieu, tenTepAnToan, xuatMetadataExcel, type MetaRow } from "@/features/dossier/metadataXuat";
 import { Icon } from "@/components/Icon";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -392,6 +393,38 @@ function ChiTietGoi({ id, onBack, onChanged }: { id: string; onBack: () => void;
     }
   };
 
+  const [xuatBan, setXuatBan] = useState(false);
+  const xuatMeta = async (kieu: "excel" | "in") => {
+    if (!pkg || items.length === 0) return;
+    setXuatBan(true);
+    setErr(null);
+    try {
+      const truong = await layTruongNhieuTaiLieu(items.map((i) => i.documentId), (d, t) => setMsg(`Đang lấy trường ${d}/${t}…`));
+      const rows: MetaRow[] = items.map((i) => {
+        const f = truong.get(i.documentId);
+        return {
+          id: i.documentId,
+          filename: i.filename,
+          hoSoRef: i.hoSoRef ?? "",
+          relPath: i.relPath ?? "",
+          fields: f?.fields ?? {},
+          daXacNhan: f?.daXacNhan ?? false,
+          trangThai: ITEM_STATUS_LABEL[i.status],
+          nguoiLam: i.doneByName ?? "",
+          kiemTra: i.checkedByName ?? "",
+          ghiChu: [i.checkNote, i.reviewNote].filter(Boolean).join(" · "),
+        };
+      });
+      const ten = `${pkg.name}${loc ? ` - ${ITEM_STATUS_LABEL[loc]}` : ""}`;
+      if (kieu === "excel") await xuatMetadataExcel(rows, `metadata-${tenTepAnToan(pkg.name)}.xlsx`);
+      else inMetadata(rows, "METADATA TÀI LIỆU ĐÃ BÓC TÁCH", ten);
+      setMsg(`${kieu === "excel" ? "Đã xuất" : "Đã in"} metadata ${n(rows.length)} tài liệu.`);
+    } catch (e) {
+      setErr(errText(e));
+    } finally {
+      setXuatBan(false);
+    }
+  };
   if (!pkg) return <div className="card mt-3.5 muted">{err ?? "Đang tải…"}</div>;
   if (open) {
     return (
@@ -488,6 +521,13 @@ function ChiTietGoi({ id, onBack, onChanged }: { id: string; onBack: () => void;
         </button>
         <button className="btn sm" onClick={() => void review("approve", true)}>
           Duyệt tất cả đã xác nhận
+        </button>
+        <div className="flex-1" />
+        <button className="btn sm" disabled={xuatBan || items.length === 0} title="Excel: mỗi dòng một tài liệu của gói (theo bộ lọc trạng thái đang chọn) với 18 trường đã bóc / xác nhận" onClick={() => void xuatMeta("excel")}>
+          <Icon name="tepExcel" /> {xuatBan ? "Đang lấy trường…" : "Xuất metadata"}
+        </button>
+        <button className="btn sm" disabled={xuatBan || items.length === 0} title="In bảng metadata (A4 ngang) các tài liệu đang hiện" onClick={() => void xuatMeta("in")}>
+          In metadata
         </button>
       </div>
       <div className="tbl-scroll mt-2">
