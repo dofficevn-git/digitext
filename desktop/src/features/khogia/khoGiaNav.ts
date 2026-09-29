@@ -11,6 +11,7 @@ export const KHOGIA_NAV: V46l[] = [
   { key: "kho", label: "Kho lưu trữ" },
   { key: "gia", label: "Giá lưu trữ" },
   { key: "khaithac", label: "Khai thác dữ liệu" },
+  { key: "muontra", label: "Mượn – trả hồ sơ" },
 ];
 
 export const V46m: V3xw[] = KHOGIA_NAV.map((i) => i.key);

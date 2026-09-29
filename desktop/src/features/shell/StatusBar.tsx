@@ -8,6 +8,26 @@ import { V475 } from "@/api/scanner";
 import { V47g, V47i } from "@/api/health";
 import { V45w } from "@/live/status";
 import { V47q, type V47l } from "./statusItems";
+import { syncLabel, useClSync } from "@/features/chinhly/common";
+import { clSyncNow } from "@/api/chinhly";
+
+function ClSyncStat() {
+  const s = useClSync();
+  const l = syncLabel(s);
+  const { session: ss } = V460();
+  const active = !!ss && !ss.locked && !!ss.projectId;
+  // Đăng nhập / mở khoá xong → đồng bộ chỉnh lý ngay (worker nền chỉ chạy mỗi 60 s).
+  useEffect(() => {
+    if (active && isTauri()) clSyncNow().catch(() => {});
+  }, [active]);
+  return (
+    <div className="stat" title={l.title}>
+      <span className={`dot ${l.dot === "unknown" ? "" : l.dot}`} />
+      <Icon name="chinhly" size={13} className="flex-none text-fg-subtle" />
+      Chỉnh lý: <b>{l.text}</b>
+    </div>
+  );
+}
 
 const V47r = 6_000;
 const V47s = 3;
@@ -102,6 +122,7 @@ export default function V47t() {
           {Vfr.label}: <b>{Vfr.value}</b>
         </div>
       ))}
+      <ClSyncStat />
     </footer>
   );
 }

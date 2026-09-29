@@ -1,6 +1,6 @@
 [package]
 name = "digitext-desktop"
-version = "0.15.25"
+version = "0.16.2"
 edition = "2021"
 publish = false
 
@@ -47,6 +47,7 @@ lopdf = "0.42.0"
 x509-cert = "0.2"
 der = { version = "0.7", features = ["oid"] }
 unicode-normalization = "0.1.25"
+uuid = { version = "1", features = ["v7", "serde"] }
 tauri-plugin-dialog = "2.7.1"
 thiserror = "1"
 tracing = "0.1"

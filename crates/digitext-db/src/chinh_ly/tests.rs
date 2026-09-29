@@ -203,6 +203,58 @@ async fn pull_theo_ver_tombstone_va_xoa_khoi_phuc() {
 }
 
 #[tokio::test]
+async fn he_thong_hoa_danh_so_va_gan_hop() {
+    use super::he_thong_hoa as hth;
+    use digitext_core::chinh_ly::SortOrder;
+    let Some(pool) = pool().await else { return };
+    let fx = fixture(&pool).await;
+    let c = ctx(&fx, "online", &all);
+    let pb = Uuid::now_v7();
+    sync::apply_op(&pool, &c, &upsert("cl_phong_ban", pb, json!({"phong_id": fx.phong, "ma_don_vi": "VP", "ten": "Văn phòng"}))).await.unwrap();
+    let thbq_vv: Uuid = sqlx::query_scalar("SELECT id FROM cl_thbq WHERE project_id IS NULL AND trang_thai = 1 LIMIT 1").fetch_one(&pool).await.unwrap();
+    let ids: Vec<Uuid> = (0..5).map(|_| Uuid::now_v7()).collect();
+    for (k, id) in ids.iter().enumerate() {
+        // số tạm 5,4,3,2,1 với ngày KT tăng dần → thứ tự theo ngày KT khác thứ tự số tạm
+        sync::apply_op(&pool, &c, &upsert("cl_ho_so", *id, json!({"phong_id": fx.phong, "phong_ban_id": pb, "thbq_id": thbq_vv, "so_tam": (5 - k).to_string(), "tieu_de": format!("HS {k}"), "ngay_ket_thuc": (2000 + k as i32).to_string()})))
+            .await
+            .unwrap();
+    }
+    let p = hth::preview(&pool, fx.project, fx.phong, &hth::Filter::default(), SortOrder::ThoiGianMang, 1, 1).await.unwrap();
+    assert_eq!(p.rows.len(), 5);
+    assert_eq!(p.rows[0].so_tam, "5"); // ngày KT 2000 nhỏ nhất
+    assert_eq!(p.rows[0].stt, 1);
+    assert_eq!(p.rows[4].stt, 5);
+    assert_eq!(p.rows[0].ma_ho_so_moi.as_deref(), Some("UBND.01.2000.1"));
+    // snapshot cũ → Stale
+    let stale = hth::apply(&pool, &c, fx.phong, &hth::Filter::default(), SortOrder::ThoiGianMang, 1, 1, p.snapshot_ver - 1).await.unwrap();
+    assert!(matches!(stale, Err(hth::ApplyErr::Stale)));
+    let ok = hth::apply(&pool, &c, fx.phong, &hth::Filter::default(), SortOrder::ThoiGianMang, 1, 1, p.snapshot_ver).await.unwrap().ok().unwrap();
+    assert_eq!(ok.rows.iter().map(|r| r.ho_so_so_cu.clone().unwrap()).collect::<Vec<_>>(), vec!["1", "2", "3", "4", "5"]);
+    let ls: i64 = sqlx::query_scalar("SELECT count(*) FROM cl_lich_su WHERE phong_id = $1 AND action = 'systematize'").bind(fx.phong).fetch_one(&pool).await.unwrap();
+    assert_eq!(ls, 5);
+    // gán hộp: 3 hồ sơ đầu hộp "1", 2 hồ sơ sau hộp "2"; 1 dòng lỗi (hồ sơ lạ)
+    let rows: Vec<hth::BoxRow> = ok.rows.iter().enumerate().map(|(k, r)| hth::BoxRow { ho_so_id: r.ho_so_id, hop_so: Some(if k < 3 { "1" } else { "2" }.into()), bo_so: None, tap_so: None, clear: false }).collect();
+    let mut rows = rows;
+    rows.push(hth::BoxRow { ho_so_id: Uuid::now_v7(), hop_so: Some("9".into()), bo_so: None, tap_so: None, clear: false });
+    let b = hth::boxing(&pool, &c, 1, &rows).await.unwrap();
+    assert_eq!((b.applied, b.hops_created, b.errors.len()), (5, 2, 1));
+    let (tu, den, vv): (Option<String>, Option<String>, bool) = sqlx::query_as("SELECT tu_ho_so, den_ho_so, vinh_vien FROM cl_hop WHERE phong_ban_id = $1 AND hop_so = '1'").bind(pb).fetch_one(&pool).await.unwrap();
+    assert_eq!((tu.as_deref(), den.as_deref(), vv), (Some("1"), Some("3"), true));
+    // giá suy ra từ dải hộp
+    let kho = Uuid::now_v7();
+    sync::apply_op(&pool, &c, &upsert("cl_kho", kho, json!({"ten": "Kho A"}))).await.unwrap();
+    let gia = Uuid::now_v7();
+    sync::apply_op(&pool, &c, &upsert("cl_gia", gia, json!({"kho_id": kho, "phong_ban_id": pb, "ten": "Giá 1", "tu_hop": 1, "den_hop": 1}))).await.unwrap();
+    let (rows, _) = super::ho_so::list(&pool, &super::ho_so::Filter { project_id: fx.project, gia_id: Some(gia), limit: 10, ..Default::default() }).await.unwrap();
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[0]["ten_kho"], json!("Kho A"));
+    // bó / tập cho hồ sơ hết hạn
+    let b2 = hth::boxing(&pool, &c, 2, &[hth::BoxRow { ho_so_id: ids[0], hop_so: None, bo_so: Some(7), tap_so: Some(2), clear: false }]).await.unwrap();
+    assert_eq!((b2.applied, b2.bo_tap_created), (1, 2));
+    cleanup(&pool, &fx).await;
+}
+
+#[tokio::test]
 async fn danh_muc_khong_xoa_khi_con_dung() {
     let Some(pool) = pool().await else { return };
     let fx = fixture(&pool).await;

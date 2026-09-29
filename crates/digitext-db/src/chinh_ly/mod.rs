@@ -12,6 +12,7 @@
 //! - `danh_muc`: đọc gộp danh mục.
 
 pub mod danh_muc;
+pub mod he_thong_hoa;
 pub mod ho_so;
 pub mod lich_su;
 pub mod merge;
@@ -20,6 +21,7 @@ pub mod spec;
 pub mod sync;
 #[cfg(test)]
 mod tests;
+pub mod thong_ke;
 pub mod validate;
 
 pub use merge::Row;

@@ -12,6 +12,7 @@ export const REPORT_NAV: V46o[] = [
   { key: "chinhly", label: "Tổng kết chỉnh lý" },
   { key: "nhanvien", label: "Tổng kết nhân viên" },
   { key: "phanmem", label: "Tổng kết phần mềm" },
+  { key: "muontra", label: "Mượn trả" },
 ];
 
 export const V46p: V3xx[] = REPORT_NAV.map((i) => i.key);

@@ -56,6 +56,10 @@ export const V3x9 = [
   "settings",
 
   "uploadBatches",
+
+  "chinhLy",
+
+  "clSync",
 ] as const;
 
 export type V3xa = (typeof V3x9)[number];
@@ -163,6 +167,16 @@ export const V3xc: readonly string[] = [
   "gia_list",
   "kho_list_detail",
   "gia_list_detail",
+
+  "cl_catalog_list",
+  "cl_rows",
+  "cl_row",
+  "cl_ho_so_list",
+  "cl_van_ban_list",
+  "cl_next_stt",
+  "cl_sync_status",
+  "cl_conflicts",
+  "cl_outbox",
 ];
 
 export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
@@ -298,6 +312,14 @@ export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
   gia_delete: ["khogia"],
   dossier_assign_gia: ["khogia", "dossier"],
   dossier_assign_gia_by_range: ["khogia", "dossier"],
+
+  cl_save: ["chinhLy", "clSync"],
+  cl_delete: ["chinhLy", "clSync"],
+  cl_sync_now: ["chinhLy", "clSync", "catalog", "khogia"],
+  cl_conflict_resolve: ["chinhLy", "clSync"],
+  cl_outbox_retry: ["clSync"],
+  cl_outbox_discard: ["chinhLy", "clSync"],
+  cl_remote: ["chinhLy"],
 };
 
 const V3xe: ReadonlySet<string> = new Set(V3xc);

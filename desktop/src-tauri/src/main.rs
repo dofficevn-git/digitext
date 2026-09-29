@@ -4,6 +4,7 @@ mod access;
 mod archive;
 mod auth;
 mod catalog;
+mod chinhly;
 mod collect;
 mod collect_progress;
 mod config;
@@ -50,6 +51,7 @@ fn main() {
         .manage(collect::SyncGuards::default())
         .manage(forward_progress::ForwardControl::default())
         .manage(forward_progress::CollectControl::default())
+        .manage(chinhly::sync::SyncState::default())
         .setup(|r_29j| {
             if let Ok(r_29m) = r_29j.path().app_log_dir() {
                 telemetry::init(&r_29m);
@@ -62,6 +64,7 @@ fn main() {
             std::fs::create_dir_all(&r_29l)?;
             let r_29k = db::open(&r_29l.join(config::DB_FILE))?;
             r_29j.manage(db::Db(std::sync::Mutex::new(r_29k)));
+            chinhly::sync::spawn_worker(r_29j.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -181,6 +184,22 @@ fn main() {
             progress_report::report_set_contract,
             progress_report::report_staff,
             progress_report::report_set_target,
+            chinhly::commands::cl_catalog_list,
+            chinhly::commands::cl_rows,
+            chinhly::commands::cl_row,
+            chinhly::commands::cl_ho_so_list,
+            chinhly::commands::cl_van_ban_list,
+            chinhly::commands::cl_next_stt,
+            chinhly::commands::cl_save,
+            chinhly::commands::cl_delete,
+            chinhly::commands::cl_sync_now,
+            chinhly::commands::cl_sync_status,
+            chinhly::commands::cl_conflicts,
+            chinhly::commands::cl_conflict_resolve,
+            chinhly::commands::cl_outbox,
+            chinhly::commands::cl_outbox_retry,
+            chinhly::commands::cl_outbox_discard,
+            chinhly::commands::cl_remote,
             work::work_list_packages,
             work::work_create_package,
             work::work_get_package,

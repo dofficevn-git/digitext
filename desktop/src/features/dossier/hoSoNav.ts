@@ -15,9 +15,11 @@ export const V4zc: V4zb[] = [
   {
     group: "Chỉnh lý",
     items: [
+      { key: "danhmuccl", label: "Danh mục chỉnh lý" },
       { key: "laphoso", label: "Lập hồ sơ điện tử" },
       { key: "hethonghoa", label: "Hệ thống hoá hồ sơ" },
       { key: "capnhat", label: "Cập nhật cơ sở dữ liệu" },
+      { key: "dongbo", label: "Đồng bộ & xung đột" },
     ],
   },
   {

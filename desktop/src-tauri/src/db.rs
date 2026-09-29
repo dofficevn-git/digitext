@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 20;
+const C_P1: i64 = 21;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -221,6 +221,10 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_collected_hash_path ON collected_docs (project_id, blake3, storage_path);
              DROP INDEX IF EXISTS ux_collected_hash;",
         )?;
+    }
+    if r_1d2 < 21 {
+        // Bản sao chỉnh lý (cl_*) + outbox / trạng thái / xung đột đồng bộ (30/9/2026).
+        r_1d3.execute_batch(&crate::chinhly::store::schema_sql())?;
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;
     r_1d3.commit()?;

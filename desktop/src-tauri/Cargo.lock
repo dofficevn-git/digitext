@@ -1059,7 +1059,7 @@ dependencies = [
 
 [[package]]
 name = "digitext-desktop"
-version = "0.15.25"
+version = "0.16.2"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1098,6 +1098,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "unicode-normalization",
+ "uuid",
  "x25519-dalek",
  "x509-cert",
 ]
