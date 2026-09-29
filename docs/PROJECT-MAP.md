@@ -107,7 +107,7 @@ và [crates/digitext-cli/src/tt02.rs](../crates/digitext-cli/src/tt02.rs).
 | Thư mục | Nội dung | Quy mô |
 | --- | --- | --- |
 | [crates/](../crates/) | 14 crate Rust — backend server | ~32k LOC |
-| [desktop/src/](../desktop/src/) | React 18 + TS — giao diện | ~35k LOC |
+| [desktop/src/](../desktop/src/) | React 18 + TS — giao diện (0.17.1) | ~38k LOC |
 | [desktop/src-tauri/](../desktop/src-tauri/) | Tauri v2 — lõi app desktop (Rust) | ~22k LOC |
 | [ml/](../ml/) | Python — fine-tune, benchmark, sinh data | ~6.9k LOC |
 | [triton/](../triton/) | Cấu hình model Triton Inference Server | ~1.1k LOC |
@@ -268,19 +268,45 @@ Module đáng chú ý: `scanner/` (điều khiển máy quét), `archive/`, `cat
 
 ### Frontend ([desktop/src/](../desktop/src/))
 
-React 18 + Vite + Tailwind + Radix UI + lucide-react. Xuất Excel bằng `xlsx`
-(cài trực tiếp từ CDN SheetJS, không qua npm registry).
+React 18 + Vite + Tailwind v4 + Radix UI (vendored trong `components/ui/`) + lucide-react.
+Xuất Excel bằng `xlsx` (cài trực tiếp từ CDN SheetJS, không qua npm registry).
+Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành phần chung.
 
+- `ui/` — **bộ thành phần dùng chung, màn nghiệp vụ chỉ import từ `@/ui`**
+  (eslint `no-restricted-imports` chặn `@/components/ui/*` và `confirm/message`
+  của `plugin-dialog` trong `features/`, trừ `features/shell`): Button, IconButton
+  (bắt buộc `label`), Field (+FormGrid, gắn id/aria qua context), Input/Select/
+  Textarea/Checkbox/Switch, PageHeader, Toolbar, Card, Tabs, Stepper, KpiTile,
+  EmptyState, Skeleton, Kbd, Help (khối trợ giúp gập, nơi đặt "Điều N" và tên
+  chuẩn), Banner/ErrorBanner, Menu, Badge, Seg, Dialog, Table (cấu hình cột hoặc
+  compound `Table.Root/Head/Body/Row/HeadCell/Cell`), Pagination, toast (sonner)
+  + `notifyError`, `confirm()`/`prompt()` (store mức module, host `ConfirmHost`),
+  `describeError` từ `lib/errors.ts`.
+- `styles/theme.css` — nguồn token duy nhất (màu trạng thái 50–800, thang chữ
+  xs 12 / sm 13 / base 14); `do365-tokens.css` đóng băng; `digitext.css` chỉ còn
+  luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
-- `features/` — 20 màn hình theo nghiệp vụ: `scan`, `dossier`, `records`,
-  `submission`, `access`, `disposal`, `catalog`, `khogia`, `sign`, `package`,
-  `editor`, `report`, `upload`, `drive`, `users`, `settings`, `server`,
-  `infoops`, `shell`
-- `state/` — state theo ngữ cảnh React (`session`, `uploads`, `collects`,
-  `drive`, `navigation`)
-- `live/` — cập nhật thời gian thực: `LiveProvider`, `bus`, `topics`, `pollCore`
-- `domain/` — `types.ts`, `permissions.ts` (11KB — **quyền được cài đặt cả hai
-  phía**, đối chiếu với `digitext-core/permission.rs`)
+- `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
+  Tổng quan (`home`) · Số hoá (`drive`, `scan`, `tree`, `dossier`, `upload`,
+  `server`) · Xử lý (`dossier/OcrPane`, `work`, `sign`, `package`) · Chỉnh lý
+  (`chinhly/*`: bản sao đồng bộ, offline được) · Lưu trữ số (`submission`,
+  `access`, `infoops`, `records`, `disposal`) · Báo cáo (`report`,
+  `chinhly/ThongKeView`) · Quản trị (`users`, `settings`). `editor` mở từ Kho/Quét.
+  `khogia/` chỉ còn hub cũ; danh mục cục bộ (`catalog`) đã bỏ, thay bằng `tree`.
+- `shell/` — Topbar (breadcrumb, ô **Dự án đang làm** dùng chung qua
+  `state/project.tsx`, Ctrl+K `CommandPalette`, chuông `useNotifications`),
+  Sidebar (bàn phím, nhớ nhóm mở, Ctrl+B), StatusBar (chip bấm được), Login /
+  LockScreen / UpdateOverlay.
+- `state/` — state theo ngữ cảnh React (`session`, `project`, `uploads`,
+  `collects`, `drive`, `navigation`)
+- `live/` — cập nhật thời gian thực: `LiveProvider`, `bus`, `topics`, `pollCore`;
+  màn danh sách dùng `V41t(loader, {topics})` (giữ dữ liệu cũ khi lỗi, không
+  nhấp nháy khi nạp lại)
+- `domain/` — `types.ts`, `permissions.ts` (**quyền được cài đặt cả hai phía**,
+  đối chiếu với `digitext-core/permission.rs`)
+
+Kiểm sau mỗi lần sửa: `npx tsc --noEmit -p .`, `npx eslint src` (jsx-a11y mức
+lỗi), `npm run build`. Không có test.
 
 ---
 
