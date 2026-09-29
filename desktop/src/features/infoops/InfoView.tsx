@@ -1,224 +1,312 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Cung cấp thông tin từ tài liệu lưu trữ: người dùng gửi yêu cầu (danh mục / trích xuất / tổng hợp), người xét duyệt
+// duyệt, thu phí, kết xuất và trả kết quả. Cùng khung với màn Khai thác. Căn cứ Điều 44–47 chỉ ở tooltip / trợ giúp.
 
-import { useCallback, useState } from "react";
-import { V41p } from "@/live/useLive";
-
-import { V4ux, V4uv, V4uy, V4ut, type V4us } from "@/api/infoops";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
+import { V41t } from "@/live/useLive";
+import { V4ut, V4uv, V4ux, V4uy, type V4us, type V4uw } from "@/api/infoops";
 import { V460 } from "@/state";
+import { V3z9 } from "@/domain/permissions";
+import { V462 as cn } from "@/lib/utils";
+import { Icon, type V41v as IconName } from "@/components/Icon";
+import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, Help, IconButton, Input, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
+import { V4v9 } from "./infoFlow";
 
-import { V4v6, V4v7, V4vb, V4v9 } from "./infoFlow";
-import { Icon } from "@/components/Icon";
+const n = (v: number) => v.toLocaleString("vi-VN");
+const tien = (v: number | null) => (v == null ? "—" : v === 0 ? "Miễn phí" : `${n(v)} đ`);
+const ngay = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("vi-VN") : "—");
+
+const HINH_THUC: Record<V4us["hinhThuc"], { label: string; desc: string; legal: string; icon: IconName }> = {
+  danh_muc: { label: "Danh mục tài liệu", desc: "Danh sách tài liệu theo chủ đề, tối đa 4 trường tin.", legal: "Điều 44.1", icon: "danhSach" },
+  trich_xuat: { label: "Trích xuất nguyên văn", desc: "Trích nội dung kèm địa chỉ lưu trữ.", legal: "Điều 44.2", icon: "taiLieu" },
+  tong_hop: { label: "Thông tin tổng hợp", desc: "Báo cáo tổng hợp do hệ thống lập.", legal: "Điều 44.3", icon: "baoCao" },
+};
+const STATUS: Record<V4us["status"], { label: string; tone: "warn" | "ok" | "err" | "info" }> = {
+  submitted: { label: "Chờ xét duyệt", tone: "warn" },
+  approved: { label: "Đã duyệt", tone: "info" },
+  refused: { label: "Từ chối", tone: "err" },
+  fulfilled: { label: "Đã trả kết quả", tone: "ok" },
+};
+const STEPS = [
+  { key: "gui", label: "Gửi yêu cầu" },
+  { key: "duyet", label: "Xét duyệt" },
+  { key: "phi", label: "Thanh toán" },
+  { key: "ketxuat", label: "Kết xuất" },
+  { key: "tra", label: "Trả kết quả" },
+];
+function stepOf(r: V4us): number {
+  if (r.status === "submitted" || r.status === "refused") return 1;
+  if (r.status === "fulfilled") return 5;
+  if ((r.phi ?? 0) > 0 && !r.paidAt) return 2;
+  return r.coKetQua ? 4 : 3;
+}
+/** Số ngày làm việc còn lại của hạn xử lý 6 ngày (Điều 46.5). */
+function conNgayLamViec(createdAt: string): number {
+  const start = new Date(createdAt);
+  let d = new Date(start);
+  let count = 0;
+  while (count < 6) {
+    d = new Date(d.getTime() + 86_400_000);
+    if (d.getDay() !== 0 && d.getDay() !== 6) count += 1;
+  }
+  return Math.ceil((d.getTime() - Date.now()) / 86_400_000);
+}
 
 export default function V4vc() {
-  const { session: V30f } = V460();
-  const V30g = V30f?.permissions ?? [];
-  const V30h = V30g.includes("access.review");
-  const [V30i, V30j] = useState<V4us[]>([]);
-  const [V30k, V30l] = useState(false);
-  const [V30m, V30n] = useState(false);
-  const [V30o, V30p] = useState<string | null>(null);
-  const [V30q, V30r] = useState<string[]>([]);
+  const { session } = V460();
+  const perms = session?.permissions;
+  const canReview = V3z9(perms, "access.review");
+  const canRequest = V3z9(perms, "access.request");
+  const [selId, setSelId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [statusF, setStatusF] = useState("");
+  const [moi, setMoi] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const [V30s, V30t] = useState<V4us["hinhThuc"]>("danh_muc");
-  const [V30u, V30v] = useState("");
-  const [V30w, V30x] = useState("");
+  const load = useCallback(() => V4ut(), []);
+  const { data: list, error, loading, refreshing, reload } = V41t(load, { topics: ["info"], enabled: isTauri() });
+  const shown = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    const rows = (list ?? []).filter((r) => (!statusF || r.status === statusF) && (!k || r.chuDe.toLowerCase().includes(k) || r.mucDich.toLowerCase().includes(k) || (r.requester ?? "").toLowerCase().includes(k)));
+    return canReview ? [...rows].sort((a, b) => (a.status === "submitted" ? 0 : 1) - (b.status === "submitted" ? 0 : 1)) : rows;
+  }, [list, q, statusF, canReview]);
+  useEffect(() => {
+    if (!selId && shown.length > 0) setSelId(shown[0].id);
+  }, [shown, selId]);
+  const d = useMemo(() => (list ?? []).find((r) => r.id === selId) ?? null, [list, selId]);
 
-  const reload = useCallback(async () => {
-    if (!isTauri()) return;
+  const run = async (ctx: string, f: () => Promise<void>) => {
+    setBusy(true);
     try {
-      V30j(await V4ut());
-    } catch (V30y) {
-      V30p(`Không tải được danh sách: ${String(V30y)}`);
-    }
-  }, []);
-
-  V41p(reload, { topics: ["info", "notifications"] });
-
-  const V30z = async () => {
-    const V310 = {
-      projectId: V30f?.projectId ?? null,
-      hinhThuc: V30s,
-      chuDe: V30u,
-      mucDich: V30w,
-      phuongThuc: "tai_khoan",
-    };
-    const V311 = V4v9(V310);
-    V30r(V311);
-    if (V311.length > 0) return;
-    V30n(true);
-    V30p(null);
-    try {
-      await V4uv(V310);
-      V30p(
-        "Đã gửi yêu cầu — SLA tiếp nhận + xét duyệt 6 ngày làm việc (Điều 46.5).",
-      );
-      V30l(false);
-      V30v("");
-      V30x("");
-      await reload();
-    } catch (V312) {
-      V30p(`Gửi yêu cầu thất bại: ${String(V312)}`);
+      await f();
+      reload();
+    } catch (e) {
+      notifyError(e, ctx);
     } finally {
-      V30n(false);
+      setBusy(false);
     }
   };
-
-  const V313 = async (row: V4us, V314: "approve" | "refuse" | "pay" | "generate" | "fulfill") => {
-    let V315: string | undefined;
-    let V316: string | undefined;
-    if (V314 === "refuse") {
-      V315 = window.prompt("Lý do từ chối (Điều 46.1.c):")?.trim() || undefined;
-      if (!V315) return;
+  const act = async (row: V4us, action: V4uw) => {
+    let note: string | undefined;
+    let bienTap: string | undefined;
+    if (action === "refuse") {
+      const r = await prompt({ title: "Từ chối yêu cầu", label: "Lý do từ chối", type: "textarea", required: true, confirmLabel: "Từ chối", danger: true });
+      if (r === null) return;
+      note = r.trim();
     }
-    if (V314 === "generate") {
-      V316 =
-        window
-          .prompt(
-            "Nội dung rà soát, biên tập (Điều 47.2 — tuỳ chọn):",
-          )
-          ?.trim() || undefined;
+    if (action === "generate") {
+      const r = await prompt({ title: row.coKetQua ? "Kết xuất lại" : "Kết xuất từ hệ thống", label: "Nội dung rà soát, biên tập", body: "Có thể để trống.", type: "textarea", confirmLabel: "Kết xuất" });
+      if (r === null) return;
+      bienTap = r.trim() || undefined;
     }
-    V30n(true);
-    try {
-      await V4ux(row.id, V314, { note: V315, bienTap: V316 });
-      await reload();
-    } catch (V317) {
-      V30p(`Thao tác thất bại: ${String(V317)}`);
-    } finally {
-      V30n(false);
+    if (action === "pay") {
+      const ok = await confirm({ title: "Xác nhận đã thu phí?", body: `Số tiền: ${tien(row.phi)}.`, confirmLabel: "Đã thu phí" });
+      if (!ok) return;
     }
+    if (action === "fulfill") {
+      const ok = await confirm({ title: "Phê duyệt và trả kết quả cho người yêu cầu?", confirmLabel: "Trả kết quả" });
+      if (!ok) return;
+    }
+    const ctx: Record<V4uw, string> = { approve: "duyệt yêu cầu", refuse: "từ chối yêu cầu", pay: "xác nhận thanh toán", generate: "kết xuất", fulfill: "trả kết quả" };
+    const done: Record<V4uw, string> = { approve: "Đã duyệt yêu cầu. Phí tính tự động.", refuse: "Đã từ chối yêu cầu.", pay: "Đã ghi nhận thanh toán.", generate: "Đã kết xuất kết quả.", fulfill: "Đã trả kết quả cho người yêu cầu." };
+    await run(ctx[action], async () => {
+      await V4ux(row.id, action, { note, bienTap });
+      toast.success(done[action]);
+    });
   };
-
-  const V318 = async (row: V4us) => {
-    V30n(true);
-    try {
+  const tai = (row: V4us) =>
+    run("tải kết quả", async () => {
       const path = await V4uy(row.id, `cung-cap-thong-tin-${row.chuDe.slice(0, 30)}.pdf`);
-      V30p(`Đã lưu kết quả: ${path}`);
-    } catch (V319) {
-      V30p(`Tải kết quả thất bại: ${String(V319)}`);
-    } finally {
-      V30n(false);
-    }
-  };
+      toast.success("Đã lưu kết quả.", { description: path });
+    });
+
+  const cols: Column<V4us>[] = [
+    { key: "chuDe", header: "Yêu cầu", className: "whitespace-normal", cell: (r) => <div><div className="font-medium text-fg-strong">{r.chuDe}</div><div className="text-xs text-fg-subtle">{HINH_THUC[r.hinhThuc].label}</div></div> },
+    { key: "status", header: "Trạng thái", width: 130, cell: (r) => <Badge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Badge> },
+    { key: "phi", header: "Phí", width: 100, align: "right", cell: (r) => <span className={cn((r.phi ?? 0) > 0 && !r.paidAt && "text-warning-700")}>{tien(r.phi)}</span> },
+  ];
 
   return (
     <section className="view active">
-      <div className="page-head">
-        <h2>Cung cấp thông tin (Mục 4, Điều 44–47 — TT 05/2025/TT-BNV)</h2>
-        <div className="page-actions">
-          <button className="btn" onClick={() => void reload()} disabled={V30m}>
-            <Icon name="lamMoi" />
-            Làm mới
-          </button>
-          {V30g.includes("access.request") && (
-            <button className="btn primary" onClick={() => V30l((v) => !v)}>
-              + Đăng ký yêu cầu
-            </button>
+      <PageHeader
+        title="Cung cấp thông tin"
+        description="Yêu cầu danh mục, trích xuất hoặc thông tin tổng hợp từ tài liệu lưu trữ; xét duyệt, kết xuất và trả kết quả."
+        actions={
+          <>
+            <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
+            {canRequest && (
+              <Button variant="primary" icon="them" onClick={() => setMoi(true)}>
+                Yêu cầu mới
+              </Button>
+            )}
+          </>
+        }
+      />
+      {error && list && <ErrorBanner error={error} onRetry={reload} className="mb-3" />}
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(320px,2fr)_3fr]">
+        <Card padding="none" className="self-start">
+          <div className="border-b border-border-subtle p-3">
+            <Toolbar>
+              <Input size="sm" prefix="tim" placeholder="Chủ đề, mục đích, người yêu cầu" value={q} onChange={(e) => setQ(e.target.value)} className="min-w-40 flex-1" aria-label="Tìm yêu cầu" />
+              <Select size="sm" value={statusF} onChange={setStatusF} placeholder="Mọi trạng thái" options={Object.entries(STATUS).map(([k, v]) => ({ value: k, label: v.label }))} className="w-40" aria-label="Lọc trạng thái" />
+            </Toolbar>
+          </div>
+          <Table
+            columns={cols}
+            rows={shown}
+            getRowId={(r) => r.id}
+            onRowClick={(r) => setSelId(r.id)}
+            rowClassName={(r) => (r.id === selId ? "bg-brand-50" : undefined)}
+            state={{ loading: loading && !list, error: list ? undefined : error, onRetry: reload, empty: (list?.length ?? 0) === 0 ? { title: "Chưa có yêu cầu", description: canRequest ? "Bấm Yêu cầu mới để gửi." : undefined } : { title: "Không có yêu cầu khớp bộ lọc" } }}
+            maxHeight="calc(100dvh - 300px)"
+          />
+        </Card>
+
+        <div className="min-w-0">
+          {!d ? (
+            <Card>
+              <EmptyState icon="thongTin" title="Chọn một yêu cầu" />
+            </Card>
+          ) : (
+            <Card
+              title={
+                <span className="flex flex-wrap items-center gap-2">
+                  {d.chuDe}
+                  <Badge tone={STATUS[d.status].tone}>{STATUS[d.status].label}</Badge>
+                </span>
+              }
+              description={`${HINH_THUC[d.hinhThuc].label}${d.requester ? ` · ${d.requester}` : ""} · gửi ${ngay(d.createdAt)}`}
+            >
+              <Stepper steps={STEPS} current={stepOf(d)} className="mb-4" />
+              {d.status === "submitted" && (
+                <p className={cn("mb-3 text-sm", conNgayLamViec(d.createdAt) < 0 ? "text-danger-700" : "text-fg-subtle")}>
+                  {conNgayLamViec(d.createdAt) >= 0 ? `Hạn xử lý: còn ${conNgayLamViec(d.createdAt)} ngày.` : `Quá hạn xử lý ${-conNgayLamViec(d.createdAt)} ngày.`}
+                </p>
+              )}
+              {d.status === "refused" && <Banner tone="danger" className="mb-3">Yêu cầu đã bị từ chối{d.reviewNote ? `: ${d.reviewNote}` : "."}</Banner>}
+              <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                <dt className="text-fg-subtle">Mục đích</dt>
+                <dd>{d.mucDich}</dd>
+                <dt className="text-fg-subtle">Phí</dt>
+                <dd>
+                  {tien(d.phi)}
+                  {(d.phi ?? 0) > 0 && <span className={d.paidAt ? "text-success-700" : "text-warning-700"}> · {d.paidAt ? `đã thu ${ngay(d.paidAt)}` : "chưa thu"}</span>}
+                </dd>
+                {d.bienTap && <><dt className="text-fg-subtle">Biên tập</dt><dd>{d.bienTap}</dd></>}
+                {d.reviewNote && d.status !== "refused" && <><dt className="text-fg-subtle">Ghi chú</dt><dd>{d.reviewNote}</dd></>}
+                {d.fulfilledAt && <><dt className="text-fg-subtle">Trả kết quả</dt><dd>{ngay(d.fulfilledAt)}</dd></>}
+              </dl>
+              <Toolbar>
+                {canReview && d.status === "submitted" && (
+                  <>
+                    <Tip text="Duyệt yêu cầu, phí tính tự động (Điều 46.1.c)">
+                      <Button variant="primary" icon="duyet" disabled={busy} onClick={() => void act(d, "approve")}>
+                        Duyệt yêu cầu
+                      </Button>
+                    </Tip>
+                    <Button variant="dangerOutline" icon="tuChoi" disabled={busy} onClick={() => void act(d, "refuse")}>
+                      Từ chối
+                    </Button>
+                  </>
+                )}
+                {canReview && d.status === "approved" && (d.phi ?? 0) > 0 && !d.paidAt && (
+                  <Tip text="Theo Điều 46.4">
+                    <Button variant="primary" icon="thanhToan" disabled={busy} onClick={() => void act(d, "pay")}>
+                      Xác nhận đã thu phí
+                    </Button>
+                  </Tip>
+                )}
+                {canReview && d.status === "approved" && (
+                  <Tip text="Hệ thống lập kết quả theo hình thức đã chọn (Điều 47.1)">
+                    <Button variant={d.coKetQua ? "secondary" : "primary"} icon={d.coKetQua ? "lamMoi" : "ketXuat"} disabled={busy} onClick={() => void act(d, "generate")}>
+                      {d.coKetQua ? "Kết xuất lại" : "Kết xuất"}
+                    </Button>
+                  </Tip>
+                )}
+                {canReview && d.status === "approved" && d.coKetQua && (
+                  <Tip text="Theo Điều 47.3 và 47.4">
+                    <Button variant="primary" icon="guiKetQua" disabled={busy} onClick={() => void act(d, "fulfill")}>
+                      Trả kết quả
+                    </Button>
+                  </Tip>
+                )}
+                {(d.status === "fulfilled" || (canReview && d.coKetQua)) && (
+                  <Button icon="taiVe" disabled={busy} onClick={() => void tai(d)}>
+                    Tải kết quả
+                  </Button>
+                )}
+              </Toolbar>
+            </Card>
           )}
         </div>
       </div>
 
-      {V30o && <div className="card p-2.5 mb-2.5">{V30o}</div>}
+      <Help className="mt-4" title="Quy trình cung cấp thông tin">
+        <p>Người dùng nêu chủ đề và mục đích (Điều 44–45) → xét duyệt trong 6 ngày làm việc, phí tính theo đơn giá (Điều 46) → thu phí nếu có → hệ thống kết xuất, người xét duyệt rà soát rồi trả kết quả (Điều 47).</p>
+      </Help>
 
-      {V30k && (
-        <div className="card p-4 mb-4">
-          <h3 className="mt-0">Đăng ký yêu cầu (Điều 45)</h3>
-          <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-            <div className="field">
-              <label>Hình thức (Điều 44)</label>
-              <select
-                className="inp"
-                value={V30s}
-                onChange={(V31a) => V30t(V31a.target.value as V4us["hinhThuc"])}
-              >
-                {Object.entries(V4v6).map(([k, V31b]) => (
-                  <option key={k} value={k}>
-                    {V31b}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Chủ đề cụ thể (44.1.a)</label>
-              <input className="inp" value={V30u} onChange={(V31c) => V30v(V31c.target.value)} />
-            </div>
-            <div className="field">
-              <label>Mục đích sử dụng (45.3)</label>
-              <input className="inp" value={V30w} onChange={(V31d) => V30x(V31d.target.value)} />
-            </div>
-          </div>
-          {V30q.length > 0 && (
-            <ul className="mt-2.5 text-danger-700">
-              {V30q.map((V31e) => (
-                <li key={V31e}>{V31e}</li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-2.5">
-            <button className="btn primary" onClick={() => void V30z()} disabled={V30m}>
-              Gửi yêu cầu
-            </button>
-          </div>
-        </div>
+      {moi && (
+        <YeuCauMoiDialog
+          projectId={session?.projectId ?? null}
+          onClose={() => setMoi(false)}
+          onDone={(r) => {
+            setMoi(false);
+            reload();
+            setSelId(r.id);
+          }}
+        />
       )}
-
-      <div className="card p-4">
-        <h3 className="mt-0">Danh sách yêu cầu</h3>
-        {V30i.length === 0 ? (
-          <p className="muted">Chưa có yêu cầu nào.</p>
-        ) : (
-          <div className="tbl-scroll">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Hình thức</th>
-                  <th>Chủ đề</th>
-                  <th>Trạng thái</th>
-                  <th>Phí</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {V30i.map((r) => (
-                  <tr key={r.id}>
-                    <td>{V4v6[r.hinhThuc]}</td>
-                    <td title={r.mucDich}>{r.chuDe}</td>
-                    <td title={r.reviewNote ?? r.bienTap ?? undefined}>
-                      {V4v7[r.status]}
-                      {r.coKetQua ? " · có kết quả" : ""}
-                    </td>
-                    <td>
-                      {r.phi == null ? "—" : r.phi === 0 ? "Miễn phí" : `${r.phi}IMSR`}
-                      {(r.phi ?? 0) > 0 && (r.paidAt ? " (đã TT)" : " (chưa TT)")}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {V30h &&
-                        V4vb(r).map((a) => (
-                          <button
-                            key={a.action}
-                            className="btn sm mr-1"
-                            disabled={V30m}
-                            onClick={() => void V313(r, a.action)}
-                          >
-                            <Icon name={a.icon} />
-                            {a.label}
-                          </button>
-                        ))}
-                      {(r.status === "fulfilled" || (V30h && r.coKetQua)) && (
-                        <button className="btn sm" disabled={V30m} onClick={() => void V318(r)}>
-                          <Icon name="taiVe" />
-                          Tải kết quả
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </section>
+  );
+}
+
+function YeuCauMoiDialog({ projectId, onClose, onDone }: { projectId: string | null; onClose: () => void; onDone: (r: V4us) => void }) {
+  const [hinhThuc, setHinhThuc] = useState<V4us["hinhThuc"]>("danh_muc");
+  const [chuDe, setChuDe] = useState("");
+  const [mucDich, setMucDich] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const body = () => ({ projectId, hinhThuc, chuDe, mucDich, phuongThuc: "tai_khoan" });
+  const errs = V4v9(body());
+  const gui = async () => {
+    setTouched(true);
+    if (errs.length > 0 || busy) return;
+    setBusy(true);
+    try {
+      const r = await V4uv(body());
+      toast.success("Đã gửi yêu cầu. Hạn xét duyệt 6 ngày làm việc.");
+      onDone(r);
+    } catch (e) {
+      notifyError(e, "gửi yêu cầu");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} title="Yêu cầu cung cấp thông tin" size="md" footer={<><Button onClick={onClose}>Huỷ</Button><Button variant="primary" loading={busy} onClick={() => void gui()}>Gửi yêu cầu</Button></>}>
+      <div className="space-y-4">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(Object.keys(HINH_THUC) as V4us["hinhThuc"][]).map((k) => (
+            <button key={k} type="button" className={cn("flex flex-col items-start gap-1 rounded-md border p-3 text-left transition-colors", hinhThuc === k ? "border-brand-500 bg-brand-50" : "border-border hover:border-border-strong")} onClick={() => setHinhThuc(k)} aria-pressed={hinhThuc === k}>
+              <span className={cn("grid size-7 place-items-center rounded-full", hinhThuc === k ? "bg-brand-500 text-white" : "bg-gray-100 text-fg-subtle")}>
+                <Icon name={HINH_THUC[k].icon} size={14} />
+              </span>
+              <span className="font-medium text-fg-strong">{HINH_THUC[k].label}</span>
+              <span className="text-xs text-fg-subtle">{HINH_THUC[k].desc}</span>
+            </button>
+          ))}
+        </div>
+        <div className="space-y-3">
+          <Field label="Chủ đề cụ thể" required error={touched && !chuDe.trim() ? "Chưa nêu chủ đề." : undefined}>
+            <Input value={chuDe} onChange={(e) => setChuDe(e.target.value)} autoFocus />
+          </Field>
+          <Field label="Mục đích sử dụng" required error={touched && !mucDich.trim() ? "Chưa khai mục đích." : undefined}>
+            <Textarea value={mucDich} onChange={(e) => setMucDich(e.target.value)} rows={3} />
+          </Field>
+        </div>
+      </div>
+    </Dialog>
   );
 }
