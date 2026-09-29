@@ -4,12 +4,14 @@ import V4x4 from "@/features/shell/Login";
 import V4x5 from "@/features/shell/LockScreen";
 import V4x7 from "@/features/shell/UpdateOverlay";
 import { V460 } from "@/state";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfirmHost, Toaster } from "@/ui";
 
 export default function V4x8() {
   const { status, update: V3aa, dismissUpdate: V3ab } = V460();
 
   return (
-    <>
+    <TooltipProvider delayDuration={300}>
       {status === "loading" && (
         <div className="login-screen">
           <div className="login-card">
@@ -23,6 +25,8 @@ export default function V4x8() {
       {status === "locked" && <V4x5 />}
       {status === "active" && <V4wx />}
       <V4x7 status={V3aa} onDismiss={V3ab} />
-    </>
+      <ConfirmHost />
+      <Toaster />
+    </TooltipProvider>
   );
 }
