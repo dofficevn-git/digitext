@@ -29,7 +29,7 @@ export function V3zt(V14: string, V15: string): string {
     case "too_many_attempts":
       return (
         V15 ||
-        "Sai mật khẩu nhiều lần — thử lại sau ít phút."
+        "Sai mật khẩu nhiều lần. Thử lại sau ít phút."
       );
     case "captcha_invalid":
       return "Mã xác nhận không đúng — nhập lại mã trong ảnh mới.";
@@ -45,7 +45,7 @@ export function V3zt(V14: string, V15: string): string {
       return "Không kết nối được máy chủ. Kiểm tra mạng, hoặc đăng nhập offline nếu đã dùng máy này trước đó." + (chiTiet ? ` Chi tiết: ${chiTiet}` : "");
     }
     case "server_not_configured":
-      return "Chưa cấu hình địa chỉ máy chủ — bấm “Cài đặt” để nhập.";
+      return "Chưa có địa chỉ máy chủ. Bấm nút “Máy chủ” bên dưới để nhập.";
     case "busy":
       return "Đang quét dở một lô — kết thúc lô quét trước khi đổi người dùng.";
     case "locked":

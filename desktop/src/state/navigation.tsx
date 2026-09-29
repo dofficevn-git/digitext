@@ -57,7 +57,7 @@ interface V41c {
 const V41g = createContext<V41c | null>(null);
 
 export function V41h({ children: V2s }: { children: ReactNode }) {
-  const [view, V2t] = useState<V3xt>("drive");
+  const [view, V2t] = useState<V3xt>("home");
   const [V2u, V2v] = useState<V3xu>("laphoso");
   const [V2w, V2x] = useState<V3xv>("phong");
   const [V2y, V2z] = useState<V3xw>("khogia");

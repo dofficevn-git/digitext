@@ -1,128 +1,112 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Thanh trạng thái: Máy chủ · Phiên · Máy quét (khi có quyền quét) · Chỉnh lý · Ổ lưu trữ (chỉ khi lỗi).
+// Mỗi ô là nút: bấm mở Cài đặt / Quét / Đồng bộ. Hỏi lại mỗi 6 s, tự dừng khi cửa sổ ẩn.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
+import { V3z9 } from "@/domain/permissions";
+import { V3zr } from "@/state/sessionCore";
 import { Icon } from "@/components/Icon";
 import { V475 } from "@/api/scanner";
 import { V47g, V47i } from "@/api/health";
 import { V45w } from "@/live/status";
-import { V47q, type V47l } from "./statusItems";
+import { V41p } from "@/live/useLive";
+import { V462 as cn } from "@/lib/utils";
+import { Tip } from "@/ui";
+import { V47q, type V47l, type V47m } from "./statusItems";
 import { syncLabel, useClSync } from "@/features/chinhly/common";
 import { clSyncNow } from "@/api/chinhly";
 
-function ClSyncStat() {
-  const s = useClSync();
-  const l = syncLabel(s);
-  const { session: ss } = V460();
-  const active = !!ss && !ss.locked && !!ss.projectId;
-  // Đăng nhập / mở khoá xong → đồng bộ chỉnh lý ngay (worker nền chỉ chạy mỗi 60 s).
-  useEffect(() => {
-    if (active && isTauri()) clSyncNow().catch(() => {});
-  }, [active]);
+function Chip({ dot, icon, label, value, title, onClick, right }: { dot: string; icon: React.ComponentProps<typeof Icon>["name"]; label: string; value: string; title: string; onClick?: () => void; right?: boolean }) {
+  const inner = (
+    <>
+      <span className={cn("dot", dot !== "unknown" && dot)} />
+      <Icon name={icon} size={13} className="flex-none text-fg-subtle" />
+      <span className="text-fg-subtle">{label}:</span>
+      <b>{value}</b>
+    </>
+  );
   return (
-    <div className="stat" title={l.title}>
-      <span className={`dot ${l.dot === "unknown" ? "" : l.dot}`} />
-      <Icon name="chinhly" size={13} className="flex-none text-fg-subtle" />
-      Chỉnh lý: <b>{l.text}</b>
-    </div>
+    <Tip text={title}>
+      {onClick ? (
+        <button type="button" className={cn("stat", right && "right")} onClick={onClick}>
+          {inner}
+        </button>
+      ) : (
+        <div className={cn("stat", right && "right")}>{inner}</div>
+      )}
+    </Tip>
   );
 }
 
-const V47r = 6_000;
-const V47s = 3;
-
-export default function V47t() {
-  const { status, session: Vf9 } = V460();
-  const { serverLive: Vfa } = V45w();
-  const [Vfb, Vfc] = useState<number | null>(null);
-  const [Vfd, Vfe] = useState<boolean | null>(null);
-  const [Vff, Vfg] = useState<V47l["storage"]>(null);
-
+function ClSyncChip() {
+  const s = useClSync();
+  const l = syncLabel(s);
+  const { session, gotoHoSo, project } = V460();
+  const active = !!session && !session.locked && !!project.projectId;
   useEffect(() => {
-    if (!isTauri()) return;
-    let Vfh = true;
-    let Vfi = 0;
+    if (active && isTauri()) clSyncNow().catch(() => {});
+  }, [active]);
+  if (!session || !V3z9(session.permissions, "dossier.read")) return null;
+  return <Chip dot={l.dot} icon="chinhly" label="Chỉnh lý" value={l.text} title={l.title} onClick={() => gotoHoSo("dongbo")} />;
+}
 
-    const Vfj = async () => {
-      try {
-        const Vfk = await V475();
-        if (Vfh) Vfc(Vfk.length);
-      } catch {
-        if (Vfh) Vfc(null);
-      }
-    };
-    const Vfl = async () => {
-      try {
-        const up = await V47g();
-        if (Vfh) Vfe(up);
-      } catch {
-        if (Vfh) Vfe(false);
-      }
-    };
-    const Vfm = async () => {
-      try {
-        const s = await V47i();
-        if (Vfh) Vfg({ configured: s.configured, exists: s.exists });
-      } catch {
-        if (Vfh) Vfg(null);
-      }
-    };
+export default function StatusBar() {
+  const { status, session, goto } = V460();
+  const { serverLive } = V45w();
+  const [scanners, setScanners] = useState<number | null>(null);
+  const [serverUp, setServerUp] = useState<boolean | null>(null);
+  const [storage, setStorage] = useState<V47l["storage"]>(null);
+  const canScan = !!session && V3z9(session.permissions, "scan.view");
 
-    const Vfn = () => {
-      void Vfl();
-      void Vfm();
-
-      if (Vfi % V47s === 0) void Vfj();
-      Vfi += 1;
-    };
-
-    Vfn();
-    const Vfo = setInterval(Vfn, V47r);
-    return () => {
-      Vfh = false;
-      clearInterval(Vfo);
-    };
+  const pollMain = useCallback(async () => {
+    const [up, st] = await Promise.all([V47g().catch(() => false), V47i().catch(() => null)]);
+    setServerUp(up);
+    setStorage(st ? { configured: st.configured, exists: st.exists } : null);
   }, []);
+  V41p(pollMain, { topics: ["session", "settings"], enabled: isTauri(), pollMs: 6_000 });
+
+  const pollScanner = useCallback(async () => {
+    try {
+      setScanners((await V475()).length);
+    } catch {
+      setScanners(null);
+    }
+  }, []);
+  V41p(pollScanner, { topics: ["settings"], enabled: isTauri() && canScan, pollMs: 30_000 });
 
   if (!isTauri()) {
     return (
       <footer className="statusbar">
-        <div
-          className="stat"
-          title="UI đang chạy trong trình duyệt (vite dev), chưa kết nối backend Tauri."
-        >
+        <div className="stat">
           <span className="dot busy" />
-          Chế độ xem trước
+          Bản xem trước trên trình duyệt
         </div>
       </footer>
     );
   }
 
-  const Vfp: V47l = {
+  const input: V47l = {
     loading: status === "loading",
-    session: Vf9 ? { locked: Vf9.locked, mode: Vf9.mode } : null,
-    scanners: Vfb,
-    serverUp: Vfd,
-    storage: Vff,
-    live: Vfa,
+    session: session ? { locked: session.locked, mode: session.mode, offlineDays: V3zr(session.offlineExpiry) } : null,
+    scanners,
+    serverUp,
+    storage,
+    live: serverLive,
   };
-  const Vfq = V47q(Vfp);
+  const items = V47q(input, { showScanner: canScan });
+  const open = (key: V47m) => {
+    if (key === "scanner") goto("scan");
+    else goto("settings");
+  };
 
   return (
     <footer className="statusbar">
-      {Vfq.map((Vfr) => (
-        <div
-          key={Vfr.key}
-          className={`stat${Vfr.key === "drive" ? " right" : ""}`}
-          title={Vfr.title}
-        >
-          <span className={`dot ${Vfr.dot === "unknown" ? "" : Vfr.dot}`} />
-          <Icon name={Vfr.icon} size={13} className="flex-none text-fg-subtle" />
-          {Vfr.label}: <b>{Vfr.value}</b>
-        </div>
+      {items.map((it) => (
+        <Chip key={it.key} dot={it.dot} icon={it.icon} label={it.label} value={it.value} title={it.title} onClick={() => open(it.key)} right={it.key === "drive"} />
       ))}
-      <ClSyncStat />
+      <ClSyncChip />
     </footer>
   );
 }

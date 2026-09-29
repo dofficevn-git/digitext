@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import Modal, { V49j } from "@/ui/Modal";
 import { V460 } from "@/state";
 import { clRemoteDelete, clRemoteSave, str, num, type ClRow } from "@/api/chinhly";
-import { ChonDuAn, errText, n, Select, useClCatalog, useClSync } from "./common";
+import { ChuaChonDuAn, errText, n, Select, useClCatalog, useClSync } from "./common";
 
 export default function KhoGiaView({ tab }: { tab: "kho" | "gia" }) {
   const { session } = V460();
@@ -60,7 +60,7 @@ export default function KhoGiaView({ tab }: { tab: "kho" | "gia" }) {
         <h2>{tab === "kho" ? "Kho lưu trữ" : "Giá lưu trữ"}</h2>
         <div className="sub">· dùng chung toàn dự án · giá = dải hộp của một phòng ban trong kho; hồ sơ trên giá suy ra từ số hộp</div>
       </div>
-      <ChonDuAn />
+      <ChuaChonDuAn />
       {!online && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — kho / giá chỉ sửa được khi có máy chủ (danh sách dưới là bản sao).</div>}
       <div className="card mt-3.5">
         <div className="flex gap-2 items-center flex-wrap">

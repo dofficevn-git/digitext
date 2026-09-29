@@ -2,6 +2,7 @@
 import { V460 } from "@/state";
 import { V3z8 } from "@/domain/permissions";
 import V461 from "@/features/shell/Topbar";
+import HomeView from "@/features/home/HomeView";
 import Sidebar from "@/features/shell/Sidebar";
 import V47t from "@/features/shell/StatusBar";
 import DriveView from "@/features/drive/DriveView";
@@ -46,6 +47,7 @@ export default function V4wx() {
             <p className="muted p-6">Tài khoản của bạn không có quyền truy cập màn hình này.</p>
           </section>
         )}
+        {V382 && view === "home" && <HomeView />}
         {V382 && view === "drive" && <DriveView />}
         {V382 && view === "catalog" && <V4bk />}
         {V382 && view === "dossier" && <V4lc />}

@@ -10,6 +10,7 @@ import { V42x, V42y } from "./update";
 import { V44l, V44m } from "./uploads";
 import { V45j, V45k } from "./collects";
 import { V45y } from "@/live/LiveProvider";
+import { ProjectProvider, useProject } from "./project";
 
 export {
   V407 as useSession,
@@ -20,6 +21,7 @@ export {
   V42y as useUpdate,
   V44m as useUploads,
   V45k as useCollects,
+  useProject,
 };
 export type { AuthSession } from "./session";
 export type { V41b as ScanTarget } from "./navigation";
@@ -31,6 +33,7 @@ export function V45z({ children: Vck }: { children: ReactNode }) {
       {}
       <V45y>
         <V41h>
+          <ProjectProvider>
           <V42x>
             <V42h>
               <V42o>
@@ -42,6 +45,7 @@ export function V45z({ children: Vck }: { children: ReactNode }) {
               </V42o>
             </V42h>
           </V42x>
+          </ProjectProvider>
         </V41h>
       </V45y>
     </V406>
@@ -56,5 +60,6 @@ export function V460() {
     ...V42i(),
     ...V42p(),
     ...V42y(),
+    project: useProject(),
   };
 }
