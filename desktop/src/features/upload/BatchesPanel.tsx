@@ -1,229 +1,123 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Đợt đã đẩy lên máy chủ: ma trận phông × máy quản trị và danh sách các đợt nộp. Giữ dữ liệu cũ khi tải lại.
 
-import { useCallback, useState } from "react";
-import { V41p } from "@/live/useLive";
-
+import { useCallback } from "react";
+import { V41t } from "@/live/useLive";
 import "./khogom.css";
-import { V3xq } from "@/api/ipc";
-import {
-  V4pj,
-  V4pk,
-  V4ph,
-  V4pb,
-  V4pf,
-  type V4pi,
-  type V4pe,
-  type V4pg,
-  type V4pa,
-} from "@/api/uploadBatches";
+import { V4pb, V4pf, V4ph, V4pj, V4pk, type V4pa, type V4pe, type V4pi } from "@/api/uploadBatches";
 import { Icon } from "@/components/Icon";
+import { Badge, Card, EmptyState, ErrorBanner, IconButton, Skeleton, Table, Tip, type Column } from "@/ui";
 
-const V4pl = (V2bl: unknown) =>
-  V2bl instanceof V3xq || V2bl instanceof Error ? V2bl.message : String(V2bl);
-
-const V4pm: Record<V4pi, { cls: string; label: string }> = {
-  ok: { cls: "ok", label: "Hoàn tất" },
-  in_progress: { cls: "gray", label: "Đang gửi" },
-  attention: { cls: "warn", label: "Cần kiểm tra" },
+const TONE: Record<V4pi, { tone: "ok" | "gray" | "warn"; label: string }> = {
+  ok: { tone: "ok", label: "Hoàn tất" },
+  in_progress: { tone: "gray", label: "Đang gửi" },
+  attention: { tone: "warn", label: "Cần kiểm tra" },
 };
 
-function V4pn(V2bm: string): string {
-  const d = new Date(V2bm);
-  return Number.isNaN(d.getTime()) ? V2bm : d.toLocaleString("vi-VN");
-}
+const fmt = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("vi-VN");
+};
+const EMPTY: V4pe = { admins: [], projects: [] };
 
-const V4po: V4pe = { admins: [], projects: [] };
-
-export default function V4pp({ isSuper: V2bn }: { isSuper: boolean }) {
-  const [V2bo, V2bp] = useState<V4pg>(() => V4ph(V4po));
-  const [V2bq, V2br] = useState<V4pa[]>([]);
-  const [V2bs, V2bt] = useState(true);
-  const [V2bu, V2bv] = useState("");
-
-  const V2bw = useCallback(async () => {
-    V2bt(true);
-    V2bv("");
-
+export default function V4pp({ isSuper }: { isSuper: boolean }) {
+  const load = useCallback(async () => {
     const [m, b] = await Promise.allSettled([V4pf(), V4pb()]);
-    if (m.status === "fulfilled") V2bp(V4ph(m.value));
-    else V2bv(V4pl(m.reason));
-    if (b.status === "fulfilled") V2br(b.value);
-    else if (m.status !== "rejected") V2bv(V4pl(b.reason));
-    V2bt(false);
+    if (m.status === "rejected" && b.status === "rejected") throw m.reason;
+    return { view: V4ph(m.status === "fulfilled" ? m.value : EMPTY), batches: b.status === "fulfilled" ? b.value : ([] as V4pa[]) };
   }, []);
+  const { data, error, loading, refreshing, reload } = V41t(load, { topics: ["uploadBatches", "docs"] });
+  const view = data?.view;
+  const batches = data?.batches ?? [];
 
-  V41p(V2bw, { topics: ["uploadBatches", "docs"] });
+  const cols: Column<V4pa>[] = [
+    { key: "createdAt", header: "Thời điểm", cell: (b) => fmt(b.createdAt), sortable: true, width: 160 },
+    ...(isSuper ? [{ key: "forwardedByName", header: "Máy quản trị", cell: (b: V4pa) => b.forwardedByName ?? "—", sortable: true } as Column<V4pa>] : []),
+    { key: "status", header: "Tình trạng", width: 130, cell: (b) => { const t = TONE[V4pj(b)]; return <Badge tone={t.tone}>{t.label}</Badge>; } },
+    { key: "received", header: "Nhận / gửi", align: "right", width: 110, cell: (b) => <><b className={b.received < b.forwarded ? "text-warning-700" : undefined}>{b.received}</b> / {b.forwarded}</> },
+    { key: "projectCount", header: "Phông", align: "right", width: 80 },
+    { key: "detail", header: "Chi tiết", className: "whitespace-normal text-fg-subtle", cell: (b) => `${V4pk(b)}${b.note ? ` · ${b.note}` : ""}` },
+  ];
 
   return (
-    <div>
-      <div className="users-toolbar mb-2.5">
-        <p className="muted m-0">
-          {V2bn
-            ? "Mỗi máy admin đẩy tài liệu lên máy chủ theo từng phông — theo dõi chéo tất cả."
-            : "Tài liệu bạn (và đồng-admin) đã đẩy lên máy chủ, theo từng phông."}
-        </p>
-        <div className="spacer" />
-        <button className="btn" onClick={() => void V2bw()} disabled={V2bs}>
-          <Icon name="lamMoi" />
-          Tải lại
-        </button>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <p className="text-sm text-fg-subtle">{isSuper ? "Mỗi máy quản trị đẩy tài liệu lên máy chủ theo từng phông." : "Tài liệu bạn và các quản trị cùng dự án đã đẩy lên máy chủ, theo từng phông."}</p>
+        <div className="flex-1" />
+        <IconButton label="Tải lại" icon="lamMoi" variant="secondary" size="sm" loading={refreshing} onClick={reload} />
       </div>
+      {error && data && <ErrorBanner error={error} onRetry={reload} />}
 
-      {V2bu && <div className="login-error">{V2bu}</div>}
-      {V2bs && <p className="muted">Đang tải…</p>}
-
-      {!V2bs && (
-        <>
-          <V4pq isSuper={V2bn} view={V2bo} />
-          <V4pr batches={V2bq} isSuper={V2bn} />
-        </>
-      )}
-    </div>
-  );
-}
-
-function V4pq({ isSuper: V2bx, view }: { isSuper: boolean; view: V4pg }) {
-  return (
-    <div className="card kg-card p-0 overflow-hidden mb-4">
-      <div className="kg-bar">
-        <h3 className="m-0">Tài liệu đã nộp lên máy chủ</h3>
-        <span className="muted text-sm">
-          {view.grandTotal.toLocaleString("vi-VN")} tài liệu · {view.admins.length} máy admin ·{" "}
-          {view.rows.length} phông
-        </span>
-      </div>
-
-      {view.isEmpty ? (
-        <p className="kg-note">
-          Chưa có máy admin nào đẩy tài liệu lên máy chủ qua luồng “Đợt nộp”. Ở màn Đồng bộ dữ liệu,
-          bấm “② Đẩy lên máy chủ” để bắt đầu.
-        </p>
-      ) : (
-        <div className="tbl-scroll kg-matrix">
-          <table className="tbl kg-table">
-            <thead>
-              <tr>
-                <th className="kg-corner">Kho lưu trữ</th>
-                {view.admins.map((a) => (
-                  <th key={a.id} className="kg-colhead">
-                    <div className="kg-colname">
-                      <Icon name="mayTram" />
-                      <b>{a.name ?? "—"}</b>
-                      {}
-                      {a.attention && (
-                        <span
-                          className="text-warn"
-                          title="Có đợt máy chủ nhận thiếu so với báo cáo — xem danh sách đợt bên dưới"
-                        >
-                          {" "}
-                          <Icon name="canhBao" size={13} />
-                        </span>
-                      )}
-                    </div>
-                    <div className="muted">{view.columnTotals[a.id] ?? 0} tài liệu</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {view.rows.map(({ project: V2by, total: V2bz }) => (
-                <tr key={V2by.id}>
-                  <th className="kg-rowhead kg-hoso">
-                    <div>
-                      <Icon name="thuMuc" /> {V2by.name}
-                    </div>
-                    <div className="muted">
-                      {V2by.code} · {V2bz} tài liệu
-                    </div>
-                  </th>
-                  {view.admins.map((a) => {
-                    const n = V2by.cells[a.id] ?? 0;
-                    return (
-                      <td key={a.id} className="kg-cell text-center">
-                        {n > 0 ? <b>{n}</b> : <span className="muted">—</span>}
-                      </td>
-                    );
-                  })}
+      <Card title="Tài liệu đã nộp lên máy chủ" description={view ? `${view.grandTotal.toLocaleString("vi-VN")} tài liệu · ${view.admins.length} máy quản trị · ${view.rows.length} phông` : undefined} padding="none">
+        {loading && !data ? (
+          <Skeleton.Rows rows={4} cols={4} />
+        ) : !view || view.isEmpty ? (
+          <EmptyState compact icon="taiLen" title="Chưa có đợt nộp nào" description="Ở màn Đưa lên máy chủ, bấm Đẩy lên máy chủ để bắt đầu." />
+        ) : (
+          <div className="tbl-scroll kg-matrix">
+            <table className="tbl kg-table">
+              <thead>
+                <tr>
+                  <th className="kg-corner">Phông</th>
+                  {view.admins.map((a) => (
+                    <th key={a.id} className="kg-colhead">
+                      <div className="kg-colname">
+                        <Icon name="mayTram" />
+                        <b>{a.name ?? "—"}</b>
+                        {a.attention && (
+                          <Tip text="Có đợt máy chủ nhận thiếu, xem danh sách bên dưới">
+                            <span className="text-warning-700">
+                              <Icon name="canhBao" size={13} label="Cần kiểm tra" />
+                            </span>
+                          </Tip>
+                        )}
+                      </div>
+                      <div className="text-fg-subtle">{view.columnTotals[a.id] ?? 0} tài liệu</div>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="kg-grouprow">
-                <th className="kg-rowhead">Tổng</th>
-                {view.admins.map((a) => (
-                  <td key={a.id} className="text-center">
-                    <b>{view.columnTotals[a.id] ?? 0}</b>
-                  </td>
-                ))}
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-
-      <p className="kg-note">
-        {V2bx
-          ? "Chỉ đếm tài liệu đẩy qua “Đợt nộp”. Upload lẻ (không qua Gửi lô) không có máy-gửi nên không nằm trong bảng này."
-          : "Cột gồm cả đồng-admin cùng phụ trách phông với bạn."}
-      </p>
-    </div>
-  );
-}
-
-function V4pr({ batches: V2c0, isSuper: V2c1 }: { batches: V4pa[]; isSuper: boolean }) {
-  return (
-    <div className="card p-0 overflow-hidden">
-      <div className="flex items-center py-3 px-4 gap-3">
-        <h3 className="m-0">Các đợt nộp</h3>
-        <span className="muted text-sm">{V2c0.length} đợt</span>
-      </div>
-
-      {V2c0.length === 0 ? (
-        <p className="muted pt-0 px-4 pb-4">
-          Chưa có đợt nộp nào. Mỗi lần bấm “② Đẩy lên máy chủ” ở màn Đồng bộ dữ liệu là một đợt.
-        </p>
-      ) : (
-        <div className="tbl-scroll">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Thời điểm</th>
-                {V2c1 && <th>Máy admin</th>}
-                <th>Tình trạng</th>
-                <th className="num">Nhận / Gửi</th>
-                <th className="num">Phông</th>
-                <th>Chi tiết</th>
-              </tr>
-            </thead>
-            <tbody>
-              {V2c0.map((b) => {
-                const V2c2 = V4pm[V4pj(b)];
-                return (
-                  <tr key={b.id}>
-                    <td>{V4pn(b.createdAt)}</td>
-                    {V2c1 && <td>{b.forwardedByName ?? "—"}</td>}
-                    <td>
-                      <span className={`badge ${V2c2.cls}`}>{V2c2.label}</span>
-                    </td>
-                    <td className="num">
-                      <b className={b.received < b.forwarded ? "text-warn" : undefined}>
-                        {b.received}
-                      </b>
-                      {" / "}
-                      {b.forwarded}
-                    </td>
-                    <td className="num">{b.projectCount}</td>
-                    <td className="muted">
-                      {V4pk(b)}
-                      {b.note ? ` · ${b.note}` : ""}
-                    </td>
+              </thead>
+              <tbody>
+                {view.rows.map(({ project, total }) => (
+                  <tr key={project.id}>
+                    <th className="kg-rowhead kg-hoso">
+                      <div>
+                        <Icon name="thuMuc" /> {project.name}
+                      </div>
+                      <div className="text-fg-subtle">
+                        {project.code} · {total} tài liệu
+                      </div>
+                    </th>
+                    {view.admins.map((a) => {
+                      const c = project.cells[a.id] ?? 0;
+                      return (
+                        <td key={a.id} className="kg-cell text-center">
+                          {c > 0 ? <b>{c}</b> : <span className="text-fg-subtle">—</span>}
+                        </td>
+                      );
+                    })}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="kg-grouprow">
+                  <th className="kg-rowhead">Tổng</th>
+                  {view.admins.map((a) => (
+                    <td key={a.id} className="text-center">
+                      <b>{view.columnTotals[a.id] ?? 0}</b>
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+        <p className="border-t border-border-subtle px-4 py-2 text-xs text-fg-subtle">{isSuper ? "Chỉ đếm tài liệu đẩy theo đợt; tải lẻ không có máy gửi nên không nằm trong bảng." : "Cột gồm cả quản trị cùng phụ trách phông với bạn."}</p>
+      </Card>
+
+      <Card title="Các đợt nộp" description={`${batches.length.toLocaleString("vi-VN")} đợt`} padding="none">
+        <Table columns={cols} rows={batches} getRowId={(b) => b.id} state={{ loading: loading && !data, empty: { title: "Chưa có đợt nộp", description: "Mỗi lần bấm Đẩy lên máy chủ ở màn Đưa lên máy chủ là một đợt." } }} />
+      </Card>
     </div>
   );
 }
