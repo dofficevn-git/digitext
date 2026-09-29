@@ -72,6 +72,7 @@ function VanBanForm({ cat, hoSoId, row, onClose, onSaved }: { cat: ClCatalog; ho
         </>
       }
     >
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- chỉ bắt Ctrl+Enter để lưu, không phải nút */}
       <div
         className="space-y-4"
         onKeyDown={(e) => {

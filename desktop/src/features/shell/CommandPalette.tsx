@@ -26,7 +26,7 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
   const { session } = nav;
   const [q, setQ] = useState("");
   const [idx, setIdx] = useState(0);
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const entries = useMemo<Entry[]>(() => {
     const can = (v: V46s["gate"]) => !session || V3z8(session.permissions, v);
@@ -114,15 +114,17 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
           />
           <Kbd keys={["Esc"]} />
         </div>
-        <ul ref={listRef} id="cmdk-list" role="listbox" className="max-h-[50vh] overflow-y-auto py-1">
-          {hits.length === 0 && <li className="px-3 py-6 text-center text-sm text-fg-subtle">Không tìm thấy màn hình hay hành động nào.</li>}
+        <div ref={listRef} id="cmdk-list" role="listbox" aria-label="Kết quả" className="max-h-[50vh] overflow-y-auto py-1">
+          {hits.length === 0 && <p className="px-3 py-6 text-center text-sm text-fg-subtle">Không tìm thấy màn hình hay hành động nào.</p>}
           {hits.map((e, i) => (
-            <li
+            <div
               key={e.id}
               id={`cmdk-${e.id}`}
               data-i={i}
               role="option"
+              tabIndex={-1}
               aria-selected={i === idx}
+              onKeyDown={(ev) => ev.key === "Enter" && run(e)}
               className={cn("flex cursor-pointer items-center gap-2.5 px-3 py-2 text-base", i === idx ? "bg-brand-50 text-brand-700" : "hover:bg-surface-hover")}
               onMouseEnter={() => setIdx(i)}
               onClick={() => run(e)}
@@ -130,9 +132,9 @@ export default function CommandPalette({ open, onOpenChange }: { open: boolean; 
               <Icon name={e.icon ?? "moNhanh"} size={15} className="flex-none text-fg-subtle" />
               <span className="min-w-0 flex-1 truncate">{e.label}</span>
               <span className="flex-none text-xs text-fg-subtle">{e.group}</span>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       </DialogContent>
     </Root>
   );

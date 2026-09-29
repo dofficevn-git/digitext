@@ -14,8 +14,7 @@ import "./server.css";
 import { Icon } from "@/components/Icon";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import V4pp from "@/features/upload/BatchesPanel";
-import { V462 as cn } from "@/lib/utils";
-import { Badge, Banner, Button, Card, EmptyState, IconButton, Menu, notifyError, PageHeader, Select, Skeleton, Tabs, Tip, toast } from "@/ui";
+import { Badge, Banner, Button, Card, EmptyState, IconButton, Menu, notifyError, PageHeader, Select, Skeleton, Tabs, Tip, toast, Table } from "@/ui";
 
 const DL_DIR_KEY = "server.download.dir";
 function nhoThuMuc(): string | undefined {
@@ -336,8 +335,7 @@ export default function V4wh() {
         <div className="mt-3 space-y-4">
           {pdfa && pdfaBad.length > 0 && (
             <Card tone="danger" padding="none" title={`${n(pdfaBad.length)} tệp PDF/A lỗi`} description={`Đã soát ${n(pdfa.length)} tài liệu (mỗi lượt tối đa 1.000). Sửa bằng Ghép lại PDF/A trong menu.`} actions={<IconButton label="Đóng" icon="dong" size="sm" onClick={() => setPdfa(null)} />}>
-              <div className="tbl-scroll max-h-64">
-                <table className="tbl">
+              <Table.Root maxHeight={256} dense>
                   <thead>
                     <tr>
                       <th>Lỗi</th>
@@ -366,8 +364,7 @@ export default function V4wh() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+              </Table.Root>
             </Card>
           )}
           {pdfa && pdfaBad.length === 0 && (
@@ -397,8 +394,7 @@ export default function V4wh() {
             ) : tree.docCount === 0 ? (
               <EmptyState compact icon="mayChu" title="Chưa có tài liệu trên máy chủ" description="Máy quản trị gom rồi đẩy lên ở màn Đưa lên máy chủ." />
             ) : (
-              <div className="tbl-scroll">
-                <table className={cn("tbl srv-tree")}>
+              <Table.Root className="srv-tree">
                   <thead>
                     <tr>
                       <th className="srv-tickcell">
@@ -422,8 +418,7 @@ export default function V4wh() {
                     </tr>
                   </thead>
                   <tbody>{rows}</tbody>
-                </table>
-              </div>
+              </Table.Root>
             )}
           </Card>
         </div>

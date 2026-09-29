@@ -28,13 +28,9 @@ export default function V4x3({
       <label htmlFor="captcha-answer">Mã xác nhận</label>
       <div className="captcha-row">
         {V38i ? (
-          <img
-            className="captcha-img"
-            src={V38i.image}
-            alt={`Mã xác nhận gồm ${V4wy} ký tự`}
-            onClick={V38l}
-            title="Bấm để lấy mã khác"
-          />
+          <button type="button" className="captcha-img border-0 bg-transparent p-0" onClick={V38l} title="Lấy mã khác">
+            <img src={V38i.image} alt={`Mã xác nhận gồm ${V4wy} ký tự`} className="block h-full w-full" />
+          </button>
         ) : (
           <div className="captcha-img captcha-img-empty">
             {V38m ? "Đang tải…" : V38n ? "Không tải được mã" : ""}

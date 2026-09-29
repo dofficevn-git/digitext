@@ -1,6 +1,7 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
-import { message } from "@tauri-apps/plugin-dialog";
+import { toast } from "@/ui/toast";
+import { describeError } from "@/lib/errors";
 
 import { invoke } from "@/api/ipc";
 import type { V3yc } from "@/domain/types";
@@ -204,10 +205,8 @@ export async function V40y(path: string): Promise<void> {
   try {
     await V40x(path);
   } catch (V2n) {
-    await message(V2n instanceof Error ? V2n.message : String(V2n), {
-      title: "Không mở được PDF",
-      kind: "error",
-    });
+    const d = describeError(V2n, "mở PDF");
+    toast.error("Không mở được PDF.", { detail: d.detail ?? d.message });
   }
 }
 

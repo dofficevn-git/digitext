@@ -1,7 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 import { useCallback, useState } from "react";
 import { V41p } from "@/live/useLive";
-import { confirm, message } from "@tauri-apps/plugin-dialog";
 import { V460 } from "@/state";
 import { V47u } from "@/features/drive/scanTarget";
 import { V41y } from "@/mocks/fixtures";
@@ -9,6 +8,8 @@ import { V414, V412, V419, V40n, V40y, V40o, V413, type V418 } from "@/api/archi
 import type { V3y1 } from "@/domain/types";
 import V47w from "@/ui/Avatars";
 import { Icon } from "@/components/Icon";
+
+import { errorText, confirm, toast } from "@/ui";
 
 function V48c({ node }: { node: V3y1 }) {
   const { removeArchiveNode: Vhe, renameNode: Vhf, addFolderNode: Vhg } = V460();
@@ -35,22 +36,19 @@ function V48c({ node }: { node: V3y1 }) {
       Vhi("none");
       Vhk("");
     } catch (Vhr) {
-      Vhm(Vhr instanceof Error ? Vhr.message : String(Vhr));
+      Vhm(errorText(Vhr));
     }
   };
 
   const Vhs = async () => {
     Vhm("");
     try {
-      const Vht = await confirm(
-        `Xóa "${node.name}"${Vhn ? " và toàn bộ nội dung bên trong" : ""}? Không thể hoàn tác.`,
-        { title: "Xác nhận xóa", kind: "warning" },
-      );
+      const Vht = await confirm({ title: `Xoá "${node.name}"?`, body: Vhn ? "Toàn bộ nội dung bên trong bị xoá theo. Không hoàn tác được." : "Không hoàn tác được.", confirmLabel: "Xoá", danger: true });
       if (!Vht) return;
       await V412(path);
       Vhe(node.id);
     } catch (Vhu) {
-      Vhm(Vhu instanceof Error ? Vhu.message : String(Vhu));
+      Vhm(errorText(Vhu));
     }
   };
 
@@ -161,7 +159,7 @@ export default function V48d() {
       const Vig = await V40n(Vif.id, Vie);
       Vi3(Vig, Vie ?? Vig.hoSo.pdfPath ?? null);
     } catch (Vih) {
-      Vi9(Vih instanceof Error ? Vih.message : String(Vih));
+      Vi9(errorText(Vih));
     } finally {
       Vi7(false);
     }
@@ -174,7 +172,7 @@ export default function V48d() {
       const Vik = await V40o(Vij);
       Vi3(Vik, Vij);
     } catch (Vil) {
-      Vi9(Vil instanceof Error ? Vil.message : String(Vil));
+      Vi9(errorText(Vil));
     } finally {
       Vi7(false);
     }
@@ -218,11 +216,7 @@ export default function V48d() {
                 Vi2(V47u(Vi4));
                 goto("scan");
               } else {
-                void message(
-                  "Thư mục này chưa gắn hồ sơ nên không lưu PDF vào đây được. Hãy chọn đúng " +
-                    "thư mục HỒ SƠ (Cơ quan → Hộp → Hồ sơ) rồi bấm Quét.",
-                  { title: "Chưa chọn thư mục hồ sơ", kind: "warning" },
-                );
+                toast.warning("Thư mục này chưa gắn hồ sơ nên không lưu PDF vào đây được.", { description: "Chọn đúng thư mục hồ sơ (Cơ quan › Hộp › Hồ sơ) rồi bấm Quét." });
               }
             }}
           >
@@ -292,7 +286,7 @@ export default function V48d() {
             className="btn"
             disabled={Vi6}
             onClick={() => void Vii(n.path!)}
-            title="Mở lại các trang để xoay/cắt/khử nghiêng, xoá/sắp xếp/chèn trang rồi đóng gói lại (ghi đè PDF)."
+            title="Sửa ảnh từng trang rồi đóng gói lại, ghi đè PDF"
           >
             {Vi6 ? (
               "Đang mở…"

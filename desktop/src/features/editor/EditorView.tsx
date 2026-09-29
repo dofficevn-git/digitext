@@ -11,6 +11,8 @@ import { V4ov } from "./tone";
 import { Icon } from "@/components/Icon";
 import type { V41v } from "@/components/Icon";
 
+import { errorText } from "@/ui";
+
 interface V4ow {
   x: number;
   y: number;
@@ -317,7 +319,7 @@ export default function V4p4({
       V25k();
       if (V23n) V23l(true);
     } catch (V25x) {
-      V24s(V25x instanceof Error ? V25x.message : String(V25x));
+      V24s(errorText(V25x));
     } finally {
       V24m(false);
     }
@@ -337,7 +339,7 @@ export default function V4p4({
         V24u(false);
         V24w(false);
       } catch (V261) {
-        V24s(V261 instanceof Error ? V261.message : String(V261));
+        V24s(errorText(V261));
       } finally {
         V24m(false);
       }
@@ -368,7 +370,7 @@ export default function V4p4({
       }
       if (V23n) V23l(true);
     } catch (V266) {
-      V24s(V266 instanceof Error ? V266.message : String(V266));
+      V24s(errorText(V266));
     } finally {
       V24m(false);
     }
@@ -396,7 +398,7 @@ export default function V4p4({
       V24w(!!V26b.canRedo);
       if (V23n) V23l(true);
     } catch (V26c) {
-      V24s(V26c instanceof Error ? V26c.message : String(V26c));
+      V24s(errorText(V26c));
     } finally {
       V24m(false);
     }
@@ -449,7 +451,7 @@ export default function V4p4({
       });
       V23l(true);
     } catch (V26t) {
-      V24s(V26t instanceof Error ? V26t.message : String(V26t));
+      V24s(errorText(V26t));
     } finally {
       V24q(false);
     }
@@ -522,7 +524,7 @@ export default function V4p4({
       V23l(false);
       goto("drive");
     } catch (V26z) {
-      V24s(V26z instanceof Error ? V26z.message : String(V26z));
+      V24s(errorText(V26z));
       V24o(false);
     }
   };
@@ -719,6 +721,10 @@ export default function V4p4({
               <div
                 key={p.index}
                 className={`ed-thumb ${p.index === V23r ? "on" : ""}`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Trang ${i + 1}`}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => V23s(p.index)}
               >
                 <div
@@ -735,6 +741,7 @@ export default function V4p4({
                 />
                 <div className="cap">{i + 1}</div>
                 {V23n && (
+                  // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- chỉ chặn nổi bọt, các nút bên trong tự có phím
                   <div className="ed-thumb-ops" onClick={(V275) => V275.stopPropagation()}>
                     <button title="Lên" disabled={i === 0} onClick={() => V26g(p.index, -1)}>
                       <Icon name="len" size={14} />
@@ -1102,6 +1109,10 @@ function V4p5({
     <div
       className={`tbtn ${V27d || V27f ? "flash" : ""} ${disabled ? "off" : ""}`}
       title={V27e}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled || undefined}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
       onClick={() => {
         if (disabled || !V27c) return;
         V27c();

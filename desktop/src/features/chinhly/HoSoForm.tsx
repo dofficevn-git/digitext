@@ -111,6 +111,7 @@ export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat:
         </>
       }
     >
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- chỉ bắt Ctrl+Enter để lưu, không phải nút */}
       <div
         className="space-y-4"
         onKeyDown={(e) => {

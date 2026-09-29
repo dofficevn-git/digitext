@@ -19,7 +19,7 @@ export default function V47w({ members: Vft = [] }: { members?: string[] }) {
           key={i}
           role="listitem"
           className={V462(
-            "grid size-[22px] place-items-center rounded-full border-2 border-surface text-2xs font-semibold text-white -ml-1.5 first:ml-0",
+            "grid size-[22px] place-items-center rounded-full border-2 border-surface text-xs font-semibold text-white -ml-1.5 first:ml-0",
             m.startsWith("+") ? "bg-gray-500" : V47v[i % V47v.length],
           )}
         >

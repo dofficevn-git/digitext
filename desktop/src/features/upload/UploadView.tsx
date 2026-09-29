@@ -28,7 +28,7 @@ import { V4qb, V4qc } from "./sharePort";
 import { Icon } from "@/components/Icon";
 import { useProject } from "@/state/project";
 import { V462 as cn } from "@/lib/utils";
-import { Badge, Banner, Button, Card, Checkbox, confirm, ErrorBanner, Field, Help, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Tabs, Tip, toast, Toolbar } from "@/ui";
+import { Badge, Banner, Button, Card, Checkbox, confirm, ErrorBanner, Field, Help, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Tabs, Tip, toast, Toolbar, Table } from "@/ui";
 
 const SITE_PLACEHOLDER = "Dán mã site hoặc bấm Sinh mã mạnh";
 const MONO = { flex: "0 0 auto", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" } as const;
@@ -585,8 +585,7 @@ function MayQuanTri() {
                 {V4j2(flt) ? "Không có tài liệu nào khớp bộ lọc. Chọn lại Tất cả phông hoặc bỏ bớt tiêu chí." : filtering ? "Không có bản nào thu thập trong khoảng ngày đã chọn." : "Chưa có hồ sơ trong mục lục và kho gom còn trống. Bấm Thu thập ở tab Gom từ máy nhân viên."}
               </p>
             ) : (
-              <div className="tbl-scroll kg-matrix">
-                <table className="tbl kg-table">
+              <Table.Root className="kg-table" maxHeight="min(62vh, 640px)">
                   <thead>
                     <tr>
                       <th className="kg-corner kg-c1">Hộp</th>
@@ -649,8 +648,7 @@ function MayQuanTri() {
                       </Fragment>
                     ))}
                   </tbody>
-                </table>
-              </div>
+              </Table.Root>
             )}
 
             {(truncated || matrix.hiddenRows > 0 || matrix.unmatched > 0 || filtering || (filtered.unknown > 0 && V4j3(flt))) && (
@@ -694,8 +692,7 @@ function BangLoi({ rows, queued, onResend, onClearAll }: { rows: V43g[]; queued:
         </Button>
       }
     >
-      <div className="tbl-scroll max-h-80">
-        <table className="tbl kg-errtbl">
+      <Table.Root className="kg-errtbl" maxHeight={320} dense>
           <thead>
             <tr>
               <th>Tệp</th>
@@ -727,8 +724,7 @@ function BangLoi({ rows, queued, onResend, onClearAll }: { rows: V43g[]; queued:
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+      </Table.Root>
     </Card>
   );
 }

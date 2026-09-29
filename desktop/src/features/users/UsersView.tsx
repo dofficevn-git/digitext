@@ -37,9 +37,9 @@ export default function V4ra() {
     return { users, projects, stats };
   }, []);
   const { data, error, loading, refreshing, reload } = V41t(load, { topics: ["users", "projects", "stats"] });
-  const users = data?.users ?? [];
-  const projects = data?.projects ?? [];
-  const stats = data?.stats ?? [];
+  const users = useMemo(() => data?.users ?? [], [data]);
+  const projects = useMemo(() => data?.projects ?? [], [data]);
+  const stats = useMemo(() => data?.stats ?? [], [data]);
 
   const projectName = useMemo(() => {
     const m = new Map(projects.map((p) => [p.id, p.name]));

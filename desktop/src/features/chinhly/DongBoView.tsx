@@ -7,9 +7,8 @@ import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { clConflictResolve, clConflicts, clOutbox, clOutboxDiscard, clOutboxRetry, clSyncNow, str, type ClConflict, type ClOutboxRow } from "@/api/chinhly";
 import { ChuaChonDuAn, fmtTime, n, SyncBadge, syncLabel, useClSync } from "./common";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Icon } from "@/components/Icon";
-import { Badge, Banner, Button, Card, confirm, EmptyState, ErrorBanner, Menu, notifyError, PageHeader, Seg, Table, toast, type Column } from "@/ui";
+import { Badge, Banner, Button, Card, Collapsible, CollapsibleContent, CollapsibleTrigger, confirm, EmptyState, ErrorBanner, Menu, notifyError, PageHeader, Seg, Table, toast, type Column } from "@/ui";
 
 const TEN_BANG: Record<string, string> = {
   cl_ho_so: "Hồ sơ",

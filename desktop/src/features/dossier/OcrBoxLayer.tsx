@@ -153,6 +153,7 @@ export default function V4h3({
 
   return (
     <div className="ocr-boxwrap relative leading-none">
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- ảnh chỉ báo onLoad để đo kích thước, khung vẽ bằng chuột ở lớp svg */}
       <img
         ref={V1au}
         src={src}

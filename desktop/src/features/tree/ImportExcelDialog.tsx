@@ -6,6 +6,8 @@ import type { V3yr } from "@/domain/types";
 import { V4bf, V4b9, V4b5, V4be, V4b7, type V4b8, type V4b2 } from "@/domain/catalogImport";
 import { Icon } from "@/components/Icon";
 
+import { Banner, Button, Dialog, Table, errorText } from "@/ui";
+
 export default function V4bg({
   startId: Vrj,
   onClose: Vrk,
@@ -41,7 +43,7 @@ export default function V4bg({
       Vrp(f.name);
       Vs1(w, V4bf(w));
     } catch (Vs3) {
-      Vrx("Không đọc được file: " + String(Vs3));
+      Vrx("Không đọc được tệp: " + errorText(Vs3));
     } finally {
       Vrz(false);
     }
@@ -70,24 +72,44 @@ export default function V4bg({
     });
 
   return (
-    <div className="overlay" onClick={Vrk}>
-      <div className="dialog xl" onClick={(Vse) => Vse.stopPropagation()}>
-        <h3>
-          <Icon name="nhapTep" /> Nhập danh mục hồ sơ từ Excel
-        </h3>
+    <Dialog
+      open
+      onOpenChange={(o) => !o && Vrk()}
+      title="Nhập danh mục hồ sơ từ Excel"
+      size="xl"
+      footer={
+        <>
+          <Button onClick={Vrk}>Huỷ</Button>
+          <Button
+            variant="primary"
+            icon="nhapTep"
+            disabled={!Vs9 || Vs9.records.length === 0 || Vry}
+            onClick={() => {
+              if (Vs9 && Vs9.records.length) {
+                Vrl(Vs9.records);
+                Vrk();
+              }
+            }}
+          >
+            Nhập {Vs9?.records.length ?? 0} hồ sơ
+          </Button>
+        </>
+      }
+    >
+      <>
 
         {!Vrm ? (
-          <div className="imp-drop" onClick={() => Vs0.current?.click()}>
+          <button type="button" className="imp-drop w-full" onClick={() => Vs0.current?.click()}>
             <div className="imp-drop-ic">
               <Icon name="taiLieu" size={28} />
             </div>
             <div>
-              <b>Bấm để chọn file Excel</b> (.xlsx, .xls, .csv)
+              <b>Bấm để chọn tệp Excel</b> (.xlsx, .xls, .csv)
             </div>
             <small className="muted">
               Hệ thống tự nhận diện các cột: Hộp số · Hồ sơ số · Tiêu đề · Số tờ · THBQ · Ghi chú
             </small>
-          </div>
+          </button>
         ) : (
           <>
             <div className="imp-filebar">
@@ -102,15 +124,15 @@ export default function V4bg({
                   </option>
                 ))}
               </select>
-              <button
-                className="btn sm"
+              <Button
+                size="sm"
                 onClick={() => {
                   Vrn(null);
                   Vrp("");
                 }}
               >
-                Chọn file khác
-              </button>
+                Chọn tệp khác
+              </Button>
             </div>
 
             <div className="imp-map">
@@ -140,8 +162,7 @@ export default function V4bg({
             </div>
 
             <div className="imp-preview">
-              <div className="tbl-scroll">
-                <table className="tbl">
+              <Table.Root maxHeight={320} dense>
                   <thead>
                     <tr>
                       <th>Hộp</th>
@@ -170,8 +191,7 @@ export default function V4bg({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+              </Table.Root>
               {Vs9 && Vs9.records.length > 8 && (
                 <div className="muted imp-more">… và {Vs9.records.length - 8} hồ sơ khác</div>
               )}
@@ -180,9 +200,9 @@ export default function V4bg({
         )}
 
         {Vrw && (
-          <div className="banner err mt-3">
-            <span className="bx">{Vrw}</span>
-          </div>
+          <Banner tone="danger" className="mt-3">
+            {Vrw}
+          </Banner>
         )}
 
         <input
@@ -190,6 +210,7 @@ export default function V4bg({
           type="file"
           accept=".xlsx,.xls,.csv"
           className="hidden"
+          aria-hidden
           onChange={(Vsh) => {
             const f = Vsh.target.files?.[0];
             if (f) Vs2(f);
@@ -197,24 +218,7 @@ export default function V4bg({
           }}
         />
 
-        <div className="actions">
-          <button className="btn" onClick={Vrk}>
-            Hủy
-          </button>
-          <button
-            className="btn primary"
-            disabled={!Vs9 || Vs9.records.length === 0 || Vry}
-            onClick={() => {
-              if (Vs9 && Vs9.records.length) {
-                Vrl(Vs9.records);
-                Vrk();
-              }
-            }}
-          >
-            Nhập {Vs9?.records.length ?? 0} hồ sơ
-          </button>
-        </div>
-      </div>
-    </div>
+      </>
+    </Dialog>
   );
 }

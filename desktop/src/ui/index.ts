@@ -28,3 +28,4 @@ export { toast, notifyError, Toaster } from "./toast";
 export { confirm, prompt, type ConfirmOptions, type PromptOptions } from "./dialogs/confirmStore";
 export { default as ConfirmHost } from "./dialogs/ConfirmHost";
 export { describeError, errorText, type UserError } from "@/lib/errors";
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";

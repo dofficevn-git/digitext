@@ -30,18 +30,35 @@ export default tseslint.config(
     },
   },
   {
-    // Khả năng tiếp cận: mức cảnh báo để đếm, siết thành lỗi theo từng thư mục đã chuyển sang bộ ui/*.
+    // Khả năng tiếp cận: mức lỗi cho toàn bộ màn nghiệp vụ (bản 0.17.1).
     files: ["src/**/*.tsx"],
     ...jsxA11y.flatConfigs.recommended,
     rules: {
-      ...Object.fromEntries(Object.entries(jsxA11y.flatConfigs.recommended.rules ?? {}).map(([k]) => [k, "warn"])),
+      ...Object.fromEntries(Object.entries(jsxA11y.flatConfigs.recommended.rules ?? {}).map(([k]) => [k, "error"])),
       "jsx-a11y/no-autofocus": "off",
       "jsx-a11y/label-has-for": "off",
+      // Ô nhập trong <Field> nhận id / aria-describedby qua context nên luật này báo nhầm; nhãn được ép ở Field và IconButton.
+      "jsx-a11y/control-has-associated-label": "off",
+      "jsx-a11y/label-has-associated-control": ["error", { controlComponents: ["Input", "Select", "Textarea", "Checkbox", "Switch"], depth: 3 }],
     },
   },
   {
     files: ["src/components/ui/**"],
     rules: Object.fromEntries(Object.keys(jsxA11y.flatConfigs.recommended.rules ?? {}).map((k) => [k, "off"])),
+  },
+  {
+    // Màn nghiệp vụ chỉ dùng bộ src/ui/*; hộp thoại hệ thống chỉ còn `open` (chọn tệp / thư mục).
+    files: ["src/features/**", "src/state/**", "src/api/**"],
+    ignores: ["src/features/shell/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [{ group: ["@/components/ui/*"], message: "Dùng bộ thành phần trong @/ui thay vì components/ui." }],
+          paths: [{ name: "@tauri-apps/plugin-dialog", importNames: ["confirm", "message", "ask", "save"], message: "Dùng confirm()/prompt()/toast của @/ui." }],
+        },
+      ],
+    },
   },
   {
     // Provider + hook ở chung file là chủ đích cho các context — không áp react-refresh.
