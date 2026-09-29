@@ -25,7 +25,7 @@ FIELDS = [
     ("coQuanBanHanh", "Cơ quan ban hành (góc trên bên trái)"),
     ("trichYeu", "Trích yếu nội dung (dòng V/v…, Về việc…, hoặc dòng dưới tiêu đề)"),
     ("nguoiKy", "Họ tên người ký"),
-    ("soVietTay", "Số viết tay ở góc trên bên phải"),
+    ("toSo", "Tờ số: số viết tay ở góc trên bên phải"),
 ]
 RULES = """QUY TẮC:
 1. Chỉ chép chữ THỰC SỰ có trên ảnh; trường không có thì để "".

@@ -31,7 +31,7 @@ MAP = {
     "summary": "trichYeu",
     "supervising_authority": "coQuanChuQuan",
     "signer_name": "nguoiKy",
-    "handwritten_number": "soVietTay",
+    "handwritten_number": "toSo",  # số viết tay góc phải = Tờ số (xác nhận 29/9/2026)
 }
 # Thứ tự ưu tiên khi một ảnh có ở nhiều bộ: bộ xuất sau cùng thắng.
 SETS = sorted(
