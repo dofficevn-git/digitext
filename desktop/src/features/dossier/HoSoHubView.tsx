@@ -9,9 +9,7 @@ import LapHoSoView from "@/features/chinhly/LapHoSoView";
 import DongBoView from "@/features/chinhly/DongBoView";
 import DanhMucView from "@/features/chinhly/DanhMucView";
 import HeThongHoaPane from "@/features/chinhly/HeThongHoaView";
-import V4ef from "./CapNhatCsdlPane";
 import SoHoaPane from "./SoHoaPane";
-import V4hd from "./KySoPane";
 import OcrPane from "./OcrPane";
 
 export default function V4lc() {
@@ -30,10 +28,8 @@ export default function V4lc() {
       {V1ug === "danhmuccl" && <DanhMucView />}
       {V1ug === "laphoso" && <LapHoSoView />}
       {V1ug === "hethonghoa" && <HeThongHoaPane />}
-      {V1ug === "capnhat" && <V4ef />}
       {V1ug === "dongbo" && <DongBoView />}
       {V1ug === "sohoa" && <SoHoaPane phongs={V1uh} />}
-      {V1ug === "kyso" && <V4hd />}
       {V1ug === "ocr" && <OcrPane />}
     </section>
   );

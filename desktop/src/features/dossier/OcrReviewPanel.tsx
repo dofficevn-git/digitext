@@ -6,7 +6,7 @@ import { V3xq } from "@/api/ipc";
 import { V40x, V40p } from "@/api/archive";
 import { V4bz, V4by, V4c0, type V4bm, type V4ca, type V4bp } from "@/api/dossier";
 import { V4ei } from "@/api/docs";
-import { V4fg, V4fk, V4fl, type V4fj } from "@/api/ocr";
+import { V4fg, V4fk, type V4fj } from "@/api/ocr";
 import { V4cy, V4cw, V4cz, V4cx } from "./logic";
 import { V4ge, V4gf, V4gj, V4gi } from "./ocrPrefill";
 import V4h3 from "./OcrBoxLayer";
@@ -57,7 +57,6 @@ export default function V4h7({
 
   const [ocr, V1ck] = useState<Record<number, V4fj>>({});
   const [V1cl, V1cm] = useState<Record<number, V4gk[]>>({});
-  const [V1cn, V1co] = useState<Set<number>>(new Set());
   const [V1cp, V1cq] = useState<string | null>(null);
   const [V1cr, V1cs] = useState<number | null>(null);
 
@@ -81,38 +80,6 @@ export default function V4h7({
       ...m,
       [V1cy]: (m[V1cy] ?? []).map((b) => (b.key === V1cz.key ? V1cz : b)),
     }));
-    V1co((s) => new Set(s).add(V1cy));
-  };
-
-  const V1d0 = async (V1d1: number) => {
-    const V1d2 = V1cl[V1d1];
-    if (!V1d2) return;
-    V1cf(null);
-    try {
-      await V4fl(
-        file.filePath,
-        V1d1 + 1,
-        V1d2.map((b) => ({
-          key: b.key,
-          x: b.x,
-          y: b.y,
-          w: b.w,
-          h: b.h,
-          text: b.text ?? "",
-          conf: b.conf ?? null,
-        })),
-      );
-      V1co((s) => {
-        const n = new Set(s);
-        n.delete(V1d1);
-        return n;
-      });
-      V1ch(
-        `Đã lưu ${V1d2.length} box (dữ liệu vàng) — trang ${V1d1 + 1}.`,
-      );
-    } catch (V1d3) {
-      V1cf(V4h5(V1d3));
-    }
   };
 
   const V1d4 = useCallback(async () => {
@@ -239,11 +206,6 @@ export default function V4h7({
                     </button>
                     {ocr[i] && (
                       <span className="muted">{V1cl[i]?.length ?? 0} box — kéo/chỉnh khung</span>
-                    )}
-                    {V1cn.has(i) && (
-                      <button className="btn btn-sm btn-success" onClick={() => V1d0(i)}>
-                        <Icon name="luu" /> Lưu box (gold)
-                      </button>
                     )}
                   </div>
                   {ocr[i] ? (

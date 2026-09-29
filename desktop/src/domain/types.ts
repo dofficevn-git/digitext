@@ -23,16 +23,13 @@ export type V3xt =
   | "server"
   | "report"
   | "work"
-  | "workManage"
-  | "chinhlyAdmin"
-  | "khogiaManage"
-  | "loan";
+  | "workManage";
 
-export type V3xu = "danhmuccl" | "laphoso" | "hethonghoa" | "capnhat" | "dongbo" | "sohoa" | "kyso" | "ocr";
+export type V3xu = "danhmuccl" | "laphoso" | "hethonghoa" | "dongbo" | "sohoa" | "ocr";
 
 export type V3xv = "phong" | "phongban" | "mang" | "thbq" | "ngonngu" | "loai" | "hoso";
 
-export type V3xw = "kho" | "gia" | "khaithac" | "muontra";
+export type V3xw = "khogia" | "khaithac" | "muontra";
 
 export type V3xx = "sohoa" | "chinhly" | "nhanvien" | "phanmem" | "muontra";
 

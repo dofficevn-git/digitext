@@ -5,6 +5,7 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
   { ignores: ["dist", "node_modules", "src-tauri", "*.config.js", "*.config.ts"] },
@@ -27,6 +28,19 @@ export default tseslint.config(
       "no-empty": ["error", { allowEmptyCatch: true }],
       "@typescript-eslint/no-unused-expressions": ["error", { allowShortCircuit: true, allowTernary: true }],
     },
+  },
+  {
+    // Khả năng tiếp cận: mức cảnh báo để đếm, siết thành lỗi theo từng thư mục đã chuyển sang bộ ui/*.
+    files: ["src/**/*.tsx"],
+    ...jsxA11y.flatConfigs.recommended,
+    rules: {
+      ...Object.fromEntries(Object.entries(jsxA11y.flatConfigs.recommended.rules ?? {}).map(([k]) => [k, "warn"])),
+      "jsx-a11y/no-autofocus": "off",
+    },
+  },
+  {
+    files: ["src/components/ui/**"],
+    rules: Object.fromEntries(Object.keys(jsxA11y.flatConfigs.recommended.rules ?? {}).map((k) => [k, "off"])),
   },
   {
     // Provider + hook ở chung file là chủ đích cho các context — không áp react-refresh.

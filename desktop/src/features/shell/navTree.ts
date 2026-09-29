@@ -3,8 +3,6 @@
 import type { V3xv, V3xu, V3xw, V3xx, V3xt } from "@/domain/types";
 import type { V41v } from "@/components/Icon";
 import { CATALOG_NAV } from "@/features/catalog/catalogNav";
-import { KHOGIA_NAV } from "@/features/khogia/khoGiaNav";
-import { REPORT_NAV } from "@/features/report/reportNav";
 
 export type V46r =
   | { kind: "view"; view: V3xt }
@@ -69,12 +67,6 @@ export const NAV_TREE: V46s[] = [
         leaf: { kind: "hoso", pane: "hethonghoa" },
       },
       {
-        id: "capnhat",
-        label: "Cập nhật cơ sở dữ liệu",
-        gate: "dossier",
-        leaf: { kind: "hoso", pane: "capnhat" },
-      },
-      {
         id: "dongbo",
         label: "Đồng bộ & xung đột",
         gate: "dossier",
@@ -122,12 +114,11 @@ export const NAV_TREE: V46s[] = [
     label: "Khai thác hồ sơ",
     icon: "khaithac",
     gate: "khogia",
-    children: KHOGIA_NAV.map((k) => ({
-      id: `khogia:${k.key}`,
-      label: k.label,
-      gate: "khogia" as V3xt,
-      leaf: { kind: "khogia", tab: k.key } as V46r,
-    })),
+    children: [
+      { id: "khogia:khogia", label: "Kho và giá", gate: "khogia", leaf: { kind: "khogia", tab: "khogia" } },
+      { id: "khogia:khaithac", label: "Khai thác dữ liệu", gate: "khogia", leaf: { kind: "khogia", tab: "khaithac" } },
+      { id: "khogia:muontra", label: "Mượn – trả hồ sơ", gate: "khogia", leaf: { kind: "khogia", tab: "muontra" } },
+    ],
   },
   {
     id: "thongke",
@@ -135,12 +126,11 @@ export const NAV_TREE: V46s[] = [
     icon: "thongke",
     gate: "report",
     children: [
-      ...REPORT_NAV.map((r) => ({
-        id: `report:${r.key}`,
-        label: r.label,
-        gate: "report" as V3xt,
-        leaf: { kind: "report", tab: r.key } as V46r,
-      })),
+      { id: "report:sohoa", label: "Tổng kết số hoá", gate: "report", leaf: { kind: "report", tab: "sohoa" } },
+      { id: "report:chinhly", label: "Tổng kết chỉnh lý", gate: "report", leaf: { kind: "report", tab: "chinhly" } },
+      { id: "report:nhanvien", label: "Tổng kết nhân viên", gate: "report", leaf: { kind: "report", tab: "nhanvien" } },
+      { id: "report:phanmem", label: "Tổng kết phần mềm", gate: "report", leaf: { kind: "report", tab: "phanmem" } },
+      { id: "report:muontra", label: "Mượn trả", gate: "report", leaf: { kind: "report", tab: "muontra" } },
 
       {
         id: "bienban",

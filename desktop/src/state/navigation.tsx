@@ -60,7 +60,7 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
   const [view, V2t] = useState<V3xt>("drive");
   const [V2u, V2v] = useState<V3xu>("laphoso");
   const [V2w, V2x] = useState<V3xv>("phong");
-  const [V2y, V2z] = useState<V3xw>("khaithac");
+  const [V2y, V2z] = useState<V3xw>("khogia");
   const [V30, V31] = useState<V3xx>("sohoa");
   const [V32, V33] = useState<V41b | null>(null);
   const [V34, V35] = useState<V41a | null>(null);
