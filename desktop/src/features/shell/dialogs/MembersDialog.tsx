@@ -1,127 +1,91 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Thành viên của một thư mục dự án trong Kho (vai trò theo dự án, chủ sở hữu luôn toàn quyền).
+
 import { useState } from "react";
 import { V460 } from "@/state";
 import { V41z } from "@/mocks/fixtures";
 import type { V3yi } from "@/domain/types";
-import { Icon } from "@/components/Icon";
+import { Button, Dialog, IconButton, Input, Select, Table } from "@/ui";
 
 export default function V4wv() {
-  const { dialogTitle: V37b, closeDialog: V37c, members: V37d, setMembers: V37e } = V460();
+  const { dialogTitle, closeDialog, members, setMembers } = V460();
+  const [list, setList] = useState<V3yi[]>(members);
+  const [ten, setTen] = useState("");
+  const [vaiTro, setVaiTro] = useState<string>(V41z[1]);
+  const roles = V41z.map((r) => ({ value: r, label: r }));
 
-  const [V37f, V37g] = useState<V3yi[]>(V37d);
-  const [V37h, V37i] = useState("");
-  const [V37j, V37k] = useState<string>(V41z[1]);
-
-  const V37l = (i: number, V37m: string) =>
-    V37g((d) => d.map((m, V37n) => (V37n === i ? { ...m, role: V37m } : m)));
-  const V37o = (i: number) => V37g((d) => d.filter((_V37p, V37q) => V37q !== i));
-  const V37r = () => {
-    const name = V37h.trim();
+  const doiVaiTro = (i: number, role: string) => setList((d) => d.map((m, j) => (j === i ? { ...m, role } : m)));
+  const go = (i: number) => setList((d) => d.filter((_m, j) => j !== i));
+  const them = () => {
+    const name = ten.trim();
     if (!name) return;
-    V37g((d) => [
-      ...d,
-      {
-        name,
-        email: name.toLowerCase().replace(/\s+/g, ".") + "@tn.gov.vn",
-        role: V37j,
-        av: name[0].toUpperCase(),
-        c: d.length % 5,
-      },
-    ]);
-    V37i("");
+    setList((d) => [...d, { name, email: "", role: vaiTro, av: name[0].toUpperCase(), c: d.length % 5 }]);
+    setTen("");
   };
-  const V37s = () => {
-    V37e(V37f);
-    V37c();
+  const luu = () => {
+    setMembers(list);
+    closeDialog();
   };
 
   return (
-    <div className="overlay" onClick={V37c}>
-      <div className="dialog wide" onClick={(V37t) => V37t.stopPropagation()}>
-        <h3>
-          Quản lý thành viên — <span>{V37b || "Dự án"}</span>
-        </h3>
-        <p className="muted -mt-1.5 mx-0 mb-3.5 text-sm">
-          Phân quyền theo dự án. Chủ sở hữu luôn có toàn quyền.
-        </p>
-        <div className="tbl-scroll">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Thành viên</th>
-                <th>Vai trò trong dự án</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {V37f.map((m, i) => (
-                <tr key={i}>
-                  <td>
-                    <div className="mem-cell">
-                      <span className={`a c${m.c}`}>{m.av}</span>
-                      <div>
-                        {m.name}
-                        {m.owner && <span className="owner-tag"> (chủ sở hữu)</span>}
-                        <small>{m.email}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    {m.owner ? (
-                      <span className="muted">Toàn quyền</span>
-                    ) : (
-                      <select
-                        className="role-sel"
-                        value={m.role}
-                        onChange={(V37u) => V37l(i, V37u.target.value)}
-                      >
-                        {V41z.map((r) => (
-                          <option key={r}>{r}</option>
-                        ))}
-                      </select>
-                    )}
-                  </td>
-                  <td>
-                    {!m.owner && (
-                      <span
-                        className="rm-mem"
-                        title="Gỡ khỏi dự án"
-                        onClick={() => V37o(i)}
-                      >
-                        <Icon name="dong" size={13} />
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="add-member">
-          <input
-            placeholder="+ Thêm theo tên / email…"
-            value={V37h}
-            onChange={(V37v) => V37i(V37v.target.value)}
-            onKeyDown={(V37w) => V37w.key === "Enter" && V37r()}
-          />
-          <select className="role-sel" value={V37j} onChange={(V37x) => V37k(V37x.target.value)}>
-            {V41z.map((r) => (
-              <option key={r}>{r}</option>
-            ))}
-          </select>
-          <button className="btn" onClick={V37r}>
-            Thêm
-          </button>
-        </div>
-        <div className="actions">
-          <button className="btn" onClick={V37c}>
-            Đóng
-          </button>
-          <button className="btn primary" onClick={V37s}>
-            Lưu thay đổi
-          </button>
-        </div>
+    <Dialog
+      open
+      onOpenChange={(o) => !o && closeDialog()}
+      title="Thành viên"
+      description={`${dialogTitle || "Dự án"}. Chủ sở hữu luôn có toàn quyền.`}
+      size="md"
+      footer={
+        <>
+          <Button onClick={closeDialog}>Huỷ</Button>
+          <Button variant="primary" icon="luu" onClick={luu}>
+            Lưu
+          </Button>
+        </>
+      }
+    >
+      <Table.Root dense>
+        <Table.Head>
+          <tr>
+            <Table.HeadCell>Thành viên</Table.HeadCell>
+            <Table.HeadCell width={220}>Vai trò trong dự án</Table.HeadCell>
+            <Table.HeadCell width={44}>
+              <span className="sr-only">Gỡ</span>
+            </Table.HeadCell>
+          </tr>
+        </Table.Head>
+        <Table.Body>
+          {list.map((m, i) => (
+            <Table.Row key={`${m.name}-${i}`}>
+              <Table.Cell>
+                <span className="flex items-center gap-2">
+                  <span className={`a c${m.c} inline-grid size-7 place-items-center rounded-full text-xs font-semibold`} aria-hidden>
+                    {m.av}
+                  </span>
+                  <span>
+                    {m.name}
+                    {m.owner && <span className="ml-1 text-xs text-fg-subtle">chủ sở hữu</span>}
+                    {m.email && <span className="block text-xs text-fg-subtle">{m.email}</span>}
+                  </span>
+                </span>
+              </Table.Cell>
+              <Table.Cell>{m.owner ? <span className="text-sm text-fg-subtle">Toàn quyền</span> : <Select size="sm" value={m.role} onChange={(v) => doiVaiTro(i, v)} options={roles} aria-label={`Vai trò của ${m.name}`} />}</Table.Cell>
+              <Table.Cell>{!m.owner && <IconButton label={`Gỡ ${m.name} khỏi dự án`} icon="dong" size="sm" onClick={() => go(i)} />}</Table.Cell>
+            </Table.Row>
+          ))}
+          {list.length === 0 && (
+            <Table.FullRow colSpan={3}>
+              <p className="px-3 py-3 text-sm text-fg-subtle">Chưa có thành viên nào.</p>
+            </Table.FullRow>
+          )}
+        </Table.Body>
+      </Table.Root>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Input size="sm" className="min-w-40 flex-1" placeholder="Tên thành viên" value={ten} onChange={(e) => setTen(e.target.value)} onKeyDown={(e) => e.key === "Enter" && them()} aria-label="Tên thành viên mới" />
+        <Select size="sm" className="w-56" value={vaiTro} onChange={setVaiTro} options={roles} aria-label="Vai trò" />
+        <Button size="sm" icon="them" onClick={them} disabled={!ten.trim()}>
+          Thêm
+        </Button>
       </div>
-    </div>
+    </Dialog>
   );
 }

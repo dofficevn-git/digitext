@@ -45,7 +45,7 @@ export function V3zt(V14: string, V15: string): string {
       return "Không kết nối được máy chủ. Kiểm tra mạng, hoặc đăng nhập offline nếu đã dùng máy này trước đó." + (chiTiet ? ` Chi tiết: ${chiTiet}` : "");
     }
     case "server_not_configured":
-      return "Chưa có địa chỉ máy chủ. Bấm nút “Máy chủ” bên dưới để nhập.";
+      return "Chưa có địa chỉ máy chủ. Nhập vào ô Địa chỉ máy chủ rồi bấm Lưu.";
     case "busy":
       return "Đang quét dở một lô — kết thúc lô quét trước khi đổi người dùng.";
     case "locked":

@@ -22,7 +22,6 @@ export { default as Menu, type MenuEntry, type MenuItem } from "./Menu";
 export { default as Badge } from "./Badge";
 export { default as Seg } from "./Seg";
 export { default as Dialog } from "./Dialog";
-export { default as Modal } from "./Modal";
 export { default as Table, useTableSort, compareValues, collator, type Column, type SortState, type TableState } from "./Table";
 export { default as Pagination, usePagination, pageSlice } from "./Pagination";
 export { toast, notifyError, Toaster } from "./toast";
