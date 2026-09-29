@@ -1,100 +1,60 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Tạo thư mục con trong Kho tài liệu (mở từ menu Tạo của Kho).
+
 import { useState } from "react";
 import { V460 } from "@/state";
-import V4oq from "@/ui/Seg";
-import { Icon } from "@/components/Icon";
-
-interface V4wt {
-  initial: string;
-  name: string;
-  c: number;
-}
+import { Button, Dialog, Field, Input } from "@/ui";
 
 export default function V4wu() {
-  const { dialogTitle: V36w, closeDialog: V36x, createFolder: V36y } = V460();
-  const [name, V36z] = useState("");
-  const [V370, V371] = useState<"300" | "600">("600");
-  const [color, V372] = useState<"rgb" | "gray">("rgb");
-  const [V373, V374] = useState<V4wt[]>([]);
-
-  const V375 = () => {
-    V36y(name.trim());
-    V36x();
+  const { dialogTitle, closeDialog, createFolder } = V460();
+  const [name, setName] = useState("");
+  const [err, setErr] = useState<string | undefined>();
+  const tao = () => {
+    const t = name.trim();
+    if (!t) {
+      setErr("Nhập tên thư mục.");
+      return;
+    }
+    if (/[\\/:*?"<>|]/.test(t)) {
+      setErr("Tên không được chứa các ký tự \\ / : * ? \" < > |");
+      return;
+    }
+    createFolder(t);
+    closeDialog();
   };
-
   return (
-    <div className="overlay" onClick={V36x}>
-      <div className="dialog wide" onClick={(V376) => V376.stopPropagation()}>
-        <h3>{V36w || "Tạo dự án mới"}</h3>
-        <div className="field">
-          <label>Tên dự án / thư mục</label>
-          <input
-            type="text"
-            className="inp w-full"
-            placeholder="VD: Bắc Giang — Sở Nội vụ"
+    <Dialog
+      open
+      onOpenChange={(o) => !o && closeDialog()}
+      title={dialogTitle || "Tạo thư mục"}
+      size="sm"
+      footer={
+        <>
+          <Button onClick={closeDialog}>Huỷ</Button>
+          <Button variant="primary" icon="them" onClick={tao}>
+            Tạo
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          tao();
+        }}
+      >
+        <Field label="Tên thư mục" required error={err}>
+          <Input
             value={name}
-            onChange={(V377) => V36z(V377.target.value)}
             autoFocus
+            placeholder="Ví dụ: Hộp 01"
+            onChange={(e) => {
+              setName(e.target.value);
+              setErr(undefined);
+            }}
           />
-        </div>
-        <div className="field">
-          <label>Mô tả (tùy chọn)</label>
-          <textarea
-            className="inp"
-            placeholder="Phạm vi, ghi chú đợt số hóa…"
-          />
-        </div>
-        <div className="field">
-          <label>Thành viên truy cập</label>
-          <div className="chips mb-2">
-            {V373.map((c, i) => (
-              <span className="chip" key={i}>
-                <span className={`a c${c.c}`}>{c.initial}</span> {c.name}
-                <span
-                  className="x"
-                  onClick={() => V374((V378) => V378.filter((_V379, V37a) => V37a !== i))}
-                >
-                  <Icon name="dong" size={12} label={`Bỏ ${c.name}`} />
-                </span>
-              </span>
-            ))}
-          </div>
-          <input
-            type="text"
-            className="inp w-full"
-            placeholder="+ Thêm người dùng theo tên / email…"
-          />
-        </div>
-        <div className="field">
-          <label>Cấu hình quét mặc định</label>
-          <div className="flex gap-2.5 items-center">
-            <V4oq
-              value={V370}
-              onChange={V371}
-              options={[
-                { value: "300", label: "300" },
-                { value: "600", label: "600 DPI" },
-              ]}
-            />
-            <V4oq
-              value={color}
-              onChange={V372}
-              options={[
-                { value: "rgb", label: "RGB" },
-                { value: "gray", label: "Xám" },
-              ]}
-            />
-          </div>
-        </div>
-        <div className="actions">
-          <button className="btn" onClick={V36x}>
-            Hủy
-          </button>
-          <button className="btn primary" onClick={V375}>
-            Tạo dự án
-          </button>
-        </div>
-      </div>
-    </div>
+        </Field>
+      </form>
+    </Dialog>
   );
 }
