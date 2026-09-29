@@ -7,7 +7,8 @@ import { V460 } from "@/state";
 import { V3xq, isTauri } from "@/api/ipc";
 import { V3zt } from "@/state/sessionCore";
 import { V3z9 } from "@/domain/permissions";
-import { V4et, V4f3, V4er, type V4f2, type V4f0 } from "@/api/docs";
+import { V4et, V4f3, V4er, V4ek, type V4f2, type V4f0 } from "@/api/docs";
+import { inMetadata, layTruongNhieuTaiLieu, tenTepAnToan, xuatMetadataExcel, type MetaRow } from "./metadataXuat";
 import { V4ak, type V4a9 } from "@/api/users";
 import V4i7, { type V4i6 } from "../upload/OcrFieldsView";
 import V4k5 from "../server/ServerJobs";
@@ -118,6 +119,7 @@ export default function OcrPane() {
   const [report, V1tl] = useState<V4f2 | null>(null);
   const [V1tm, V1tn] = useState(true);
   const [V1to, V1tp] = useState("");
+  const [xuatBan, setXuatBan] = useState(false);
 
   const V1tq = V1sy?.projectId ?? null;
   const V1tr = V1tq ?? V1t7;
@@ -239,6 +241,45 @@ export default function OcrPane() {
   }
 
   const totals = report?.totals;
+
+  const xuatMeta = async (kieu: "excel" | "in") => {
+    setXuatBan(true);
+    V1t2(null);
+    try {
+      const all = await V4ek();
+      const docs = all.filter((d) => d.status !== "disposed" && (!V1tr || (d.projectId ?? "") === V1tr));
+      if (docs.length === 0) {
+        V1t2(V1tr ? "Dự án đang chọn chưa có tài liệu nào." : "Chưa có tài liệu nào trên máy chủ.");
+        return;
+      }
+      const truong = await layTruongNhieuTaiLieu(docs.map((d) => d.id), (d, t) => V1t4(`Đang lấy trường ${d}/${t}…`));
+      const duyet: Record<string, string> = { pending: "Chờ duyệt", approved: "Đã duyệt", rejected: "Từ chối" };
+      const boc: Record<string, string> = { done: "đã bóc", queued: "chờ bóc", running: "đang bóc", failed_transient: "bóc lỗi", page_failed: "bóc lỗi" };
+      const rows: MetaRow[] = docs
+        .sort((a, b) => (a.hoSoRef ?? "").localeCompare(b.hoSoRef ?? "", "vi", { numeric: true }) || a.filename.localeCompare(b.filename, "vi", { numeric: true }))
+        .map((d) => {
+          const f = truong.get(d.id);
+          return {
+            id: d.id,
+            filename: d.filename,
+            hoSoRef: d.hoSoRef ?? "",
+            relPath: d.relPath ?? "",
+            fields: f?.fields ?? {},
+            daXacNhan: f?.daXacNhan ?? false,
+            trangThai: `${duyet[d.reviewStatus ?? "pending"] ?? d.reviewStatus ?? ""}${d.fieldsStatus ? ` (${boc[d.fieldsStatus] ?? d.fieldsStatus})` : " (chưa bóc)"}`,
+          };
+        });
+      const p = V1t5.find((x) => x.id === V1tr);
+      const ten = p ? `${p.code} — ${p.name}` : V1sy?.projectName ?? "";
+      if (kieu === "excel") await xuatMetadataExcel(rows, `metadata-${tenTepAnToan(p?.code ?? V1sy?.projectCode ?? "du-an")}.xlsx`);
+      else inMetadata(rows, "METADATA TÀI LIỆU ĐÃ BÓC TÁCH", ten);
+      V1t4(`${kieu === "excel" ? "Đã xuất" : "Đã in"} metadata ${V4l7(rows.length)} tài liệu.`);
+    } catch (e) {
+      V1t2(V4lb(e));
+    } finally {
+      setXuatBan(false);
+    }
+  };
 
   return (
     <>
@@ -505,6 +546,23 @@ export default function OcrPane() {
                 ))}
               </select>
             )}
+            <button
+              className="btn sm"
+              onClick={() => void xuatMeta("excel")}
+              disabled={xuatBan}
+              title="Excel metadata: mỗi dòng một tài liệu của dự án đang chọn với 18 trường đã bóc tách / xác nhận, trạng thái duyệt"
+            >
+              <Icon name="tepExcel" />
+              {xuatBan ? "Đang lấy trường…" : "Xuất metadata"}
+            </button>
+            <button
+              className="btn sm"
+              onClick={() => void xuatMeta("in")}
+              disabled={xuatBan}
+              title="In bảng metadata (A4 ngang) các tài liệu của dự án đang chọn"
+            >
+              In metadata
+            </button>
             <button
               className="btn sm"
               onClick={() => void V1u4()}
