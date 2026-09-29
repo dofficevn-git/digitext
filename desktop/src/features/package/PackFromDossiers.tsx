@@ -1,21 +1,17 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-//
-// Đóng gói từ bảng hồ sơ (đề nghị chỉnh sửa mục 8): tích chọn hồ sơ trong mục lục → chọn loại gói
-// (SIP hồ sơ / SIP tài liệu / AIP hồ sơ / AIP tài liệu / DIP) → ghép với tài liệu đã lên máy chủ theo
-// phông / hộp / hồ sơ → tạo gói trên máy chủ (mỗi hồ sơ một gói; gói mức tài liệu: mỗi tài liệu một
-// gói). Thông tin mô tả lấy từ bản ghi hồ sơ (mã hồ sơ, tiêu đề, THBQ, thời gian, số tờ).
+// Đóng gói từ bảng hồ sơ: chọn loại gói (SIP / AIP hồ sơ hay tài liệu, DIP) → ghép hồ sơ với tài liệu đã lên máy chủ
+// theo phông / hộp / hồ sơ → tạo gói trên máy chủ (mỗi hồ sơ một gói; gói mức tài liệu: mỗi tài liệu một gói).
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
-import { V41p } from "@/live/useLive";
-import { isTauri, V3xq } from "@/api/ipc";
+import { useEffect, useMemo, useState } from "react";
+import { V41t } from "@/live/useLive";
+import { isTauri } from "@/api/ipc";
 import { V4ek, type V4ej } from "@/api/docs";
 import { V4ru, V4rv, V4rw, type V4rt } from "@/api/packaging";
 import type { V4bm } from "@/api/dossier";
 import type { V3yo } from "@/domain/types";
-import { Icon } from "@/components/Icon";
-import { V4su, V4sn, V4sk, type V4sj, type V4sm } from "./packageWire";
+import { V4sk, V4sn, V4su, type V4sj, type V4sm } from "./packageWire";
+import { Badge, Button, Card, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
 
-const errText = (e: unknown) => (e instanceof V3xq || e instanceof Error ? e.message : String(e));
 const so = (s: string | null | undefined): number | null => {
   const m = /(\d+)/.exec(s ?? "");
   return m ? Number(m[1]) : null;
@@ -24,7 +20,6 @@ const phongOf = (d: V4ej) => {
   const p = (d.relPath ?? "").split("/").filter((x) => x.trim() !== "");
   return p.length >= 2 ? p[0].trim() : "";
 };
-/** "HOP 01/HO SO 5" → [1, 5]. */
 function hopHoSo(d: V4ej): [number | null, number | null] {
   const ref = d.hoSoRef ?? "";
   const i = ref.indexOf("/");
@@ -36,14 +31,7 @@ function hopHoSo(d: V4ej): [number | null, number | null] {
 function maintenanceOf(tenThbq: string): string {
   const t = tenThbq.toLowerCase();
   if (t.includes("vĩnh viễn")) return "01";
-  for (const [nam, ma] of [
-    ["70", "02"],
-    ["50", "03"],
-    ["30", "04"],
-    ["20", "05"],
-    ["10", "06"],
-  ] as const)
-    if (t.includes(nam)) return ma;
+  for (const [nam, ma] of [["70", "02"], ["50", "03"], ["30", "04"], ["20", "05"], ["10", "06"]] as const) if (t.includes(nam)) return ma;
   return "07";
 }
 function nho(key: string): string {
@@ -60,26 +48,16 @@ function luu(key: string, v: string) {
     /* tiện ích nhớ */
   }
 }
-
 const KINDS: V4sj[] = ["sip_hoso", "sip_tailieu", "aip_hoso", "aip_tailieu", "dip"];
-
 interface KetQua {
   hoSo: string;
   ok: number;
   loi: string[];
 }
 
-export function PackDialog({
-  dossiers,
-  thbqs,
-  onClose,
-}: {
-  dossiers: V4bm[];
-  thbqs: V3yo[];
-  onClose: () => void;
-}) {
+export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thbqs: V3yo[]; onClose: () => void }) {
   const [docs, setDocs] = useState<V4ej[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [docErr, setDocErr] = useState<unknown>(null);
   const [kind, setKind] = useState<V4sj>("aip_hoso");
   const [projectId, setProjectId] = useState(() => nho("pack.projectId"));
   const [phong, setPhong] = useState("");
@@ -92,11 +70,8 @@ export function PackDialog({
 
   useEffect(() => {
     if (!isTauri()) return;
-    V4ek()
-      .then(setDocs)
-      .catch((e) => setErr(`Không tải được danh sách tài liệu máy chủ: ${errText(e)}`));
+    V4ek().then(setDocs).catch(setDocErr);
   }, []);
-
   const duAn = useMemo(() => {
     const m = new Map<string, string>();
     for (const d of docs ?? []) if (d.projectId) m.set(d.projectId, `${d.projectCode ?? ""} · ${d.projectName ?? ""}`);
@@ -112,17 +87,12 @@ export function PackDialog({
   }, [docs, projectId]);
   useEffect(() => {
     if (!dsPhong.includes(phong)) {
-      // Đoán phông theo mã phông của hồ sơ; không có thì lấy phông đầu.
       const ma = (dossiers[0]?.maDa ?? "").toUpperCase();
       setPhong(dsPhong.find((p) => ma && p.toUpperCase().includes(ma)) ?? dsPhong[0] ?? "");
     }
   }, [dsPhong, phong, dossiers]);
-
-  // Ghép hồ sơ mục lục ↔ tài liệu máy chủ theo số hộp + số hồ sơ trong phông đã chọn.
   const ghep = useMemo(() => {
-    const trongPhong = (docs ?? []).filter(
-      (d) => d.projectId === projectId && (dsPhong.length === 0 || phongOf(d) === phong),
-    );
+    const trongPhong = (docs ?? []).filter((d) => d.projectId === projectId && (dsPhong.length === 0 || phongOf(d) === phong));
     return dossiers.map((r) => {
       const hop = so(r.hopSo);
       const hs = so(r.soTam);
@@ -135,21 +105,18 @@ export function PackDialog({
       return { r, ds };
     });
   }, [docs, dossiers, projectId, phong, dsPhong.length]);
-
   const tenThbq = (id?: number) => thbqs.find((t) => t.thbqid === id)?.tenThbq ?? "";
 
   const chay = async () => {
     setBusy(true);
-    setErr(null);
     luu("pack.projectId", projectId);
     luu("pack.archiveOrgCode", orgCode.trim());
     const out: KetQua[] = [];
     for (const { r, ds } of ghep) {
-      const nhan = `Hộp ${r.hopSo ?? "—"} · HS ${r.soTam}`;
-      const kq: KetQua = { hoSo: nhan, ok: 0, loi: [] };
+      const kq: KetQua = { hoSo: `Hộp ${r.hopSo ?? "—"} · HS ${r.soTam}`, ok: 0, loi: [] };
       out.push(kq);
       if (ds.length === 0) {
-        kq.loi.push("không có tài liệu nào trên máy chủ khớp phông/hộp/hồ sơ này");
+        kq.loi.push("không có tài liệu nào trên máy chủ khớp phông, hộp, hồ sơ này");
         continue;
       }
       const base: V4sm = {
@@ -170,15 +137,10 @@ export function PackDialog({
         certTrichYeu: dip.certTrichYeu || r.tieuDe,
         certMaLuuTruGoc: dip.certMaLuuTruGoc || (r.maHoSo ?? ""),
       };
-      // Gói mức tài liệu: mỗi tài liệu một gói; còn lại: cả hồ sơ một gói.
       const nhom = kind === "aip_tailieu" || kind === "sip_tailieu" ? ds.map((d) => [d]) : [ds];
       for (const [i, g] of nhom.entries()) {
-        const form: V4sm =
-          nhom.length > 1 ? { ...base, fileCode: `${base.fileCode}.${String(i + 1).padStart(3, "0")}`, title: g[0].filename } : base;
-        const { request, errors } = V4su(
-          form,
-          g.map((d) => ({ documentId: d.id, filename: d.filename })),
-        );
+        const form: V4sm = nhom.length > 1 ? { ...base, fileCode: `${base.fileCode}.${String(i + 1).padStart(3, "0")}`, title: g[0].filename } : base;
+        const { request, errors } = V4su(form, g.map((d) => ({ documentId: d.id, filename: d.filename })));
         if (!request) {
           kq.loi.push(...errors);
           break;
@@ -187,76 +149,98 @@ export function PackDialog({
           await V4rv({ projectId, hoSoRef: g[0].hoSoRef, request });
           kq.ok += 1;
         } catch (e) {
-          kq.loi.push(errText(e));
+          kq.loi.push(errorText(e));
         }
       }
       setKetQua([...out]);
     }
     setKetQua(out);
     setBusy(false);
+    const tong = out.reduce((a, k) => a + k.ok, 0);
+    const loi = out.filter((k) => k.loi.length > 0).length;
+    if (tong > 0) toast.success(`Đã tạo ${tong} gói. Máy chủ đang dựng, theo dõi ở tab Gói tin.`, { description: loi ? `${loi} hồ sơ có lỗi, xem cột Kết quả.` : undefined });
+    else toast.error("Không tạo được gói nào. Xem cột Kết quả.");
   };
 
   const khop = ghep.filter((g) => g.ds.length > 0).length;
-  const f = (label: string, el: ReactElement) => (
-    <label className="grid gap-1 text-sm">
-      <span className="muted">{label}</span>
-      {el}
-    </label>
-  );
+  const cols: Column<{ r: V4bm; ds: V4ej[] }>[] = [
+    { key: "hopSo", header: "Hộp", align: "right", width: 70, cell: (g) => g.r.hopSo },
+    { key: "soTam", header: "HS số", align: "right", width: 80, cell: (g) => g.r.soTam },
+    { key: "tieuDe", header: "Tiêu đề", className: "whitespace-normal", cell: (g) => g.r.tieuDe },
+    { key: "ds", header: "Tài liệu trên máy chủ", width: 170, cell: (g) => (docs == null ? "…" : g.ds.length ? <Badge tone="ok">{g.ds.length} tài liệu</Badge> : <Badge tone="err">Không khớp</Badge>) },
+    ...(ketQua
+      ? [
+          {
+            key: "kq",
+            header: "Kết quả",
+            className: "whitespace-normal text-sm",
+            cell: (g: { r: V4bm; ds: V4ej[] }) => {
+              const kq = ketQua[ghep.indexOf(g)];
+              if (!kq) return "…";
+              return (
+                <>
+                  {kq.ok > 0 && <span className="text-success-700">Đã tạo {kq.ok} gói. </span>}
+                  {kq.loi.length > 0 && <span className="text-danger-700">{kq.loi.join(" · ")}</span>}
+                </>
+              );
+            },
+          } as Column<{ r: V4bm; ds: V4ej[] }>,
+        ]
+      : []),
+  ];
 
   return (
-    <div className="lhs-overlay" onClick={onClose}>
-      <div className="lhs-modal" style={{ maxWidth: 900, width: "95vw" }} onClick={(e) => e.stopPropagation()}>
-        <div className="m-head">
-          <h4>Đóng gói {dossiers.length} hồ sơ</h4>
-          <button className="m-close" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="m-body">
-        <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-          {f(
-            "Lựa chọn đóng gói",
-            <select value={kind} onChange={(e) => setKind(e.target.value as V4sj)}>
-              {KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {V4sk[k]}
-                </option>
-              ))}
-            </select>,
-          )}
-          {f(
-            "Dự án trên máy chủ",
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              {duAn.map(([id, ten]) => (
-                <option key={id} value={id}>
-                  {ten}
-                </option>
-              ))}
-            </select>,
-          )}
-          {dsPhong.length > 0 &&
-            f(
-              "Phông trên máy chủ",
-              <select value={phong} onChange={(e) => setPhong(e.target.value)}>
-                {dsPhong.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>,
-            )}
-          {f("Mã phông (Fondcode)", <input value={fondCode} onChange={(e) => setFondCode(e.target.value)} />)}
-          {f("Mã cơ quan lưu trữ", <input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} />)}
-          {kind.startsWith("sip") &&
-            f("Mã yêu cầu nộp (thoả thuận nộp)", <input value={agreement} onChange={(e) => setAgreement(e.target.value)} />)}
-        </div>
-        {kind === "dip" && (
-          <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+    <Dialog
+      open
+      onOpenChange={(o) => !o && !busy && onClose()}
+      closable={!busy}
+      title={`Đóng gói ${dossiers.length} hồ sơ`}
+      size="xl"
+      footer={
+        <>
+          <span className="self-center text-sm text-fg-subtle">{docs ? `${khop}/${dossiers.length} hồ sơ khớp tài liệu trên máy chủ.` : "Đang tải danh sách tài liệu máy chủ…"}</span>
+          <span className="flex-1" />
+          <Button onClick={onClose} disabled={busy}>
+            {ketQua ? "Đóng" : "Huỷ"}
+          </Button>
+          <Button variant="primary" icon="goi" loading={busy} disabled={khop === 0 || !docs} onClick={() => void chay()}>
+            Đóng gói {V4sk[kind]}
+          </Button>
+        </>
+      }
+    >
+      {docErr !== null && <ErrorBanner error={docErr} className="mb-3" />}
+      <FormGrid cols={3}>
+        <Field label="Loại gói">
+          <Select value={kind} onChange={(v) => setKind(v as V4sj)} options={KINDS.map((k) => ({ value: k, label: V4sk[k] }))} />
+        </Field>
+        <Field label="Dự án trên máy chủ">
+          <Select value={projectId} onChange={setProjectId} options={duAn.map(([id, ten]) => ({ value: id, label: ten }))} />
+        </Field>
+        {dsPhong.length > 0 && (
+          <Field label="Phông trên máy chủ">
+            <Select value={phong} onChange={setPhong} options={dsPhong.map((p) => ({ value: p, label: p }))} />
+          </Field>
+        )}
+        <Field label="Mã phông">
+          <Input value={fondCode} onChange={(e) => setFondCode(e.target.value)} />
+        </Field>
+        <Field label="Mã cơ quan lưu trữ">
+          <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} />
+        </Field>
+        {kind.startsWith("sip") && (
+          <Field label="Mã yêu cầu nộp" hint="Thoả thuận nộp lưu, nếu có">
+            <Input value={agreement} onChange={(e) => setAgreement(e.target.value)} />
+          </Field>
+        )}
+      </FormGrid>
+      {kind === "dip" && (
+        <Card className="mt-3" title="Thông tin cấp bản sao (DIP)" padding="sm">
+          <FormGrid cols={3}>
             {(
               [
                 ["requestId", "Mã yêu cầu khai thác"],
-                ["requestDate", "Ngày yêu cầu (YYYY-MM-DD)"],
+                ["requestDate", "Ngày yêu cầu"],
                 ["certMaXacThuc", "Mã xác thực lưu trữ"],
                 ["certTenLuuTru", "Tên lưu trữ lịch sử"],
                 ["certNguoiNhanHoTen", "Họ tên người nhận"],
@@ -264,148 +248,70 @@ export function PackDialog({
                 ["certTenLoai", "Tên loại tài liệu"],
                 ["certMucDich", "Mục đích sử dụng"],
               ] as const
-            ).map(([k, label]) =>
-              f(
-                label,
-                <input
-                  key={k}
-                  value={(dip[k] as string | undefined) ?? ""}
-                  onChange={(e) => setDip((d) => ({ ...d, [k]: e.target.value }))}
-                />,
-              ),
-            )}
-          </div>
-        )}
-
-        {err && <div className="text-danger text-sm mt-2">{err}</div>}
-        <div className="tbl-scroll mt-3" style={{ maxHeight: 280 }}>
-          <table className="dataTable">
-            <thead>
-              <tr>
-                <th>Hộp số</th>
-                <th>HS số</th>
-                <th>Tiêu đề</th>
-                <th>Tài liệu trên máy chủ</th>
-                {ketQua && <th>Kết quả</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {ghep.map(({ r, ds }, i) => {
-                const kq = ketQua?.[i];
-                return (
-                  <tr key={r.id}>
-                    <td className="text-center">{r.hopSo}</td>
-                    <td className="text-center">{r.soTam}</td>
-                    <td className="text-left">{r.tieuDe}</td>
-                    <td className={`text-center ${ds.length ? "" : "text-danger-700"}`}>
-                      {docs == null ? "…" : ds.length ? `${ds.length} tài liệu` : "không khớp"}
-                    </td>
-                    {ketQua && (
-                      <td className="text-left text-sm">
-                        {kq ? (
-                          <>
-                            {kq.ok > 0 && <span className="text-success-700">Đã tạo {kq.ok} gói. </span>}
-                            {kq.loi.length > 0 && <span className="text-danger-700">{kq.loi.join(" · ")}</span>}
-                          </>
-                        ) : (
-                          "…"
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center gap-2 mt-3">
-          <span className="muted text-sm">
-            {khop}/{dossiers.length} hồ sơ khớp tài liệu trên máy chủ. Máy chủ dựng gói nền — theo dõi ở “Danh sách gói tin”.
-          </span>
-          <div className="flex-1" />
-          <button className="btn btn-success btn-round" onClick={() => void chay()} disabled={busy || khop === 0 || !docs}>
-            <Icon name="goi" /> {busy ? "Đang tạo gói…" : `Đóng gói ${V4sk[kind]}`}
-          </button>
-        </div>
-        </div>
+            ).map(([k, label]) => (
+              <Field key={k} label={label}>
+                <Input type={k === "requestDate" ? "date" : "text"} value={(dip[k] as string | undefined) ?? ""} onChange={(e) => setDip((d) => ({ ...d, [k]: e.target.value }))} />
+              </Field>
+            ))}
+          </FormGrid>
+        </Card>
+      )}
+      <div className="mt-3">
+        <Table columns={cols} rows={ghep} getRowId={(g) => String(g.r.id)} maxHeight={300} dense state={{ loading: docs == null && !docErr }} />
       </div>
-    </div>
+    </Dialog>
   );
 }
 
-const TRANG_THAI: Record<string, string> = {
-  queued: "Chờ dựng",
-  building: "Đang dựng",
-  built: "Xong",
-  failed: "Lỗi",
+const TRANG_THAI: Record<string, { label: string; tone: "gray" | "info" | "ok" | "err" }> = {
+  queued: { label: "Chờ dựng", tone: "gray" },
+  building: { label: "Đang dựng", tone: "info" },
+  built: { label: "Xong", tone: "ok" },
+  failed: { label: "Lỗi", tone: "err" },
 };
 
-/** Danh sách gói tin trên máy chủ + tải về (thư mục _goi_tin trong Kho). */
+/** Danh sách gói tin trên máy chủ + tải về. */
 export function PackageList() {
-  const [list, setList] = useState<V4rt[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
-  const load = async () => {
-    if (!isTauri()) return;
-    try {
-      setList(await V4ru());
-    } catch (e) {
-      setMsg(errText(e));
-    }
-  };
-  V41p(load, { topics: ["docs"], pollMs: 10000 });
+  const { data, error, loading, refreshing, reload } = V41t(() => V4ru(), { topics: ["docs", "packages"], pollMs: 10_000, enabled: isTauri() });
+  const [q, setQ] = useState("");
+  const [statusF, setStatusF] = useState("");
+  const list = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    return (data ?? []).filter((p) => (!statusF || p.status === statusF) && (!k || p.label.toLowerCase().includes(k) || (p.zipName ?? "").toLowerCase().includes(k)));
+  }, [data, q, statusF]);
   const tai = async (p: V4rt) => {
     try {
       const path = await V4rw(p.id, p.zipName ?? `${p.label}.zip`);
-      setMsg(`Đã tải về ${path}`);
+      toast.success("Đã tải gói về.", { description: path });
     } catch (e) {
-      setMsg(errText(e));
+      notifyError(e, "tải gói");
     }
   };
+  const cols: Column<V4rt>[] = [
+    { key: "label", header: "Nhãn", className: "whitespace-normal", sortable: true, cell: (p) => <Tip text={p.objid ?? ""}><span>{p.label}</span></Tip> },
+    { key: "kind", header: "Loại", width: 150, sortable: true, cell: (p) => V4sk[p.kind as V4sj] ?? p.kind },
+    { key: "status", header: "Trạng thái", width: 120, cell: (p) => { const t = TRANG_THAI[p.status] ?? { label: p.status, tone: "gray" as const }; return <Tip text={p.error ?? ""}><span><Badge tone={t.tone}>{t.label}</Badge></span></Tip>; } },
+    { key: "documentCount", header: "Tài liệu", align: "right", width: 90, sortable: true },
+    { key: "zipSize", header: "Kích thước", align: "right", width: 100, sortable: true, cell: (p) => (p.zipSize != null ? `${(p.zipSize / 1048576).toFixed(1)} MB` : "—") },
+    { key: "createdAt", header: "Tạo lúc", width: 150, sortable: true, cell: (p) => new Date(p.createdAt).toLocaleString("vi-VN") },
+  ];
   return (
-    <div className="content-panel pt-3">
-      <h4>
-        <b>Danh sách gói tin</b>
-      </h4>
-      {msg && <div className="muted text-sm">{msg}</div>}
-      {list.length === 0 ? (
-        <p className="muted">Chưa có gói tin nào.</p>
-      ) : (
-        <div className="tbl-scroll">
-          <table className="dataTable">
-            <thead>
-              <tr>
-                <th>Nhãn</th>
-                <th>Loại</th>
-                <th>Trạng thái</th>
-                <th>Tài liệu</th>
-                <th>Kích thước</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((p) => (
-                <tr key={p.id}>
-                  <td className="text-left">{p.label}</td>
-                  <td>{V4sk[p.kind as V4sj] ?? p.kind}</td>
-                  <td title={p.error ?? undefined} className={p.status === "failed" ? "text-danger-700" : undefined}>
-                    {TRANG_THAI[p.status] ?? p.status}
-                    {p.status === "failed" && p.error ? ` — ${p.error}` : ""}
-                  </td>
-                  <td className="text-center">{p.documentCount}</td>
-                  <td className="text-center">{p.zipSize != null ? `${(p.zipSize / 1048576).toFixed(1)} MB` : "—"}</td>
-                  <td>
-                    {p.status === "built" && p.zipName && (
-                      <button className="btn btn-outline-primary btn-round" onClick={() => void tai(p)}>
-                        <Icon name="taiVe" /> Tải về
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+    <Card padding="none">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle p-3">
+        <Input size="sm" prefix="tim" placeholder="Nhãn, tên tệp" value={q} onChange={(e) => setQ(e.target.value)} className="w-60" aria-label="Tìm gói" />
+        <Select size="sm" value={statusF} onChange={setStatusF} placeholder="Mọi trạng thái" options={Object.entries(TRANG_THAI).map(([k, v]) => ({ value: k, label: v.label }))} className="w-40" aria-label="Lọc trạng thái" />
+        <span className="flex-1" />
+        <span className="text-sm text-fg-subtle">{list.length.toLocaleString("vi-VN")} gói</span>
+        <IconButton label="Tải lại" icon="lamMoi" size="sm" variant="secondary" loading={refreshing} onClick={reload} />
+      </div>
+      <Table
+        columns={cols}
+        rows={list}
+        getRowId={(p) => p.id}
+        state={{ loading: loading && !data, error: data ? undefined : error, onRetry: reload, empty: { title: "Chưa có gói tin", description: "Chọn hồ sơ ở tab Từ hồ sơ rồi bấm Đóng gói." } }}
+        rowActions={(p) => (p.status === "built" && p.zipName ? <Button size="sm" icon="taiVe" onClick={() => void tai(p)}>Tải về</Button> : p.status === "failed" && p.error ? <Tip text={p.error}><span className="text-xs text-danger-700">Lỗi</span></Tip> : null)}
+        maxHeight="calc(100dvh - 340px)"
+      />
+    </Card>
   );
 }

@@ -1,30 +1,19 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// KIỂM TRA PDF/A cho tệp / thư mục bất kỳ: tệp tự khai loại nào (PDF/A-1B, 2B, 3B…), có đủ dấu
-// hiệu bắt buộc không, và (khi máy có Docker) veraPDF — bộ kiểm chuẩn ISO 19005 — kết luận
-// ĐẠT / KHÔNG ĐẠT kèm luật vi phạm. "Ctrl+A bôi được chữ" chỉ là có LỚP CHỮ, chưa phải PDF/A.
+// Kiểm tra PDF/A cho tệp hoặc thư mục bất kỳ: loại tự khai (PDF/A-1B, 2B, 3B…), dấu hiệu bắt buộc, và khi máy có
+// Docker thì veraPDF kết luận đạt / không đạt kèm luật vi phạm.
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-
-import {
-  onExtimportProgress,
-  pdfaCheck,
-  pdfaVerapdfAvailable,
-  type ExtProgress,
-  type PdfaFileReport,
-  type PdfaSummary,
-} from "@/api/extimport";
+import { onExtimportProgress, pdfaCheck, pdfaVerapdfAvailable, type ExtProgress, type PdfaFileReport, type PdfaSummary } from "@/api/extimport";
 import { isTauri } from "@/api/ipc";
+import { Badge, Banner, Button, Card, Checkbox, ErrorBanner, Field, Help, Table, Tip, Toolbar, type Column } from "@/ui";
 
-function fmt(n: number): string {
-  return n.toLocaleString("vi-VN");
-}
-
-function badgeOf(f: PdfaFileReport): { cls: string; text: string } {
-  if (f.error) return { cls: "err", text: "HỎNG" };
-  if (f.verapdf) return f.verapdf.compliant ? { cls: "ok", text: "ĐẠT" } : { cls: "err", text: "KHÔNG ĐẠT" };
-  if (f.looksPdfa) return { cls: "info", text: "CÓ KHAI" };
-  return { cls: "err", text: "KHÔNG PHẢI PDF/A" };
+const fmt = (n: number) => n.toLocaleString("vi-VN");
+function badgeOf(f: PdfaFileReport): { tone: "err" | "ok" | "info"; text: string } {
+  if (f.error) return { tone: "err", text: "Hỏng" };
+  if (f.verapdf) return f.verapdf.compliant ? { tone: "ok", text: "Đạt" } : { tone: "err", text: "Không đạt" };
+  if (f.looksPdfa) return { tone: "info", text: "Có khai PDF/A" };
+  return { tone: "err", text: "Không phải PDF/A" };
 }
 
 export default function PdfaCheckPanel() {
@@ -34,8 +23,7 @@ export default function PdfaCheckPanel() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<ExtProgress | null>(null);
   const [res, setRes] = useState<PdfaSummary | null>(null);
-  const [openRow, setOpenRow] = useState<string | null>(null);
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState<unknown>(null);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -60,138 +48,87 @@ export default function PdfaCheckPanel() {
     const r = await open({ directory: true, multiple: false, title: "Chọn thư mục chứa PDF (quét cả thư mục con)" });
     if (typeof r === "string") setPaths([r]);
   };
-
   const run = async () => {
-    setErr("");
+    setErr(null);
     setRes(null);
     setProgress(null);
     setBusy(true);
     try {
       setRes(await pdfaCheck({ paths, useVerapdf: useVera && veraOk === true }));
     } catch (e) {
-      setErr(String((e as { message?: string })?.message ?? e));
+      setErr(e);
     } finally {
       setBusy(false);
     }
   };
 
+  const cols: Column<PdfaFileReport>[] = [
+    { key: "kq", header: "Kết luận", width: 140, cell: (f) => { const b = badgeOf(f); return <Badge tone={b.tone}>{b.text}</Badge>; } },
+    { key: "declared", header: "Loại tự khai", width: 120, cell: (f) => f.declared ?? "Không khai" },
+    { key: "name", header: "Tệp", className: "whitespace-normal", cell: (f) => <Tip text={f.path}><span>{f.name}</span></Tip> },
+    { key: "hasOutputIntent", header: "Hồ sơ màu", width: 100, cell: (f) => (f.hasOutputIntent ? "Có" : <span className="text-danger-700">Không</span>) },
+    { key: "textPages", header: "Lớp chữ", width: 100, cell: (f) => `${f.textPages}/${f.pages} trang` },
+    { key: "minDpi", header: "dpi", width: 110, cell: (f) => `${f.minDpi ?? "—"}${f.isMap ? " (bản đồ, cần 300)" : ""}` },
+    { key: "signed", header: "Ký số", width: 80, cell: (f) => (f.signed ? "Có" : "Không") },
+    { key: "producer", header: "Phần mềm tạo", className: "text-sm text-fg-subtle", cell: (f) => f.producer ?? "—", hideBelow: 1440 },
+  ];
+
   return (
-    <div className="card p-4 mb-4">
-      <h3 className="mt-0">Kiểm tra PDF/A</h3>
-      <p className="muted mt-0">
-        Chọn tệp hoặc cả thư mục — hệ thống cho biết từng tệp <b>là loại PDF/A nào</b> (PDF/A-1B, 2B, 3B…) hay không
-        phải PDF/A, kèm lý do. Bôi được chữ bằng Ctrl+A chỉ chứng minh tệp có lớp chữ, không chứng minh là PDF/A.
-      </p>
-
-      <div className="flex items-center gap-2 flex-wrap">
-        <button className="btn" onClick={() => void pickFiles()} disabled={busy}>Chọn tệp PDF…</button>
-        <button className="btn" onClick={() => void pickDir()} disabled={busy}>Chọn thư mục…</button>
-        <span className="muted">
-          {paths.length === 0 ? "Chưa chọn gì" : paths.length === 1 ? paths[0] : `${fmt(paths.length)} tệp đã chọn`}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-4 mt-3 flex-wrap">
-        <label className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={useVera && veraOk === true}
-            onChange={(e) => setUseVera(e.target.checked)}
-            disabled={busy || veraOk !== true}
-          />
-          Kiểm đúng chuẩn ISO bằng veraPDF (kết quả dùng để nghiệm thu)
-        </label>
-        {veraOk === false && (
-          <span className="muted">Máy này chưa có Docker + veraPDF — chỉ xem được loại tệp tự khai và các dấu hiệu bắt buộc.</span>
-        )}
-        <button className="btn primary" onClick={() => void run()} disabled={!isTauri() || busy || paths.length === 0}>
-          {busy ? "Đang kiểm…" : "Kiểm tra PDF/A"}
-        </button>
-      </div>
+    <div className="space-y-4">
+      <Card title="Kiểm tra PDF/A" description="Chọn tệp hoặc cả thư mục để biết từng tệp là loại PDF/A nào hay không phải PDF/A, kèm lý do.">
+        <Toolbar>
+          <Button icon="tepPdf" disabled={busy} onClick={() => void pickFiles()}>
+            Chọn tệp PDF
+          </Button>
+          <Button icon="thuMuc" disabled={busy} onClick={() => void pickDir()}>
+            Chọn thư mục
+          </Button>
+          <span className="text-sm text-fg-subtle">{paths.length === 0 ? "Chưa chọn gì" : paths.length === 1 ? paths[0] : `${fmt(paths.length)} tệp đã chọn`}</span>
+        </Toolbar>
+        <Toolbar className="mt-3">
+          <Tip text={veraOk === false ? "Máy này chưa có Docker và veraPDF, chỉ xem được loại tự khai và dấu hiệu bắt buộc" : "Kết quả veraPDF dùng để nghiệm thu"}>
+            <span>
+              <Field label="Kiểm đúng chuẩn ISO bằng veraPDF" inline>
+                <Checkbox checked={useVera && veraOk === true} onChange={setUseVera} disabled={busy || veraOk !== true} />
+              </Field>
+            </span>
+          </Tip>
+          <Toolbar.Spacer />
+          <Button variant="primary" icon="kiemTraPdfa" loading={busy} disabled={!isTauri() || paths.length === 0} onClick={() => void run()}>
+            Kiểm tra PDF/A
+          </Button>
+        </Toolbar>
+      </Card>
 
       {busy && progress && progress.total > 0 && (
-        <div className="banner mt-3">
+        <Banner tone="info">
           Đang kiểm PDF/A: {fmt(progress.done)}/{fmt(progress.total)} bước
-        </div>
+        </Banner>
       )}
-      {err && <div className="err-banner mt-3">{err}</div>}
+      {err !== null && <ErrorBanner error={err} />}
 
       {res && (
-        <div className="mt-4">
-          <div className={`banner ${res.notOk === 0 ? "" : "warn"}`}>
-            <b>{fmt(res.total)} tệp</b> · {res.verapdfUsed ? "veraPDF ĐẠT" : "có khai PDF/A, đủ dấu hiệu"}: <b>{fmt(res.ok)}</b> ·
-            không đạt: <b>{fmt(res.notOk)}</b> · Theo loại:{" "}
-            {Object.entries(res.byKind)
-              .map(([k, v]) => `${k} — ${fmt(v)}`)
-              .join(" · ")}
-            {!res.verapdfUsed ? " · (chưa chạy veraPDF — đây mới là tệp TỰ KHAI)" : ""}
-            {res.truncated ? " · Quá 5.000 tệp: chỉ kiểm 5.000 tệp đầu, chọn thư mục nhỏ hơn để kiểm phần còn lại." : ""}
-          </div>
-          <div className="tbl-scroll mt-2.5">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Kết luận</th>
-                  <th>Loại tự khai</th>
-                  <th>Tệp</th>
-                  <th>Hồ sơ màu</th>
-                  <th>Lớp chữ</th>
-                  <th>dpi</th>
-                  <th>Chữ ký số</th>
-                  <th>Phần mềm tạo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {res.files.map((f) => {
-                  const b = badgeOf(f);
-                  const detail = [...(f.error ? [f.error] : f.problems), ...(f.verapdf?.rules ?? [])];
-                  return (
-                    <Fragment key={f.path}>
-                      <tr onClick={() => setOpenRow(openRow === f.path ? null : f.path)} style={{ cursor: "pointer" }} title={f.path}>
-                        <td>
-                          <span className={`badge ${b.cls}`}>{b.text}</span>
-                        </td>
-                        <td>{f.declared ?? "không khai"}</td>
-                        <td>{f.name}</td>
-                        <td>{f.hasOutputIntent ? "có" : "KHÔNG"}</td>
-                        <td>
-                          {f.textPages}/{f.pages} trang
-                        </td>
-                        <td>
-                          {f.minDpi ?? "—"}
-                          {f.isMap ? " (bản đồ, cần 300)" : ""}
-                        </td>
-                        <td>{f.signed ? "có" : "không"}</td>
-                        <td>{f.producer ?? "—"}</td>
-                      </tr>
-                      {openRow === f.path && detail.length > 0 && (
-                        <tr>
-                          <td colSpan={8}>
-                            <ul className="m-0 pl-5">
-                              {detail.map((d, i) => (
-                                <li key={i}>{d}</li>
-                              ))}
-                            </ul>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="muted mt-2">
-            Bấm vào một dòng để xem lý do chi tiết.
-            {res.total > res.files.length ? ` Bảng hiện ${fmt(res.files.length)} tệp đầu (tệp không đạt xếp trước).` : ""}
+        <Card
+          tone={res.notOk === 0 ? undefined : "warning"}
+          padding="none"
+          title={`${fmt(res.total)} tệp: ${fmt(res.ok)} ${res.verapdfUsed ? "đạt veraPDF" : "có khai PDF/A đủ dấu hiệu"}, ${fmt(res.notOk)} không đạt`}
+          description={`Theo loại: ${Object.entries(res.byKind).map(([k, v]) => `${k} ${fmt(v)}`).join(" · ")}${!res.verapdfUsed ? " · chưa chạy veraPDF, đây là loại tự khai" : ""}${res.truncated ? " · quá 5.000 tệp, chỉ kiểm 5.000 tệp đầu" : ""}`}
+        >
+          <Table columns={cols} rows={res.files} getRowId={(f) => f.path} maxHeight={480} dense renderExpanded={(f) => { const d = [...(f.error ? [f.error] : f.problems), ...(f.verapdf?.rules ?? [])]; return d.length ? <ul className="list-disc px-8 py-2 text-sm">{d.map((x, i) => <li key={i}>{x}</li>)}</ul> : null; }} />
+          <p className="px-4 py-2 text-xs text-fg-subtle">
+            {res.total > res.files.length ? `Bảng hiện ${fmt(res.files.length)} tệp đầu, tệp không đạt xếp trước. ` : ""}
             {res.reportFile ? (
               <>
-                {" "}Bảng đầy đủ (mở bằng Excel): <code>{res.reportFile}</code>
+                Bảng đầy đủ: <code>{res.reportFile}</code>
               </>
             ) : null}
           </p>
-        </div>
+        </Card>
       )}
+
+      <Help title="Lớp chữ không phải PDF/A">
+        <p>Bôi được chữ bằng Ctrl+A chỉ chứng minh tệp có lớp chữ. PDF/A còn đòi hồ sơ màu, siêu dữ liệu XMP, font nhúng và không có thành phần bị cấm; veraPDF kiểm đủ các luật đó theo ISO 19005.</p>
+      </Help>
     </div>
   );
 }

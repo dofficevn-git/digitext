@@ -1,258 +1,152 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// OCR & bóc tách: Tiến độ (số liệu theo dự án) · Chạy xử lý (việc trên máy chủ) · Soát & duyệt (bảng tài liệu,
+// mở màn bóc tách trường). Dự án mặc định lấy từ ô "Dự án đang làm" trên Topbar, vẫn đổi được tại chỗ.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { V41p } from "@/live/useLive";
 import { open } from "@tauri-apps/plugin-dialog";
 import { V460 } from "@/state";
-import { V3xq, isTauri } from "@/api/ipc";
-import { V3zt } from "@/state/sessionCore";
+import { useProject } from "@/state/project";
+import { isTauri } from "@/api/ipc";
 import { V3z9 } from "@/domain/permissions";
-import { V4et, V4f3, V4er, V4ek, type V4f2, type V4f0 } from "@/api/docs";
+import { V4et, V4f3, V4er, V4ek, type V4f2, type V4f0, type V4f1 } from "@/api/docs";
 import { inMetadata, layTruongNhieuTaiLieu, tenTepAnToan, xuatMetadataExcel, type MetaRow } from "./metadataXuat";
 import { V4ak, type V4a9 } from "@/api/users";
 import V4i7, { type V4i6 } from "../upload/OcrFieldsView";
 import V4k5 from "../server/ServerJobs";
-import { Banner } from "@/ui";
 import ReviewHoSoTable from "./ReviewHoSoTable";
 import { V4hg, pdfaSummary, V4hi, V4hj, V4hh, type V4he } from "./ocrReport";
-import { Icon } from "@/components/Icon";
+import { Badge, Button, Card, Field, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, toast, Toolbar, type Column } from "@/ui";
 
-const V4l7 = (n: number) => n.toLocaleString("vi-VN");
+const fmtN = (n: number) => n.toLocaleString("vi-VN");
+type Tab = "tiendo" | "chay" | "soat";
 
 function BocTachCell({ c }: { c: V4f0 }) {
   return (
     <>
-      <div
-        title={
-          c.ocrPages ? `${V4l7(c.ocrPages)} trang đã có kết quả OCR` : undefined
-        }
-      >
-        {V4l7(c.ocrDone)}
-      </div>
-      {c.fieldDocs != null && c.fieldDocs > 0 && (
-        <div
-          className="muted text-sm"
-          title="Tài liệu đã bóc 16 trường mục lục (nút ② Bóc tách 16 trường)"
-        >
-          {V4l7(c.fieldDocs)} bóc trường
-        </div>
-      )}
+      <div>{fmtN(c.ocrDone)}</div>
+      {c.fieldDocs != null && c.fieldDocs > 0 && <div className="text-xs text-fg-subtle">{fmtN(c.fieldDocs)} bóc trường</div>}
     </>
   );
 }
 
 function PdfaCell({ c }: { c: V4f0 }) {
   const t = pdfaSummary(c);
-  if (!t.known) {
-    return (
-      <span
-        className="muted"
-        title="Máy chủ đang chạy bản cũ, chưa báo số văn bản đã chuyển PDF/A"
-      >
-        —
-      </span>
-    );
-  }
+  if (!t.known) return <span className="text-fg-subtle">—</span>;
   return (
     <>
-      <div
-        title={`Đã chuyển đổi ${t.docs}/${t.total} văn bản sang PDF/A lưu trữ (${t.percent}%). Bản ghép sinh ra ở nút "PDF 2 lớp" màn Máy chủ — OCR xong chưa có nghĩa là đã có tệp PDF/A.`}
-      >
-        {V4l7(t.docs)}
-        <span className="muted text-sm">/{V4l7(t.total)}</span>
+      <div>
+        {fmtN(t.docs)}
+        <span className="text-fg-subtle text-sm">/{fmtN(t.total)}</span>
       </div>
-      {t.old > 0 && (
-        <div
-          className="text-sm text-warning-700"
-          title="Ghép bởi bản cũ, thiếu dấu hiệu PDF/A-2b — bấm “Ghép lại PDF/A” để đạt Điều 8.2.a"
-        >
-          {V4l7(t.old)} chưa đạt 2b
-        </div>
-      )}
+      {t.old > 0 && <div className="text-xs text-warning-700">{fmtN(t.old)} chưa đạt 2b</div>}
     </>
   );
 }
 
-function V4la({
-  label: V1st,
-  value: V1su,
-  tone: V1sv,
-  title: V1sw,
-}: {
-  label: string;
-  value: number;
-  tone?: "ok" | "err" | "warn";
-  title?: string;
-}) {
-  return (
-    <div className="tile" title={V1sw}>
-      <span
-        className={`num${V1sv ? ` text-${V1sv === "ok" ? "success" : V1sv === "err" ? "danger" : "warning"}-700` : ""}`}
-      >
-        {V4l7(V1su)}
-      </span>
-      <span className="lbl">{V1st}</span>
-    </div>
-  );
-}
-
-const V4lb = (V1sx: unknown) =>
-  V3zt(
-    V1sx instanceof V3xq ? V1sx.code : "error",
-    V1sx instanceof Error ? V1sx.message : String(V1sx),
-  );
-
 export default function OcrPane() {
-  const { session: V1sy } = V460();
-  const [V1sz, V1t0] = useState(false);
-  const [V1t1, V1t2] = useState<string | null>(null);
-  const [V1t3, V1t4] = useState<string | null>(null);
-
-  const [V1t5, V1t6] = useState<V4a9[]>([]);
-  const [V1t7, V1t8] = useState("");
-
-  const [V1t9, V1ta] = useState<V4i6 | null>(null);
-
-  const [V1tb, V1tc] = useState(false);
-
-  const [V1tj, V1tk] = useState<V4he>(() => V4hg());
-  const [report, V1tl] = useState<V4f2 | null>(null);
-  const [V1tm, V1tn] = useState(true);
-  const [V1to, V1tp] = useState("");
+  const { session } = V460();
+  const duAnTopbar = useProject();
+  const [tab, setTab] = useState<Tab>("tiendo");
+  const [dangTaiLen, setDangTaiLen] = useState(false);
+  const [dangXepHang, setDangXepHang] = useState(false);
   const [xuatBan, setXuatBan] = useState(false);
 
-  const V1tq = V1sy?.projectId ?? null;
-  const V1tr = V1tq ?? V1t7;
-  const V1ts = V3z9(V1sy?.permissions, "document.review");
-  const V1tt = V4hh(V1tj);
+  const [projects, setProjects] = useState<V4a9[]>([]);
+  const [chonDuAn, setChonDuAn] = useState("");
+  const [docMo, setDocMo] = useState<V4i6 | null>(null);
 
-  const V1tu = useCallback(async () => {
-    if (!isTauri() || V4hh(V1tj)) {
-      V1tn(false);
+  const [khoang, setKhoang] = useState<V4he>(() => V4hg());
+  const [report, setReport] = useState<V4f2 | null>(null);
+  const [dangTinh, setDangTinh] = useState(true);
+
+  const duAnTaiKhoan = session?.projectId ?? null;
+  // Không gắn dự án ở tài khoản → mặc định theo Topbar, đổi tại chỗ được.
+  useEffect(() => {
+    if (!duAnTaiKhoan && duAnTopbar.projectId) setChonDuAn(duAnTopbar.projectId);
+  }, [duAnTaiKhoan, duAnTopbar.projectId]);
+  const duAnHieuLuc = duAnTaiKhoan ?? chonDuAn;
+  const coQuyenDuyet = V3z9(session?.permissions, "document.review");
+  const loiKhoang = V4hh(khoang);
+
+  const napBaoCao = useCallback(async () => {
+    if (!isTauri() || V4hh(khoang)) {
+      setDangTinh(false);
       return;
     }
-    V1tn(true);
     try {
-      V1tl(await V4f3(V1tj.from || undefined, V1tj.to || undefined));
-    } catch (V1tv) {
-      V1t2(V4lb(V1tv));
-      V1tl(null);
+      setReport(await V4f3(khoang.from || undefined, khoang.to || undefined));
+    } catch (e) {
+      notifyError(e, "tính số liệu");
     } finally {
-      V1tn(false);
+      setDangTinh(false);
     }
-  }, [V1tj]);
-  V41p(V1tu, { topics: ["docs", "ocr"] });
+  }, [khoang]);
+  V41p(napBaoCao, { topics: ["docs", "ocr"] });
 
-  const V1tw = useCallback(() => {
+  const napDuAn = useCallback(() => {
     V4ak()
-      .then((V1tx) => {
-        const V1ty = V1tx.filter((p) => p.isActive);
-        V1t6(V1ty);
-        if (V1ty.length === 1) V1t8(V1ty[0].id);
-      })
+      .then((all) => setProjects(all.filter((p) => p.isActive)))
       .catch(() => {});
   }, []);
-  V41p(V1tw, {
-    topics: ["projects"],
-    enabled: !V1tq && isTauri(),
-  });
+  V41p(napDuAn, { topics: ["projects"], enabled: !duAnTaiKhoan && isTauri() });
 
-  const V1tz = async () => {
-    if (!V1tr) {
-      V1t2(
-        V1t5.length > 1
-          ? "Hãy chọn dự án đích ở ô bên cạnh trước khi tải tài liệu lên."
-          : "Tài khoản chưa gắn dự án nào — không thể tải tài liệu lên.",
-      );
+  const taiPdfLen = async () => {
+    if (!duAnHieuLuc) {
+      toast.warning(projects.length > 1 ? "Chọn dự án đích trước khi tải tài liệu lên." : "Tài khoản chưa gắn dự án nào nên không tải tài liệu lên được.");
       return;
     }
-    let V1u0: string | null;
+    let path: string | null;
     try {
-      const r = await open({
-        multiple: false,
-        title: "Chọn PDF để gán nhãn",
-        filters: [{ name: "PDF", extensions: ["pdf"] }],
-      });
-      V1u0 = typeof r === "string" ? r : null;
-    } catch (V1u1) {
-      V1t2(V4lb(V1u1));
+      const r = await open({ multiple: false, title: "Chọn PDF để gán nhãn", filters: [{ name: "PDF", extensions: ["pdf"] }] });
+      path = typeof r === "string" ? r : null;
+    } catch (e) {
+      notifyError(e, "chọn tệp");
       return;
     }
-    if (!V1u0) return;
-    V1t0(true);
-    V1t2(null);
-    V1t4(null);
+    if (!path) return;
+    setDangTaiLen(true);
     try {
-      const V1u2 = await V4er(V1tr, V1u0);
-      void V1tu();
-
-      V1t4(
-        V1u2.duplicate
-          ? `"${V1u2.filename}" đã có sẵn trên máy chủ.`
-          : `Đã tải "${V1u2.filename}" lên máy chủ.`,
-      );
-      V1ta({ id: V1u2.id, filename: V1u2.filename, reviewStatus: "pending" });
-    } catch (V1u3) {
-      V1t2(V4lb(V1u3));
+      const r = await V4er(duAnHieuLuc, path);
+      void napBaoCao();
+      toast.success(r.duplicate ? `"${r.filename}" đã có sẵn trên máy chủ.` : `Đã tải "${r.filename}" lên máy chủ.`);
+      setDocMo({ id: r.id, filename: r.filename, reviewStatus: "pending" });
+    } catch (e) {
+      notifyError(e, "tải PDF lên");
     } finally {
-      V1t0(false);
+      setDangTaiLen(false);
     }
   };
 
-  const V1u4 = async () => {
-    V1tc(true);
-    V1t2(null);
-    V1t4(null);
+  const ocrToanBo = async () => {
+    setDangXepHang(true);
     try {
-      const r = await V4et(V1tr || undefined);
-      if (r.documents === 0) {
-        V1t4(
-          r.skippedNoPageCount > 0
-            ? `Không có tài liệu nào để OCR (bỏ qua ${r.skippedNoPageCount} tài liệu chưa rõ số trang).`
-            : "Mọi tài liệu đã được đưa vào OCR trước đó — không có gì mới.",
-        );
-      } else {
-        const V1u5 =
-          r.skippedNoPageCount > 0
-            ? ` (bỏ qua ${r.skippedNoPageCount} chưa rõ số trang)`
-            : "";
-        V1t4(
-          `Đã đưa ${r.documents} tài liệu (${r.pages} trang) vào hàng đợi OCR${V1u5}.`,
-        );
-      }
-      void V1tu();
-    } catch (V1u6) {
-      V1t2(V4lb(V1u6));
+      const r = await V4et(duAnHieuLuc || undefined);
+      const boQua = r.skippedNoPageCount > 0 ? ` Bỏ qua ${fmtN(r.skippedNoPageCount)} tài liệu chưa rõ số trang.` : "";
+      if (r.documents === 0) toast.info(`Không có tài liệu mới để OCR.${boQua}`);
+      else toast.success(`Đã đưa ${fmtN(r.documents)} tài liệu (${fmtN(r.pages)} trang) vào hàng đợi OCR.${boQua}`);
+      void napBaoCao();
+    } catch (e) {
+      notifyError(e, "xếp hàng OCR");
     } finally {
-      V1tc(false);
+      setDangXepHang(false);
     }
   };
-
-  if (V1t9) {
-    return (
-      <V4i7
-        doc={V1t9}
-        onBack={() => {
-          V1ta(null);
-          void V1tu();
-        }}
-      />
-    );
-  }
-
-  const totals = report?.totals;
 
   const xuatMeta = async (kieu: "excel" | "in") => {
     setXuatBan(true);
-    V1t2(null);
+    const id = toast.info("Đang lấy trường đã bóc tách…");
     try {
       const all = await V4ek();
-      const docs = all.filter((d) => d.status !== "disposed" && (!V1tr || (d.projectId ?? "") === V1tr));
+      const docs = all.filter((d) => d.status !== "disposed" && (!duAnHieuLuc || (d.projectId ?? "") === duAnHieuLuc));
       if (docs.length === 0) {
-        V1t2(V1tr ? "Dự án đang chọn chưa có tài liệu nào." : "Chưa có tài liệu nào trên máy chủ.");
+        toast.warning(duAnHieuLuc ? "Dự án đang chọn chưa có tài liệu nào." : "Chưa có tài liệu nào trên máy chủ.");
         return;
       }
-      const truong = await layTruongNhieuTaiLieu(docs.map((d) => d.id), (d, t) => V1t4(`Đang lấy trường ${d}/${t}…`));
+      const truong = await layTruongNhieuTaiLieu(
+        docs.map((d) => d.id),
+        () => {},
+      );
       const duyet: Record<string, string> = { pending: "Chờ duyệt", approved: "Đã duyệt", rejected: "Từ chối" };
       const boc: Record<string, string> = { done: "đã bóc", queued: "chờ bóc", running: "đang bóc", failed_transient: "bóc lỗi", page_failed: "bóc lỗi" };
       const rows: MetaRow[] = docs
@@ -269,328 +163,149 @@ export default function OcrPane() {
             trangThai: `${duyet[d.reviewStatus ?? "pending"] ?? d.reviewStatus ?? ""}${d.fieldsStatus ? ` (${boc[d.fieldsStatus] ?? d.fieldsStatus})` : " (chưa bóc)"}`,
           };
         });
-      const p = V1t5.find((x) => x.id === V1tr);
-      const ten = p ? `${p.code} — ${p.name}` : V1sy?.projectName ?? "";
-      if (kieu === "excel") await xuatMetadataExcel(rows, `metadata-${tenTepAnToan(p?.code ?? V1sy?.projectCode ?? "du-an")}.xlsx`);
+      const p = projects.find((x) => x.id === duAnHieuLuc);
+      const ten = p ? `${p.code} — ${p.name}` : session?.projectName ?? "";
+      if (kieu === "excel") await xuatMetadataExcel(rows, `metadata-${tenTepAnToan(p?.code ?? session?.projectCode ?? "du-an")}.xlsx`);
       else inMetadata(rows, "METADATA TÀI LIỆU ĐÃ BÓC TÁCH", ten);
-      V1t4(`${kieu === "excel" ? "Đã xuất" : "Đã in"} metadata ${V4l7(rows.length)} tài liệu.`);
+      toast.success(`${kieu === "excel" ? "Đã xuất" : "Đã in"} metadata ${fmtN(rows.length)} tài liệu.`);
     } catch (e) {
-      V1t2(V4lb(e));
+      notifyError(e, "xuất metadata");
     } finally {
+      toast.dismiss(id);
       setXuatBan(false);
     }
   };
 
-  return (
-    <>
-      {V1t1 && <Banner tone="danger" className="mb-3" onClose={() => V1t2(null)}>{V1t1}</Banner>}
-      {V1t3 && <Banner tone="success" className="mb-3" onClose={() => V1t4(null)}>{V1t3}</Banner>}
+  if (docMo) {
+    return (
+      <V4i7
+        doc={docMo}
+        onBack={() => {
+          setDocMo(null);
+          void napBaoCao();
+        }}
+      />
+    );
+  }
 
-      {}
-      <div className="card mb-3">
-        <div className="kpi-row">
-          <V4la
-            label="Tổng số dự án"
-            value={report?.projectsCount ?? 0}
-            title="Số dự án trong phạm vi phụ trách"
-          />
-          <V4la
-            label="Tổng số file"
-            value={totals?.docs ?? 0}
-            title={`${V4l7(totals?.pages ?? 0)} trang`}
-          />
-          <V4la
-            label="File đã OCR"
-            value={totals?.ocrDone ?? 0}
-            title={`Tài liệu đã có kết quả OCR đủ số trang (nút ① PDF 2 lớp)${
-              totals?.ocrPages ? ` · ${V4l7(totals.ocrPages)} trang đã OCR` : ""
-            }${
-              totals?.fieldDocs
-                ? ` · ${V4l7(totals.fieldDocs)} tài liệu đã bóc 16 trường (②)`
-                : ""
-            }`}
-          />
-          <V4la
-            label="Đã duyệt (admin)"
-            value={totals?.approved ?? 0}
-            tone="ok"
-            title="Admin đã xác nhận kết quả bóc tách"
-          />
-          <V4la
-            label="Từ chối"
-            value={totals?.rejected ?? 0}
-            tone="err"
-            title="Admin trả lại — phải quét/bóc lại"
-          />
-          <V4la
-            label="Chờ xác nhận"
-            value={totals?.pending ?? 0}
-            tone="warn"
-            title="Chưa có quyết định duyệt (gồm cả tài liệu máy chưa OCR xong)"
-          />
-        </div>
-
-        <div className="mt-3.5 flex flex-wrap items-center gap-2.5 border-t border-border-subtle pt-3">
-          <span className="muted text-sm">Ngày tải lên máy chủ:</span>
-          <input
-            className="inp sm"
-            type="date"
-            value={V1tj.from}
-            max={V1tj.to || undefined}
-            onChange={(V1uc) => V1tk((r) => ({ ...r, from: V1uc.target.value }))}
-            title="Ngày bắt đầu"
-          />
-          <span className="muted">—</span>
-          <input
-            className="inp sm"
-            type="date"
-            value={V1tj.to}
-            min={V1tj.from || undefined}
-            onChange={(V1ud) => V1tk((r) => ({ ...r, to: V1ud.target.value }))}
-            title="Ngày kết thúc (tính trọn ngày này)"
-          />
-          <button
-            className="btn sm"
-            onClick={() => V1tk({ from: "", to: "" })}
-            title="Bỏ lọc, xem toàn bộ"
-          >
-            Toàn bộ
-          </button>
-          <button
-            className="btn sm"
-            onClick={() => V1tk(V4hg())}
-            title="Từ đầu tháng đến hôm nay"
-          >
-            Tháng này
-          </button>
-          {V1tt ? (
-            <span className="text-danger-700 text-xs">{V1tt}</span>
-          ) : (
-            <span className="muted text-sm">
-              {V1tm
-                ? "Đang tính số liệu…"
-                : V1tj.from || V1tj.to
-                  ? `Đang xem: ${V1tj.from || "đầu kỳ"} → ${V1tj.to || "nay"}`
-                  : "Đang xem: toàn bộ"}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {}
-      <div className="card p-0 overflow-hidden mb-3">
-        <div className="flex items-center gap-3 py-3 px-4 flex-wrap">
-          <h3 className="m-0">Theo dõi dự án</h3>
-          <span className="muted text-sm">Bấm một dự án để lọc danh sách tài liệu bên dưới</span>
-          <div className="flex-1" />
-          {V1to && (
-            <button
-              className="btn sm"
-              onClick={() => {
-                V1tp("");
-                V1t8("");
-              }}
-            >
-              <Icon name="tuChoi" />
-              Bỏ lọc dự án
-            </button>
-          )}
-        </div>
-        {report && report.projects.length > 0 ? (
-          <div className="tbl-scroll">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th className="num">#</th>
-                  <th>Dự án</th>
-                  <th className="num">Tổng file</th>
-                  <th
-                    className="num"
-                    title="Trên: tài liệu đã OCR đủ số trang (nút ① PDF 2 lớp, đếm theo ocr_results). Dưới: tài liệu đã bóc 16 trường (nút ② VLM, đếm theo ocr_fields) — hai việc khác nhau nên đếm riêng."
-                  >
-                    Đã bóc tách
-                  </th>
-                  <th
-                    className="num"
-                    title="Số văn bản đã chuyển đổi sang PDF/A lưu trữ trên tổng số tài liệu (vết ghi khi kho đã nhận bản ghép). Đây là việc của nút “PDF 2 lớp” màn Máy chủ — OCR xong chưa có nghĩa là đã có tệp PDF/A."
-                  >
-                    Đã PDF A
-                  </th>
-                  <th className="num">Đã duyệt</th>
-                  <th className="num">Từ chối</th>
-                  <th className="num">Chờ xác nhận</th>
-                  <th title="Tài liệu đã duyệt / tổng số tài liệu">
-                    % hoàn thành
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.projects.map((p, i) => {
-                  const V1ue = p.projectId === V1to;
-                  return (
-                    <tr
-                      key={p.projectId}
-                      onClick={() => {
-                        // Bấm dòng dự án = lọc bảng dưới + đặt luôn ô "Chọn dự án" (một nguồn lọc).
-                        const moi = V1ue ? "" : p.projectId;
-                        V1tp(moi);
-                        V1t8(moi);
-                      }}
-                      style={{
-                        cursor: "pointer",
-                        background: V1ue ? "var(--line-2)" : undefined,
-                      }}
-                      title={
-                        V1ue
-                          ? "Bấm lại để bỏ lọc"
-                          : `Chỉ xem tài liệu của ${p.name}`
-                      }
-                    >
-                      <td className="num">{i + 1}</td>
-                      <td>
-                        {p.name}
-                        <span className="muted text-sm"> · {p.code}</span>
-                        {!p.isActive && <span className="badge gray ml-1.5">ngưng</span>}
-                      </td>
-                      <td className="num">{V4l7(p.docs)}</td>
-                      <td className="num">
-                        <BocTachCell c={p} />
-                      </td>
-                      <td className="num">
-                        <PdfaCell c={p} />
-                      </td>
-                      <td className={`num${p.approved > 0 ? " text-success-700" : ""}`}>
-                        {V4l7(p.approved)}
-                      </td>
-                      <td className={`num${p.rejected > 0 ? " text-danger-700" : ""}`}>
-                        {V4l7(p.rejected)}
-                      </td>
-                      <td className={`num${p.pending > 0 ? " text-warning-700" : ""}`}>
-                        {V4l7(p.pending)}
-                      </td>
-                      <td>
-                        <div
-                          className="progress min-w-22.5 mb-1"
-                          title={`${p.approved}/${p.docs} tài liệu đã duyệt`}
-                        >
-                          <span style={{ width: `${Math.min(100, V4hi(p))}%` }} />
-                        </div>
-                        <span className="text-sm">{V4hj(p)}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {totals && report.projects.length > 1 && (
-                <tfoot>
-                  <tr className="font-semibold">
-                    <td />
-                    <td>Tổng cộng</td>
-                    <td className="num">{V4l7(totals.docs)}</td>
-                    <td className="num">
-                      <BocTachCell c={totals} />
-                    </td>
-                    <td className="num">
-                      <PdfaCell c={totals} />
-                    </td>
-                    <td className="num">{V4l7(totals.approved)}</td>
-                    <td className="num">{V4l7(totals.rejected)}</td>
-                    <td className="num">{V4l7(totals.pending)}</td>
-                    <td>{V4hj(totals)}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
+  const totals = report?.totals;
+  const duAnRows = report?.projects ?? [];
+  const cols: Column<V4f1>[] = [
+    {
+      key: "name",
+      header: "Dự án",
+      cell: (p) => (
+        <>
+          {p.name} <span className="text-sm text-fg-subtle">· {p.code}</span> {!p.isActive && <Badge tone="gray">ngưng</Badge>}
+        </>
+      ),
+    },
+    { key: "docs", header: "Tổng tệp", align: "right", width: 90, cell: (p) => fmtN(p.docs) },
+    { key: "ocr", header: "Đã bóc tách", align: "right", width: 120, cell: (p) => <BocTachCell c={p} /> },
+    { key: "pdfa", header: "Đã PDF/A", align: "right", width: 110, cell: (p) => <PdfaCell c={p} /> },
+    { key: "approved", header: "Đã duyệt", align: "right", width: 90, cell: (p) => <span className={p.approved > 0 ? "text-success-700" : undefined}>{fmtN(p.approved)}</span> },
+    { key: "rejected", header: "Từ chối", align: "right", width: 90, cell: (p) => <span className={p.rejected > 0 ? "text-danger-700" : undefined}>{fmtN(p.rejected)}</span> },
+    { key: "pending", header: "Chờ xác nhận", align: "right", width: 110, cell: (p) => <span className={p.pending > 0 ? "text-warning-700" : undefined}>{fmtN(p.pending)}</span> },
+    {
+      key: "pct",
+      header: "Hoàn thành",
+      width: 150,
+      cell: (p) => (
+        <>
+          <div className="progress mb-1 min-w-22.5">
+            <span style={{ width: `${Math.min(100, V4hi(p))}%` }} />
           </div>
-        ) : (
-          <p className="muted pt-0 px-4 pb-4">
-            {V1tm
-              ? "Đang tính số liệu…"
-              : "Chưa có dự án nào trong phạm vi phụ trách."}
-          </p>
-        )}
-      </div>
+          <span className="text-sm">{V4hj(p)}</span>
+        </>
+      ),
+    },
+  ];
 
-      {}
-      <V4k5 />
+  const chonDuAnUI = !duAnTaiKhoan && projects.length > 0 && (
+    <Select size="sm" className="w-56" value={chonDuAn} onChange={setChonDuAn} placeholder="Tất cả dự án" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} aria-label="Dự án" />
+  );
 
-      {}
-      <ReviewHoSoTable
-        canReview={V1ts}
-        onlyProject={V1to}
-        onOpenDoc={(f) => V1ta({ ...f, reviewStatus: f.review })}
-        onDone={() => void V1tu()}
+  return (
+    <section className="view active">
+      <PageHeader
+        title="OCR & bóc tách"
+        description="Theo dõi tiến độ OCR, chạy xử lý trên máy chủ và soát, duyệt kết quả bóc tách 16 trường."
         actions={
           <>
-            {!V1tq && V1t5.length > 0 && (
-              <select
-                className="inp sm max-w-55"
-                value={V1t7}
-                onChange={(V1uf) => {
-                  // Chọn dự án = lọc bảng tài liệu chỉ còn dự án đó (và là dự án đích khi tải PDF lên).
-                  V1t8(V1uf.target.value);
-                  V1tp(V1uf.target.value);
-                }}
-                title="Lọc bảng theo dự án (cũng là dự án đích khi tải PDF lên)"
-              >
-                <option value="">— Chọn dự án —</option>
-                {V1t5.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.code} · {p.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              className="btn sm"
-              onClick={() => void xuatMeta("excel")}
-              disabled={xuatBan}
-              title="Excel metadata: mỗi dòng một tài liệu của dự án đang chọn với 18 trường đã bóc tách / xác nhận, trạng thái duyệt"
-            >
-              <Icon name="tepExcel" />
-              {xuatBan ? "Đang lấy trường…" : "Xuất metadata"}
-            </button>
-            <button
-              className="btn sm"
-              onClick={() => void xuatMeta("in")}
-              disabled={xuatBan}
-              title="In bảng metadata (A4 ngang) các tài liệu của dự án đang chọn"
-            >
-              In metadata
-            </button>
-            <button
-              className="btn sm"
-              onClick={() => void V1u4()}
-              disabled={V1tb}
-              title="Đưa mọi tài liệu đã đồng bộ (chưa OCR) vào hàng đợi OCR trên máy chủ"
-            >
-              {V1tb ? (
-                "Đang xếp hàng…"
-              ) : (
-                <>
-                  <Icon name="chay" />
-                  OCR toàn bộ
-                </>
-              )}
-            </button>
-            <button
-              className="btn sm primary"
-              onClick={() => void V1tz()}
-              disabled={V1sz}
-              title="Chọn một PDF trên máy, tải lên máy chủ rồi gán nhãn"
-            >
-              {V1sz ? (
-                "Đang tải lên…"
-              ) : (
-                <>
-                  <Icon name="taiLen" />
-                  Tải PDF lên
-                </>
-              )}
-            </button>
+            <Button variant="primary" icon="taiLen" loading={dangTaiLen} onClick={() => void taiPdfLen()}>
+              Tải PDF lên
+            </Button>
+            <Menu
+              items={[
+                { label: "OCR toàn bộ tài liệu mới", icon: "chay", onSelect: () => void ocrToanBo(), disabled: dangXepHang },
+                "-",
+                { label: "Xuất metadata Excel", icon: "tepExcel", onSelect: () => void xuatMeta("excel"), disabled: xuatBan },
+                { label: "In metadata", icon: "inRa", onSelect: () => void xuatMeta("in"), disabled: xuatBan },
+              ]}
+            />
           </>
         }
       />
-    </>
+      <Tabs<Tab>
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "tiendo", label: "Tiến độ", icon: "thongke" },
+          { value: "chay", label: "Chạy xử lý", icon: "chay" },
+          { value: "soat", label: "Soát & duyệt", icon: "duyet" },
+        ]}
+      />
+      <div className="mt-3 space-y-4">
+        {tab === "tiendo" && (
+          <>
+            <Card>
+              <KpiRow>
+                <KpiTile label="Dự án" value={report?.projectsCount ?? 0} />
+                <KpiTile label="Tổng tệp" value={totals?.docs ?? 0} sub={`${fmtN(totals?.pages ?? 0)} trang`} />
+                <KpiTile label="Đã OCR" value={totals?.ocrDone ?? 0} sub={totals?.fieldDocs ? `${fmtN(totals.fieldDocs)} đã bóc 16 trường` : undefined} />
+                <KpiTile label="Đã duyệt" value={totals?.approved ?? 0} tone="ok" />
+                <KpiTile label="Từ chối" value={totals?.rejected ?? 0} tone="err" />
+                <KpiTile label="Chờ xác nhận" value={totals?.pending ?? 0} tone="warn" />
+              </KpiRow>
+              <Toolbar className="mt-4 border-t border-border-subtle pt-3">
+                <Field label="Tải lên từ" inline>
+                  <Input size="sm" type="date" value={khoang.from} max={khoang.to || undefined} onChange={(e) => setKhoang((r) => ({ ...r, from: e.target.value }))} />
+                </Field>
+                <Field label="đến" inline>
+                  <Input size="sm" type="date" value={khoang.to} min={khoang.from || undefined} onChange={(e) => setKhoang((r) => ({ ...r, to: e.target.value }))} />
+                </Field>
+                <Button size="sm" variant="ghost" onClick={() => setKhoang({ from: "", to: "" })}>
+                  Toàn bộ
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setKhoang(V4hg())}>
+                  Tháng này
+                </Button>
+                <span className={`text-sm ${loiKhoang ? "text-danger-700" : "text-fg-subtle"}`}>{loiKhoang ?? (dangTinh ? "Đang tính số liệu…" : khoang.from || khoang.to ? `Đang xem ${khoang.from || "đầu kỳ"} đến ${khoang.to || "nay"}` : "Đang xem toàn bộ")}</span>
+              </Toolbar>
+            </Card>
+            <Card title="Theo dự án" description="Bấm một dòng để lọc tab Soát & duyệt theo dự án đó." padding="none">
+              <Table
+                columns={cols}
+                rows={duAnRows}
+                getRowId={(p) => p.projectId}
+                onRowClick={(p) => {
+                  setChonDuAn((cu) => (cu === p.projectId ? "" : p.projectId));
+                  setTab("soat");
+                }}
+                rowClassName={(p) => (p.projectId === chonDuAn ? "bg-brand-50" : undefined)}
+                state={{ loading: dangTinh && !report, empty: { title: "Chưa có dự án nào trong phạm vi phụ trách" } }}
+              />
+              {totals && duAnRows.length > 1 && (
+                <p className="px-4 py-2 text-sm text-fg-subtle">
+                  Tổng cộng {fmtN(totals.docs)} tệp · đã duyệt {fmtN(totals.approved)} · từ chối {fmtN(totals.rejected)} · chờ {fmtN(totals.pending)} · {V4hj(totals)}
+                </p>
+              )}
+            </Card>
+          </>
+        )}
+        {tab === "chay" && <V4k5 />}
+        {tab === "soat" && <ReviewHoSoTable canReview={coQuyenDuyet} onlyProject={duAnTaiKhoan ? undefined : chonDuAn} onOpenDoc={(f) => setDocMo({ ...f, reviewStatus: f.review })} onDone={() => void napBaoCao()} actions={chonDuAnUI} />}
+      </div>
+    </section>
   );
 }
