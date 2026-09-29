@@ -6,7 +6,7 @@ import HomeView from "@/features/home/HomeView";
 import Sidebar from "@/features/shell/Sidebar";
 import V47t from "@/features/shell/StatusBar";
 import DriveView from "@/features/drive/DriveView";
-import V4bk from "@/features/catalog/CatalogView";
+import TreeView from "@/features/tree/TreeView";
 import V4lc from "@/features/dossier/HoSoHubView";
 import V4ns from "@/features/chinhly/ChinhLyHub";
 import V4oe from "@/features/report/ReportHubView";
@@ -49,7 +49,7 @@ export default function V4wx() {
         )}
         {V382 && view === "home" && <HomeView />}
         {V382 && view === "drive" && <DriveView />}
-        {V382 && view === "catalog" && <V4bk />}
+        {V382 && view === "tree" && <TreeView />}
         {V382 && view === "dossier" && <V4lc />}
         {V382 && view === "khogia" && <V4ns />}
         {V382 && view === "report" && <V4oe />}

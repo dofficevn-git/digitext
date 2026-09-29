@@ -1004,10 +1004,10 @@ export default function V4p9() {
                           className="btn sm"
                           onClick={() => {
                             V27t(null);
-                            goto("catalog");
+                            goto("tree");
                           }}
                         >
-                          Xong → về Danh mục
+                          Xong, về Cây thư mục
                         </button>
                       </div>
                     </div>
