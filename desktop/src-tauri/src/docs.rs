@@ -787,7 +787,7 @@ async fn f_174_kind(
         .await
         .map_err(|e| AppError::internal(format!("tạo thư mục lưu lỗi: {e}")))?;
     let part = part_path(r_1l0);
-    let n = f_2r8(r_1kx, auth, Permission::DocumentDownload, |r_1kw, r_1l1| {
+    let n = crate::auth::admin::f_2r8_any(r_1kx, auth, &[Permission::DocumentDownload, Permission::WorkExecute], |r_1kw, r_1l1| {
         let (id, part) = (id.to_string(), part.clone());
         let route = match kind {
             "pdfa" => format!("/documents/{id}/download?variant=pdfa"),

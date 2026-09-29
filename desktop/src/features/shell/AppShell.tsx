@@ -16,6 +16,8 @@ import V4qy from "@/features/sign/SignView";
 import V4ra from "@/features/users/UsersView";
 import V4rs from "@/features/settings/SettingsView";
 import DongGoiView from "@/features/package/DongGoiView";
+import WorkManageView from "@/features/work/WorkManageView";
+import MyWorkView from "@/features/work/MyWorkView";
 import V4t9 from "@/features/submission/SubmissionView";
 import V4tk from "@/features/records/RecordsView";
 import V4u7 from "@/features/access/AccessView";
@@ -63,6 +65,8 @@ export default function V4wx() {
         {V382 && view === "info" && <V4vc />}
         {V382 && view === "bk" && <V4vd />}
         {V382 && view === "server" && <V4wh />}
+        {V382 && view === "workManage" && <WorkManageView />}
+        {V382 && view === "work" && <MyWorkView />}
       </main>
 
       <V47t />

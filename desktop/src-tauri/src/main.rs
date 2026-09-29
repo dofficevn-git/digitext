@@ -24,6 +24,7 @@ mod live;
 mod ocr;
 mod packaging;
 mod progress_report;
+mod work;
 mod extimport;
 mod records;
 mod report;
@@ -180,6 +181,21 @@ fn main() {
             progress_report::report_set_contract,
             progress_report::report_staff,
             progress_report::report_set_target,
+            work::work_list_packages,
+            work::work_create_package,
+            work::work_get_package,
+            work::work_patch_package,
+            work::work_set_members,
+            work::work_review,
+            work::work_close_package,
+            work::work_my_packages,
+            work::work_rejected_items,
+            work::work_next_item,
+            work::work_claim_item,
+            work::work_navigate,
+            work::work_release,
+            work::work_done,
+            work::work_check,
             data_share::data_share_status,
             data_share::data_share_restart,
             data_share::lan_site_code_get,

@@ -476,15 +476,20 @@ async fn f_173(
     Path(id): Path<Uuid>,
     Query(q): Query<DownloadQuery>,
 ) -> Result<Response, ApiError> {
-    r_eu.require_perm(Permission::DocumentDownload)?;
     let r_ev = documents::get(&state.pool, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
-    if !f_29a(&state.pool, &r_eu.user)
-        .await?
-        .allows_project(r_ev.project_id)
-    {
-        return Err(ApiError::forbidden());
+    let ctv_ok = !r_eu.has_perm(Permission::DocumentDownload)
+        && r_eu.has_perm(Permission::WorkExecute)
+        && digitext_db::work_packages::can_work_on(&state.pool, r_eu.user.id, id).await?;
+    if !ctv_ok {
+        r_eu.require_perm(Permission::DocumentDownload)?;
+        if !f_29a(&state.pool, &r_eu.user)
+            .await?
+            .allows_project(r_ev.project_id)
+        {
+            return Err(ApiError::forbidden());
+        }
     }
     if q.variant.as_deref() == Some("signed") {
         // Bản ĐÃ KÝ SỐ (PAdES) — chỉ có khi tài liệu đã qua bước ký (signed/archived).

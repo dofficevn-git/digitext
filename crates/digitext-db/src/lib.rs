@@ -28,6 +28,7 @@ pub mod tokens;
 pub mod trees;
 pub mod upload_batches;
 pub mod users;
+pub mod work_packages;
 pub mod workdays;
 pub use pool::{connect, f_11d};
 pub fn f_1jn(r_25w: &sqlx::Error) -> bool {

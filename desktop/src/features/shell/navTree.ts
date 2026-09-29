@@ -89,6 +89,13 @@ export const NAV_TREE: V46s[] = [
         leaf: { kind: "view", view: "upload" },
       },
       { id: "ocr", label: "OCR", gate: "dossier", leaf: { kind: "hoso", pane: "ocr" } },
+      {
+        id: "giaoviec",
+        label: "Giao việc xác nhận",
+        gate: "workManage",
+        leaf: { kind: "view", view: "workManage" },
+      },
+      { id: "viec", label: "Việc của tôi", gate: "work", leaf: { kind: "view", view: "work" } },
       { id: "kyso", label: "Ký số", gate: "sign", leaf: { kind: "view", view: "sign" } },
       {
         id: "donggoi",

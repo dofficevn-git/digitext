@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { V41p } from "@/live/useLive";
 import { V3xq } from "@/api/ipc";
 import { V460 } from "@/state";
@@ -78,9 +78,21 @@ export interface V4i6 {
   reviewNote?: string | null;
 }
 
-export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => void }) {
+/** `workMode`: CTV làm mục trong gói việc — chỉ Lưu, không có nút duyệt / từ chối tài liệu;
+ *  `footer`: các nút thêm ở thanh dưới (Trước / Tiếp / Xác nhận hoàn thành…). */
+export default function V4i7({
+  doc,
+  onBack: V1j4,
+  workMode = false,
+  footer,
+}: {
+  doc: V4i6;
+  onBack: () => void;
+  workMode?: boolean;
+  footer?: ReactNode;
+}) {
   const { session: V1j5 } = V460();
-  const V1j6 = V3z9(V1j5?.permissions, "document.review");
+  const V1j6 = !workMode && V3z9(V1j5?.permissions, "document.review");
 
   const [review, V1j7] = useState<V4hp>({
     id: doc.id,
@@ -250,7 +262,9 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
           : V1ku
             ? "Không có thay đổi thực sự (chỉ khác khoảng trắng/cách gõ) nên không ghi gì. "
             : "";
-      if (!V1j6) {
+      if (workMode) {
+        V1k3(`${V1kv}Kiểm tra đủ rồi thì bấm “Xác nhận hoàn thành”.`);
+      } else if (!V1j6) {
         V1k3(
           `${V1kv}Bạn không có quyền duyệt tài liệu nên trạng thái duyệt giữ nguyên.`,
         );
@@ -276,6 +290,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
         </button>
         <b className="overflow-hidden text-ellipsis whitespace-nowrap">{doc.filename}</b>
         {}
+        {!workMode && (
         <span className="whitespace-nowrap">
           <V4hr
             doc={review}
@@ -296,6 +311,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
             onError={V1k1}
           />
         </span>
+        )}
         <div className="flex-1" />
         <button className="btn sm" onClick={() => void V1k4()}>
           <Icon name="lamMoi" />
@@ -492,6 +508,7 @@ export default function V4i7({ doc, onBack: V1j4 }: { doc: V4i6; onBack: () => v
             : "Không có thay đổi nào chưa lưu."}
         </span>
         <div className="flex-1" />
+        {footer}
         <button className="btn" onClick={V1j4} disabled={V1jy}>
           Đóng
         </button>

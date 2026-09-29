@@ -21,7 +21,9 @@ export type V3xt =
   | "info"
   | "bk"
   | "server"
-  | "report";
+  | "report"
+  | "work"
+  | "workManage";
 
 export type V3xu = "laphoso" | "hethonghoa" | "capnhat" | "sohoa" | "kyso" | "ocr";
 
