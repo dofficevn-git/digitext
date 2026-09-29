@@ -1,128 +1,134 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Văn bản của một hồ sơ trên máy này: bảng, thêm / sửa / xoá (đơn và nhiều), tìm nhanh.
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { V41p } from "@/live/useLive";
-import V49a from "@/ui/DataTable";
-import { V49o, V49n } from "./rowActions";
-import { V4bz, V4c1, V4by, V4c0, type V4bm, type V4bp, type V4bq } from "@/api/dossier";
-import { V3xq } from "@/api/ipc";
-import Banner from "./Banner";
+import { V4by, V4bz, V4c0, V4c1, type V4bm, type V4bp, type V4bq } from "@/api/dossier";
+import { V460 } from "@/state";
+import { V3z9 } from "@/domain/permissions";
 import V4ck from "./VanBanForm";
-import { V4cy, V4cu, V4cw, V4cz, V4cx } from "./logic";
+import { V4cu, V4cw, V4cx, V4cy, V4cz } from "./logic";
+import { Button, Card, confirm, IconButton, Input, notifyError, PageHeader, Table, toast, Toolbar, type Column } from "@/ui";
 
-type V4dx = { mode: "add" | "edit"; draft: V4bp; id?: number } | null;
+type Draft = { mode: "add" | "edit"; draft: V4bp; id?: number } | null;
+const n = (v: number) => v.toLocaleString("vi-VN");
 
-export default function V4dy({ dossier, onBack: Vz1 }: { dossier: V4bm; onBack: () => void }) {
-  const Vz2 = V49n("dossier.update", "dossier.update", "dossier.update");
-  const [Vz3, Vz4] = useState<V4bq[]>([]);
-  const [Vz5, Vz6] = useState<string | null>(null);
-  const [Vz7, Vz8] = useState<V4dx>(null);
+export default function V4dy({ dossier, onBack }: { dossier: V4bm; onBack: () => void }) {
+  const { session } = V460();
+  const canEdit = V3z9(session?.permissions, "dossier.update");
+  const [rows, setRows] = useState<V4bq[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [draft, setDraft] = useState<Draft>(null);
+  const [q, setQ] = useState("");
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
 
   const reload = useCallback(() => {
     V4by(dossier.id)
       .then((rs) => {
-        Vz4(rs);
-        Vz6(null);
+        setRows(rs);
+        setLoaded(true);
       })
-      .catch((Vz9) => Vz6(Vz9 instanceof V3xq ? Vz9.message : String(Vz9)));
+      .catch((e) => {
+        setLoaded(true);
+        notifyError(e, "nạp văn bản");
+      });
   }, [dossier.id]);
-
   V41p(reload, { topics: ["dossier"] });
 
-  const Vza = (p: Partial<V4bp>) => Vz7 && Vz8({ ...Vz7, draft: { ...Vz7.draft, ...p } });
+  const shown = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    return k ? rows.filter((v) => [v.trichYeu, v.soKyHieu, v.coQuanBanHanh, v.loaiVanBan].filter(Boolean).join(" ").toLowerCase().includes(k)) : rows;
+  }, [rows, q]);
 
-  const Vzb = async () => {
-    if (!Vz7) return;
-    const Vzc = V4cz(Vz7.draft);
-    if (Vzc) {
-      Vz6(Vzc);
+  const luu = async () => {
+    if (!draft) return;
+    const err = V4cz(draft.draft);
+    if (err) {
+      toast.error(err);
       return;
     }
+    setBusy(true);
     try {
-      const body = V4cy(Vz7.draft);
-      if (Vz7.mode === "add") await V4bz(dossier.id, body);
-      else if (Vz7.id != null) await V4c0(Vz7.id, body);
-      Vz8(null);
+      const body = V4cy(draft.draft);
+      if (draft.mode === "add") await V4bz(dossier.id, body);
+      else if (draft.id != null) await V4c0(draft.id, body);
+      setDraft(null);
       reload();
-    } catch (Vzd) {
-      Vz6(Vzd instanceof V3xq ? Vzd.message : String(Vzd));
+      toast.success(draft.mode === "add" ? "Đã thêm văn bản." : "Đã lưu văn bản.");
+    } catch (e) {
+      notifyError(e, "lưu văn bản");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const xoa = async (ids: number[]) => {
+    const ok = await confirm({ title: ids.length === 1 ? "Xoá văn bản này?" : `Xoá ${n(ids.length)} văn bản đã chọn?`, body: "Không thể hoàn tác.", danger: true });
+    if (!ok) return;
+    try {
+      await Promise.all(ids.map((id) => V4c1(id)));
+      setSel(new Set());
+      reload();
+      toast.success(`Đã xoá ${n(ids.length)} văn bản.`);
+    } catch (e) {
+      notifyError(e, "xoá văn bản");
     }
   };
 
-  const Vze = async (Vzf: number) => {
-    try {
-      await V4c1(Vzf);
-      reload();
-    } catch (Vzg) {
-      Vz6(Vzg instanceof V3xq ? Vzg.message : String(Vzg));
-    }
-  };
-
-  const Vzh = async (Vzi: (string | number)[]) => {
-    try {
-      await Promise.all(Vzi.map((Vzj) => V4c1(Number(Vzj))));
-      reload();
-    } catch (Vzk) {
-      Vz6(Vzk instanceof V3xq ? Vzk.message : String(Vzk));
-    }
-  };
+  const cols: Column<V4bq>[] = [
+    { key: "thuTu", header: "STT", align: "right", width: 60, sortable: true },
+    { key: "loaiVanBan", header: "Loại VB", width: 120, sortable: true },
+    { key: "soKyHieu", header: "Số, ký hiệu", width: 140, sortable: true },
+    { key: "ngayThang", header: "Ngày", width: 100 },
+    { key: "coQuanBanHanh", header: "Cơ quan ban hành", className: "whitespace-normal", hideBelow: 1366 },
+    { key: "trichYeu", header: "Trích yếu", className: "whitespace-normal min-w-64" },
+    { key: "toSo", header: "Tờ số", align: "right", width: 70 },
+    { key: "soTrang", header: "Trang", align: "right", width: 70 },
+  ];
 
   return (
     <>
-      <div className="page-head mt-0">
-        <h2>
-          <button className="linkbtn" onClick={Vz1}>
-            ← Danh sách hồ sơ
-          </button>{" "}
-          / Văn bản
-        </h2>
-        <span className="sub">{V4cu(dossier)}</span>
-      </div>
-
-      {Vz5 && <Banner tone="err" text={Vz5} onClose={() => Vz6(null)} />}
-
-      <V49a<V4bq>
-        addLabel="Thêm văn bản"
-        onAdd={!Vz2.canCreate ? undefined : () => Vz8({ mode: "add", draft: V4cw() })}
-        rows={Vz3}
-        getId={(v) => v.id}
-        matches={(v, q) =>
-          [v.trichYeu, v.soKyHieu, v.coQuanBanHanh, v.loaiVanBan]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(q)
-        }
-        columns={[
-          { head: "STT", cell: (v) => v.thuTu, cls: "num" },
-          { head: "Loại VB", cell: (v) => v.loaiVanBan },
-          { head: "Số/ký hiệu", cell: (v) => v.soKyHieu, cls: "tnum" },
-          { head: "Ngày tháng", cell: (v) => v.ngayThang },
-          { head: "Cơ quan ban hành", cell: (v) => v.coQuanBanHanh },
-          { head: "Trích yếu", cell: (v) => v.trichYeu },
-          { head: "Số tờ", cell: (v) => v.toSo, cls: "num" },
-          { head: "Số trang", cell: (v) => v.soTrang, cls: "num" },
-        ]}
-        rowActions={(v) =>
-          V49o(
-            () => Vz8({ mode: "edit", draft: V4cx(v), id: v.id }),
-            () => void Vze(v.id),
-            undefined,
-            Vz2,
+      <PageHeader
+        onBack={onBack}
+        title={`Văn bản của hồ sơ ${dossier.soTam}`}
+        description={V4cu(dossier)}
+        actions={
+          canEdit && (
+            <Button variant="primary" icon="them" onClick={() => setDraft({ mode: "add", draft: V4cw() })}>
+              Thêm văn bản
+            </Button>
           )
         }
-        onDeleteMany={Vz2.canDelete ? Vzh : undefined}
       />
-
-      {Vz7 && (
-        <V4ck
-          mode={Vz7.mode}
-          draft={Vz7.draft}
-          onChange={Vza}
-          onClose={() => Vz8(null)}
-          onSave={() => void Vzb()}
+      <Card padding="none">
+        <div className="border-b border-border-subtle p-3">
+          <Toolbar>
+            <Input size="sm" prefix="tim" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Trích yếu, số ký hiệu, cơ quan" className="w-72" aria-label="Tìm văn bản" />
+            <Toolbar.Spacer />
+            {canEdit && sel.size > 0 && (
+              <Button size="sm" variant="dangerOutline" icon="xoa" onClick={() => void xoa([...sel].map(Number))}>
+                Xoá {n(sel.size)}
+              </Button>
+            )}
+            <span className="text-sm text-fg-subtle">{n(shown.length)} văn bản</span>
+          </Toolbar>
+        </div>
+        <Table
+          columns={cols}
+          rows={shown}
+          getRowId={(v) => String(v.id)}
+          selection={canEdit ? { selected: sel, onChange: setSel } : undefined}
+          rowActions={canEdit ? (v) => (
+            <>
+              <IconButton label="Sửa" icon="sua" size="sm" onClick={() => setDraft({ mode: "edit", draft: V4cx(v), id: v.id })} />
+              <IconButton label="Xoá" icon="xoa" size="sm" onClick={() => void xoa([v.id])} />
+            </>
+          ) : undefined}
+          state={{ loading: !loaded, empty: { title: q ? "Không có văn bản khớp tìm kiếm" : "Hồ sơ chưa có văn bản", description: canEdit && !q ? "Thêm tay, nhập Excel ở màn Tài liệu đã quét, hoặc soát OCR từ PDF." : undefined } }}
+          maxHeight="calc(100dvh - 300px)"
         />
-      )}
+      </Card>
+      {draft && <V4ck mode={draft.mode} draft={draft.draft} busy={busy} onChange={(p) => setDraft({ ...draft, draft: { ...draft.draft, ...p } })} onClose={() => setDraft(null)} onSave={() => void luu()} />}
     </>
   );
 }

@@ -1,382 +1,191 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Soát OCR một tệp PDF trong hồ sơ: ảnh trang bên trái (OCR bóc khung tuỳ chọn), form văn bản bên phải
+// được điền sẵn từ trường máy chủ đã bóc; bấm Lưu để ghi vào hồ sơ (tự đẩy sang chỉnh lý).
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import "./laphoso.css";
-import { V3xq } from "@/api/ipc";
-import { V40x, V40p } from "@/api/archive";
-import { V4bz, V4by, V4c0, type V4bm, type V4ca, type V4bp } from "@/api/dossier";
+import { useCallback, useEffect, useState } from "react";
+import "./ocrReview.css";
+import { V40p, V40x } from "@/api/archive";
+import { V4by, V4bz, V4c0, type V4bm, type V4bp, type V4ca } from "@/api/dossier";
 import { V4ei } from "@/api/docs";
 import { V4fg, V4fk, type V4fj } from "@/api/ocr";
-import { V4cy, V4cw, V4cz, V4cx } from "./logic";
-import { V4ge, V4gf, V4gj, V4gi } from "./ocrPrefill";
+import { V4cw, V4cx, V4cy, V4cz } from "./logic";
+import { V4ge, V4gf, V4gi, V4gj } from "./ocrPrefill";
 import V4h3 from "./OcrBoxLayer";
 import type { V4gk } from "./ocrBoxes";
-import { Icon } from "@/components/Icon";
+import { Banner, Button, Field, Input, notifyError, PageHeader, Textarea, toast } from "@/ui";
 
-function V4h4(path: string): string {
-  const V1bx = path.split(/[\\/]/);
-  return (V1bx[V1bx.length - 1] ?? "").toLowerCase();
+function baseName(path: string): string {
+  const p = path.split(/[\\/]/);
+  return (p[p.length - 1] ?? "").toLowerCase();
 }
 
-function V4h5(V1by: unknown): string {
-  return V1by instanceof V3xq || V1by instanceof Error ? V1by.message : String(V1by);
-}
+export default function V4h7({ dossier, file, onBack }: { dossier: V4bm; file: V4ca; onBack: () => void }) {
+  const [pages, setPages] = useState<string[]>([]);
+  const [pageErr, setPageErr] = useState<string | null>(null);
+  const [draft, setDraft] = useState<V4bp>(V4cw());
+  const [vbId, setVbId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [prefill, setPrefill] = useState<string | null>(null);
+  const [ocr, setOcr] = useState<Record<number, V4fj>>({});
+  const [boxes, setBoxes] = useState<Record<number, V4gk[]>>({});
+  const [selKey, setSelKey] = useState<string | null>(null);
+  const [ocrPage, setOcrPage] = useState<number | null>(null);
 
-function V4h6({ label: V1bz, children: V1c0 }: { label: string; children: ReactNode }) {
-  return (
-    <div className="col-lg-12">
-      <div className="input-group groupwidth">
-        <label className="input-group-addon">
-          <b>{V1bz}</b>
-        </label>
-        {V1c0}
-      </div>
-    </div>
-  );
-}
-
-export default function V4h7({
-  dossier,
-  file,
-  onBack: V1c1,
-}: {
-  dossier: V4bm;
-  file: V4ca;
-  onBack: () => void;
-}) {
-  const [V1c2, V1c3] = useState<string[]>([]);
-  const [V1c4, V1c5] = useState<string | null>(null);
-  const [V1c6, V1c7] = useState<V4bp>(V4cw());
-  const [V1c8, V1c9] = useState<number | null>(null);
-  const [V1ca, V1cb] = useState(true);
-  const [V1cc, V1cd] = useState(false);
-  const [V1ce, V1cf] = useState<string | null>(null);
-  const [V1cg, V1ch] = useState<string | null>(null);
-
-  const [V1ci, V1cj] = useState<string | null>(null);
-
-  const [ocr, V1ck] = useState<Record<number, V4fj>>({});
-  const [V1cl, V1cm] = useState<Record<number, V4gk[]>>({});
-  const [V1cp, V1cq] = useState<string | null>(null);
-  const [V1cr, V1cs] = useState<number | null>(null);
-
-  const V1ct = async (V1cu: number) => {
-    V1cs(V1cu);
-    V1cf(null);
+  const chayOcr = async (i: number) => {
+    setOcrPage(i);
     try {
-      const V1cv = await V4fk(file.filePath, V1cu + 1);
-      V1ck((m) => ({ ...m, [V1cu]: V1cv }));
-      V1cm((m) => ({ ...m, [V1cu]: V1cv.boxes.map((b) => ({ ...b })) }));
-      V1ch(`OCR trang ${V1cu + 1}: ${V1cv.boxes.length} box.`);
-    } catch (V1cw) {
-      V1cf(V4h5(V1cw));
+      const r = await V4fk(file.filePath, i + 1);
+      setOcr((m) => ({ ...m, [i]: r }));
+      setBoxes((m) => ({ ...m, [i]: r.boxes.map((b) => ({ ...b })) }));
+      toast.info(`Trang ${i + 1}: ${r.boxes.length} khung.`);
+    } catch (e) {
+      notifyError(e, "OCR trang");
     } finally {
-      V1cs(null);
+      setOcrPage(null);
     }
   };
+  const suaBox = (i: number, b: V4gk) => setBoxes((m) => ({ ...m, [i]: (m[i] ?? []).map((x) => (x.key === b.key ? b : x)) }));
 
-  const V1cx = (V1cy: number, V1cz: V4gk) => {
-    V1cm((m) => ({
-      ...m,
-      [V1cy]: (m[V1cy] ?? []).map((b) => (b.key === V1cz.key ? V1cz : b)),
-    }));
-  };
-
-  const V1d4 = useCallback(async () => {
-    const V1d5 = await V4by(dossier.id);
-    const V1d6 = V4h4(file.fileName);
-    const V1d7 = V1d5.find((v) => v.pdfPath && V4h4(v.pdfPath) === V1d6);
-    let V1d8 = V1d7 ? V4cx(V1d7) : V4cw();
-    V1c9(V1d7 ? V1d7.id : null);
-    let V1d9: string | null = null;
+  const napForm = useCallback(async () => {
+    const vbs = await V4by(dossier.id);
+    const mine = vbs.find((v) => v.pdfPath && baseName(v.pdfPath) === baseName(file.fileName));
+    let d = mine ? V4cx(mine) : V4cw();
+    setVbId(mine ? mine.id : null);
+    let note: string | null = null;
     try {
       const docs = await V4ei();
       const doc = V4gf(docs, V4ge(dossier), file.fileName);
       if (doc) {
-        const fields = await V4fg(doc.id);
-        const r = V4gi(V1d8, fields);
+        const r = V4gi(d, await V4fg(doc.id));
         if (r.filled.length > 0) {
-          V1d8 = r.draft;
-          V1d9 = `Đã điền sẵn từ OCR máy chủ: ${V4gj(r.filled)}. Kiểm tra rồi bấm Lưu để ghi vào CSDL.`;
+          d = r.draft;
+          note = `Đã điền sẵn từ máy chủ: ${V4gj(r.filled)}. Kiểm tra rồi bấm Lưu.`;
         }
       }
-    } catch {}
-    V1c7(V1d8);
-    V1cj(V1d9);
+    } catch {
+      /* không có trường máy chủ */
+    }
+    setDraft(d);
+    setPrefill(note);
   }, [dossier, file.fileName]);
 
   useEffect(() => {
-    let V1da = true;
-    V1cb(true);
-    V1cf(null);
-    V1ch(null);
+    let alive = true;
+    setLoading(true);
     Promise.all([
       V40p(file.filePath)
-        .then((p) => {
-          if (V1da) {
-            V1c3(p);
-            V1c5(null);
-          }
-        })
-        .catch((V1db) => {
-          if (V1da) {
-            V1c3([]);
-            V1c5(V4h5(V1db));
-          }
-        }),
-      V1d4().catch((V1dc) => V1da && V1cf(V4h5(V1dc))),
-    ]).finally(() => {
-      if (V1da) V1cb(false);
-    });
+        .then((p) => alive && (setPages(p), setPageErr(null)))
+        .catch((e) => alive && (setPages([]), setPageErr(e instanceof Error ? e.message : String(e)))),
+      napForm().catch((e) => alive && notifyError(e, "nạp văn bản")),
+    ]).finally(() => alive && setLoading(false));
     return () => {
-      V1da = false;
+      alive = false;
     };
-  }, [file.filePath, V1d4]);
+  }, [file.filePath, napForm]);
 
-  const set = (p: Partial<V4bp>) => V1c7((d) => ({ ...d, ...p }));
-
-  const V1dd = (s: string) => (s.trim() === "" ? undefined : Number(s));
-
-  const V1de = async () => {
-    const v = V4cz(V1c6);
-    if (v) {
-      V1cf(v);
-      V1ch(null);
+  const set = (p: Partial<V4bp>) => setDraft((d) => ({ ...d, ...p }));
+  const num = (s: string) => (s.trim() === "" ? undefined : Number(s));
+  const luu = async () => {
+    const err = V4cz(draft);
+    if (err) {
+      toast.error(err);
       return;
     }
-    V1cd(true);
-    V1cf(null);
-    V1ch(null);
+    setSaving(true);
     try {
-      const body = V4cy(V1c6);
-      if (V1c8 != null) {
-        await V4c0(V1c8, body);
-      } else {
-        const V1df = await V4bz(dossier.id, { ...body, pdfPath: file.filePath });
-        V1c9(V1df);
-      }
-      await V1d4();
-      V1ch("Đã lưu.");
-    } catch (V1dg) {
-      V1cf(V4h5(V1dg));
+      const body = V4cy(draft);
+      if (vbId != null) await V4c0(vbId, body);
+      else setVbId(await V4bz(dossier.id, { ...body, pdfPath: file.filePath }));
+      await napForm();
+      toast.success("Đã lưu văn bản.");
+    } catch (e) {
+      notifyError(e, "lưu văn bản");
     } finally {
-      V1cd(false);
+      setSaving(false);
     }
   };
+  const text = (key: keyof V4bp, label: string) => (
+    <Field label={label}>
+      <Input size="sm" value={(draft[key] as string | undefined) ?? ""} onChange={(e) => set({ [key]: e.target.value } as Partial<V4bp>)} />
+    </Field>
+  );
 
   return (
-    <div className="lhs">
-      <div className="content-panel">
-        <div className="mb-2 flex items-center gap-2.5">
-          <button className="btn btn-outline-primary btn-round" onClick={V1c1}>
-            <Icon name="hoanTac" /> Về danh sách
-          </button>
-          <b className="overflow-hidden text-ellipsis whitespace-nowrap">{file.fileName}</b>
-        </div>
-
-        {V1ce && <p className="muted text-danger-700">{V1ce}</p>}
-        {V1cg && <p className="muted text-success-700">{V1cg}</p>}
-        {V1ci && (
-          <p className="muted text-info-700">
-            <Icon name="tuDong" /> {V1ci}
-          </p>
-        )}
-
-        <div className="ocr-view">
-          {}
-          <div className="ocr-left">
-            {V1ca ? (
-              <div className="ocr-empty">Đang tải văn bản…</div>
-            ) : V1c2.length > 0 ? (
-              V1c2.map((src, i) => (
-                <div key={i} className="ocr-page">
-                  <div className="ocr-page-tools flex gap-2 items-center my-1 mx-0">
-                    <button
-                      className="btn btn-sm btn-outline-primary"
-                      disabled={V1cr !== null}
-                      onClick={() => V1ct(i)}
-                      title="Chạy OCR (Triton) để bóc tách box trên trang này"
-                    >
-                      <Icon name="tuDong" />{" "}
-                      {V1cr === i
-                        ? "Đang OCR…"
-                        : ocr[i]
-                          ? "OCR lại"
-                          : "OCR bóc tách box"}
-                    </button>
-                    {ocr[i] && (
-                      <span className="muted">{V1cl[i]?.length ?? 0} box — kéo/chỉnh khung</span>
-                    )}
-                  </div>
-                  {ocr[i] ? (
-                    <V4h3
-                      src={src}
-                      boxes={V1cl[i] ?? []}
-                      pageW={ocr[i].pageW}
-                      pageH={ocr[i].pageH}
-                      selectedKey={V1cp}
-                      onSelect={V1cq}
-                      onChange={(b) => V1cx(i, b)}
-                    />
-                  ) : (
-                    <img src={src} alt={`Trang ${i + 1}`} draggable={false} />
-                  )}
+    <div
+      onKeyDown={(e) => {
+        if (e.ctrlKey && e.key === "Enter") void luu();
+      }}
+    >
+      <PageHeader
+        onBack={onBack}
+        title={file.fileName}
+        description={`Hồ sơ ${dossier.soTam}${dossier.tieuDe ? ` · ${dossier.tieuDe}` : ""}`}
+        actions={
+          <>
+            <Button icon="tepPdf" onClick={() => V40x(file.filePath).catch((e) => notifyError(e, "mở PDF"))}>
+              Mở PDF
+            </Button>
+            <Button variant="primary" icon="luu" loading={saving} onClick={() => void luu()}>
+              Lưu (Ctrl+Enter)
+            </Button>
+          </>
+        }
+      />
+      {prefill && (
+        <Banner tone="info" className="mb-3" onClose={() => setPrefill(null)}>
+          {prefill}
+        </Banner>
+      )}
+      <div className="ocr-view">
+        <div className="ocr-left">
+          {loading ? (
+            <div className="ocr-empty">Đang tải trang…</div>
+          ) : pages.length > 0 ? (
+            pages.map((src, i) => (
+              <div key={i} className="ocr-page">
+                <div className="ocr-page-tools">
+                  <span>Trang {i + 1}</span>
+                  <Button size="sm" icon="tuDong" loading={ocrPage === i} disabled={ocrPage !== null} onClick={() => void chayOcr(i)} className="border-gray-600 bg-gray-700 text-gray-100 hover:bg-gray-600">
+                    {ocr[i] ? "OCR lại" : "OCR bóc khung"}
+                  </Button>
+                  {ocr[i] && <span>{boxes[i]?.length ?? 0} khung, kéo để chỉnh</span>}
                 </div>
-              ))
-            ) : (
-              <div className="ocr-empty">
-                {V1c4 ??
-                  "Không hiển thị được nội dung (không phải PDF ảnh)."}
-                <div className="mt-2.5">
-                  <a
-                    className="ic-word"
-                    onClick={() => V40x(file.filePath).catch((V1dh) => V1cf(V4h5(V1dh)))}
-                    title="Mở bằng trình xem PDF"
-                  >
-                    <Icon name="tepPdf" /> Mở file
-                  </a>
-                </div>
+                {ocr[i] ? <V4h3 src={src} boxes={boxes[i] ?? []} pageW={ocr[i].pageW} pageH={ocr[i].pageH} selectedKey={selKey} onSelect={setSelKey} onChange={(b) => suaBox(i, b)} /> : <img src={src} alt={`Trang ${i + 1}`} draggable={false} />}
               </div>
-            )}
+            ))
+          ) : (
+            <div className="ocr-empty">{pageErr ?? "Không hiển thị được nội dung (không phải PDF ảnh)."}</div>
+          )}
+        </div>
+        <div className="ocr-right space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Số thứ tự">
+              <Input size="sm" type="number" value={draft.thuTu ?? 0} onChange={(e) => set({ thuTu: Number(e.target.value) || 0 })} />
+            </Field>
+            {text("loaiVanBan", "Loại văn bản")}
+            {text("soKyHieu", "Số, ký hiệu")}
+            <Field label="Ngày tháng">
+              <Input size="sm" placeholder="dd/mm/yyyy" value={draft.ngayThang ?? ""} onChange={(e) => set({ ngayThang: e.target.value })} />
+            </Field>
           </div>
-
-          {}
-          <div className="ocr-right" id="rightpanel">
-            <V4h6 label="Số thứ tự VB">
-              <input
-                type="number"
-                className="form-control pull-right"
-                value={V1c6.thuTu ?? 0}
-                onChange={(V1di) => set({ thuTu: Number(V1di.target.value) || 0 })}
-              />
-            </V4h6>
-            <V4h6 label="Loại văn bản">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.loaiVanBan ?? ""}
-                onChange={(V1dj) => set({ loaiVanBan: V1dj.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Số Văn Bản">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value=""
-                readOnly
-                title="Desktop gộp số + ký hiệu vào ô 'KH văn bản'"
-              />
-            </V4h6>
-            <V4h6 label="KH văn bản">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.soKyHieu ?? ""}
-                onChange={(V1dk) => set({ soKyHieu: V1dk.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Ngày tháng">
-              <input
-                type="text"
-                className="form-control pull-right"
-                placeholder="dd/mm/yyyy"
-                value={V1c6.ngayThang ?? ""}
-                onChange={(V1dl) => set({ ngayThang: V1dl.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="CQ ban hành">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.coQuanBanHanh ?? ""}
-                onChange={(V1dm) => set({ coQuanBanHanh: V1dm.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Trích yếu">
-              <textarea
-                className="form-control pull-right"
-                rows={5}
-                value={V1c6.trichYeu ?? ""}
-                onChange={(V1dn) => set({ trichYeu: V1dn.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Tờ số">
-              <input
-                type="number"
-                className="form-control pull-right"
-                value={V1c6.toSo ?? ""}
-                onChange={(V1do) => set({ toSo: V1dd(V1do.target.value) })}
-              />
-            </V4h6>
-            <V4h6 label="Số trang">
-              <input
-                type="number"
-                className="form-control pull-right"
-                value={V1c6.soTrang ?? ""}
-                onChange={(V1dp) => set({ soTrang: V1dd(V1dp.target.value) })}
-              />
-            </V4h6>
-            <V4h6 label="Ghi chú">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.ghiChu ?? ""}
-                onChange={(V1dq) => set({ ghiChu: V1dq.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Ngôn ngữ">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.ngonNgu ?? ""}
-                onChange={(V1dr) => set({ ngonNgu: V1dr.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="CĐ sử dụng">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.cheDoSuDung ?? ""}
-                onChange={(V1ds) => set({ cheDoSuDung: V1ds.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Độ tin cậy">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.doTinCay ?? ""}
-                onChange={(V1dt) => set({ doTinCay: V1dt.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="Bút tích">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.butTich ?? ""}
-                onChange={(V1du) => set({ butTich: V1du.target.value })}
-              />
-            </V4h6>
-            <V4h6 label="TT vật lý">
-              <input
-                type="text"
-                className="form-control pull-right"
-                value={V1c6.tinhTrangVatLy ?? ""}
-                onChange={(V1dv) => set({ tinhTrangVatLy: V1dv.target.value })}
-              />
-            </V4h6>
-
-            <div className="col-lg-12 text-center mt-1.5">
-              <button
-                className="btn btn-outline-success btn-round"
-                onClick={() => void V1de()}
-                disabled={V1cc}
-              >
-                <Icon name="luu" /> {V1cc ? "Đang lưu…" : "Lưu"}
-              </button>{" "}
-              <button className="btn btn-outline-danger btn-round" onClick={V1c1} disabled={V1cc}>
-                <Icon name="dong" /> Đóng
-              </button>
-            </div>
+          {text("coQuanBanHanh", "Cơ quan ban hành")}
+          <Field label="Trích yếu">
+            <Textarea rows={4} value={draft.trichYeu ?? ""} onChange={(e) => set({ trichYeu: e.target.value })} />
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Tờ số">
+              <Input size="sm" type="number" value={draft.toSo ?? ""} onChange={(e) => set({ toSo: num(e.target.value) })} />
+            </Field>
+            <Field label="Số trang">
+              <Input size="sm" type="number" value={draft.soTrang ?? ""} onChange={(e) => set({ soTrang: num(e.target.value) })} />
+            </Field>
+            {text("ngonNgu", "Ngôn ngữ")}
+            {text("cheDoSuDung", "Chế độ sử dụng")}
+            {text("doTinCay", "Độ tin cậy")}
+            {text("butTich", "Bút tích")}
+            {text("tinhTrangVatLy", "Tình trạng vật lý")}
+            {text("ghiChu", "Ghi chú")}
           </div>
         </div>
       </div>

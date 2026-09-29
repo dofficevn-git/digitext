@@ -1,648 +1,315 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Tài liệu đã quét (hồ sơ trên máy này + PDF quét + OCR / nhập văn bản). mode "donggoi": cùng bảng nhưng chỉ để
+// tích chọn và đóng gói (dùng ở màn Đóng gói).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { V41p } from "@/live/useLive";
-import "./laphoso.css";
-import { isTauri, V3xq } from "@/api/ipc";
+import { isTauri } from "@/api/ipc";
 import type { V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
-import type { V3ym, V3yl, V3yo } from "@/domain/types";
-import { V4cg, V4br, type V4bm } from "@/api/dossier";
+import type { V3yl, V3ym, V3yo } from "@/domain/types";
+import { V4br, V4cg, type V4bm } from "@/api/dossier";
 import { V460 } from "@/state";
-import { bangTrongText, chuaChonPhong } from "./phongScope";
+import { chuaChonPhong } from "./phongScope";
 import V4dy from "./VanBanPanel";
 import V4h8 from "./TaiLieuPanel";
 import { V4e3, V4e8 } from "./excel";
-import { type V4dk, V4d0, V4di, V4dr, V4cm, V4ct, V4cl, V4dt, V4dp, V4du, V4co } from "./logic";
-import { Icon } from "@/components/Icon";
+import { type V4dk, V4cl, V4cm, V4co, V4ct, V4d0, V4di, V4dp, V4dr, V4dt, V4du } from "./logic";
 import { PackDialog } from "@/features/package/PackFromDossiers";
+import { Badge, Button, Card, Checkbox, Dialog, Field, IconButton, Input, Menu, notifyError, PageHeader, Pagination, Select, Table, Tip, toast, Toolbar, type Column, type SortState } from "@/ui";
 
-const V4h9 = [10, 25, 50, 100];
+const n = (v: number) => v.toLocaleString("vi-VN");
+const THBQ_TONE: Record<string, "info" | "ok" | "err" | "gray"> = { "badge-vv": "info", "badge-gl": "ok", "badge-het": "err" };
 
-type V4hb = "import" | "inpack" | null;
-type V4hc = { key: V4dk; dir: "asc" | "desc" };
-
-/** "taolap" = Tạo lập cơ sở dữ liệu; "donggoi" = cùng bảng hồ sơ nhưng chỉ để tích chọn và đóng gói
- * (bỏ tìm kiếm / nhập / xuất / cột Mã hồ sơ, File đính kèm — theo đề nghị chỉnh sửa mục 7, 8). */
-export default function SoHoaPane({
-  phongs: V1e7,
-  mode = "taolap",
-}: {
-  phongs: V40v[];
-  mode?: "taolap" | "donggoi";
-}) {
+export default function SoHoaPane({ phongs, mode = "taolap" }: { phongs: V40v[]; mode?: "taolap" | "donggoi" }) {
   const dg = mode === "donggoi";
-  const { setScanTarget: V1e8, goto } = V460();
+  const { setScanTarget, goto } = V460();
+  const [phongBans, setPhongBans] = useState<V3yl[]>([]);
+  const [mangs, setMangs] = useState<V3ym[]>([]);
+  const [thbqs, setThbqs] = useState<V3yo[]>([]);
+  const [maDa, setMaDa] = useState("");
+  const [maDv, setMaDv] = useState("");
+  const [mangId, setMangId] = useState("");
+  const [thbqSel, setThbqSel] = useState<Set<number>>(new Set());
+  const [q, setQ] = useState("");
+  const [hetThbq, setHetThbq] = useState(false);
+  const [giuLai, setGiuLai] = useState(false);
+  const [rows, setRows] = useState<V4bm[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [openVb, setOpenVb] = useState<V4bm | null>(null);
+  const [openTl, setOpenTl] = useState<V4bm | null>(null);
+  const [cols, setCols] = useState({ soTo: false, nbd: false, nkt: false });
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState | null>({ key: "id", dir: "asc" });
+  const [dialog, setDialog] = useState<"import" | "inpack" | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const [V1e9, V1ea] = useState<V3yl[]>([]);
-  const [V1eb, V1ec] = useState<V3ym[]>([]);
-  const [V1ed, V1ee] = useState<V3yo[]>([]);
-
-  const [maDa, V1ef] = useState("");
-  const [V1eg, V1eh] = useState("");
-  const [V1ei, V1ej] = useState<string>("");
-  const [V1ek, V1el] = useState<string[]>([]);
-  const [V1em, V1en] = useState("");
-  const [V1eo, V1ep] = useState(false);
-  const [V1eq, V1er] = useState(false);
-
-  const [V1es, V1et] = useState<V4bm[]>([]);
-  const [V1eu, V1ev] = useState<Set<number>>(new Set());
-  const [V1ew, V1ex] = useState<V4bm | null>(null);
-  const [V1ey, V1ez] = useState<V4bm | null>(null);
-
-  const [cols, V1f0] = useState({ soTo: false, nbd: false, nkt: false });
-
-  const [V1f1, V1f2] = useState(25);
-  const [V1f3, V1f4] = useState(1);
-  const [V1f5, V1f6] = useState("");
-  const [V1f7, V1f8] = useState<V4hc>({ key: "id", dir: "asc" });
-
-  const [V1f9, V1fa] = useState<V4hb>(null);
-  const [V1fl, V1fm] = useState(false);
-  const V1fn = useRef<HTMLInputElement>(null);
-  const V1fo = useRef<HTMLInputElement>(null);
-
-  const V1fp = useCallback(() => {
+  const loadCat = useCallback(() => {
     V48j()
       .then((c) => {
-        V1ea(c.phongBans);
-        V1ec(c.mangs);
-        V1ee(c.thbqs);
+        setPhongBans(c.phongBans);
+        setMangs(c.mangs);
+        setThbqs(c.thbqs);
       })
       .catch(() => {});
   }, []);
-  V41p(V1fp, { topics: ["catalog"], enabled: isTauri() });
+  V41p(loadCat, { topics: ["catalog"], enabled: isTauri() });
 
-
-  const V1fr = useCallback(() => {
+  const load = useCallback(() => {
     if (!isTauri()) return;
-
     if (chuaChonPhong(maDa)) {
-      V1et([]);
+      setRows([]);
+      setLoaded(true);
       return;
     }
-    V4br({
-      maDa,
-      maDv: V1eg || undefined,
-      mangCvid: V1ei ? Number(V1ei) : undefined,
-    })
-      .then(V1et)
-      .catch(() => V1et([]));
-  }, [maDa, V1eg, V1ei]);
+    V4br({ maDa, maDv: maDv || undefined, mangCvid: mangId ? Number(mangId) : undefined })
+      .then((rs) => {
+        setRows(rs);
+        setLoaded(true);
+      })
+      .catch((e) => {
+        setLoaded(true);
+        notifyError(e, "nạp hồ sơ");
+      });
+  }, [maDa, maDv, mangId]);
+  V41p(load, { topics: ["dossier", "khogia"] });
+  useEffect(() => {
+    if (!maDa && phongs.length === 1) setMaDa(phongs[0].maDuAn);
+  }, [phongs, maDa]);
 
-  V41p(V1fr, { topics: ["dossier", "khogia"] });
+  const shown = useMemo(() => {
+    let r = rows;
+    const k = q.trim().toLowerCase();
+    if (k) r = r.filter((x) => V4ct(x, k));
+    if (thbqSel.size) r = r.filter((x) => x.thbq != null && thbqSel.has(x.thbq));
+    if (giuLai) r = r.filter((x) => V4du(x, thbqs).cls === "badge-gl");
+    if (hetThbq) r = r.filter((x) => V4du(x, thbqs).cls === "badge-het");
+    return sort ? V4dp(r, sort.key as V4dk, sort.dir, thbqs, mangs) : r;
+  }, [rows, q, thbqSel, giuLai, hetThbq, sort, thbqs, mangs]);
+  useEffect(() => setPage(1), [shown.length, sort]);
+  const pages = Math.max(1, Math.ceil(shown.length / pageSize));
+  const cur = Math.min(page, pages);
+  const pageRows = useMemo(() => shown.slice((cur - 1) * pageSize, cur * pageSize), [shown, cur, pageSize]);
 
-  const V1fs = useMemo(() => {
-    let V1ft = V1es;
-    const q = V1em.trim().toLowerCase();
-    if (q) V1ft = V1ft.filter((r) => V4ct(r, q));
-    if (V1ek.length && !V1ek.includes("-1")) {
-      const set = new Set(V1ek.map(Number));
-      V1ft = V1ft.filter((r) => r.thbq != null && set.has(r.thbq));
-    }
-    if (V1eq) V1ft = V1ft.filter((r) => V4du(r, V1ed).cls === "badge-gl");
-    if (V1eo) V1ft = V1ft.filter((r) => V4du(r, V1ed).cls === "badge-het");
-    return V4dp(V1ft, V1f7.key, V1f7.dir, V1ed, V1eb);
-  }, [V1es, V1em, V1ek, V1eq, V1eo, V1f7, V1ed, V1eb]);
+  const pbOfPhong = V4cl(phongBans, maDa);
+  const mangOfPb = V4cm(mangs, maDv);
+  const selected = useMemo(() => rows.filter((r) => sel.has(String(r.id))), [rows, sel]);
 
-  useEffect(() => V1f4(1), [V1fs.length, V1f7]);
-
-  const V1fu = V4cl(V1e9, maDa);
-  const V1fv = V4cm(V1eb, V1eg);
-
-  const V1fw = (v: string) => {
-    V1ef(v);
-    V1eh("");
-    V1ej("");
-  };
-  const V1fx = (v: string) => {
-    V1eh(v);
-    V1ej("");
-  };
-
-  const V1fy = V1fs.length;
-  const V1fz = Math.max(1, Math.ceil(V1fy / V1f1));
-  const V1g0 = Math.min(V1f3, V1fz);
-  const V1g1 = useMemo(() => V1fs.slice((V1g0 - 1) * V1f1, V1g0 * V1f1), [V1fs, V1g0, V1f1]);
-
-  const V1g2 = (V1g3: number) =>
-    V1ev((s) => {
-      const n = new Set(s);
-      n.has(V1g3) ? n.delete(V1g3) : n.add(V1g3);
-      return n;
-    });
-  const V1g4 = V1g1.length > 0 && V1g1.every((r) => V1eu.has(r.id));
-  const V1g5 = () =>
-    V1ev((s) => {
-      const n = new Set(s);
-      if (V1g4) V1g1.forEach((r) => n.delete(r.id));
-      else V1g1.forEach((r) => n.add(r.id));
-      return n;
-    });
-
-  const V1g6 = (V1g7: unknown) =>
-    V1g7 instanceof V3xq || V1g7 instanceof Error ? V1g7.message : String(V1g7);
-
-  const V1g8 = (r: V4bm) => {
+  const quet = (r: V4bm) => {
     const target = V4d0(r);
     if (!target) {
-      window.alert(
-        "Hồ sơ chưa gắn phông nên không tạo được cây thư mục để quét. Hãy chọn phông cho hồ sơ trước.",
-      );
+      toast.error("Hồ sơ chưa gắn phông nên chưa tạo được thư mục quét. Chọn phông cho hồ sơ trước.");
       return;
     }
-    V1e8(target);
+    setScanTarget(target);
     goto("scan");
   };
-
-  const V1g9 = async (file: File | undefined) => {
+  const nhapExcel = async (file: File | undefined) => {
     if (!file) return;
-    V1fm(true);
+    setImportBusy(true);
     try {
-      const { items: V1ga, skipped: V1gb, issues: V1gc } = await V4e8(file, V1es);
-      if (V1ga.length === 0) {
-        const V1gd = V4di(V1gc);
-        window.alert(
-          V1gd
-            ? `Không đọc được văn bản hợp lệ nào.\n\n${V1gd}`
-            : "Không đọc được văn bản hợp lệ nào (cần xác định được hồ sơ từ 'Hồ sơ id' hoặc 'Mã/Hồ sơ số', và có trích yếu/số ký hiệu hoặc tiêu đề hồ sơ).",
-        );
+      const { items, skipped, issues } = await V4e8(file, rows);
+      if (items.length === 0) {
+        const chiTiet = V4di(issues);
+        toast.error("Không đọc được văn bản hợp lệ nào trong tệp.", { detail: chiTiet || "Cần xác định được hồ sơ (cột Hồ sơ id hoặc Mã / Hồ sơ số) và có trích yếu, số ký hiệu hoặc tiêu đề." });
         return;
       }
-      const n = await V4cg(V1ga);
-      window.alert(`Đã nhập ${n} văn bản${V1gb ? ` (bỏ qua ${V1gb} dòng thiếu dữ liệu)` : ""}.`);
-      V1fa(null);
-      V1fr();
-    } catch (V1ge) {
-      window.alert(V1g6(V1ge));
+      const k = await V4cg(items);
+      toast.success(`Đã nhập ${n(k)} văn bản.`, { description: skipped ? `Bỏ qua ${n(skipped)} dòng thiếu dữ liệu.` : undefined });
+      setDialog(null);
+      load();
+    } catch (e) {
+      notifyError(e, "nhập Excel");
     } finally {
-      V1fm(false);
+      setImportBusy(false);
     }
   };
-
-  const V1gf = async () => {
-    if (V1fs.length === 0) {
-      window.alert("Không có hồ sơ nào để xuất.");
+  const xuatExcel = async () => {
+    if (shown.length === 0) {
+      toast.error("Không có hồ sơ nào để xuất.");
       return;
     }
-    const data = V1fs.map((r) => ({
+    const data = shown.map((r) => ({
       "Mã hồ sơ": r.maHoSo ?? "",
       "Hộp số": r.hopSo ?? "",
       "HS số": r.soTam,
       "Tiêu đề": r.tieuDe,
-      THBQ: V4co(V1ed, r.thbq),
+      THBQ: V4co(thbqs, r.thbq),
       "Số tờ": V4dt(r.soTo),
       "Ngày bắt đầu": V4dr(r.ngayBatDau),
       "Ngày kết thúc": V4dr(r.ngayKetThuc),
-      "Trạng thái": V4du(r, V1ed).label,
+      "Trạng thái": V4du(r, thbqs).label,
       "Số văn bản": r.soVanBan,
       "File đính kèm": r.soFileScan,
     }));
     try {
       await V4e3(data, "SoHoa", "xuat-csdl-so-hoa.xlsx");
-    } catch (V1gg) {
-      window.alert(V1g6(V1gg));
+      toast.success(`Đã xuất ${n(shown.length)} hồ sơ.`);
+    } catch (e) {
+      notifyError(e, "xuất Excel");
     }
   };
 
-  const V1gu = () => {
-    if (V1eu.size === 0) {
-      window.alert("Vui lòng chọn ít nhất một hồ sơ để đóng gói!");
-      return;
-    }
-    V1fa("inpack");
-  };
-
-  const V1gx = (V1gy: V4dk) => {
-    V1f8((V1gz) =>
-      V1gz.key === V1gy
-        ? { key: V1gy, dir: V1gz.dir === "asc" ? "desc" : "asc" }
-        : { key: V1gy, dir: "asc" },
-    );
-  };
-
-  const V1h0 = (V1h1: V4dk) => {
-    if (V1f7.key !== V1h1) return "sapXep";
-    return V1f7.dir === "asc" ? "tangDan" : "giamDan";
-  };
-
-  const V1h2 = ({
-    label: V1h3,
-    sortKey: V1h4,
-    className,
-  }: {
-    label: string;
-    sortKey: V4dk;
-    className?: string;
-  }) => (
-    <th className={`sortable-th${className ? ` ${className}` : ""}`} onClick={() => V1gx(V1h4)}>
-      <span className="sort-label">{V1h3}</span>
-      <Icon name={V1h0(V1h4)} size={12} />
-    </th>
-  );
-
-  if (V1ew) {
+  if (openVb) {
     return (
       <V4dy
-        dossier={V1ew}
+        dossier={openVb}
         onBack={() => {
-          V1ex(null);
-          V1fr();
+          setOpenVb(null);
+          load();
         }}
       />
     );
   }
+  if (openTl) return <V4h8 dossier={openTl} onBack={() => setOpenTl(null)} />;
 
-  if (V1ey) {
-    return <V4h8 dossier={V1ey} onBack={() => V1ez(null)} />;
-  }
-
-  const V1h5 = (dg ? 6 : 8) + Number(cols.soTo) + Number(cols.nbd) + Number(cols.nkt);
+  const columns: Column<V4bm>[] = [
+    ...(dg ? [] : [{ key: "maHoSo", header: "Mã hồ sơ", sortable: true, width: 150, cell: (r: V4bm) => <span className="text-xs text-fg-subtle">{r.maHoSo}</span> } as Column<V4bm>]),
+    { key: "hopSo", header: "Hộp", sortable: true, align: "right", width: 70 },
+    { key: "soTam", header: "HS số", sortable: true, align: "right", width: 80 },
+    { key: "tieuDe", header: "Tiêu đề", sortable: true, className: "whitespace-normal min-w-64", cell: (r) => <button type="button" className="text-left hover:text-fg-link" onClick={() => setOpenVb(r)}>{r.tieuDe}</button> },
+    ...(cols.soTo ? [{ key: "soTo", header: "Số tờ", sortable: true, align: "right", width: 70, cell: (r: V4bm) => V4dt(r.soTo) } as Column<V4bm>] : []),
+    ...(cols.nbd ? [{ key: "ngayBatDau", header: "Bắt đầu", sortable: true, width: 100, cell: (r: V4bm) => V4dr(r.ngayBatDau) } as Column<V4bm>] : []),
+    ...(cols.nkt ? [{ key: "ngayKetThuc", header: "Kết thúc", sortable: true, width: 100, cell: (r: V4bm) => V4dr(r.ngayKetThuc) } as Column<V4bm>] : []),
+    {
+      key: "trangThai",
+      header: "THBQ",
+      sortable: true,
+      width: 120,
+      cell: (r) => {
+        const s = V4du(r, thbqs);
+        return (
+          <Tip text={V4co(thbqs, r.thbq)}>
+            <span>
+              <Badge tone={THBQ_TONE[s.cls] ?? "gray"}>{s.label}</Badge>
+            </span>
+          </Tip>
+        );
+      },
+    },
+    { key: "soTaiLieuScan", header: "PDF quét", sortable: true, align: "right", width: 90, cell: (r) => <button type="button" className="tabular-nums hover:text-fg-link" onClick={() => setOpenTl(r)}>{n(r.soTaiLieuScan)}</button> },
+    ...(dg ? [] : [{ key: "soFileScan", header: "Tệp", sortable: true, align: "right", width: 70, cell: (r: V4bm) => n(r.soFileScan) } as Column<V4bm>]),
+  ];
 
   return (
-    <div className="lhs">
-      <div className="content-panel">
-        <div className="center">
-          <h4>
-            <b>{dg ? "ĐÓNG GÓI DỮ LIỆU" : "SỐ HÓA TÀI LIỆU"}</b>
-          </h4>
-        </div>
-        <hr />
-
-        {}
-        <div className="row">
-          <div className="col-4">
-            <div className="input-group">
-              <label className="input-group-addon w-1/4">Phông</label>
-              <select
-                className="form-control"
-                value={maDa}
-                onChange={(V1h6) => V1fw(V1h6.target.value)}
-              >
-                <option value="">-- CHỌN PHÔNG LƯU TRỮ --</option>
-                {V1e7.map((p) => (
-                  <option key={p.maDuAn} value={p.maDuAn}>
-                    {p.tenDuAn}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="col-4">
-            <div className="input-group">
-              <label className="input-group-addon w-1/4">Phòng ban</label>
-              <select
-                className="form-control"
-                value={V1eg}
-                disabled={!maDa}
-                onChange={(V1h7) => V1fx(V1h7.target.value)}
-              >
-                <option value="">-- CHỌN PHÒNG BAN --</option>
-                {V1fu.map((V1h8) => (
-                  <option key={V1h8.maDv} value={V1h8.maDv}>
-                    {V1h8.tenDonVi}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="col-4">
-            <div className="input-group">
-              <label className="input-group-addon w-1/4">Mảng CV</label>
-              <select
-                className="form-control"
-                value={V1ei}
-                disabled={!V1eg}
-                onChange={(V1h9) => V1ej(V1h9.target.value)}
-              >
-                <option value="">-- CHỌN MẢNG CÔNG VIỆC --</option>
-                {V1fv.map((m) => (
-                  <option key={m.mangCvid} value={m.mangCvid}>
-                    {m.tenMang}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {}
-        <div className="row items-center">
-          <div className="col-4">
-            <div className="input-group">
-              <label className="input-group-addon w-1/4">THBQ</label>
-              <select
-                className="form-control h-8.5"
-                multiple
-                value={V1ek}
-                onChange={(V1ha) => V1el([...V1ha.target.selectedOptions].map((o) => o.value))}
-              >
-                <option value="-1">Tất cả THBQ</option>
-                {V1ed.map((t) => (
-                  <option key={t.thbqid} value={t.thbqid}>
-                    {t.tenThbq}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {!dg && (
+    <>
+      {!dg && (
+        <PageHeader
+          title="Tài liệu đã quét"
+          description="Hồ sơ trên máy này với PDF đã quét; mở hồ sơ để soát OCR và nhập văn bản."
+          actions={
             <>
-              <div className="col-2">
-                <input
-                  className="form-control solo searchInput"
-                  value={V1em}
-                  placeholder="Nhập ký tự tìm kiếm"
-                  onChange={(V1hb) => V1en(V1hb.target.value)}
-                  onKeyDown={(V1hc) => V1hc.key === "Enter" && V1fr()}
-                />
-              </div>
-              <div className="col-2">
-                <label className="labelEx">
-                  <input
-                    type="checkbox"
-                    className="inputEx"
-                    checked={V1eo}
-                    onChange={(V1hd) => V1ep(V1hd.target.checked)}
-                  />{" "}
-                  Hết THBQ
-                </label>
-                <label className="labelEx ml-3">
-                  <input
-                    type="checkbox"
-                    className="inputEx"
-                    checked={V1eq}
-                    onChange={(V1he) => V1er(V1he.target.checked)}
-                  />{" "}
-                  Giữ lại
-                </label>
-              </div>
+              <Button icon="quet" variant="primary" onClick={() => goto("scan")}>
+                Quét
+              </Button>
+              <Menu
+                items={[
+                  { label: "Nhập văn bản từ Excel", icon: "nhapTep", onSelect: () => setDialog("import") },
+                  { label: "Xuất Excel hồ sơ", icon: "tepExcel", onSelect: () => void xuatExcel(), disabled: shown.length === 0 },
+                  "-",
+                  { label: `${cols.soTo ? "Ẩn" : "Hiện"} cột Số tờ`, onSelect: () => setCols((c) => ({ ...c, soTo: !c.soTo })) },
+                  { label: `${cols.nbd ? "Ẩn" : "Hiện"} cột Bắt đầu`, onSelect: () => setCols((c) => ({ ...c, nbd: !c.nbd })) },
+                  { label: `${cols.nkt ? "Ẩn" : "Hiện"} cột Kết thúc`, onSelect: () => setCols((c) => ({ ...c, nkt: !c.nkt })) },
+                ]}
+              />
             </>
-          )}
-          <div className={dg ? "col-8 text-right" : "col-4 text-right"}>
-            <button className="btn btn-outline-success btn-round" onClick={() => V1fr()}>
-              <Icon name="tim" /> Tìm kiếm
-            </button>{" "}
+          }
+        />
+      )}
+      <Card padding="none">
+        <div className="border-b border-border-subtle p-3">
+          <Toolbar>
+            <Field label="Phông" className="w-60">
+              <Select size="sm" value={maDa} onChange={(v) => { setMaDa(v); setMaDv(""); setMangId(""); }} placeholder="— Chọn phông —" options={phongs.map((p) => ({ value: p.maDuAn, label: p.tenDuAn }))} />
+            </Field>
+            <Field label="Phòng ban" className="w-48">
+              <Select size="sm" value={maDv} disabled={!maDa} onChange={(v) => { setMaDv(v); setMangId(""); }} placeholder="Tất cả" options={pbOfPhong.map((p) => ({ value: p.maDv, label: p.tenDonVi }))} />
+            </Field>
+            <Field label="Mảng" className="w-44">
+              <Select size="sm" value={mangId} disabled={!maDv} onChange={setMangId} placeholder="Tất cả" options={mangOfPb.map((m) => ({ value: String(m.mangCvid), label: m.tenMang }))} />
+            </Field>
+            {!dg && (
+              <Field label="Tìm" className="w-56">
+                <Input size="sm" prefix="tim" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tiêu đề, số, mã hồ sơ" />
+              </Field>
+            )}
+            <Toolbar.Spacer />
+            {dg && (
+              <Button variant="primary" icon="goi" disabled={sel.size === 0} onClick={() => setDialog("inpack")}>
+                Đóng gói ({n(sel.size)})
+              </Button>
+            )}
+          </Toolbar>
+          <Toolbar className="mt-2">
+            <span className="text-sm text-fg-subtle">THBQ:</span>
+            {thbqs.map((t) => (
+              <button
+                key={t.thbqid}
+                type="button"
+                className={`rounded-full border px-2.5 py-0.5 text-sm ${thbqSel.has(t.thbqid) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-border text-fg-muted hover:border-border-strong"}`}
+                aria-pressed={thbqSel.has(t.thbqid)}
+                onClick={() =>
+                  setThbqSel((s) => {
+                    const m = new Set(s);
+                    if (m.has(t.thbqid)) m.delete(t.thbqid);
+                    else m.add(t.thbqid);
+                    return m;
+                  })
+                }
+              >
+                {t.tenThbq}
+              </button>
+            ))}
             {!dg && (
               <>
-                <button
-                  className="btn btn-outline-success btn-round"
-                  onClick={() => V1fa("import")}
-                >
-                  <Icon name="tepPdf" /> Nhập tài liệu
-                </button>{" "}
-                <button className="btn btn-outline-secondary btn-round" onClick={() => void V1gf()}>
-                  <Icon name="tepExcel" /> Xuất CSDL
-                </button>
+                <Field label="Hết THBQ" inline>
+                  <Checkbox checked={hetThbq} onChange={setHetThbq} />
+                </Field>
+                <Field label="Giữ lại" inline>
+                  <Checkbox checked={giuLai} onChange={setGiuLai} />
+                </Field>
               </>
             )}
-            {dg && (
-              <button className="btn btn-success btn-round" onClick={V1gu}>
-                <Icon name="goi" /> Đóng gói
-              </button>
-            )}
-          </div>
+            <Toolbar.Spacer />
+            <span className="text-sm text-fg-subtle">{n(shown.length)} hồ sơ</span>
+          </Toolbar>
         </div>
-      </div>
-
-      {}
-      {!dg && (
-        <div className="actionbar">
-          <div className="grp">
-            <input
-              ref={V1fo}
-              type="file"
-              className="form-control max-w-65"
-              accept=".xlsx,.xls,.csv"
-              onChange={(V1hf) => {
-                void V1g9(V1hf.target.files?.[0]);
-                V1hf.target.value = "";
-              }}
-            />
-            <button
-              className="btn btn-outline-primary btn-round"
-              onClick={() => V1fo.current?.click()}
-            >
-              <Icon name="taiLen" /> Import file PDF
-            </button>
-          </div>
+        <Table
+          columns={columns}
+          rows={pageRows}
+          getRowId={(r) => String(r.id)}
+          sort={sort}
+          onSortChange={setSort}
+          selection={{ selected: sel, onChange: setSel }}
+          state={{ loading: !loaded, empty: chuaChonPhong(maDa) ? { title: "Chọn phông để xem hồ sơ" } : { title: q || thbqSel.size || hetThbq || giuLai ? "Không có hồ sơ khớp bộ lọc" : "Chưa có hồ sơ trong phông này", description: dg ? undefined : "Hồ sơ đến từ mục lục chỉnh lý hoặc cây thư mục." } }}
+          rowActions={
+            dg
+              ? undefined
+              : (r) => (
+                  <>
+                    <IconButton label="Văn bản trong hồ sơ" icon="taiLieu" size="sm" onClick={() => setOpenVb(r)} />
+                    <IconButton label="PDF đã quét" icon="tepPdf" size="sm" onClick={() => setOpenTl(r)} />
+                    <IconButton label="Quét vào hồ sơ" icon="quet" size="sm" onClick={() => quet(r)} />
+                  </>
+                )
+          }
+          maxHeight="calc(100dvh - 380px)"
+        />
+        <div className="border-t border-border-subtle px-3 py-2">
+          <Pagination page={cur} pageSize={pageSize} total={shown.length} onChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} pageSizeOptions={[10, 25, 50, 100]} />
         </div>
-      )}
+      </Card>
 
-      {}
-      <div className="content-panel pt-3">
-        <div className="tbl-scroll">
-          <table className="dataTable">
-            <thead>
-              <tr>
-                <th className="w-2.5">
-                  <input type="checkbox" checked={V1g4} onChange={V1g5} />
-                </th>
-                {!dg && <V1h2 label="Mã hồ sơ" sortKey="maHoSo" className="w-32.5" />}
-                <V1h2 label="Hộp số" sortKey="hopSo" className="w-15" />
-                <V1h2 label="HS số" sortKey="soTam" className="w-15" />
-                <V1h2 label="Tiêu đề" sortKey="tieuDe" />
-                {cols.soTo && <V1h2 label="Số tờ" sortKey="soTo" className="w-12.5" />}
-                {cols.nbd && <V1h2 label="N. Bắt đầu" sortKey="ngayBatDau" className="w-20" />}
-                {cols.nkt && <V1h2 label="N. Kết thúc" sortKey="ngayKetThuc" className="w-20" />}
-                <V1h2 label="THBQ" sortKey="trangThai" className="w-30" />
-                <V1h2 label="Tài liệu" sortKey="soTaiLieuScan" className="w-22.5" />
-                {!dg && <V1h2 label="File Đính kèm" sortKey="soFileScan" className="w-22.5" />}
-              </tr>
-            </thead>
-            <tbody>
-              {V1g1.length === 0 ? (
-                <tr>
-                  <td className="dt-empty" colSpan={V1h5}>
-                    {bangTrongText(maDa)}
-                  </td>
-                </tr>
-              ) : (
-                V1g1.map((r, i) => {
-                  const V1hg = V4du(r, V1ed);
-                  return (
-                    <tr key={r.id} className={i % 2 === 0 ? "odd" : "even"}>
-                      <td className="text-center">
-                        <input
-                          type="checkbox"
-                          checked={V1eu.has(r.id)}
-                          onChange={() => V1g2(r.id)}
-                        />
-                      </td>
-                      {!dg && <td className="text-left">{r.maHoSo}</td>}
-                      <td className="text-center">{r.hopSo}</td>
-                      <td className="text-center">{r.soTam}</td>
-                      <td className="text-justify">{r.tieuDe}</td>
-                      {cols.soTo && <td className="text-center">{V4dt(r.soTo)}</td>}
-                      {cols.nbd && <td className="text-center">{V4dr(r.ngayBatDau)}</td>}
-                      {cols.nkt && <td className="text-center">{V4dr(r.ngayKetThuc)}</td>}
-                      <td className="text-center">
-                        <span className={`badge-thbq ${V1hg.cls}`} title={V4co(V1ed, r.thbq)}>
-                          {V1hg.label}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <a
-                          className="ic-word"
-                          onClick={() => V1ez(r)}
-                          title="Xem danh sách file PDF trong hồ sơ"
-                        >
-                          <Icon name="tepPdf" />
-                        </a>
-                        <b className="cnt-red" title="Số file PDF đã quét trong hồ sơ">
-                          {" "}
-                          ({r.soTaiLieuScan})
-                        </b>
-                      </td>
-                      {!dg && (
-                        <td className="text-center">
-                          {r.soFileScan}{" "}
-                          <a className="ic-word" onClick={() => V1g8(r)} title="Quét vào hồ sơ">
-                            <Icon name="quet" />
-                          </a>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td className="footer-restore" colSpan={V1h5}>
-                  <a
-                    className="toggle-vis"
-                    title="Hiển thị toàn bộ cột"
-                    onClick={() => V1f0({ soTo: true, nbd: true, nkt: true })}
-                  >
-                    <Icon name="luoi" />
-                  </a>{" "}
-                  <a
-                    className={`toggle-vis ${cols.soTo ? "on" : "off"}`}
-                    onClick={() => V1f0((c) => ({ ...c, soTo: !c.soTo }))}
-                  >
-                    Số tờ
-                  </a>{" "}
-                  <a
-                    className={`toggle-vis ${cols.nbd ? "on" : "off"}`}
-                    onClick={() => V1f0((c) => ({ ...c, nbd: !c.nbd }))}
-                  >
-                    N. Bắt đầu
-                  </a>{" "}
-                  <a
-                    className={`toggle-vis ${cols.nkt ? "on" : "off"}`}
-                    onClick={() => V1f0((c) => ({ ...c, nkt: !c.nkt }))}
-                  >
-                    N. Kết thúc
-                  </a>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+      <Dialog open={dialog === "import"} onOpenChange={(o) => !o && setDialog(null)} title="Nhập văn bản từ Excel" description="Tệp Excel có cột Hồ sơ id (hoặc Mã / Hồ sơ số) để gắn văn bản vào đúng hồ sơ." size="sm" footer={<><Button onClick={() => setDialog(null)}>Đóng</Button><Button variant="primary" icon="taiLen" loading={importBusy} onClick={() => void nhapExcel(fileRef.current?.files?.[0])}>Nhập</Button></>}>
+        <Field label="Tệp Excel">
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="block w-full text-sm file:mr-3 file:rounded file:border file:border-border file:bg-surface file:px-3 file:py-1 file:text-sm" />
+        </Field>
+      </Dialog>
 
-        {}
-        <div className="dt-bottom">
-          <div className="dt-length">
-            <label>
-              Hiển thị{" "}
-              <select
-                value={V1f1}
-                onChange={(V1hh) => {
-                  V1f2(Number(V1hh.target.value));
-                  V1f4(1);
-                }}
-              >
-                {V4h9.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>{" "}
-              bản ghi.
-            </label>
-          </div>
-          <div className="pagination">
-            <button className="pbtn" disabled={V1g0 <= 1} onClick={() => V1f4(V1g0 - 1)}>
-              <Icon name="truoc" />
-            </button>
-            <button className="pbtn current">{V1g0}</button>
-            <button className="pbtn" disabled={V1g0 >= V1fz} onClick={() => V1f4(V1g0 + 1)}>
-              <Icon name="sau" />
-            </button>
-          </div>
-          <div className="dt-goto">
-            <label>Tới trang</label>
-            <input
-              type="number"
-              min={1}
-              value={V1f5}
-              onChange={(V1hi) => V1f6(V1hi.target.value)}
-            />
-            <button
-              className="pbtn"
-              onClick={() => {
-                const p = Number(V1f5);
-                if (p >= 1 && p <= V1fz) V1f4(p);
-              }}
-            >
-              Đi
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {}
-      {V1f9 === "import" && (
-        <Modal title="Nhập Tài Liệu vào Văn Bản" onClose={() => V1fa(null)}>
-          <p className="muted">
-            Chọn tệp Excel văn bản (có cột "Hồ sơ id") để nhập hàng loạt vào các hồ sơ.
-          </p>
-          <input ref={V1fn} type="file" className="form-control" accept=".xlsx,.xls,.csv" />
-          <div className="text-right mt-3">
-            <button
-              className="btn btn-outline-primary btn-round"
-              disabled={V1fl}
-              onClick={() => void V1g9(V1fn.current?.files?.[0])}
-            >
-              <Icon name="taiLen" /> Nhập
-            </button>{" "}
-            <button className="btn btn-outline-danger btn-round" onClick={() => V1fa(null)}>
-              Đóng
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {}
-      {V1f9 === "inpack" && (
-        <PackDialog dossiers={V1es.filter((r) => V1eu.has(r.id))} thbqs={V1ed} onClose={() => V1fa(null)} />
-      )}
-    </div>
-  );
-}
-
-function Modal({
-  title: V1hm,
-  onClose: V1hn,
-  children: V1ho,
-}: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="lhs-overlay" onClick={V1hn}>
-      <div className="lhs-modal" onClick={(V1hp) => V1hp.stopPropagation()}>
-        <div className="m-head">
-          <h4>{V1hm}</h4>
-          <button className="m-close" onClick={V1hn}>
-            ×
-          </button>
-        </div>
-        <div className="m-body">{V1ho}</div>
-      </div>
-    </div>
+      {dialog === "inpack" && <PackDialog dossiers={selected} thbqs={thbqs} onClose={() => setDialog(null)} />}
+    </>
   );
 }

@@ -94,7 +94,7 @@ export function V4pj(b: V4pa): V4pi {
 
 export function V4pk(b: V4pa): string {
   if (b.status === "abandoned") {
-    return `Phiên gửi bị bỏ dở — máy chủ đã tự đóng. Đã nhận ${b.received} tài liệu; bấm “② Gửi lên máy chủ” để tiếp tục phần còn lại.`;
+    return `Phiên gửi bị bỏ dở — máy chủ đã tự đóng. Đã nhận ${b.received} tài liệu; bấm Đẩy lên máy chủ để tiếp tục phần còn lại.`;
   }
   if (b.status !== "completed") {
     return "Đang gửi hoặc phiên bị gián đoạn — chưa chốt.";

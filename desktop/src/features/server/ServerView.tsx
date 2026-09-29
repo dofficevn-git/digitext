@@ -1,36 +1,22 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Kho máy chủ: cây tài liệu đã đẩy lên (theo dự án › hộp › hồ sơ), tải xuống theo loại bản, soát PDF/A lỗi,
+// ghép lại PDF/A; tab "Đợt đã đẩy" xem lịch sử các đợt nộp.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { V41p } from "@/live/useLive";
-import type { ReactNode } from "react";
-import { useNavigation } from "@/state";
-import { isTauri, V3xq } from "@/api/ipc";
-import { V3zt } from "@/state/sessionCore";
-import { V4el, V4fc, V4fb, V4ek, type V4f9, type V4ej, type DownloadKind } from "@/api/docs";
-import {
-  V4vz,
-  V4vq,
-  V4vt,
-  V4vj,
-  V4vi,
-  V4w1,
-  V4vv,
-  V4w2,
-  V4vw,
-  V4vy,
-  type V4vu,
-  type V4vl,
-  type V4vx,
-  isPdfaOnlyDoc,
-  isSignedDoc,
-} from "./serverTree";
+import { useNavigation, V460 } from "@/state";
+import { isTauri } from "@/api/ipc";
+import { V4ek, V4el, V4fb, V4fc, type DownloadKind, type V4ej, type V4f9 } from "@/api/docs";
+import { isPdfaOnlyDoc, isSignedDoc, V4vi, V4vj, V4vq, V4vt, V4vv, V4vw, V4vx, V4vy, V4vz, V4w1, V4w2, type V4vl, type V4vu } from "./serverTree";
 import { V4w5, V4w9 } from "./pdfa";
 import { V4k1 } from "./progress";
 import "./server.css";
 import { Icon } from "@/components/Icon";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import V4pp from "@/features/upload/BatchesPanel";
+import { V462 as cn } from "@/lib/utils";
+import { Badge, Banner, Button, Card, EmptyState, IconButton, Menu, notifyError, PageHeader, Select, Skeleton, Tabs, Tip, toast } from "@/ui";
 
-// Thư mục lưu lần trước — chỉ là tiện ích nhớ, hỏng cũng không sao.
 const DL_DIR_KEY = "server.download.dir";
 function nhoThuMuc(): string | undefined {
   try {
@@ -46,17 +32,13 @@ function luuThuMuc(d: string): void {
     /* bỏ qua */
   }
 }
+const mb = (b: number) => (b / 1_048_576).toFixed(1);
+const n = (v: number) => v.toLocaleString("vi-VN");
+const INDENT = 18;
+const HIT_MS = 6000;
+const TEN_LOAI: Record<DownloadKind, string> = { original: "bản gốc", pdfa: "PDF/A chưa ký số", signed: "đã ký số" };
 
-const V4wa = (V33e: unknown) =>
-  V3zt(
-    V33e instanceof V3xq ? V33e.code : "error",
-    V33e instanceof Error ? V33e.message : String(V33e),
-  );
-
-const V4wb = (b: number) => (b / 1_048_576).toFixed(1);
-const V4wc = (n: number) => n.toLocaleString("vi-VN");
-
-function V4wd(status: string): string {
+function statusTone(status: string): "ok" | "err" | "info" | "gray" | "warn" {
   if (status === "signed" || status === "archived") return "ok";
   if (status === "sign_rejected") return "err";
   if (status === "to_sign" || status === "signing" || status === "ocr_done") return "info";
@@ -64,538 +46,394 @@ function V4wd(status: string): string {
   return "warn";
 }
 
-const V4we = 18;
-
-const V4wf = 6000;
-
-function V4wg({
-  state,
-  onToggle: V33f,
-  title: V33g,
-}: {
-  state: V4vx;
-  onToggle: () => void;
-  title: string;
-}) {
+function Tick({ state, onToggle, title }: { state: V4vx; onToggle: () => void; title: string }) {
   return (
     <input
       type="checkbox"
       className="srv-tick"
-      aria-label={V33g}
-      title={V33g}
+      aria-label={title}
       checked={state === "all"}
-      ref={(V33h) => {
-        if (V33h) V33h.indeterminate = state === "some";
+      ref={(el) => {
+        if (el) el.indeterminate = state === "some";
       }}
-      onChange={V33f}
-      onClick={(V33i) => V33i.stopPropagation()}
+      onChange={onToggle}
+      onClick={(e) => e.stopPropagation()}
     />
   );
 }
 
+type Tab = "cay" | "dot";
+
 export default function V4wh() {
-  const { serverReveal: V33j, clearServerReveal: V33k } = useNavigation();
-  const [V33l, V33m] = useState<{ relPath: string; filename: string } | null>(null);
-  const [V33n, V33o] = useState<{ folderPath: string; filename: string } | null>(null);
-  const V33p = useRef<HTMLTableRowElement | null>(null);
-  const [tree, V33q] = useState<V4vl | null>(null);
-  const [open, V33r] = useState<Set<string>>(new Set());
-  const [V33s, V33t] = useState<Set<string>>(new Set());
-  const [V33u, V33v] = useState(false);
-  const [V33w, V33x] = useState<V4f9[] | null>(null);
-  const [V33y, V33z] = useState(false);
-  const [V340, V341] = useState<{ done: number; total: number } | null>(null);
-  const V342 = useRef(false);
-  const [V343, V344] = useState("");
-  // Loại bản tải: bản gốc đã tải lên / PDF/A chưa ký số / bản ĐÃ KÝ SỐ. Mỗi loại chỉ tải
-  // đúng tệp thuộc loại đó (phân loại theo trạng thái tài liệu trên máy chủ).
+  const { serverReveal, clearServerReveal } = useNavigation();
+  const { session } = V460();
+  const [tab, setTab] = useState<Tab>("cay");
+  const [reveal, setReveal] = useState<{ relPath: string; filename: string } | null>(null);
+  const [hit, setHit] = useState<{ folderPath: string; filename: string } | null>(null);
+  const hitRef = useRef<HTMLTableRowElement | null>(null);
+  const [tree, setTree] = useState<V4vl | null>(null);
+  const [openSet, setOpenSet] = useState<Set<string>>(new Set());
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [pdfa, setPdfa] = useState<V4f9[] | null>(null);
+  const [pdfaBusy, setPdfaBusy] = useState(false);
+  const [ghepLai, setGhepLai] = useState(false);
+  const [dl, setDl] = useState<{ done: number; total: number } | null>(null);
+  const stopRef = useRef(false);
   const [loaiTai, setLoaiTai] = useState<DownloadKind>("original");
-  const taiPdfa = loaiTai === "pdfa";
-  const TEN_LOAI: Record<DownloadKind, string> = {
-    original: "bản gốc",
-    pdfa: "PDF/A chưa ký số",
-    signed: "đã ký số",
-  };
+  const firstOpen = useRef(false);
 
-  const V345 = useRef(false);
-
-  const V346 = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!isTauri()) return;
-    V33v(true);
+    setLoading(true);
     try {
-      const V347 = V4vq(await V4ek());
-      V33q(V347);
-      if (!V345.current) {
-        V345.current = true;
-        V33r(V4vt(V347));
+      const t = V4vq(await V4ek());
+      setTree(t);
+      if (!firstOpen.current) {
+        firstOpen.current = true;
+        setOpenSet(V4vt(t));
       }
-    } catch (V348) {
-      V344(V4wa(V348));
+    } catch (e) {
+      notifyError(e, "tải kho máy chủ");
     } finally {
-      V33v(false);
+      setLoading(false);
     }
   }, []);
+  V41p(load, { topics: ["docs", "ocr", "sign", "uploadBatches"] });
 
-  V41p(V346, { topics: ["docs", "ocr", "sign", "uploadBatches"] });
-
-  const V349 = useMemo<V4vu[]>(() => (tree ? V4vv(tree) : []), [tree]);
-  const V34a = useMemo<Map<string, string[]>>(() => (tree ? V4vw(tree) : new Map()), [tree]);
-  const V34b = useMemo<V4ej[]>(() => V349.map((f) => f.doc), [V349]);
-
-  const V34c = useMemo(() => (V33w ? V4w9(V33w, V34b) : []), [V33w, V34b]);
-  const V34d = useMemo(() => new Set(V34c.map((p) => p.id)), [V34c]);
+  const allFiles = useMemo<V4vu[]>(() => (tree ? V4vv(tree) : []), [tree]);
+  const idsByFolder = useMemo<Map<string, string[]>>(() => (tree ? V4vw(tree) : new Map()), [tree]);
+  const allDocs = useMemo<V4ej[]>(() => allFiles.map((f) => f.doc), [allFiles]);
+  const pdfaBad = useMemo(() => (pdfa ? V4w9(pdfa, allDocs) : []), [pdfa, allDocs]);
+  const pdfaBadIds = useMemo(() => new Set(pdfaBad.map((p) => p.id)), [pdfaBad]);
 
   useEffect(() => {
-    if (!V33j) return;
-    V33m(V33j);
-    V33k();
-  }, [V33j, V33k]);
-
+    if (!serverReveal) return;
+    setReveal(serverReveal);
+    clearServerReveal();
+    setTab("cay");
+  }, [serverReveal, clearServerReveal]);
   useEffect(() => {
-    if (!V33l || !tree) return;
-    const V34e = V4w1(tree, V33l);
-    if (V34e === null) {
-      V344(
-        `Chưa thấy “${V33l.filename}” trong kho máy chủ (có thể chưa đồng bộ xong).`,
-      );
-    } else {
-      V33r((V34f) => new Set([...V34f, ...V4vz(V34e)]));
-
-      V345.current = true;
-      V33o({ folderPath: V34e, filename: V33l.filename });
+    if (!reveal || !tree) return;
+    const folder = V4w1(tree, reveal);
+    if (folder === null) toast.warning(`Chưa thấy "${reveal.filename}" trong kho máy chủ. Có thể chưa đồng bộ xong.`);
+    else {
+      setOpenSet((s) => new Set([...s, ...V4vz(folder)]));
+      firstOpen.current = true;
+      setHit({ folderPath: folder, filename: reveal.filename });
     }
-    V33m(null);
-  }, [V33l, tree]);
-
+    setReveal(null);
+  }, [reveal, tree]);
   useEffect(() => {
-    if (!V33n) return;
-    V33p.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-    const t = setTimeout(() => V33o(null), V4wf);
+    if (!hit) return;
+    hitRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const t = setTimeout(() => setHit(null), HIT_MS);
     return () => clearTimeout(t);
-  }, [V33n, tree]);
+  }, [hit, tree]);
 
-  const V34g = (path: string) =>
-    V33r((V34h) => {
-      const V34i = new Set(V34h);
-      if (V34i.has(path)) V34i.delete(path);
-      else V34i.add(path);
-      return V34i;
+  const toggleOpen = (path: string) =>
+    setOpenSet((s) => {
+      const m = new Set(s);
+      if (m.has(path)) m.delete(path);
+      else m.add(path);
+      return m;
     });
-
-  const V34j = (V34k: readonly string[]) =>
-    V33t((V34l) => {
-      const V34m = new Set(V34l);
-      if (V4vy(V34k, V34l) === "all") for (const V34n of V34k) V34m.delete(V34n);
-      else for (const V34o of V34k) V34m.add(V34o);
-      return V34m;
+  const toggleSel = (ids: readonly string[]) =>
+    setSel((s) => {
+      const m = new Set(s);
+      if (V4vy(ids, s) === "all") for (const id of ids) m.delete(id);
+      else for (const id of ids) m.add(id);
+      return m;
     });
+  const selected = useMemo(() => allFiles.filter((f) => sel.has(f.doc.id)), [allFiles, sel]);
+  const selectedPages = selected.reduce((s, f) => s + (f.doc.pageCount ?? 0), 0);
 
-  const V34p = useMemo(() => V349.filter((f) => V33s.has(f.doc.id)), [V349, V33s]);
-  const V34q = V34p.reduce((n, f) => n + (f.doc.pageCount ?? 0), 0);
-
-  const V34r = async (V34s: V4vu[], V34t: string) => {
-    if (V34s.length === 0) return;
-    // Người dùng CHỌN thư mục lưu mỗi lần tải — không mặc định về Documents\DigiText nữa.
+  const taiXuong = async (files: V4vu[], label: string) => {
+    if (files.length === 0) return;
     let destDir: string;
     try {
-      const r = await openDialog({
-        directory: true,
-        multiple: false,
-        defaultPath: nhoThuMuc(),
-        title: `Chọn thư mục lưu tệp ${TEN_LOAI[loaiTai]} (giữ nguyên cây thư mục)`,
-      });
+      const r = await openDialog({ directory: true, multiple: false, defaultPath: nhoThuMuc(), title: `Chọn thư mục lưu tệp ${TEN_LOAI[loaiTai]} (giữ nguyên cây thư mục)` });
       if (typeof r !== "string" || !r) return;
       destDir = r;
     } catch (e) {
-      V344(`Không mở được hộp chọn thư mục: ${V4wa(e)}`);
+      notifyError(e, "mở hộp chọn thư mục");
       return;
     }
     luuThuMuc(destDir);
-    V342.current = false;
-    V341({ done: 0, total: V34s.length });
-    V344("");
-    let V34u = 0;
+    stopRef.current = false;
+    setDl({ done: 0, total: files.length });
+    let ok = 0;
     let last = "";
-    let V34v = "";
+    let firstErr: unknown = null;
     let chuaPdfa = 0;
     let khacLoai = 0;
-    for (const [i, V34w] of V34s.entries()) {
-      if (V342.current) break;
-      V341({ done: i, total: V34s.length });
-      if (loaiTai === "pdfa" && !isPdfaOnlyDoc(V34w.doc)) {
-        if (isSignedDoc(V34w.doc)) khacLoai++;
+    for (const [i, f] of files.entries()) {
+      if (stopRef.current) break;
+      setDl({ done: i, total: files.length });
+      if (loaiTai === "pdfa" && !isPdfaOnlyDoc(f.doc)) {
+        if (isSignedDoc(f.doc)) khacLoai++;
         else chuaPdfa++;
         continue;
       }
-      if (loaiTai === "signed" && !isSignedDoc(V34w.doc)) {
+      if (loaiTai === "signed" && !isSignedDoc(f.doc)) {
         khacLoai++;
         continue;
       }
       try {
-        last = await V4el(V34w.doc.id, V34w.doc.filename, V34w.folderPath, taiPdfa, destDir, loaiTai);
-        V34u++;
-      } catch (V34x) {
-        if (V34v === "") V34v = V4wa(V34x);
+        last = await V4el(f.doc.id, f.doc.filename, f.folderPath, loaiTai === "pdfa", destDir, loaiTai);
+        ok++;
+      } catch (e) {
+        if (firstErr === null) firstErr = e;
       }
     }
-    V341(null);
-    const fail = V34s.length - V34u - chuaPdfa - khacLoai;
-    const dung = V342.current ? " (đã dừng giữa chừng)" : "";
-    V344(
-      `Đã tải ${V4wc(V34u)} tệp ${TEN_LOAI[loaiTai]} ${V34t}${dung}.` +
-        (khacLoai > 0
-          ? loaiTai === "signed"
-            ? ` — bỏ qua ${V4wc(khacLoai)} tệp chưa ký số`
-            : ` — bỏ qua ${V4wc(khacLoai)} tệp đã ký số (tải ở loại “Đã ký số”)`
-          : "") +
-        (V34u > 0 ? ` Lưu tại: ${last}` : "") +
-        (chuaPdfa > 0 ? ` — ${V4wc(chuaPdfa)} tệp chưa có bản PDF/A (chạy “PDF 2 lớp” trước)` : "") +
-        (fail > 0 ? ` — ${V4wc(fail)} tệp lỗi: ${V34v}` : ""),
-    );
+    setDl(null);
+    const fail = files.length - ok - chuaPdfa - khacLoai;
+    const parts = [
+      khacLoai > 0 ? (loaiTai === "signed" ? `bỏ qua ${n(khacLoai)} tệp chưa ký số` : `bỏ qua ${n(khacLoai)} tệp đã ký số (tải ở loại Đã ký số)`) : "",
+      chuaPdfa > 0 ? `${n(chuaPdfa)} tệp chưa có bản PDF/A (chạy PDF 2 lớp trước)` : "",
+      fail > 0 ? `${n(fail)} tệp lỗi` : "",
+      ok > 0 ? `Lưu tại ${last}` : "",
+    ].filter(Boolean);
+    const msg = `Đã tải ${n(ok)} tệp ${TEN_LOAI[loaiTai]} ${label}${stopRef.current ? " (đã dừng giữa chừng)" : ""}.`;
+    if (fail > 0) notifyError(firstErr, "tải một số tệp");
+    (fail > 0 || chuaPdfa > 0 ? toast.warning : toast.success)(msg, { description: parts.join(" · ") || undefined });
   };
 
-  const V34y = async () => {
-    V33z(true);
-    V344("");
+  const soatPdfa = async () => {
+    setPdfaBusy(true);
     try {
-      const V34z = await V4fc();
-      V33x(V34z);
-      const n = V4w9(V34z, V34b).length;
-      if (n === 0)
-        V344(
-          `Đã soát ${V4wc(V34z.length)} tài liệu — không tệp nào lỗi PDF/A.`,
-        );
-    } catch (V350) {
-      V344(V4wa(V350));
+      const r = await V4fc();
+      setPdfa(r);
+      if (V4w9(r, allDocs).length === 0) toast.success(`Đã soát ${n(r.length)} tài liệu, không tệp nào lỗi PDF/A.`);
+    } catch (e) {
+      notifyError(e, "soát PDF/A");
     } finally {
-      V33z(false);
+      setPdfaBusy(false);
     }
   };
-
-  // "Ghép lại PDF/A" (chuyển từ màn OCR sang đây — đề nghị chỉnh sửa mục 6): xếp hàng ghép lại các
-  // tài liệu có PDF 2 lớp do bản cũ sinh (chưa đạt PDF/A-2b).
-  const [ghepLai, setGhepLai] = useState(false);
   const ghepLaiPdfa = async () => {
     setGhepLai(true);
-    V344("");
     try {
       const r = await V4fb();
-      V344(
-        `Đã kiểm ${V4wc(r.checked)} tài liệu, xếp hàng ghép lại ${V4wc(r.enqueued)}.` +
-          (r.skippedSigned > 0
-            ? ` ${V4wc(r.skippedSigned)} tài liệu ĐÃ KÝ chưa đạt PDF/A — phải ký lại theo quy trình.`
-            : ""),
-      );
-      if (V33w) V33x(await V4fc());
+      toast.success(`Đã kiểm ${n(r.checked)} tài liệu, xếp hàng ghép lại ${n(r.enqueued)}.`, { description: r.skippedSigned > 0 ? `${n(r.skippedSigned)} tài liệu đã ký chưa đạt PDF/A, phải ký lại theo quy trình.` : undefined });
+      if (pdfa) setPdfa(await V4fc());
     } catch (e) {
-      V344(V4wa(e));
+      notifyError(e, "ghép lại PDF/A");
     } finally {
       setGhepLai(false);
     }
   };
-
-  const V351 = (V352: string, V353: string) => {
-    V33r((V354) => new Set([...V354, ...V4vz(V352)]));
-    V345.current = true;
-    V33o({ folderPath: V352, filename: V353 });
+  const diToi = (folderPath: string, filename: string) => {
+    setOpenSet((s) => new Set([...s, ...V4vz(folderPath)]));
+    firstOpen.current = true;
+    setHit({ folderPath, filename });
   };
 
-  const V355: ReactNode[] = [];
+  const rows: ReactNode[] = [];
   if (tree) {
-    const V356 = (d: V4ej, V357: number, V358: string) => {
-      const V359 = V4w2(V358, d.filename, V33n);
-      const V35a = V34d.has(d.id);
-      V355.push(
-        <tr key={d.id} className={V359 ? "srv-hit" : undefined} ref={V359 ? V33p : undefined}>
+    const docRow = (d: V4ej, depth: number, folderPath: string) => {
+      const isHit = V4w2(folderPath, d.filename, hit);
+      rows.push(
+        <tr key={d.id} className={isHit ? "srv-hit" : undefined} ref={isHit ? hitRef : undefined}>
           <td className="srv-tickcell">
-            <V4wg
-              state={V33s.has(d.id) ? "all" : "none"}
-              onToggle={() => V34j([d.id])}
-              title={`Chọn ${d.filename}`}
-            />
+            <Tick state={sel.has(d.id) ? "all" : "none"} onToggle={() => toggleSel([d.id])} title={`Chọn ${d.filename}`} />
           </td>
           <td>
-            <span className="srv-name" style={{ paddingLeft: V357 * V4we + V4we }}>
+            <span className="srv-name" style={{ paddingLeft: depth * INDENT + INDENT }}>
               <Icon name="taiLieu" /> {d.filename}
-              <span className={`badge ${V4wd(d.status)}`}>{V4k1(d.status)}</span>
-              {isSignedDoc(d) ? (
-                <span className="badge ok" title="Đã ký số PAdES — tải ở loại “Đã ký số”">Đã ký số</span>
-              ) : isPdfaOnlyDoc(d) ? (
-                <span className="badge" title="Có PDF/A (lớp chữ), chưa ký số">PDF/A</span>
-              ) : null}
-              {V35a && (
-                <span
-                  className="badge err"
-                  title="Xem bảng “Tệp PDF/A lỗi” phía trên"
-                >
-                  PDF/A lỗi
-                </span>
-              )}
-              <span className="srv-size">{V4wb(d.sizeBytes)} MB</span>
+              <Badge tone={statusTone(d.status)}>{V4k1(d.status)}</Badge>
+              {isSignedDoc(d) ? <Badge tone="ok">Đã ký số</Badge> : isPdfaOnlyDoc(d) ? <Badge tone="gray">PDF/A</Badge> : null}
+              {pdfaBadIds.has(d.id) && <Badge tone="err">PDF/A lỗi</Badge>}
+              <span className="srv-size">{mb(d.sizeBytes)} MB</span>
             </span>
           </td>
-          <td className="num srv-count">—</td>
-          <td className="num srv-count">—</td>
-          <td className="num srv-count">—</td>
+          <td className="num srv-count" />
+          <td className="num srv-count" />
+          <td className="num srv-count" />
           <td className="num">{d.pageCount ?? "—"}</td>
-          <td className="num srv-count">{isSignedDoc(d) ? "Đã ký" : isPdfaOnlyDoc(d) ? "PDF/A" : "—"}</td>
+          <td className="srv-count">{isSignedDoc(d) ? "Đã ký" : isPdfaOnlyDoc(d) ? "PDF/A" : ""}</td>
           <td>
-            <button
-              className="btn"
-              disabled={V340 !== null}
-              onClick={() => void V34r([{ doc: d, folderPath: V358 }], `“${d.filename}”`)}
-              title={`Tải ${TEN_LOAI[loaiTai]}`}
-            >
-              <Icon name="taiVe" />
-              {loaiTai === "signed" ? "Tải bản ký" : taiPdfa ? "Tải PDF/A" : "Tải"}
-            </button>
+            <IconButton label={`Tải ${TEN_LOAI[loaiTai]}`} icon="taiVe" size="sm" disabled={dl !== null} onClick={() => void taiXuong([{ doc: d, folderPath }], `"${d.filename}"`)} />
           </td>
         </tr>,
       );
     };
-    const V35b = (f: V4vl, V35c: number) => {
-      for (const V35d of f.folders) {
-        const V35e = open.has(V35d.path);
-        const V35f = V34a.get(V35d.path) ?? [];
-        V355.push(
-          <tr key={`f:${V35d.path}`} className="srv-folder">
+    const walk = (f: V4vl, depth: number) => {
+      for (const sub of f.folders) {
+        const isOpen = openSet.has(sub.path);
+        const ids = idsByFolder.get(sub.path) ?? [];
+        rows.push(
+          <tr key={`f:${sub.path}`} className="srv-folder">
             <td className="srv-tickcell">
-              <V4wg
-                state={V4vy(V35f, V33s)}
-                onToggle={() => V34j(V35f)}
-                title={`Chọn cả ${V35d.name} (${V4wc(V35f.length)} tệp)`}
-              />
-            </td>
-            <td onClick={() => V34g(V35d.path)}>
-              <span className="srv-name" style={{ paddingLeft: V35c * V4we }}>
-                <span className="srv-caret" aria-hidden>
-                  <Icon name={V35e ? "xuong" : "moNhanh"} size={13} />
-                </span>
-                <Icon name={V35d.depth === 0 ? "hoSo" : "thuMuc"} size={15} /> {V35d.name}
-              </span>
-            </td>
-            <td className="num srv-count">{V35d.boxCount ?? "—"}</td>
-            <td className="num srv-count">{V35d.dossierCount ?? "—"}</td>
-            <td className="num srv-count">{V4wc(V35d.docCount)}</td>
-            <td className="num srv-count">{V4wc(V35d.pageCount)}</td>
-            <td className="num srv-count" title="Đã ký số · mới có PDF/A (chưa ký)">
-              {V4wc(V35d.signedCount)} · {V4wc(V35d.pdfaOnlyCount)}
+              <Tick state={V4vy(ids, sel)} onToggle={() => toggleSel(ids)} title={`Chọn cả ${sub.name} (${n(ids.length)} tệp)`} />
             </td>
             <td>
-              <button
-                className="btn"
-                disabled={V340 !== null || V35d.docCount === 0}
-                title={`Tải cả ${V4wc(V35d.docCount)} tệp trong “${V35d.name}”, giữ nguyên cây thư mục`}
-                onClick={() => void V34r(V4vv(V35d), `trong “${V35d.name}”`)}
-              >
-                <Icon name="taiVe" />
-                Tải cả nhánh
+              <button type="button" className="srv-name w-full text-left" style={{ paddingLeft: depth * INDENT }} onClick={() => toggleOpen(sub.path)} aria-expanded={isOpen}>
+                <span className="srv-caret" aria-hidden>
+                  <Icon name={isOpen ? "xuong" : "moNhanh"} size={13} />
+                </span>
+                <Icon name={sub.depth === 0 ? "hoSo" : "thuMuc"} size={15} /> {sub.name}
               </button>
+            </td>
+            <td className="num srv-count">{sub.boxCount ?? "—"}</td>
+            <td className="num srv-count">{sub.dossierCount ?? "—"}</td>
+            <td className="num srv-count">{n(sub.docCount)}</td>
+            <td className="num srv-count">{n(sub.pageCount)}</td>
+            <td className="srv-count whitespace-nowrap">
+              {sub.signedCount > 0 && <Badge tone="ok">{n(sub.signedCount)} đã ký</Badge>} {sub.pdfaOnlyCount > 0 && <Badge tone="gray">{n(sub.pdfaOnlyCount)} PDF/A</Badge>}
+            </td>
+            <td>
+              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dl !== null || sub.docCount === 0} onClick={() => void taiXuong(V4vv(sub), `trong "${sub.name}"`)} />
             </td>
           </tr>,
         );
-        if (V35e) V35b(V35d, V35c + 1);
+        if (isOpen) walk(sub, depth + 1);
       }
-      for (const d of f.docs) V356(d, V35c, f.path);
+      for (const d of f.docs) docRow(d, depth, f.path);
     };
-    V35b(tree, 0);
+    walk(tree, 0);
   }
-
-  const V35g = V34a.get("") ?? [];
+  const rootIds = idsByFolder.get("") ?? [];
 
   return (
     <section className="view active">
-      <div className="page-head">
-        <h2>Máy chủ</h2>
-        <div className="sub">
-          Kho dữ liệu đã đẩy lên máy chủ — xem theo dự án, tải xuống, soát tệp PDF/A lỗi. Chạy OCR /
-          PDF 2 lớp / Bóc tách 16 trường ở mục “Số hoá › OCR”.
-        </div>
-      </div>
-
-      {V343 && (
-        <div className="card srv-msg mb-3">
-          <span>{V343}</span>
-          <button className="btn sm" onClick={() => V344("")}>
-            <Icon name="dong" size={14} label="Đóng thông báo" />
-          </button>
-        </div>
-      )}
-
-      {V33w && V34c.length > 0 && (
-        <div className="card p-0 overflow-hidden mb-4">
-          <div className="srv-bar">
-            <h3 className="m-0">Tệp PDF/A lỗi ({V4wc(V34c.length)})</h3>
-            <span className="muted text-sm">
-              đã soát {V4wc(V33w.length)} tài liệu (máy chủ chỉ soát tối đa 1.000 tài liệu mỗi lượt)
-              — sửa bằng “Ghép lại PDF/A” ở mục Số hoá › OCR
-            </span>
-            <div className="flex-1" />
-            <button className="btn" onClick={() => V33x(null)}>
-              <Icon name="dong" />
-              Đóng
-            </button>
-          </div>
-          <div className="tbl-scroll max-h-65">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Lỗi</th>
-                  <th>Đường dẫn</th>
-                  <th>Lý do</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {V34c.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <span className={`badge ${p.kind === "not-pdfa" ? "warn" : "err"}`}>
-                        {V4w5(p.kind)}
-                      </span>
-                    </td>
-                    <td className="srv-path" title={p.path}>
-                      {p.path}
-                    </td>
-                    <td className="muted text-sm">{p.reason}</td>
-                    <td>
-                      <button
-                        className="btn sm"
-                        disabled={p.folderPath === ""}
-                        onClick={() => V351(p.folderPath, p.filename)}
-                        title="Mở đúng nhánh chứa tệp trong cây bên dưới"
-                      >
-                        Đi tới
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      <div className="card p-0 overflow-hidden">
-        <div className="srv-bar">
-          <h3 className="m-0">Kho dữ liệu máy chủ</h3>
-          <span className="muted text-sm">
-            {V4wc(tree?.docCount ?? 0)} tệp · {V4wc(tree?.pageCount ?? 0)} trang ·{" "}
-            {V4wb(tree?.sizeBytes ?? 0)} MB
-            {}
-            {V34p.length > 0
-              ? ` — đã chọn ${V4wc(V34p.length)} tệp (${V4wc(V34q)} trang)`
-              : ""}
-          </span>
-          <div className="flex-1" />
-          {V340 ? (
+      <PageHeader
+        title="Kho máy chủ"
+        description="Tài liệu đã đẩy lên máy chủ theo dự án, hộp, hồ sơ. Tải về, soát PDF/A. Chạy OCR và bóc trường ở mục Xử lý."
+        actions={
+          tab === "cay" &&
+          (dl ? (
             <>
-              <span className="muted text-sm">
-                Đang tải {V4wc(V340.done + 1)}/{V4wc(V340.total)}…
+              <span className="text-sm text-fg-subtle">
+                Đang tải {n(dl.done + 1)}/{n(dl.total)}…
               </span>
-              <button className="btn" onClick={() => (V342.current = true)}>
-                <Icon name="dungHan" />
+              <Button icon="dungHan" onClick={() => (stopRef.current = true)}>
                 Dừng
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button
-                className="btn primary"
-                disabled={V34p.length === 0}
-                onClick={() => void V34r(V34p, "đã chọn")}
-                title="Tải mọi tệp đã tích về thư mục anh chọn, giữ nguyên cây thư mục"
-              >
-                <Icon name="taiVe" />
-                Tải xuống ({V4wc(V34p.length)})
-              </button>
-              <label
-                className="flex items-center gap-1 text-sm"
-                title="Chọn loại bản tải. Mỗi loại chỉ tải đúng tệp thuộc loại đó. Thư mục lưu được chọn khi bấm tải."
-              >
-                Loại bản tải
-                <select value={loaiTai} onChange={(e) => setLoaiTai(e.target.value as DownloadKind)}>
-                  <option value="original">Bản gốc</option>
-                  <option value="pdfa">PDF/A chưa ký số</option>
-                  <option value="signed">Đã ký số</option>
-                </select>
-              </label>
-              <button
-                className="btn"
-                onClick={() => void V34y()}
-                disabled={V33y}
-                title="Soát PDF 2 lớp trên máy chủ, liệt kê tệp lỗi kèm đường dẫn"
-              >
-                {V33y ? (
-                  "Đang soát…"
-                ) : (
-                  <>
-                    <Icon name="kiemTraPdfa" />
-                    Soát PDF/A lỗi
-                  </>
-                )}
-              </button>
-              <button
-                className="btn"
-                onClick={() => void ghepLaiPdfa()}
-                disabled={ghepLai}
-                title="Ghép lại các tài liệu có PDF 2 lớp sinh bởi bản cũ (chưa đạt PDF/A theo Điều 8.2.a)"
-              >
-                {ghepLai ? (
-                  "Đang xếp hàng…"
-                ) : (
-                  <>
-                    <Icon name="ghepLai" />
-                    Ghép lại PDF/A
-                  </>
-                )}
-              </button>
-              <button className="btn" onClick={() => void V346()} disabled={V33u}>
-                <Icon name="lamMoi" />
-                Làm mới
-              </button>
+              <Select size="md" value={loaiTai} onChange={(v) => setLoaiTai(v as DownloadKind)} options={[{ value: "original", label: "Bản gốc" }, { value: "pdfa", label: "PDF/A chưa ký số" }, { value: "signed", label: "Đã ký số" }]} className="w-44" aria-label="Loại bản tải" />
+              <Button variant="primary" icon="taiVe" disabled={selected.length === 0} onClick={() => void taiXuong(selected, "đã chọn")}>
+                Tải xuống ({n(selected.length)})
+              </Button>
+              <Menu
+                items={[
+                  { label: "Soát PDF/A lỗi", icon: "kiemTraPdfa", onSelect: () => void soatPdfa(), disabled: pdfaBusy },
+                  { label: "Ghép lại PDF/A (bản cũ chưa đạt 2b)", icon: "ghepLai", onSelect: () => void ghepLaiPdfa(), disabled: ghepLai },
+                  "-",
+                  { label: "Làm mới", icon: "lamMoi", onSelect: () => void load(), disabled: loading },
+                ]}
+              />
             </>
+          ))
+        }
+      />
+
+      <Tabs<Tab> value={tab} onChange={setTab} items={[{ value: "cay", label: "Cây tài liệu", icon: "hoSo", count: tree?.docCount }, { value: "dot", label: "Đợt đã đẩy", icon: "taiLen" }]} />
+
+      {tab === "cay" && (
+        <div className="mt-3 space-y-4">
+          {pdfa && pdfaBad.length > 0 && (
+            <Card tone="danger" padding="none" title={`${n(pdfaBad.length)} tệp PDF/A lỗi`} description={`Đã soát ${n(pdfa.length)} tài liệu (mỗi lượt tối đa 1.000). Sửa bằng Ghép lại PDF/A trong menu.`} actions={<IconButton label="Đóng" icon="dong" size="sm" onClick={() => setPdfa(null)} />}>
+              <div className="tbl-scroll max-h-64">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Lỗi</th>
+                      <th>Đường dẫn</th>
+                      <th>Lý do</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pdfaBad.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          <Badge tone={p.kind === "not-pdfa" ? "warn" : "err"}>{V4w5(p.kind)}</Badge>
+                        </td>
+                        <td className="srv-path">
+                          <Tip text={p.path}>
+                            <span>{p.path}</span>
+                          </Tip>
+                        </td>
+                        <td className="text-sm text-fg-subtle">{p.reason}</td>
+                        <td>
+                          <Button size="sm" disabled={p.folderPath === ""} onClick={() => diToi(p.folderPath, p.filename)}>
+                            Đi tới
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
+          {pdfa && pdfaBad.length === 0 && (
+            <Banner tone="success" onClose={() => setPdfa(null)}>
+              Đã soát {n(pdfa.length)} tài liệu, không tệp nào lỗi PDF/A.
+            </Banner>
+          )}
+
+          <Card padding="none">
+            <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-4 py-2.5 text-sm text-fg-subtle">
+              <span>
+                {n(tree?.docCount ?? 0)} tệp · {n(tree?.pageCount ?? 0)} trang · {mb(tree?.sizeBytes ?? 0)} MB
+              </span>
+              {selected.length > 0 && (
+                <span className="text-fg">
+                  Đã chọn {n(selected.length)} tệp ({n(selectedPages)} trang)
+                </span>
+              )}
+              {loading && tree && <span className="ml-auto text-xs">Đang cập nhật…</span>}
+            </div>
+            {!tree ? (
+              loading ? (
+                <Skeleton.Rows rows={6} cols={4} />
+              ) : (
+                <EmptyState compact title="Chưa nạp được kho máy chủ" action={<Button onClick={() => void load()}>Thử lại</Button>} />
+              )
+            ) : tree.docCount === 0 ? (
+              <EmptyState compact icon="mayChu" title="Chưa có tài liệu trên máy chủ" description="Máy quản trị gom rồi đẩy lên ở màn Đưa lên máy chủ." />
+            ) : (
+              <div className="tbl-scroll">
+                <table className={cn("tbl srv-tree")}>
+                  <thead>
+                    <tr>
+                      <th className="srv-tickcell">
+                        <Tick state={V4vy(rootIds, sel)} onToggle={() => toggleSel(rootIds)} title="Chọn tất cả" />
+                      </th>
+                      <th>Dự án / hộp / hồ sơ</th>
+                      <th className="num">
+                        <Tip text={`Cấp ${V4vi + 1} của cây`}>
+                          <span>Hộp</span>
+                        </Tip>
+                      </th>
+                      <th className="num">
+                        <Tip text={`Cấp ${V4vj + 1} của cây`}>
+                          <span>Hồ sơ</span>
+                        </Tip>
+                      </th>
+                      <th className="num">Tệp</th>
+                      <th className="num">Trang</th>
+                      <th>Ký số / PDF/A</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>{rows}</tbody>
+                </table>
+              </div>
+            )}
+          </Card>
         </div>
-        {!tree || tree.docCount === 0 ? (
-          <p className="muted p-4">
-            {V33u
-              ? "Đang tải kho máy chủ…"
-              : "Chưa có tài liệu nào trên máy chủ. Dữ liệu lên máy chủ qua màn “Đồng bộ dữ liệu” (máy quản trị thu thập rồi đẩy lên)."}
-          </p>
-        ) : (
-          <div className="tbl-scroll">
-            <table className="tbl srv-tree">
-              <thead>
-                <tr>
-                  <th className="srv-tickcell">
-                    <V4wg
-                      state={V4vy(V35g, V33s)}
-                      onToggle={() => V34j(V35g)}
-                      title="Chọn tất cả"
-                    />
-                  </th>
-                  <th>Dự án</th>
-                  <th className="num" title={`Số hộp (cấp ${V4vi + 1} của cây)`}>
-                    Số hộp
-                  </th>
-                  <th
-                    className="num"
-                    title={`Số hồ sơ (cấp ${V4vj + 1} của cây)`}
-                  >
-                    Số hồ sơ
-                  </th>
-                  <th className="num">Số file</th>
-                  <th className="num">Số trang</th>
-                  <th className="num" title="Đã ký số · mới có PDF/A (chưa ký)">Đã ký · PDF/A</th>
-                  <th>Tải xuống</th>
-                </tr>
-              </thead>
-              <tbody>{V355}</tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
+
+      {tab === "dot" && (
+        <div className="mt-3">
+          <V4pp isSuper={session?.role === "super_admin"} />
+        </div>
+      )}
     </section>
   );
 }

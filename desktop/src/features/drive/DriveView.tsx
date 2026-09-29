@@ -1,271 +1,218 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// Kho tài liệu trên máy: duyệt thư mục Cơ quan › Hộp › Hồ sơ, xem dạng thẻ / danh sách, tạo thư mục con,
+// quét vào hồ sơ, chọn nhiều để xoá hoặc kéo thả di chuyển.
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { V41p } from "@/live/useLive";
-import { confirm, message } from "@tauri-apps/plugin-dialog";
 import { V460 } from "@/state";
-import { V412, V419, V415 } from "@/api/archive";
-import type { V418 } from "@/api/archive";
+import { V412, V415, V419, type V418 } from "@/api/archive";
 import { V47u } from "@/features/drive/scanTarget";
 import V485 from "@/features/drive/CardGrid";
 import V48b from "@/features/drive/CardList";
 import V48d from "@/features/drive/DetailsPanel";
 import { Icon } from "@/components/Icon";
+import { V462 as cn } from "@/lib/utils";
+import { Button, confirm, EmptyState, IconButton, Input, Menu, notifyError, PageHeader, Select, Tip, toast, Toolbar } from "@/ui";
 
 export default function DriveView() {
-  const {
-    nodes: Vin,
-    path,
-    driveMode: Vio,
-    setDriveMode: Vip,
-    navigateCrumb: Viq,
-    openDialog: Vir,
-    goto,
-    setScanTarget: Vis,
-    reloadArchive: Vit,
-  } = V460();
-  const [query, Viu] = useState("");
-  const [Viv, Viw] = useState(false);
-  const [Vix, Viy] = useState<"name" | "size">("name");
-  const [Viz, Vj0] = useState<"asc" | "desc">("asc");
-  const [Vj1, Vj2] = useState<Set<string>>(new Set());
-  const Vj3 = useRef<HTMLDivElement>(null);
+  const { nodes, path, driveMode, setDriveMode, navigateCrumb, openDialog, goto, setScanTarget, reloadArchive } = V460();
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "size">("name");
+  const [dir, setDir] = useState<"asc" | "desc">("asc");
+  const [marked, setMarked] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!Viv) return;
-    const Vj4 = (Vj5: MouseEvent) => {
-      if (Vj3.current && !Vj3.current.contains(Vj5.target as Node)) Viw(false);
-    };
-    document.addEventListener("click", Vj4);
-    return () => document.removeEventListener("click", Vj4);
-  }, [Viv]);
+  V41p(reloadArchive, { topics: ["hoso", "collected", "scan", "catalog"] });
+  useEffect(() => setMarked(new Set()), [path]);
 
-  V41p(Vit, { topics: ["hoso", "collected", "scan", "catalog"] });
-
-  useEffect(() => Vj2(new Set()), [path]);
-
-  const Vj6 = Vin[path[path.length - 1]];
-  const Vj7 = Vj6.kids ?? [];
+  const cur = nodes[path[path.length - 1]];
+  const kids = cur.kids ?? [];
   const q = query.trim().toLowerCase();
-  const Vj8 = q ? Vj7.filter((Vj9) => Vin[Vj9].name.toLowerCase().includes(q)) : Vj7;
+  const filtered = q ? kids.filter((id) => nodes[id].name.toLowerCase().includes(q)) : kids;
 
-  const Vja = Vj6?.type === "folder" ? Vj6.path : undefined;
-  const [Vjb, Vjc] = useState<V418 | null>(null);
-  const Vjd = useCallback(() => {
-    Vjc(null);
-    if (Vja)
-      V419(Vja)
-        .then(Vjc)
+  const folderPath = cur?.type === "folder" ? cur.path : undefined;
+  const [hoSo, setHoSo] = useState<V418 | null>(null);
+  const loadHoSo = useCallback(() => {
+    setHoSo(null);
+    if (folderPath)
+      V419(folderPath)
+        .then(setHoSo)
         .catch(() => {});
-  }, [Vja]);
-  V41p(Vjd, { topics: ["hoso"] });
+  }, [folderPath]);
+  V41p(loadHoSo, { topics: ["hoso"] });
 
-  const Vje = async () => {
-    if (Vjb) {
-      Vis(V47u(Vjb));
-      goto("scan");
-      return;
-    }
-    await message(
-      "Thư mục này chưa gắn hồ sơ nên không lưu PDF vào đây được. Hãy mở đúng thư mục HỒ SƠ " +
-        "(mức thấp nhất: Cơ quan → Hộp → Hồ sơ) rồi bấm Quét.",
-      { title: "Chưa chọn thư mục hồ sơ", kind: "warning" },
-    );
+  const quet = () => {
+    if (!hoSo) return;
+    setScanTarget(V47u(hoSo));
+    goto("scan");
   };
 
-  const Vjf = useMemo(() => {
-    const Vjg = [...Vj8];
-    Vjg.sort((a, b) => {
-      const Vjh = Vin[a];
-      const Vji = Vin[b];
-      const Vjj = Vjh.type === "folder" ? 0 : 1;
-      const Vjk = Vji.type === "folder" ? 0 : 1;
-      if (Vjj !== Vjk) return Vjj - Vjk;
-      const Vjl =
-        Vix === "size" ? (Vjh.size ?? 0) - (Vji.size ?? 0) : Vjh.name.localeCompare(Vji.name, "vi");
-      return Viz === "asc" ? Vjl : -Vjl;
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const A = nodes[a];
+      const B = nodes[b];
+      const fa = A.type === "folder" ? 0 : 1;
+      const fb = B.type === "folder" ? 0 : 1;
+      if (fa !== fb) return fa - fb;
+      const c = sortBy === "size" ? (A.size ?? 0) - (B.size ?? 0) : A.name.localeCompare(B.name, "vi");
+      return dir === "asc" ? c : -c;
     });
-    return Vjg;
-  }, [Vj8, Vin, Vix, Viz]);
+    return arr;
+  }, [filtered, nodes, sortBy, dir]);
 
-  const Vjm = (Vjn: string) =>
-    Vj2((m) => {
-      const n = new Set(m);
-      n.has(Vjn) ? n.delete(Vjn) : n.add(Vjn);
-      return n;
+  const toggleMark = (id: string) =>
+    setMarked((m) => {
+      const s = new Set(m);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
     });
 
-  const Vjo = async () => {
-    try {
-      const Vjp = await confirm(
-        `Xóa ${Vj1.size} mục đã chọn? Không thể hoàn tác.`,
-        {
-          title: "Xác nhận xóa",
-          kind: "warning",
-        },
-      );
-      if (!Vjp) return;
-      for (const p of Vj1) {
-        try {
-          await V412(p);
-        } catch {}
-      }
-      Vj2(new Set());
-      Vit();
-    } catch {}
-  };
-
-  const Vjq = async (Vjr: string, Vjs: string[]) => {
-    for (const p of Vjs) {
-      if (p === Vjr) continue;
+  const xoa = async () => {
+    const ok = await confirm({ title: `Xoá ${marked.size} mục đã chọn?`, body: "Tệp và thư mục sẽ bị xoá khỏi Kho trên máy này. Không thể hoàn tác.", danger: true });
+    if (!ok) return;
+    let fail = 0;
+    for (const p of marked) {
       try {
-        await V415(p, Vjr);
-      } catch {}
+        await V412(p);
+      } catch {
+        fail++;
+      }
     }
-    Vj2(new Set());
-    Vit();
+    setMarked(new Set());
+    reloadArchive();
+    if (fail) toast.warning(`Đã xoá, ${fail} mục không xoá được.`);
+    else toast.success("Đã xoá các mục đã chọn.");
   };
+  const diChuyen = async (dest: string, items: string[]) => {
+    for (const p of items) {
+      if (p === dest) continue;
+      try {
+        await V415(p, dest);
+      } catch (e) {
+        notifyError(e, "di chuyển");
+      }
+    }
+    setMarked(new Set());
+    reloadArchive();
+  };
+
+  const inFolder = path.length > 1;
 
   return (
     <section className="view active">
-      <div className="toolbar">
-        <div className="search">
-          <Icon name="tim" className="flex-none text-fg-subtle" />
-          <input
-            placeholder="Tìm thư mục, tài liệu…"
-            value={query}
-            onChange={(Vjt) => Viu(Vjt.target.value)}
-          />
-        </div>
-        <div className="spacer flex-1" />
-        <select
-          className="inp text-sm"
-          value={`${Vix}-${Viz}`}
-          onChange={(Vju) => {
-            const [b, d] = Vju.target.value.split("-");
-            Viy(b as "name" | "size");
-            Vj0(d as "asc" | "desc");
+      <PageHeader
+        title="Kho tài liệu"
+        description="Tài liệu quét và gom trên máy này, xếp theo cơ quan, hộp, hồ sơ."
+        actions={
+          <>
+            {inFolder && (
+              <Tip text={hoSo ? "" : "Mở đúng thư mục hồ sơ (cấp Cơ quan › Hộp › Hồ sơ) rồi mới quét vào được"}>
+                <span>
+                  <Button icon="quet" variant={hoSo ? "primary" : "secondary"} disabled={!hoSo} onClick={quet}>
+                    {hoSo ? "Quét vào hồ sơ này" : "Quét vào thư mục này"}
+                  </Button>
+                </span>
+              </Tip>
+            )}
+            <Menu
+              label="Tạo"
+              trigger="button"
+              items={[
+                { label: "Thư mục con", icon: "moThuMuc", onSelect: () => openDialog("create", "Tạo thư mục con") },
+                { label: "Nhận cây thư mục", icon: "cayThuMuc", onSelect: () => goto("tree") },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <Toolbar className="mb-3">
+        <nav aria-label="Đường dẫn" className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
+          {path.map((id, i) => {
+            const last = i === path.length - 1;
+            return (
+              <span key={id} className="flex items-center gap-1">
+                {i > 0 && <Icon name="moNhanh" size={12} className="text-fg-subtle" />}
+                {last ? (
+                  <span className="font-medium text-fg-strong">{nodes[id].name}</span>
+                ) : (
+                  <button type="button" className="text-fg-muted hover:text-fg-link hover:underline" onClick={() => navigateCrumb(i)}>
+                    {nodes[id].name}
+                  </button>
+                )}
+              </span>
+            );
+          })}
+        </nav>
+        <Toolbar.Spacer />
+        <Input size="sm" prefix="tim" placeholder="Tìm thư mục, tài liệu" value={query} onChange={(e) => setQuery(e.target.value)} className="w-60" aria-label="Tìm trong thư mục" />
+        <Select
+          size="sm"
+          value={`${sortBy}-${dir}`}
+          onChange={(v) => {
+            const [b, d] = v.split("-");
+            setSortBy(b as "name" | "size");
+            setDir(d as "asc" | "desc");
           }}
-          title="Sắp xếp"
-        >
-          <option value="name-asc">Tên A→Z</option>
-          <option value="name-desc">Tên Z→A</option>
-          <option value="size-asc">Nhỏ→Lớn</option>
-          <option value="size-desc">Lớn→Nhỏ</option>
-        </select>
-        <div className="view-toggle">
-          <button className={Vio === "grid" ? "on" : ""} onClick={() => Vip("grid")}>
-            <Icon name="luoi" size={15} label="Xem dạng thẻ" />
-          </button>
-          <button className={Vio === "list" ? "on" : ""} onClick={() => Vip("list")}>
-            <Icon name="danhSach" size={15} label="Xem dạng danh sách" />
-          </button>
+          options={[
+            { value: "name-asc", label: "Tên A đến Z" },
+            { value: "name-desc", label: "Tên Z đến A" },
+            { value: "size-asc", label: "Nhỏ đến lớn" },
+            { value: "size-desc", label: "Lớn đến nhỏ" },
+          ]}
+          className="w-36"
+          aria-label="Sắp xếp"
+        />
+        <div className="flex overflow-hidden rounded border border-border" role="group" aria-label="Kiểu xem">
+          <IconButton label="Xem dạng thẻ" icon="luoi" size="sm" noTooltip className={cn("rounded-none", driveMode === "grid" && "bg-brand-50 text-brand-700")} aria-pressed={driveMode === "grid"} onClick={() => setDriveMode("grid")} />
+          <IconButton label="Xem dạng danh sách" icon="danhSach" size="sm" noTooltip className={cn("rounded-none border-l border-border", driveMode === "list" && "bg-brand-50 text-brand-700")} aria-pressed={driveMode === "list"} onClick={() => setDriveMode("list")} />
         </div>
-        <div className="menu" ref={Vj3}>
-          <button
-            className="btn primary"
-            onClick={(Vjv) => {
-              Vjv.stopPropagation();
-              Viw((o) => !o);
-            }}
-          >
-            <Icon name="them" />
-            Tạo
-            <Icon name="xuong" size={14} />
-          </button>
-          {Viv && (
-            <div className="menu-pop">
-              <div
-                className="mi"
-                onClick={() => {
-                  Vir("create", "Tạo thư mục con");
-                  Viw(false);
-                }}
-              >
-                <span className="ic">
-                  <Icon name="moThuMuc" />
-                </span>{" "}
-                Thư mục con
-              </div>
-              <div className="divider" />
-              <div
-                className="mi"
-                onClick={() => {
-                  Viw(false);
-                  void Vje();
-                }}
-              >
-                <span className="ic">
-                  <Icon name="quet" />
-                </span>{" "}
-                Quét vào thư mục này
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      </Toolbar>
 
-      <div className="breadcrumb">
-        {path.map((Vjw, i) => {
-          const last = i === path.length - 1;
-          return last ? (
-            <span key={Vjw} className="cur">
-              {Vin[Vjw].name}
-            </span>
-          ) : (
-            <span key={Vjw}>
-              <a onClick={() => Viq(i)}>{Vin[Vjw].name}</a>
-              <span className="sp"> › </span>
-            </span>
-          );
-        })}
-      </div>
-
-      {}
       <div className="drive-grid with-details">
         <div>
-          {Vj1.size > 0 ? (
-            <div className="sel-bar">
-              <b>{Vj1.size} đã chọn</b>
-              <div className="spacer flex-1" />
-              <span className="muted text-sm">Kéo-thả vào thư mục để di chuyển</span>
-              <button className="btn sm danger" onClick={() => void Vjo()}>
-                <Icon name="xoa" />
-                Xóa
-              </button>
-              <button className="btn sm" onClick={() => Vj2(new Set())}>
+          {marked.size > 0 ? (
+            <Toolbar className="mb-2.5 rounded-md border border-brand-200 bg-brand-50 px-3 py-1.5">
+              <b className="text-sm">{marked.size} đã chọn</b>
+              <span className="text-sm text-fg-subtle">Kéo thả vào thư mục để di chuyển.</span>
+              <Toolbar.Spacer />
+              <Button size="sm" variant="dangerOutline" icon="xoa" onClick={() => void xoa()}>
+                Xoá
+              </Button>
+              <Button size="sm" onClick={() => setMarked(new Set())}>
                 Bỏ chọn
-              </button>
-            </div>
+              </Button>
+            </Toolbar>
           ) : (
-            <div className="flex items-center gap-2.5 mb-2.5">
-              {path.length > 1 && (
-                <button className={Vjb ? "btn sm primary" : "btn sm"} onClick={() => void Vje()}>
-                  <Icon name="quet" />
-                  {Vjb
-                    ? "Quét tiếp vào hồ sơ này"
-                    : "Quét vào thư mục này"}
-                </button>
-              )}
-              <div className="spacer flex-1" />
-              <span className="muted text-sm">{Vj8.length} mục</span>
-            </div>
+            <p className="mb-2.5 text-sm text-fg-subtle">{filtered.length.toLocaleString("vi-VN")} mục</p>
           )}
 
-          {Vj7.length === 0 ? (
-            <div className="muted p-10 text-center rounded-lg border-2 border-dashed border-border">
-              Thư mục trống.{" "}
-              <a className="cursor-pointer text-fg-link" onClick={() => goto("scan")}>
-                Quét tài liệu vào đây
-              </a>{" "}
-              hoặc tạo thư mục con.
-            </div>
-          ) : Vio === "list" ? (
-            <V48b kids={Vjf} marked={Vj1} onToggleMark={Vjm} onMove={Vjq} />
+          {kids.length === 0 ? (
+            <EmptyState
+              icon="thuMuc"
+              title="Thư mục trống"
+              description={inFolder ? "Quét tài liệu vào đây hoặc tạo thư mục con." : "Nhận cây thư mục từ quản trị hoặc tạo thư mục con để bắt đầu."}
+              action={
+                inFolder && hoSo ? (
+                  <Button variant="primary" icon="quet" onClick={quet}>
+                    Quét vào hồ sơ này
+                  </Button>
+                ) : (
+                  <Button icon="cayThuMuc" onClick={() => goto("tree")}>
+                    Cây thư mục
+                  </Button>
+                )
+              }
+            />
+          ) : filtered.length === 0 ? (
+            <EmptyState compact icon="tim" title="Không có mục nào khớp tìm kiếm" />
+          ) : driveMode === "list" ? (
+            <V48b kids={sorted} marked={marked} onToggleMark={toggleMark} onMove={diChuyen} />
           ) : (
-            <V485 kids={Vjf} marked={Vj1} onToggleMark={Vjm} onMove={Vjq} />
+            <V485 kids={sorted} marked={marked} onToggleMark={toggleMark} onMove={diChuyen} />
           )}
         </div>
-
         <V48d />
       </div>
     </section>

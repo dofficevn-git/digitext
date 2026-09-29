@@ -11,12 +11,12 @@ export function V4pu(r: V43b): string {
   if (r.cancelled > 0) {
     V2c8 +=
       ` ${r.cancelled} tệp bạn đã hủy — phần đã gửi vẫn nằm trên máy chủ, ` +
-      "bấm “② Đẩy lên máy chủ” lần nữa là tải tiếp từ chỗ dừng.";
+      "bấm Đẩy lên máy chủ lần nữa là tải tiếp từ chỗ dừng.";
   }
   if (r.rejected > 0) {
     V2c8 +=
-      ` ${r.rejected} bản bị máy chủ TỪ CHỐI (thường do người quét không thuộc dự án bạn ` +
-      "quản lý) — đã ngừng thử lại. Sửa phía máy chủ rồi bấm “Gom lại bản bị từ chối”.";
+      ` ${r.rejected} bản bị máy chủ từ chối (thường do người quét không thuộc dự án bạn ` +
+      "quản lý) — đã ngừng thử lại. Sửa phía máy chủ rồi chọn Gom lại bản bị từ chối trong menu.";
   }
   return V2c8;
 }

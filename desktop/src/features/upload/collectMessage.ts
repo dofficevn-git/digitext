@@ -22,13 +22,13 @@ export function V4pt(r: V439): string {
 
   if (r.cancelled > 0) {
     m +=
-      ` Bạn đã dừng ${r.cancelled} tài liệu — phần đã tải được giữ lại, bấm “① Thu thập”` +
+      ` Bạn đã dừng ${r.cancelled} tài liệu — phần đã tải được giữ lại, bấm Thu thập` +
       " lần nữa là tải tiếp từ chỗ dừng.";
   }
 
   if (r.khoTruncated) {
     m +=
-      " Kho có rất nhiều tệp nên lượt này mới quét được một phần — bấm “① Thu thập” thêm vài lần nữa để nhặt hết tài liệu rời.";
+      " Kho có rất nhiều tệp nên lượt này mới quét được một phần — bấm Thu thập thêm vài lần nữa để nhặt hết tài liệu rời.";
   }
 
   if (r.projectGateStale) {
@@ -52,8 +52,8 @@ export function V4pt(r: V439): string {
     const V2c6 = r.notes.some((n) => n.includes("bản cũ"));
     m += ` Có ${r.manifestFailed} máy không lấy được danh sách tài liệu${V2c5} — `;
     m += V2c6
-      ? "máy nhân viên đang chạy BẢN CŨ. Kênh LAN không mã hoá đã bị gỡ vì nó gửi mã site dạng trần; hãy cập nhật DigiText trên MỌI máy trong site rồi thu thập lại."
-      : "thường do MÃ SITE LAN trên máy nhân viên KHÁC mã trên máy quản trị, hoặc máy nhân viên chưa cập nhật. Hãy phát lại cây thư mục để máy nhân viên nhận đúng mã, và kiểm tra hai máy cùng phiên bản.";
+      ? "máy nhân viên đang chạy bản cũ. Cập nhật DigiText trên mọi máy trong site rồi thu thập lại."
+      : "thường do mã site trên máy nhân viên khác mã trên máy quản trị, hoặc máy nhân viên chưa cập nhật. Phát lại cây thư mục để họ nhận đúng mã và kiểm tra hai máy cùng phiên bản.";
     return m;
   }
 
@@ -61,25 +61,17 @@ export function V4pt(r: V439): string {
     const V2c7 = r.scannedRanges?.length
       ? r.scannedRanges.join(", ")
       : "không xác định được";
-    m +=
-      ` Không thấy máy nhân viên nào chia sẻ trong LAN (đã hỏi mDNS + broadcast và quét dải ${V2c7} theo cổng chung 45817).` +
-      " Kiểm tra: máy nhân viên đã đăng nhập và màn “Đồng bộ dữ liệu” hiện “Đang chia sẻ”;" +
-      " IP máy nhân viên có nằm trong dải vừa quét không (nếu khác dải — mạng nhiều lớp/VLAN — hãy đưa máy quản trị và máy nhân viên về CÙNG một dải, vd cùng cắm một switch/wifi);" +
-      " tường lửa không chặn DigiText (macOS: System Settings → Privacy & Security → Local Network phải bật cho DigiText; Windows: khi đổi sang mạng mới hãy chọn hồ sơ mạng “Riêng tư/Private”);" +
-      " wifi không bật chế độ cách ly thiết bị (AP/client isolation).";
+    m += ` Không thấy máy nhân viên nào chia sẻ trong mạng nội bộ (đã quét dải ${V2c7}).` + " Xem mục trợ giúp bên dưới để kiểm tra mạng và tường lửa.";
     if (r.scanClamped) {
-      m +=
-        " Dải mạng của máy này quá rộng (vd cấp /16) nên chỉ quét được một phần — hãy đặt máy quản trị và máy nhân viên trong cùng một dải hẹp (vd /24).";
+      m += " Dải mạng của máy này quá rộng nên chỉ quét được một phần; đặt hai máy trong cùng một dải hẹp.";
     }
-    m +=
-      " Máy user chạy BẢN CŨ sẽ không trả lời broadcast — cập nhật app trên mọi máy rồi thu thập lại.";
     if (r.notes.length) m += ` (${r.notes.join("; ")})`;
     return m;
   }
 
   if (r.advertised === 0 && V2c4.length === 0) {
     m +=
-      " Đã kết nối máy nhân viên nhưng chưa có tài liệu nào ĐÃ ĐÓNG GÓI để chia sẻ. Nhân viên cần bấm “Đóng gói & lưu PDF vào hồ sơ” sau khi quét (chỉ quét thôi thì chưa chia sẻ được).";
+      " Đã kết nối máy nhân viên nhưng chưa có tài liệu nào đã đóng gói để chia sẻ. Nhân viên cần bấm Đóng gói và lưu PDF vào hồ sơ sau khi quét.";
     if (r.notes.length) m += ` (${r.notes.join("; ")})`;
     return m;
   }
