@@ -511,11 +511,6 @@ export default function OcrPane() {
         )}
       </div>
 
-      <Banner
-        tone="info"
-        text="Chọn tài liệu đã số hoá để bóc tách trường: sửa lại khung máy bóc, hoặc chọn trường rồi vẽ ô cho phần máy còn thiếu, rồi lưu làm dữ liệu chuẩn. Hoặc “Tải PDF lên” để gán nhãn trên tài liệu tự chọn."
-      />
-
       {}
       <V4k5 />
 

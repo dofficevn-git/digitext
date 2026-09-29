@@ -7,7 +7,7 @@ import V47t from "@/features/shell/StatusBar";
 import DriveView from "@/features/drive/DriveView";
 import V4bk from "@/features/catalog/CatalogView";
 import V4lc from "@/features/dossier/HoSoHubView";
-import V4ns from "@/features/khogia/KhoGiaHubView";
+import V4ns from "@/features/chinhly/ChinhLyHub";
 import V4oe from "@/features/report/ReportHubView";
 import V4p9 from "@/features/scan/ScanView";
 import V4p4 from "@/features/editor/EditorView";
