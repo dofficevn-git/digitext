@@ -60,6 +60,8 @@ export const V3x9 = [
   "chinhLy",
 
   "clSync",
+
+  "work",
 ] as const;
 
 export type V3xa = (typeof V3x9)[number];
@@ -179,6 +181,12 @@ export const V3xc: readonly string[] = [
   "cl_outbox",
   "cl_migrate_preview",
   "cl_project_get",
+  "work_list_packages",
+  "work_get_package",
+  "work_my_packages",
+  "work_rejected_items",
+  "work_next_item",
+  "work_navigate",
 ];
 
 export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
@@ -323,7 +331,16 @@ export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
   cl_outbox_discard: ["chinhLy", "clSync"],
   cl_remote: ["chinhLy"],
   cl_migrate_run: ["chinhLy", "clSync", "dossier", "catalog"],
-  cl_project_set: ["chinhLy", "clSync", "dossier", "catalog", "khogia"],
+  cl_project_set: ["chinhLy", "clSync", "dossier", "catalog", "khogia", "work"],
+  work_create_package: ["work"],
+  work_patch_package: ["work"],
+  work_set_members: ["work"],
+  work_review: ["work"],
+  work_close_package: ["work"],
+  work_claim_item: ["work"],
+  work_release: ["work"],
+  work_done: ["work"],
+  work_check: ["work"],
 };
 
 const V3xe: ReadonlySet<string> = new Set(V3xc);

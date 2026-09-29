@@ -1,286 +1,223 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Thanh bên 2 cấp: nhóm (gập/mở, nhớ trạng thái) → mục. Bàn phím: ↑↓ di chuyển, → mở nhóm, ← đóng / về nhóm,
+// Home/End. Mục đang mở có aria-current. Thu gọn (Ctrl+B hoặc cửa sổ hẹp) thành dải icon, bấm mở danh sách mục.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { V460 } from "@/state";
-import type { V3xt } from "@/domain/types";
-import { V3z8, V3za } from "@/domain/permissions";
-import { V462 } from "@/lib/utils";
+import { V3z8 } from "@/domain/permissions";
+import { V462 as cn } from "@/lib/utils";
 import { Icon } from "@/components/Icon";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { NAV_TREE, type V46r, type V46s } from "./navTree";
-import { V46v, V46w } from "./sidebarPrefs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tip } from "@/ui";
+import { gotoLeaf, leafActive, NAV_TREE, type NavBadge, type V46s } from "./navTree";
+import { getOpenGroups, setOpenGroups, V46v, V46w } from "./sidebarPrefs";
+import { TOGGLE_SIDEBAR_EVENT } from "./Topbar";
+import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
 
 export default function Sidebar() {
-  const {
-    view,
-    goto,
-    hoSoPane: Vdn,
-    gotoHoSo: Vdo,
-    catalogTab: Vdp,
-    gotoCatalog: Vdq,
-    khoGiaTab: Vdr,
-    gotoKhoGia: Vds,
-    reportTab: Vdt,
-    gotoReport: Vdu,
-    session: Vdv,
-    lock,
-    logout: Vdw,
-  } = V460();
+  const nav = V460();
+  const { session } = nav;
+  const notif = useNotifications();
+  const can = useCallback((n: V46s) => !session || V3z8(session.permissions, n.gate), [session]);
+  const visible = useMemo(() => NAV_TREE.filter((g) => (g.leaf ? can(g) : (g.children ?? []).some(can))), [can]);
+  const isActive = useCallback((n: V46s): boolean => (n.leaf ? leafActive(n.leaf, nav) : (n.children ?? []).some((c) => c.leaf && leafActive(c.leaf, nav))), [nav]);
+  const activeGroup = visible.find(isActive)?.id;
 
-  const Vdx = (v: V3xt) => !Vdv || V3z8(Vdv.permissions, v);
-
-  const Vdy = (Vdz: V46r): boolean => {
-    switch (Vdz.kind) {
-      case "view":
-        return view === Vdz.view;
-      case "hoso":
-        return view === "dossier" && Vdn === Vdz.pane;
-      case "catalog":
-        return view === "catalog" && Vdp === Vdz.tab;
-      case "khogia":
-        return view === "khogia" && Vdr === Vdz.tab;
-      case "report":
-        return view === "report" && Vdt === Vdz.tab;
-    }
-  };
-  const Ve0 = (Ve1: V46r) => {
-    switch (Ve1.kind) {
-      case "view":
-        return goto(Ve1.view);
-      case "hoso":
-        return Vdo(Ve1.pane);
-      case "catalog":
-        return Vdq(Ve1.tab);
-      case "khogia":
-        return Vds(Ve1.tab);
-      case "report":
-        return Vdu(Ve1.tab);
-    }
-  };
-  const Ve2 = (n: V46s): boolean => (n.leaf ? Vdx(n.gate) : (n.children ?? []).some(Ve2));
-  const Ve3 = (n: V46s): boolean => (n.leaf ? Vdy(n.leaf) : (n.children ?? []).some(Ve3));
-
-  const Ve4 = (): string[] => {
-    const Ve5: string[] = [];
-    const Ve6 = (Ve7: V46s[]) => {
-      for (const n of Ve7) {
-        if (n.children && Ve3(n)) {
-          Ve5.push(n.id);
-          Ve6(n.children);
-        }
-      }
-    };
-    Ve6(NAV_TREE);
-    return Ve5;
-  };
-
-  const [open, Ve8] = useState<Set<string>>(() => new Set(Ve4()));
-
+  const [open, setOpen] = useState<Set<string>>(() => new Set([...getOpenGroups(), ...(activeGroup ? [activeGroup] : [])]));
   useEffect(() => {
-    Ve8((s) => new Set([...s, ...Ve4()]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, Vdn, Vdp, Vdr, Vdt]);
-  const Ve9 = (Vea: string) =>
-    Ve8((s) => {
+    if (activeGroup) setOpen((s) => (s.has(activeGroup) ? s : new Set([...s, activeGroup])));
+  }, [activeGroup]);
+  useEffect(() => setOpenGroups([...open]), [open]);
+
+  const [collapsed, setCollapsed] = useState<boolean>(V46v);
+  useEffect(() => V46w(collapsed), [collapsed]);
+  useEffect(() => {
+    const on = () => setCollapsed((c) => !c);
+    window.addEventListener(TOGGLE_SIDEBAR_EVENT, on);
+    return () => window.removeEventListener(TOGGLE_SIDEBAR_EVENT, on);
+  }, []);
+  const narrow = useNarrowViewport();
+  const rail = shouldUseRail(collapsed, narrow);
+
+  const badgeOf = (b?: NavBadge): number => (b === "clConflicts" ? notif.clConflicts : b === "myWork" ? notif.myWork : b === "notifications" ? notif.unread : 0);
+
+  const toggle = (id: string) =>
+    setOpen((s) => {
       const n = new Set(s);
-      n.has(Vea) ? n.delete(Vea) : n.add(Vea);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
 
-  const [collapsed, Veb] = useState<boolean>(V46v);
-  useEffect(() => V46w(collapsed), [collapsed]);
-
-  const Vec = useNarrowViewport();
-  const rail = shouldUseRail(collapsed, Vec);
-
-  const Ved = (n: V46s) => {
-    Veb(false);
-    if (n.leaf) Ve0(n.leaf);
-    else Ve8((s) => new Set([...s, n.id]));
-  };
-
-  const Vee =
-    "group flex w-full items-center gap-2 rounded text-left transition-colors " +
-    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring";
-  const Vef = (Veg: boolean) =>
-    Veg
-      ? "bg-brand-50 text-brand-700 font-semibold"
-      : "text-fg-muted font-medium hover:bg-gray-100 hover:text-fg";
-
-  const Veh = (n: V46s, Vei: number) => {
-    if (!Ve2(n)) return null;
-    const Vej = Ve3(n);
-    const Vek = open.has(n.id);
-    const Vel = n.children ? n.children.map((c) => Veh(c, Vei + 1)) : null;
-
-    if (Vei === 0) {
-      const Vem = () => (n.leaf ? Ve0(n.leaf) : Ve9(n.id));
-      return (
-        <div key={n.id}>
-          <button
-            type="button"
-            className={V462(Vee, Vef(Vej), "h-8 px-2 text-base")}
-            onClick={Vem}
-            aria-expanded={n.leaf ? undefined : Vek}
-          >
-            {n.icon && (
-              <Icon
-                name={n.icon}
-                className={V462(
-                  "flex-none transition-colors",
-                  Vej ? "text-brand-600" : "text-fg-subtle group-hover:text-fg-muted",
-                )}
-              />
-            )}
-            <span className="min-w-0 flex-1 truncate">{n.label}</span>
-            {!n.leaf && (
-              <Icon
-                name="moNhanh"
-                size={14}
-                className={V462(
-                  "flex-none text-fg-subtle transition-transform",
-                  Vek && "rotate-90",
-                )}
-              />
-            )}
-          </button>
-          {!n.leaf && Vek && (
-            <div className="my-0.5 ml-4 border-l border-border-subtle pl-2">{Vel}</div>
-          )}
-        </div>
-      );
+  // Bàn phím trong nav: di chuyển giữa các nút [data-nav].
+  const navRef = useRef<HTMLElement>(null);
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const root = navRef.current;
+    if (!root) return;
+    const items = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-nav]"));
+    const cur = document.activeElement as HTMLButtonElement | null;
+    const i = cur ? items.indexOf(cur) : -1;
+    const focus = (j: number) => items[Math.max(0, Math.min(items.length - 1, j))]?.focus();
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        focus(i + 1);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        focus(i - 1);
+        break;
+      case "Home":
+        e.preventDefault();
+        focus(0);
+        break;
+      case "End":
+        e.preventDefault();
+        focus(items.length - 1);
+        break;
+      case "ArrowRight": {
+        const g = cur?.dataset.group;
+        if (g && !open.has(g)) {
+          e.preventDefault();
+          setOpen((s) => new Set([...s, g]));
+        } else if (g) {
+          e.preventDefault();
+          focus(i + 1);
+        }
+        break;
+      }
+      case "ArrowLeft": {
+        const g = cur?.dataset.group;
+        const parent = cur?.dataset.parent;
+        if (g && open.has(g)) {
+          e.preventDefault();
+          toggle(g);
+        } else if (parent) {
+          e.preventDefault();
+          root.querySelector<HTMLButtonElement>(`[data-group="${parent}"]`)?.focus();
+        }
+        break;
+      }
     }
-
-    const Ven = () => (n.leaf ? Ve0(n.leaf) : Ve9(n.id));
-    return (
-      <div key={n.id}>
-        <button
-          type="button"
-          className={V462(Vee, Vef(Vej), "min-h-7 px-2 py-1 text-sm")}
-          onClick={Ven}
-          aria-expanded={n.leaf ? undefined : Vek}
-        >
-          <span className="min-w-0 flex-1 truncate">{n.label}</span>
-          {!n.leaf && (
-            <Icon
-              name="moNhanh"
-              size={13}
-              className={V462("flex-none text-fg-subtle transition-transform", Vek && "rotate-90")}
-            />
-          )}
-        </button>
-        {!n.leaf && Vek && (
-          <div className="my-0.5 ml-2 border-l border-border-subtle pl-2">{Vel}</div>
-        )}
-      </div>
-    );
   };
 
-  const user = Vdv?.displayName ?? "";
-  const Veo = user ? user[0].toUpperCase() : "?";
+  const btn = "group flex w-full items-center gap-2 rounded text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50";
+  const tone = (active: boolean) => (active ? "bg-brand-50 text-brand-700 font-semibold" : "text-fg-muted font-medium hover:bg-gray-100 hover:text-fg");
+
+  const Badge = ({ n }: { n: number }) =>
+    n > 0 ? <span className="ml-auto min-w-5 rounded-full bg-danger-600 px-1.5 text-center text-xs font-semibold leading-5 text-white tabular-nums">{n > 99 ? "99+" : n}</span> : null;
 
   return (
-    <aside className={V462("sidebar", rail && "collapsed")}>
-      <div className="side-head">
-        {}
-        {!Vec && (
-          <button
-            type="button"
-            className="grid size-7 place-items-center rounded border border-border bg-surface text-fg-muted transition-colors hover:border-border-strong hover:bg-gray-100 hover:text-fg"
-            onClick={() => Veb((c) => !c)}
-            title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
-            aria-label={
-              collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"
-            }
-          >
-            <Icon name={collapsed ? "moRong" : "thuGon"} size={15} />
-          </button>
-        )}
-      </div>
-
-      {}
-      <nav className="nav-scroll" aria-label="Điều hướng chính">
+    <aside className={cn("sidebar", rail && "collapsed")}>
+      <nav ref={navRef} className="nav-scroll" aria-label="Điều hướng chính" onKeyDown={onKeyDown}>
         {rail ? (
-          <div className="flex flex-col items-center gap-1">
-            {NAV_TREE.filter(Ve2).map((n) => (
-              <button
-                type="button"
-                key={n.id}
-                className={V462(
-                  "grid size-8 place-items-center rounded transition-colors",
-                  Ve3(n)
-                    ? "bg-brand-50 text-brand-600"
-                    : "text-fg-subtle hover:bg-gray-100 hover:text-fg",
-                )}
-                title={n.label}
-                aria-label={n.label}
-                onClick={() => Ved(n)}
-              >
-                {n.icon && <Icon name={n.icon} size={17} />}
-              </button>
-            ))}
-          </div>
+          <ul className="flex flex-col items-center gap-1">
+            {visible.map((g) => {
+              const active = isActive(g);
+              const kids = (g.children ?? []).filter(can);
+              const cnt = kids.reduce((s, c) => s + badgeOf(c.badge), 0) + badgeOf(g.badge);
+              const iconBtn = (
+                <button
+                  type="button"
+                  data-nav
+                  className={cn("relative grid size-9 place-items-center rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50", active ? "bg-brand-50 text-brand-600" : "text-fg-subtle hover:bg-gray-100 hover:text-fg")}
+                  aria-label={g.label}
+                  aria-current={g.leaf && active ? "page" : undefined}
+                  onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
+                >
+                  {g.icon && <Icon name={g.icon} size={18} />}
+                  {cnt > 0 && <span className="absolute right-0.5 top-0.5 size-2 rounded-full bg-danger-600" aria-hidden />}
+                </button>
+              );
+              return (
+                <li key={g.id}>
+                  {g.leaf ? (
+                    <Tip text={g.label} side="right">
+                      {iconBtn}
+                    </Tip>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>{iconBtn}</DropdownMenuTrigger>
+                      <DropdownMenuContent side="right" align="start" className="w-56">
+                        <DropdownMenuLabel>{g.label}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {kids.map((c) => (
+                          <DropdownMenuItem key={c.id} onSelect={() => c.leaf && gotoLeaf(c.leaf, nav)} className={cn(c.leaf && leafActive(c.leaf, nav) && "font-semibold text-brand-700")}>
+                            {c.label}
+                            <Badge n={badgeOf(c.badge)} />
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         ) : (
-          NAV_TREE.map((n) => Veh(n, 0))
+          <ul className="flex flex-col gap-0.5">
+            {visible.map((g) => {
+              const active = isActive(g);
+              const isOpen = open.has(g.id);
+              const kids = (g.children ?? []).filter(can);
+              return (
+                <li key={g.id}>
+                  <button
+                    type="button"
+                    data-nav
+                    data-group={g.leaf ? undefined : g.id}
+                    className={cn(btn, tone(active && !!g.leaf), "h-8 px-2 text-base", !g.leaf && active && "text-fg-strong")}
+                    onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
+                    aria-expanded={g.leaf ? undefined : isOpen}
+                    aria-current={g.leaf && active ? "page" : undefined}
+                  >
+                    {g.icon && <Icon name={g.icon} className={cn("flex-none", active ? "text-brand-600" : "text-fg-subtle group-hover:text-fg-muted")} />}
+                    <span className="min-w-0 flex-1 truncate">{g.label}</span>
+                    {g.leaf ? <Badge n={badgeOf(g.badge)} /> : <Icon name="moNhanh" size={14} className={cn("flex-none text-fg-subtle transition-transform", isOpen && "rotate-90")} />}
+                  </button>
+                  {!g.leaf && isOpen && (
+                    <ul className="my-0.5 ml-4 border-l border-border-subtle pl-2">
+                      {kids.map((c) => {
+                        const a = !!c.leaf && leafActive(c.leaf, nav);
+                        return (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              data-nav
+                              data-parent={g.id}
+                              className={cn(btn, tone(a), "min-h-7 px-2 py-1 text-sm")}
+                              onClick={() => c.leaf && gotoLeaf(c.leaf, nav)}
+                              aria-current={a ? "page" : undefined}
+                            >
+                              <span className="min-w-0 flex-1 truncate">{c.label}</span>
+                              <Badge n={badgeOf(c.badge)} />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </nav>
 
-      <div className="side-user">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+      <div className="side-foot">
+        {!narrow && (
+          <Tip text={collapsed ? "Mở rộng thanh bên (Ctrl+B)" : "Thu gọn thanh bên (Ctrl+B)"} side="right">
             <button
               type="button"
-              className="flex min-w-0 flex-1 items-center gap-2 rounded p-1 text-left transition-colors hover:bg-gray-100 data-[state=open]:bg-gray-100"
-              aria-label="Trình đơn tài khoản"
+              className="grid size-8 place-items-center rounded text-fg-subtle transition-colors hover:bg-gray-100 hover:text-fg"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
             >
-              <span className="grid size-7 flex-none place-items-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-                {Veo}
-              </span>
-              {!rail && (
-                <>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-fg">
-                      {user || "Chưa đăng nhập"}
-                    </span>
-                    <span className="block truncate text-xs text-fg-subtle">
-                      {Vdv ? V3za(Vdv.role) : ""}
-                      {Vdv?.mode === "offline" ? " · ngoại tuyến" : ""}
-                    </span>
-                  </span>
-                  <Icon name="moNhanh" size={14} className="flex-none text-fg-subtle" />
-                </>
-              )}
+              <Icon name={collapsed ? "moRong" : "thuGon"} size={16} />
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-56">
-            <DropdownMenuLabel className="truncate">
-              {user || "Chưa đăng nhập"}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {Vdx("settings") && (
-              <DropdownMenuItem onSelect={() => goto("settings")}>
-                <Icon name="caiDat" size={15} />
-                Cài đặt
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={() => void lock()}>
-              <Icon name="khoa" size={15} />
-              Khoá màn hình
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => void Vdw()}>
-              <Icon name="dangXuat" size={15} />
-              Đăng xuất
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </Tip>
+        )}
       </div>
     </aside>
   );

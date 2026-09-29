@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
-import { CL_SYNC_EVENT, clCatalogList, clProjectGet, clProjectSet, clSyncStatus, str, type ClCatalog, type ClProjectInfo, type ClRow, type ClSyncStatus } from "@/api/chinhly";
+import { CL_SYNC_EVENT, clCatalogList, clSyncStatus, str, type ClCatalog, type ClRow, type ClSyncStatus } from "@/api/chinhly";
+import { useProject } from "@/state/project";
+import { Banner } from "@/ui";
 
 export const errText = (e: unknown) => (e instanceof V3xq || e instanceof Error ? e.message : String(e));
 export const n = (v: number) => v.toLocaleString("vi-VN");
@@ -28,56 +30,14 @@ export function useClCatalog(): { cat: ClCatalog; reload: () => void; error: str
   return { cat, reload, error };
 }
 
-/** Thanh chọn "Dự án đang làm": chỉ hiện với tài khoản không gắn dự án (quản trị hệ thống). */
-export function ChonDuAn() {
-  const [info, setInfo] = useState<ClProjectInfo | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => {
-    if (!isTauri()) return;
-    try {
-      setInfo(await clProjectGet());
-      setErr(null);
-    } catch (e) {
-      setErr(errText(e));
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  if (!info || info.fromAccount) return null;
-  const chon = async (id: string) => {
-    if (!id) return;
-    setBusy(true);
-    try {
-      await clProjectSet(id);
-      await load();
-    } catch (e) {
-      setErr(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const chua = !info.projectId;
+/** Dải nhắc khi tài khoản quản trị chưa chọn "Dự án đang làm" (chọn ở thanh trên cùng). */
+export function ChuaChonDuAn() {
+  const p = useProject();
+  if (p.fromAccount || p.projectId || p.loading) return null;
   return (
-    <div className={`card mt-3.5 flex items-center gap-3 flex-wrap ${chua ? "border-warning" : ""}`} style={{ padding: "8px 12px" }}>
-      <span className="text-sm font-medium">Dự án đang làm:</span>
-      <select className="min-w-72" value={info.projectId ?? ""} disabled={busy} onChange={(e) => void chon(e.target.value)}>
-        <option value="">— chọn dự án —</option>
-        {info.projects.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.code} — {p.name}
-          </option>
-        ))}
-      </select>
-      <span className="muted text-sm">
-        {chua
-          ? "Tài khoản quản trị không gắn dự án: chọn dự án để nạp và đồng bộ dữ liệu chỉnh lý."
-          : "Dữ liệu chỉnh lý (danh mục, hồ sơ, kho/giá…) thuộc dự án này; đổi dự án sẽ đồng bộ lại."}
-        {info.cached ? " (danh sách lấy từ bộ nhớ đệm — không tới máy chủ)" : ""}
-      </span>
-      {err && <span className="text-danger text-sm">{err}</span>}
-    </div>
+    <Banner tone="warning" className="mb-3.5">
+      Chưa chọn dự án đang làm. Chọn dự án ở ô bên cạnh tên bạn trên thanh trên cùng để nạp và đồng bộ dữ liệu chỉnh lý.
+    </Banner>
   );
 }
 
@@ -109,15 +69,15 @@ export function syncLabel(s: ClSyncStatus | null): { text: string; dot: "ok" | "
     case "pulling":
       return { text: "Đang kéo…", dot: "warn", title: `Đang nhận thay đổi từ máy chủ. ${when}` };
     case "offline":
-      return { text: tail || "Ngoại tuyến", dot: "warn", title: `Không tới máy chủ — thay đổi giữ ở máy, sẽ tự đẩy khi có mạng. ${when}` };
+      return { text: tail || "Ngoại tuyến", dot: "warn", title: `Không tới máy chủ. Thay đổi giữ ở máy, tự đẩy khi có mạng. ${when}` };
     case "locked":
       return { text: "Đang khoá", dot: "unknown", title: "Mở khoá phiên để đồng bộ chỉnh lý." };
     case "no_project":
-      return { text: "Chưa chọn dự án", dot: "warn", title: "Tài khoản không gắn dự án — chọn \"Dự án đang làm\" ở đầu màn Chỉnh lý." };
+      return { text: "Chưa chọn dự án", dot: "warn", title: "Chọn dự án đang làm ở thanh trên cùng để đồng bộ chỉnh lý." };
     case "error":
       return { text: "Lỗi", dot: "err", title: `${s.lastError ?? "Lỗi đồng bộ"}. ${when}` };
     default:
-      if (s.conflicts > 0) return { text: tail, dot: "err", title: `Có xung đột cần bạn chọn (menu Chỉnh lý → Đồng bộ & xung đột). ${when}` };
+      if (s.conflicts > 0) return { text: tail, dot: "err", title: `Có xung đột cần bạn chọn ở màn Đồng bộ. ${when}` };
       if (s.pending > 0 || s.failed > 0) return { text: tail, dot: "warn", title: `${when}` };
       return { text: s.lastSyncAt ? `Đã đồng bộ ${fmtTime(s.lastSyncAt)}` : "Sẵn sàng", dot: "ok", title: `Bản sao chỉnh lý khớp máy chủ. ${when}` };
   }

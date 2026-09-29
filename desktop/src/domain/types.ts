@@ -3,6 +3,7 @@
 export type V3xs = "super_admin" | "admin" | "user" | "customer";
 
 export type V3xt =
+  | "home"
   | "drive"
   | "catalog"
   | "dossier"
