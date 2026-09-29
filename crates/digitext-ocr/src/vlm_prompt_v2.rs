@@ -2,7 +2,7 @@
 use crate::vlm_fields::VlmError;
 use digitext_core::VanBanField;
 use serde_json::{json, Value};
-pub const FIELD_SPECS_V2: [(VanBanField, &str); 16] = [
+pub const FIELD_SPECS_V2: [(VanBanField, &str); 18] = [
     (
         VanBanField::ThuTu,
         "Số thứ tự của văn bản trong hồ sơ (chỉ chữ số)",
@@ -19,12 +19,23 @@ pub const FIELD_SPECS_V2: [(VanBanField, &str); 16] = [
         VanBanField::NgayThang,
         "Ngày tháng ban hành, định dạng dd/mm/yyyy",
     ),
+    (
+        VanBanField::CoQuanChuQuan,
+        "Cơ quan chủ quản: dòng NGAY TRÊN tên cơ quan ban hành ở góc trên bên trái (vd UBND TỈNH BẮC NINH); không có thì rỗng",
+    ),
     (VanBanField::CoQuanBanHanh, "Tên cơ quan ban hành văn bản"),
     (
         VanBanField::TrichYeu,
         "Trích yếu nội dung văn bản (có thể nhiều dòng)",
     ),
-    (VanBanField::ToSo, "Tờ số (chỉ chữ số)"),
+    (
+        VanBanField::NguoiKy,
+        "Họ và tên người ký (dưới chức vụ, cuối văn bản); không lấy chức vụ",
+    ),
+    (
+        VanBanField::ToSo,
+        "Tờ số: số VIẾT TAY ở góc trên bên phải trang (do người chỉnh lý đánh); chỉ chữ số",
+    ),
     (VanBanField::SoTrang, "Số trang (chỉ chữ số)"),
     (VanBanField::TrangSo, "Trang số (chỉ chữ số)"),
     (
@@ -44,7 +55,7 @@ pub const FIELD_SPECS_V2: [(VanBanField, &str); 16] = [
 pub fn f_24a() -> String {
     let mut r_3k2 = String::from(
         r#"Bạn là hệ thống bóc tách thông tin văn bản hành chính Việt Nam.
-Hãy đọc ảnh trang văn bản và trích xuất 16 trường sau:
+Hãy đọc ảnh trang văn bản và trích xuất 18 trường sau:
 
 "#,
     );
@@ -224,7 +235,7 @@ pub fn model_max_len() -> u32 {
         .filter(|&n: &u32| n >= 2048)
         .unwrap_or(MODEL_MAX_LEN_V2)
 }
-/// Chừa tối thiểu ngần này token cho JSON 16 trường.
+/// Chừa tối thiểu ngần này token cho JSON 18 trường.
 const MIN_OUTPUT_V2: u32 = 700;
 const EXAMPLE_OCR_CHARS: usize = 600;
 const PAGE_OCR_CHARS: usize = 1500;
@@ -395,7 +406,7 @@ mod few_shot_tests {
         let (t, out) = fit_hint(&ex(3), 1850).unwrap();
         assert_eq!(t.matches("VÍ DỤ").count(), 3);
         assert!(t.contains("CHỮ OCR CỦA TRANG") && out >= MIN_OUTPUT_V2);
-        assert!(!t.contains("khongCo"), "chỉ đưa khoá thuộc 16 trường");
+        assert!(!t.contains("khongCo"), "chỉ đưa khoá thuộc danh sách trường");
     }
     #[test]
     fn thieu_cho_thi_bot_vi_du_roi_bo_ocr() {

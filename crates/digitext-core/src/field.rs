@@ -7,8 +7,12 @@ pub enum VanBanField {
     LoaiVanBan,
     SoKyHieu,
     NgayThang,
+    /// Cơ quan chủ quản — dòng TRÊN tên cơ quan ban hành (thêm 29/9/2026, nhãn từ plakie).
+    CoQuanChuQuan,
     CoQuanBanHanh,
     TrichYeu,
+    /// Họ tên người ký (thêm 29/9/2026, nhãn từ plakie).
+    NguoiKy,
     ToSo,
     SoTrang,
     TrangSo,
@@ -21,13 +25,15 @@ pub enum VanBanField {
     GhiChu,
 }
 impl VanBanField {
-    pub const ALL: [VanBanField; 16] = [
+    pub const ALL: [VanBanField; 18] = [
         VanBanField::ThuTu,
         VanBanField::LoaiVanBan,
         VanBanField::SoKyHieu,
         VanBanField::NgayThang,
+        VanBanField::CoQuanChuQuan,
         VanBanField::CoQuanBanHanh,
         VanBanField::TrichYeu,
+        VanBanField::NguoiKy,
         VanBanField::ToSo,
         VanBanField::SoTrang,
         VanBanField::TrangSo,
@@ -45,8 +51,10 @@ impl VanBanField {
             VanBanField::LoaiVanBan => "loaiVanBan",
             VanBanField::SoKyHieu => "soKyHieu",
             VanBanField::NgayThang => "ngayThang",
+            VanBanField::CoQuanChuQuan => "coQuanChuQuan",
             VanBanField::CoQuanBanHanh => "coQuanBanHanh",
             VanBanField::TrichYeu => "trichYeu",
+            VanBanField::NguoiKy => "nguoiKy",
             VanBanField::ToSo => "toSo",
             VanBanField::SoTrang => "soTrang",
             VanBanField::TrangSo => "trangSo",
