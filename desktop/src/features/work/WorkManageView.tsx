@@ -164,7 +164,7 @@ function TaoGoi({
     setErr(null);
     try {
       const r = await workCreatePackage(body());
-      window.alert(`Đã tạo ${r.packageIds.length} gói (${r.sizes.map(n).join(", ")} tài liệu).`);
+      window.alert(`Đã tạo ${r.packageIds.length} gói (${r.sizes.map(n).join(", ")} tài liệu).${r.toExtract ? ` ${n(r.toExtract)} tài liệu đang được máy bóc trường.` : ""}`);
       onCreated();
     } catch (e) {
       setErr(errText(e));
@@ -306,9 +306,12 @@ function TaoGoi({
                 <span className={preview.sizes.reduce((a, b) => a + b, 0) === preview.available ? "text-success-700" : "text-warning-700"}>
                   {Math.round((preview.sizes.reduce((a, b) => a + b, 0) / Math.max(1, preview.available)) * 100)}% trong {n(preview.available)} tài liệu đủ điều kiện
                 </span>
+                {preview.toExtract > 0 && (
+                  <span className="text-warning-700"> · {n(preview.toExtract)} tài liệu chưa bóc trường — máy sẽ bóc trước, CTV mở ra là có trường máy điền</span>
+                )}
               </>
             ) : (
-              <span className="text-danger">Không có tài liệu đủ điều kiện (đã bóc trường, chưa giao) trong phạm vi.</span>
+              <span className="text-danger">Không có tài liệu đủ điều kiện (đã OCR xong, chưa giao) trong phạm vi.</span>
             )
           ) : (
             "Đang tính…"

@@ -247,10 +247,12 @@ fn default_count() -> usize {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CreateResp {
-    /// Tài liệu đủ điều kiện trong phạm vi (đã bóc trường, chưa giao).
+    /// Tài liệu đủ điều kiện trong phạm vi (đã OCR xong, chưa giao).
     available: usize,
     /// Cỡ từng gói sẽ tạo / đã tạo.
     sizes: Vec<usize>,
+    /// Trong số được giao, bao nhiêu tài liệu CHƯA bóc trường (tạo gói sẽ tự xếp hàng bóc).
+    to_extract: usize,
     package_ids: Vec<Uuid>,
 }
 
@@ -271,6 +273,7 @@ async fn create_package(State(st): State<AppState>, ts: Ts, Json(r): Json<Create
         }
     }
     let seed = Utc::now().timestamp_nanos_opt().unwrap_or(1) as u64;
+    let mut no_fields: std::collections::HashSet<Uuid> = Default::default();
     let groups: Vec<Vec<Uuid>> = if r.kind == "kiem_tra" {
         let src = r.source_package_id.ok_or_else(|| ApiError::bad_request("gói kiểm tra cần chọn gói xác nhận nguồn"))?;
         let src_pkg = managed_package(&st, &ts, src).await?;
@@ -285,6 +288,7 @@ async fn create_package(State(st): State<AppState>, ts: Ts, Json(r): Json<Create
         g
     } else {
         let cands = wp::candidates(&st.pool, r.project_id, &r.prefixes).await?;
+        no_fields = cands.iter().filter(|c| !c.has_fields).map(|c| c.id).collect();
         if r.mode == "hoso" {
             wp::split_hoso(&cands, size, count)
         } else {
@@ -297,11 +301,16 @@ async fn create_package(State(st): State<AppState>, ts: Ts, Json(r): Json<Create
         wp::candidates(&st.pool, r.project_id, &r.prefixes).await?.len()
     };
     let sizes: Vec<usize> = groups.iter().map(Vec::len).collect();
+    let to_extract = groups.iter().flatten().filter(|d| no_fields.contains(d)).count();
     if r.dry_run {
-        return Ok(Json(CreateResp { available, sizes, package_ids: Vec::new() }));
+        return Ok(Json(CreateResp { available, sizes, to_extract, package_ids: Vec::new() }));
     }
     if groups.is_empty() {
-        return Err(ApiError::bad_request("không có tài liệu nào đủ điều kiện (đã bóc trường, chưa giao) trong phạm vi"));
+        return Err(ApiError::bad_request("không có tài liệu nào đủ điều kiện (đã OCR xong, chưa giao) trong phạm vi"));
+    }
+    // Tài liệu chưa bóc trường → xếp hàng bóc ngay để CTV mở ra là có sẵn trường máy điền.
+    for d in groups.iter().flatten().filter(|d| no_fields.contains(d)) {
+        digitext_db::ocr_jobs::f_19p(&st.pool, *d).await?;
     }
     let base = if r.name.trim().is_empty() {
         format!("Gói {}", Utc::now().format("%d/%m %H:%M"))
@@ -335,7 +344,7 @@ async fn create_package(State(st): State<AppState>, ts: Ts, Json(r): Json<Create
         audit(&ts, "work.package_create", format!("project:{}", r.project_id), serde_json::json!({ "packages": ids, "sizes": sizes, "kind": r.kind, "mode": r.mode })),
     )
     .await?;
-    Ok(Json(CreateResp { available, sizes, package_ids: ids }))
+    Ok(Json(CreateResp { available, sizes, to_extract, package_ids: ids }))
 }
 
 #[derive(Debug, Serialize)]
