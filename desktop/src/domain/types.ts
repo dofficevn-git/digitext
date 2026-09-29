@@ -23,7 +23,10 @@ export type V3xt =
   | "server"
   | "report"
   | "work"
-  | "workManage";
+  | "workManage"
+  | "chinhlyAdmin"
+  | "khogiaManage"
+  | "loan";
 
 export type V3xu = "laphoso" | "hethonghoa" | "capnhat" | "sohoa" | "kyso" | "ocr";
 

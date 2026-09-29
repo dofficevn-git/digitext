@@ -69,9 +69,17 @@ pub enum Permission {
     WorkExecute,
     /// Tạo / giao / duyệt gói việc xác nhận trường.
     WorkManage,
+    /// Chỉnh lý: hệ thống hoá (đánh số hồ sơ, gán hộp/bó/tập, xuất/nhập mục lục tạm).
+    DossierSystematize,
+    /// Chỉnh lý: quản lý kho / giá lưu trữ và xếp hồ sơ lên giá.
+    KhoGiaManage,
+    /// Mượn / trả hồ sơ giấy: xem phiếu.
+    LoanView,
+    /// Mượn / trả hồ sơ giấy: lập phiếu, ghi trả.
+    LoanManage,
 }
 impl Permission {
-    pub const ALL: [Permission; 60] = [
+    pub const ALL: [Permission; 64] = [
         Permission::DossierRead,
         Permission::DossierCreate,
         Permission::DossierUpdate,
@@ -132,6 +140,10 @@ impl Permission {
         Permission::DeviceRevoke,
         Permission::WorkExecute,
         Permission::WorkManage,
+        Permission::DossierSystematize,
+        Permission::KhoGiaManage,
+        Permission::LoanView,
+        Permission::LoanManage,
     ];
     pub fn as_str(self) -> &'static str {
         match self {
@@ -195,6 +207,10 @@ impl Permission {
             Permission::DeviceRevoke => "device.revoke",
             Permission::WorkExecute => "work.execute",
             Permission::WorkManage => "work.manage",
+            Permission::DossierSystematize => "dossier.systematize",
+            Permission::KhoGiaManage => "khogia.manage",
+            Permission::LoanView => "loan.view",
+            Permission::LoanManage => "loan.manage",
         }
     }
     pub fn min_perm(self) -> Perm {
@@ -231,7 +247,9 @@ impl Permission {
             | Permission::RecordView
             | Permission::RecordCreate
             | Permission::DisposalView
-            | Permission::WorkExecute => Perm::Operate,
+            | Permission::WorkExecute
+            | Permission::LoanView
+            | Permission::LoanManage => Perm::Operate,
             Permission::SubmissionReview
             | Permission::SubmissionApprove
             | Permission::AccessReview
@@ -257,7 +275,9 @@ impl Permission {
             | Permission::ProjectUpdate
             | Permission::DeviceView
             | Permission::DeviceRevoke
-            | Permission::WorkManage => Perm::Admin,
+            | Permission::WorkManage
+            | Permission::DossierSystematize
+            | Permission::KhoGiaManage => Perm::Admin,
             Permission::ProjectAssignAdmin => Perm::Super,
         }
     }

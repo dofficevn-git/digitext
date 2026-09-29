@@ -846,6 +846,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "digitext-core",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",

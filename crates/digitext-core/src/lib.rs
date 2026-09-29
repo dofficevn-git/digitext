@@ -1,5 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 #![forbid(unsafe_code)]
+pub mod chinh_ly;
 pub mod doc_status;
 pub mod field;
 pub mod job;
