@@ -1,11 +1,15 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Đồng bộ & xung đột: trạng thái engine, thay đổi chờ đẩy / bị từ chối (thử lại, bỏ), xung đột (chọn theo trường).
+// Đồng bộ và xung đột: trạng thái engine, xung đột (chọn theo trường), thay đổi chờ đẩy / bị từ chối (thử lại, bỏ).
+// Chuyển dữ liệu cũ nằm ở Cài đặt › Dữ liệu.
 
 import { useCallback, useState } from "react";
 import { isTauri } from "@/api/ipc";
-import { V41p } from "@/live/useLive";
-import { clConflictResolve, clConflicts, clMigratePreview, clMigrateRun, clOutbox, clOutboxDiscard, clOutboxRetry, clSyncNow, str, type ClConflict, type ClMigrateReport, type ClOutboxRow } from "@/api/chinhly";
-import { ChuaChonDuAn, errText, fmtTime, n, syncLabel, useClSync } from "./common";
+import { V41t } from "@/live/useLive";
+import { clConflictResolve, clConflicts, clOutbox, clOutboxDiscard, clOutboxRetry, clSyncNow, str, type ClConflict, type ClOutboxRow } from "@/api/chinhly";
+import { ChuaChonDuAn, fmtTime, n, SyncBadge, syncLabel, useClSync } from "./common";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Icon } from "@/components/Icon";
+import { Badge, Banner, Button, Card, confirm, EmptyState, ErrorBanner, Menu, notifyError, PageHeader, Seg, Table, toast, type Column } from "@/ui";
 
 const TEN_BANG: Record<string, string> = {
   cl_ho_so: "Hồ sơ",
@@ -35,10 +39,10 @@ const NHAN: Record<string, string> = {
 const nhan = (k: string) => NHAN[k] ?? k;
 const mota = (r: Record<string, unknown> | null | undefined) => (r ? [str(r as never, "so_tam") && `số tạm ${str(r as never, "so_tam")}`, str(r as never, "tieu_de"), str(r as never, "trich_yeu"), str(r as never, "ten")].filter(Boolean).join(" · ") : "");
 
-function XungDot({ c, onDone }: { c: ClConflict; onDone: () => void }) {
+function XungDot({ c, onDone, defaultOpen }: { c: ClConflict; onDone: () => void; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [pick, setPick] = useState<Record<string, "mine" | "theirs">>(() => Object.fromEntries(c.fields.map((f) => [f, "mine"])));
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const daXoa = !c.theirs || !!c.theirs.deleted_at;
   const chot = async (choice: "mine" | "theirs" | "merged") => {
     setBusy(true);
@@ -49,156 +53,76 @@ function XungDot({ c, onDone }: { c: ClConflict; onDone: () => void }) {
         for (const [f, who] of Object.entries(pick)) if (who === "theirs" && c.theirs) merged[f] = c.theirs[f];
       }
       await clConflictResolve(c.id, choice, merged);
+      toast.success("Đã giải quyết xung đột.");
       onDone();
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "giải quyết xung đột");
     } finally {
       setBusy(false);
     }
   };
+  const cols: Column<string>[] = [
+    { key: "f", header: "Trường", width: 140, cell: (f) => nhan(f) },
+    { key: "base", header: "Bản gốc lúc kéo về", className: "text-fg-subtle whitespace-normal", cell: (f) => String(c.base?.[f] ?? "") },
+    { key: "mine", header: "Của tôi", className: "whitespace-normal", cell: (f) => String(c.mine[f] ?? "") },
+    { key: "theirs", header: "Máy chủ", className: "whitespace-normal", cell: (f) => String(c.theirs?.[f] ?? "") },
+    { key: "pick", header: "Giữ", width: 180, cell: (f) => <Seg<"mine" | "theirs"> value={pick[f]} onChange={(v) => setPick((p) => ({ ...p, [f]: v }))} options={[{ value: "mine", label: "Của tôi" }, { value: "theirs", label: "Máy chủ" }]} /> },
+  ];
   return (
-    <div className="card mt-2">
-      <div className="flex items-center gap-2 flex-wrap">
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-md border border-border-subtle">
+      <CollapsibleTrigger className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover">
+        <Icon name={open ? "xuong" : "moNhanh"} size={14} className="text-fg-subtle" />
         <b>{TEN_BANG[c.tbl] ?? c.tbl}</b>
-        <span className="muted text-sm">{mota(c.mine)}</span>
-        <span className="badge warn">{c.message ?? "Xung đột"}</span>
-        <span className="muted text-sm">{fmtTime(c.createdAt)}</span>
-      </div>
-      {daXoa ? (
-        <div className="text-sm mt-2">Bản ghi này đã bị xoá trên máy chủ. Bạn muốn tạo lại từ bản của mình hay bỏ?</div>
-      ) : (
-        <div className="tbl-scroll mt-2">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Trường</th>
-                <th>Bản gốc (lúc kéo về)</th>
-                <th>Của tôi</th>
-                <th>Máy chủ (người khác)</th>
-                <th>Giữ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {c.fields.map((f) => (
-                <tr key={f}>
-                  <td>{nhan(f)}</td>
-                  <td className="muted">{String(c.base?.[f] ?? "")}</td>
-                  <td>{String(c.mine[f] ?? "")}</td>
-                  <td>{String(c.theirs?.[f] ?? "")}</td>
-                  <td className="whitespace-nowrap">
-                    <label className="mr-2">
-                      <input type="radio" checked={pick[f] === "mine"} onChange={() => setPick((p) => ({ ...p, [f]: "mine" }))} /> tôi
-                    </label>
-                    <label>
-                      <input type="radio" checked={pick[f] === "theirs"} onChange={() => setPick((p) => ({ ...p, [f]: "theirs" }))} /> máy chủ
-                    </label>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {err && <div className="text-danger text-sm mt-2">{err}</div>}
-      <div className="flex gap-2 mt-2 flex-wrap">
+        <span className="text-sm text-fg-subtle">{mota(c.mine)}</span>
+        <Badge tone="warn">{daXoa ? "Đã xoá trên máy chủ" : `${c.fields.length} trường khác nhau`}</Badge>
+        <span className="ml-auto text-xs text-fg-subtle">{fmtTime(c.createdAt)}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t border-border-subtle p-3">
         {daXoa ? (
-          <>
-            <button className="btn sm primary" disabled={busy} onClick={() => void chot("mine")}>
-              Tạo lại từ bản của tôi
-            </button>
-            <button className="btn sm" disabled={busy} onClick={() => void chot("theirs")}>
-              Bỏ, chấp nhận đã xoá
-            </button>
-          </>
+          <p className="text-sm">Bản ghi này đã bị xoá trên máy chủ. Tạo lại từ bản của bạn hay chấp nhận đã xoá?</p>
         ) : (
-          <>
-            <button className="btn sm primary" disabled={busy} onClick={() => void chot("merged")}>
-              Áp dụng lựa chọn theo trường
-            </button>
-            <button className="btn sm" disabled={busy} onClick={() => void chot("mine")}>
-              Giữ toàn bộ của tôi
-            </button>
-            <button className="btn sm" disabled={busy} onClick={() => void chot("theirs")}>
-              Lấy bản máy chủ
-            </button>
-          </>
+          <Table columns={cols} rows={c.fields} getRowId={(f) => f} dense />
         )}
-      </div>
-    </div>
-  );
-}
-
-function ChuyenDuLieuCu({ onDone }: { onDone: () => void }) {
-  const [rep, setRep] = useState<ClMigrateReport | null>(null);
-  const [res, setRes] = useState<ClMigrateReport | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    try {
-      setRep(await clMigratePreview());
-    } catch (e) {
-      setErr(errText(e));
-    }
-  }, []);
-  V41p(load, { topics: ["chinhLy", "dossier"], enabled: isTauri() });
-  const tong = rep ? rep.phong + rep.thbq + rep.phongBan + rep.mang + rep.hoSo + rep.vanBan : 0;
-  const chay = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      setRes(await clMigrateRun());
-      onDone();
-      void load();
-    } catch (e) {
-      setErr(errText(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  if (!rep) return null;
-  return (
-    <div className="card mt-3.5">
-      <h3 className="m-0">Dữ liệu chỉnh lý cũ trên máy này</h3>
-      {tong === 0 ? (
-        <div className="muted text-sm mt-1">Mọi hồ sơ, văn bản, danh mục lập trước đây trên máy đã được nối với máy chủ.</div>
-      ) : (
-        <div className="text-sm mt-1">
-          Chưa lên máy chủ: {n(rep.hoSo)} hồ sơ, {n(rep.vanBan)} văn bản, {n(rep.phong)} phông, {n(rep.phongBan)} phòng ban, {n(rep.mang)} mảng, {n(rep.thbq)} THBQ. Bấm để đưa vào bản sao đồng bộ (số tạm trùng trong phông sẽ bị báo khi đẩy).
+        <div className="mt-3 flex flex-wrap gap-2">
+          {daXoa ? (
+            <>
+              <Button size="sm" variant="primary" loading={busy} onClick={() => void chot("mine")}>
+                Tạo lại từ bản của tôi
+              </Button>
+              <Button size="sm" disabled={busy} onClick={() => void chot("theirs")}>
+                Chấp nhận đã xoá
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="primary" loading={busy} onClick={() => void chot("merged")}>
+                Áp dụng lựa chọn theo trường
+              </Button>
+              <Button size="sm" disabled={busy} onClick={() => void chot("mine")}>
+                Giữ toàn bộ của tôi
+              </Button>
+              <Button size="sm" disabled={busy} onClick={() => void chot("theirs")}>
+                Lấy bản máy chủ
+              </Button>
+            </>
+          )}
         </div>
-      )}
-      <div className="flex gap-2 mt-2 items-center flex-wrap">
-        <button className="btn primary" disabled={busy || tong === 0} onClick={() => void chay()}>
-          {busy ? "Đang chuyển…" : "Đưa dữ liệu cũ lên máy chủ"}
-        </button>
-        {res && (
-          <span className="text-sm text-success-700">
-            Đã chuyển {n(res.hoSo)} hồ sơ, {n(res.vanBan)} văn bản, {n(res.phong)} phông, {n(res.phongBan)} phòng ban, {n(res.mang)} mảng.
-            {res.errors.length > 0 && <span className="text-danger"> {res.errors.length} lỗi: {res.errors.slice(0, 3).join("; ")}</span>}
-          </span>
-        )}
-        {err && <span className="text-danger text-sm">{err}</span>}
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
 export default function DongBoView() {
   const sync = useClSync();
-  const [outbox, setOutbox] = useState<ClOutboxRow[]>([]);
-  const [conflicts, setConflicts] = useState<ClConflict[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => {
-    try {
-      const [o, c] = await Promise.all([clOutbox(), clConflicts()]);
-      setOutbox(o);
-      setConflicts(c);
-      setErr(null);
-    } catch (e) {
-      setErr(errText(e));
-    }
+  const loader = useCallback(async () => {
+    if (!isTauri()) return { outbox: [] as ClOutboxRow[], conflicts: [] as ClConflict[] };
+    const [outbox, conflicts] = await Promise.all([clOutbox(), clConflicts()]);
+    return { outbox, conflicts };
   }, []);
-  const { reload } = V41p(load, { topics: ["clSync", "chinhLy"], enabled: isTauri() });
+  const { data, error, reload } = V41t(loader, { topics: ["clSync", "chinhLy"], errorText: () => "Không đọc được hàng đợi đồng bộ." });
+  const outbox = data?.outbox ?? [];
+  const conflicts = data?.conflicts ?? [];
+  const [busy, setBusy] = useState(false);
   const sl = syncLabel(sync);
 
   const dongBo = async () => {
@@ -207,101 +131,80 @@ export default function DongBoView() {
       await clSyncNow();
       reload();
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "đồng bộ");
     } finally {
       setBusy(false);
     }
   };
+  const bo = async (o: ClOutboxRow) => {
+    const ok = await confirm({ title: "Bỏ thay đổi này?", body: "Bản ghi quay về bản trên máy chủ.", confirmLabel: "Bỏ", danger: true });
+    if (!ok) return;
+    try {
+      await clOutboxDiscard(o.id);
+      reload();
+    } catch (e) {
+      notifyError(e, "bỏ thay đổi");
+    }
+  };
+
+  const cols: Column<ClOutboxRow>[] = [
+    { key: "tbl", header: "Bảng", width: 140, cell: (o) => TEN_BANG[o.tbl] ?? o.tbl },
+    { key: "row", header: "Bản ghi", className: "max-w-[420px] whitespace-normal", cell: (o) => mota(o.new) || mota(o.base) || o.rowId },
+    { key: "op", header: "Thao tác", width: 90, cell: (o) => (o.op === "delete" ? "Xoá" : o.base ? "Sửa" : "Thêm") },
+    {
+      key: "status",
+      header: "Trạng thái",
+      width: 130,
+      cell: (o) => (
+        <>
+          <Badge tone={o.status === "pending" ? "info" : "err"}>{o.status === "pending" ? "Chờ đẩy" : "Bị từ chối"}</Badge>
+          {o.attempts > 0 && <span className="ml-1 text-xs text-fg-subtle">{o.attempts} lần</span>}
+        </>
+      ),
+    },
+    { key: "lastError", header: "Lỗi", className: "whitespace-normal text-sm text-danger-700", cell: (o) => o.lastError },
+    { key: "at", header: "Sửa lúc", width: 110, className: "text-sm", cell: (o) => fmtTime(o.editedAt ?? o.createdAt) },
+  ];
 
   return (
-    <>
-      <div className="page-head">
-        <h2>Đồng bộ & xung đột</h2>
-        <div className="sub">· dữ liệu chỉnh lý giữa máy này và máy chủ</div>
-      </div>
+    <section className="view active">
+      <PageHeader
+        title="Đồng bộ và xung đột"
+        description="Dữ liệu chỉnh lý giữa máy này và máy chủ."
+        meta={<SyncBadge sync={sync} />}
+        actions={
+          <Button variant="primary" icon="lamMoi" loading={busy} onClick={() => void dongBo()}>
+            Đồng bộ ngay
+          </Button>
+        }
+      />
       <ChuaChonDuAn />
-      <div className="card mt-3.5">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className={`badge ${sl.dot === "ok" ? "ok" : sl.dot === "err" ? "err" : sl.dot === "warn" ? "warn" : "gray"}`} title={sl.title}>
-            {sl.text}
-          </span>
-          <span className="text-sm muted">{sl.title}</span>
-          <div className="flex-1" />
-          <button className="btn primary" disabled={busy} onClick={() => void dongBo()}>
-            {busy ? "Đang đồng bộ…" : "Đồng bộ ngay"}
-          </button>
-        </div>
-        {sync?.lastError && <div className="text-danger text-sm mt-2">{sync.lastError}</div>}
-        {err && <div className="text-danger text-sm mt-2">{err}</div>}
-      </div>
+      {sync?.lastError && <Banner tone="danger" className="mb-4" title="Lần đồng bộ gần nhất lỗi">{sync.lastError}</Banner>}
+      {error != null && <ErrorBanner error={error} className="mb-4" onRetry={reload} />}
+      <p className="mb-4 text-sm text-fg-subtle">{sl.title}</p>
 
-      <ChuyenDuLieuCu onDone={reload} />
+      <Card className="mb-4" title={`Xung đột cần bạn chọn (${n(conflicts.length)})`} description="Sửa khác trường với người khác thì máy chủ tự gộp, chỉ cùng trường khác giá trị mới hỏi.">
+        {conflicts.length === 0 ? (
+          <EmptyState compact icon="duyet" title="Không có xung đột" />
+        ) : (
+          <div className="space-y-2">
+            {conflicts.map((c, i) => (
+              <XungDot key={c.id} c={c} onDone={reload} defaultOpen={i === 0} />
+            ))}
+          </div>
+        )}
+      </Card>
 
-      <div className="card mt-3.5">
-        <h3 className="m-0">Xung đột cần bạn chọn ({n(conflicts.length)})</h3>
-        {conflicts.length === 0 && <div className="muted text-sm mt-1">Không có xung đột. Sửa khác trường với người khác thì máy chủ tự gộp, chỉ cùng trường khác giá trị mới hỏi.</div>}
-        {conflicts.map((c) => (
-          <XungDot key={c.id} c={c} onDone={reload} />
-        ))}
-      </div>
-
-      <div className="card mt-3.5">
-        <h3 className="m-0">Thay đổi chờ đẩy / bị từ chối ({n(outbox.length)})</h3>
-        <div className="tbl-scroll mt-2">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Bảng</th>
-                <th>Bản ghi</th>
-                <th>Thao tác</th>
-                <th>Trạng thái</th>
-                <th>Lỗi</th>
-                <th>Sửa lúc</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {outbox.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="muted">
-                    Mọi thay đổi đã lên máy chủ.
-                  </td>
-                </tr>
-              )}
-              {outbox.map((o) => (
-                <tr key={o.id}>
-                  <td>{TEN_BANG[o.tbl] ?? o.tbl}</td>
-                  <td className="max-w-[420px] truncate" title={mota(o.new) || mota(o.base)}>
-                    {mota(o.new) || mota(o.base) || o.rowId}
-                  </td>
-                  <td>{o.op === "delete" ? "Xoá" : o.base ? "Sửa" : "Thêm"}</td>
-                  <td>
-                    <span className={`badge ${o.status === "pending" ? "info" : "err"}`}>{o.status === "pending" ? "chờ đẩy" : "bị từ chối"}</span>
-                    {o.attempts > 0 && <span className="muted text-xs"> ({o.attempts} lần)</span>}
-                  </td>
-                  <td className="text-danger text-sm">{o.lastError}</td>
-                  <td className="text-sm">{fmtTime(o.editedAt ?? o.createdAt)}</td>
-                  <td className="whitespace-nowrap">
-                    {o.status !== "pending" && (
-                      <button className="btn sm" onClick={() => void clOutboxRetry(o.id).then(reload).catch((e) => setErr(errText(e)))}>
-                        Thử lại
-                      </button>
-                    )}{" "}
-                    <button
-                      className="btn sm"
-                      onClick={() => {
-                        if (window.confirm("Bỏ thay đổi này và quay về bản máy chủ?")) void clOutboxDiscard(o.id).then(reload).catch((e) => setErr(errText(e)));
-                      }}
-                    >
-                      Bỏ
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
+      <Card padding="none" title={`Thay đổi chờ đẩy hoặc bị từ chối (${n(outbox.length)})`}>
+        <Table
+          columns={cols}
+          rows={outbox}
+          getRowId={(o) => String(o.id)}
+          dense
+          rowActions={(o) => <Menu size="sm" items={[...(o.status !== "pending" ? [{ label: "Thử lại", icon: "lamLai" as const, onSelect: () => void clOutboxRetry(o.id).then(reload).catch((e) => notifyError(e, "thử lại")) }] : []), { label: "Bỏ thay đổi", icon: "bo" as const, danger: true, onSelect: () => void bo(o) }]} />}
+          state={{ empty: { title: "Mọi thay đổi đã lên máy chủ", icon: "duyet" } }}
+        />
+      </Card>
+    </section>
   );
 }

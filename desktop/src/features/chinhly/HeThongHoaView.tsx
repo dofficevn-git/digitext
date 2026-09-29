@@ -1,21 +1,21 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Hệ thống hoá hồ sơ (chỉ online): lọc tập hồ sơ trong phông → chọn 1 trong 6 thứ tự → Xem trước (số hồ sơ
-// dự kiến, mã hồ sơ, cảnh báo) → Áp dụng (đánh số chính thức) → Xuất mục lục tạm → điền hộp / bó / tập
-// → Nhập lại (gán hộp, tự tạo hộp theo phòng ban) · gán lẻ cho các dòng đã chọn.
+// Hệ thống hoá hồ sơ (chỉ online): lọc tập hồ sơ trong phông → chọn thứ tự → Xem trước → Áp dụng (đánh số chính
+// thức) → Xuất mục lục tạm, điền hộp / bó / tập → Nhập lại (gán hộp, tự tạo hộp theo phòng ban) · gán lẻ cho dòng chọn.
 
 import { useMemo, useRef, useState } from "react";
 import { V460 } from "@/state";
 import { clRemote, str, THBQ_STATUS_LABEL } from "@/api/chinhly";
-import { ChuaChonDuAn, errText, Field, n, Select, THBQ_BADGE, useClCatalog, useClSync } from "./common";
+import { CanMayChu, Chip, ChuaChonDuAn, n, Select, tenPhong, THBQ_BADGE, useClCatalog, useClSync } from "./common";
 import { docMucLucTam, xuatMucLucTam, type PreviewRow } from "./excel";
+import { Badge, Banner, Button, Card, Checkbox, confirm, Field, FormGrid, Input, notifyError, PageHeader, prompt, Select as UiSelect, Stepper, Table, Tip, toast, Toolbar, type Column } from "@/ui";
 
 const ORDERS: [number, string][] = [
-  [1, "Mặt hoạt động → Thời gian"],
-  [2, "Thời gian → Mặt hoạt động"],
-  [3, "THBQ tăng dần → Mặt hoạt động → Thời gian"],
-  [4, "THBQ giảm dần → Mặt hoạt động → Thời gian"],
-  [5, "THBQ tăng dần → Thời gian → Mặt hoạt động"],
-  [6, "THBQ giảm dần → Thời gian → Mặt hoạt động"],
+  [1, "Mặt hoạt động, rồi thời gian"],
+  [2, "Thời gian, rồi mặt hoạt động"],
+  [3, "THBQ tăng dần, mặt hoạt động, thời gian"],
+  [4, "THBQ giảm dần, mặt hoạt động, thời gian"],
+  [5, "THBQ tăng dần, thời gian, mặt hoạt động"],
+  [6, "THBQ giảm dần, thời gian, mặt hoạt động"],
 ];
 
 interface Preview {
@@ -23,6 +23,12 @@ interface Preview {
   order: number;
   fileType: number;
   rows: PreviewRow[];
+}
+interface ImportRes {
+  applied: number;
+  hopsCreated: number;
+  boTapCreated: number;
+  errors: { row: number; message: string }[];
 }
 
 export default function HeThongHoaView() {
@@ -46,16 +52,18 @@ export default function HeThongHoaView() {
 
   const [preview, setPreview] = useState<Preview | null>(null);
   const [applied, setApplied] = useState(false);
+  const [daXuat, setDaXuat] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
-  const [importRes, setImportRes] = useState<{ applied: number; hopsCreated: number; boTapCreated: number; errors: { row: number; message: string }[] } | null>(null);
+  const [chiCanhBao, setChiCanhBao] = useState(false);
+  const [importRes, setImportRes] = useState<ImportRes | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const phong = cat.phong.find((p) => p.id === phongId);
   const phongBans = useMemo(() => cat.phong_ban.filter((p) => str(p, "phong_id") === phongId), [cat.phong_ban, phongId]);
   const mangs = useMemo(() => cat.mang.filter((m) => str(m, "phong_ban_id") === phongBanId), [cat.mang, phongBanId]);
+  const tenOrder = ORDERS.find((o) => o[0] === order)?.[1] ?? "";
+  const tenDonVi = fileType === 1 ? "hộp" : "bó / tập";
 
   const body = () => ({
     projectId,
@@ -68,30 +76,32 @@ export default function HeThongHoaView() {
 
   const xemTruoc = async () => {
     setBusy(true);
-    setErr(null);
-    setMsg(null);
     setApplied(false);
+    setDaXuat(false);
+    setImportRes(null);
     try {
-      setPreview(await clRemote<Preview>("POST", "/cl/he-thong-hoa/preview", body()));
+      const p = await clRemote<Preview>("POST", "/cl/he-thong-hoa/preview", body());
+      setPreview(p);
       setSel(new Set());
+      if (p.rows.length === 0) toast.info("Không có hồ sơ nào khớp bộ lọc.");
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "xem trước");
     } finally {
       setBusy(false);
     }
   };
   const apDung = async () => {
     if (!preview) return;
-    if (!window.confirm(`Đánh số chính thức ${n(preview.rows.length)} hồ sơ từ ${startAt} theo thứ tự “${ORDERS.find((o) => o[0] === order)?.[1]}”? Số cũ (nếu có) sẽ bị thay.`)) return;
+    const ok = await confirm({ title: `Đánh số chính thức ${n(preview.rows.length)} hồ sơ?`, body: `Bắt đầu từ số ${startAt}, theo thứ tự "${tenOrder}". Số cũ nếu có sẽ bị thay.`, confirmLabel: "Đánh số" });
+    if (!ok) return;
     setBusy(true);
-    setErr(null);
     try {
       const p = await clRemote<Preview>("POST", "/cl/he-thong-hoa/apply", { ...body(), snapshotVer: preview.snapshotVer });
       setPreview(p);
       setApplied(true);
-      setMsg(`Đã đánh số ${n(p.rows.length)} hồ sơ. Xuất mục lục tạm, điền ${fileType === 1 ? "Hộp số" : "Bó số / Tập số"} rồi nhập lại.`);
+      toast.success(`Đã đánh số ${n(p.rows.length)} hồ sơ.`, { description: `Xuất mục lục tạm, điền ${tenDonVi} rồi nhập lại.` });
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "đánh số");
     } finally {
       setBusy(false);
     }
@@ -99,39 +109,44 @@ export default function HeThongHoaView() {
   const xuat = async () => {
     if (!preview) return;
     try {
-      await xuatMucLucTam(preview.rows, fileType, phongId, str(phong, "ten"), ORDERS.find((o) => o[0] === order)?.[1] ?? "");
+      await xuatMucLucTam(preview.rows, fileType, phongId, str(phong, "ten"), tenOrder);
+      setDaXuat(true);
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "xuất mục lục tạm");
     }
   };
   const nhap = async (f: File) => {
     setBusy(true);
-    setErr(null);
     setImportRes(null);
     try {
       const d = await docMucLucTam(f);
       if (d.rows.length === 0) {
-        setErr(d.errors[0]?.message ?? "Tệp không có dòng dữ liệu");
+        toast.warning(d.errors[0]?.message ?? "Tệp không có dòng dữ liệu.");
         setImportRes({ applied: 0, hopsCreated: 0, boTapCreated: 0, errors: d.errors });
         return;
       }
       const r = await clRemote<{ applied: number; hopsCreated: number; boTapCreated: number; errors: { row: number; hoSoId: string; message: string }[] }>("POST", "/cl/he-thong-hoa/boxing", { projectId, fileType: d.fileType, rows: d.rows });
       setImportRes({ ...r, errors: [...d.errors, ...r.errors.map((e) => ({ row: e.row + 2, message: e.message }))] });
-      setMsg(`Đã gán ${n(r.applied)} hồ sơ · tạo mới ${n(r.hopsCreated)} hộp, ${n(r.boTapCreated)} bó/tập.`);
+      toast.success(`Đã gán ${n(r.applied)} hồ sơ. Tạo mới ${n(r.hopsCreated)} hộp, ${n(r.boTapCreated)} bó / tập.`);
       if (preview) void xemTruoc();
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "nhập tệp đã điền");
     } finally {
       setBusy(false);
     }
   };
   const ganLe = async () => {
     if (sel.size === 0) return;
-    const v = window.prompt(fileType === 1 ? `Số hộp cho ${sel.size} hồ sơ đã chọn:` : `Bó số (và tập số, cách nhau dấu /) cho ${sel.size} hồ sơ:`);
+    const v = await prompt({
+      title: `Gán ${tenDonVi} cho ${n(sel.size)} hồ sơ đã chọn`,
+      label: fileType === 1 ? "Số hộp" : "Bó số / tập số",
+      placeholder: fileType === 1 ? "12" : "3/1",
+      body: fileType === 1 ? "Để trống để bỏ gán." : "Ghi bó và tập cách nhau dấu gạch chéo. Để trống để bỏ gán.",
+      confirmLabel: "Gán",
+    });
     if (v === null) return;
     const t = v.trim();
     setBusy(true);
-    setErr(null);
     try {
       const rows = [...sel].map((id) => {
         if (fileType === 1) return { hoSoId: id, hopSo: t };
@@ -139,177 +154,164 @@ export default function HeThongHoaView() {
         return { hoSoId: id, boSo: Number.isNaN(b) ? undefined : b, tapSo: Number.isNaN(tp) ? undefined : tp, clear: t === "" };
       });
       const r = await clRemote<{ applied: number; errors: { message: string }[] }>("POST", "/cl/he-thong-hoa/boxing", { projectId, fileType, rows });
-      setMsg(`Đã gán ${n(r.applied)} hồ sơ${r.errors.length ? ` · ${r.errors.length} lỗi: ${r.errors[0].message}` : ""}.`);
+      if (r.errors.length) toast.warning(`Đã gán ${n(r.applied)} hồ sơ, ${r.errors.length} lỗi.`, { description: r.errors[0].message });
+      else toast.success(`Đã gán ${n(r.applied)} hồ sơ.`);
       void xemTruoc();
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, "gán");
     } finally {
       setBusy(false);
     }
   };
 
   const khoa = !online || !canDo;
+  const rowsHien = useMemo(() => (preview ? (chiCanhBao ? preview.rows.filter((r) => r.warnings.length > 0) : preview.rows) : []), [preview, chiCanhBao]);
   const canhBao = preview?.rows.filter((r) => r.warnings.length > 0).length ?? 0;
+  const buoc = !preview ? 0 : !applied ? 1 : !daXuat && !importRes ? 2 : 3;
+
+  const cols: Column<PreviewRow>[] = [
+    { key: "stt", header: applied ? "Hồ sơ số" : "Hồ sơ số dự kiến", align: "right", width: 100, cell: (r) => <b>{r.stt}</b> },
+    { key: "hoSoSoCu", header: "Số cũ", align: "right", width: 70, className: "text-fg-subtle", cell: (r) => r.hoSoSoCu ?? "" },
+    { key: "hop", header: fileType === 1 ? "Hộp" : "Bó / tập", width: 90, cell: (r) => (fileType === 1 ? (r.hopSo ?? "") : [r.boSo, r.tapSo].filter((x) => x != null).join(" / ")) },
+    { key: "maHoSoMoi", header: "Mã hồ sơ mới", className: "text-xs", cell: (r) => r.maHoSoMoi ?? <span className="text-fg-subtle">—</span> },
+    { key: "soTam", header: "Số tạm", width: 90, cell: (r) => r.soTam },
+    { key: "tieuDe", header: "Tiêu đề", className: "max-w-[420px] whitespace-normal", cell: (r) => r.tieuDe },
+    { key: "tenPhongBan", header: "Phòng ban", className: "text-sm", cell: (r) => r.tenPhongBan ?? "", hideBelow: 1400 },
+    { key: "tenMang", header: "Mảng", className: "text-sm", cell: (r) => r.tenMang ?? "", hideBelow: 1400 },
+    { key: "tenThbq", header: "THBQ", className: "text-sm", cell: (r) => r.tenThbq ?? "" },
+    { key: "thbqStatus", header: "Trạng thái", width: 100, cell: (r) => (r.thbqStatus ? <Badge tone={THBQ_BADGE[r.thbqStatus] ?? "gray"}>{THBQ_STATUS_LABEL[r.thbqStatus] ?? r.thbqStatus}</Badge> : null) },
+    { key: "ngayKetThuc", header: "Kết thúc", width: 100, cell: (r) => r.ngayKetThuc ?? "" },
+    { key: "soTo", header: "Số tờ", align: "right", width: 70, cell: (r) => r.soTo ?? "" },
+    {
+      key: "warnings",
+      header: "Cảnh báo",
+      className: "whitespace-normal text-xs",
+      cell: (r) =>
+        r.warnings.length ? (
+          <Tip text={r.warnings.join("; ").slice(0, 80)}>
+            <span>
+              <Badge tone="warn">{r.warnings.length}</Badge> <span className="text-warning-700">{r.warnings[0]}</span>
+            </span>
+          </Tip>
+        ) : null,
+    },
+  ];
 
   return (
-    <>
-      <div className="page-head">
-        <h2>Hệ thống hoá hồ sơ</h2>
-        <div className="sub">· đánh số hồ sơ chính thức, xuất mục lục tạm, gán hộp / bó / tập · cần kết nối máy chủ</div>
-      </div>
+    <section className="view active">
+      <PageHeader title="Hệ thống hoá hồ sơ" description="Đánh số hồ sơ chính thức, xuất mục lục tạm, gán hộp, bó, tập. Cần kết nối máy chủ." />
       <ChuaChonDuAn />
-      {!canDo && <div className="card mt-3.5 text-warning-700">Tài khoản chưa có quyền hệ thống hoá (dossier.systematize).</div>}
-      {!online && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — hệ thống hoá thay đổi số hồ sơ của cả tập nên chỉ làm khi có máy chủ.</div>}
-      <div className="card mt-3.5">
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-          <Field label="Phông *">
-            <Select value={phongId} onChange={(v) => { setPhongId(v); setPhongBanId(""); setMangId(""); setPreview(null); }} rows={cat.phong} render={(r) => `${str(r, "ma_du_an")} — ${str(r, "ten")}`} />
+      {!canDo && <Banner tone="warning" className="mb-4">Tài khoản chưa có quyền hệ thống hoá.</Banner>}
+      <CanMayChu sync={sync} viec="Hệ thống hoá thay đổi số hồ sơ của cả tập nên chỉ làm khi có máy chủ." />
+
+      <Stepper className="mb-4" current={buoc} steps={[{ key: "xem", label: "Xem trước", hint: "Lọc và chọn thứ tự" }, { key: "ap", label: "Áp dụng đánh số" }, { key: "xuat", label: "Xuất mục lục tạm", hint: `Điền ${tenDonVi} trong Excel` }, { key: "nhap", label: "Nhập tệp đã điền" }]} />
+
+      <Card className="mb-4" title="Tập hồ sơ và thứ tự đánh số">
+        <FormGrid cols={4}>
+          <Field label="Phông" required>
+            <Select
+              value={phongId}
+              onChange={(v) => {
+                setPhongId(v);
+                setPhongBanId("");
+                setMangId("");
+                setPreview(null);
+              }}
+              rows={cat.phong}
+              render={tenPhong}
+            />
           </Field>
           <Field label="Phòng ban">
-            <Select value={phongBanId} onChange={(v) => { setPhongBanId(v); setMangId(""); }} rows={phongBans} empty="— Cả phông —" />
+            <Select
+              value={phongBanId}
+              onChange={(v) => {
+                setPhongBanId(v);
+                setMangId("");
+              }}
+              rows={phongBans}
+              empty="Cả phông"
+            />
           </Field>
           <Field label="Mảng công việc">
-            <Select value={mangId} onChange={setMangId} rows={mangs} empty="— Cả phòng ban —" disabled={!phongBanId} />
+            <Select value={mangId} onChange={setMangId} rows={mangs} empty="Cả phòng ban" disabled={!phongBanId} />
           </Field>
           <Field label="Trạng thái THBQ">
-            <select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">— Tất cả —</option>
-              <option value="VV">Vĩnh viễn</option>
-              <option value="GL">Giữ lại</option>
-              <option value="HET">Hết THBQ</option>
-            </select>
+            <UiSelect value={status} onChange={setStatus} placeholder="Tất cả" options={[{ value: "VV", label: "Vĩnh viễn" }, { value: "GL", label: "Giữ lại" }, { value: "HET", label: "Hết THBQ" }]} />
           </Field>
           <Field label="Trùng thừa">
-            <select className="w-full" value={trungThua} onChange={(e) => setTrungThua(e.target.value as typeof trungThua)}>
-              <option value="">— Tất cả —</option>
-              <option value="0">Không trùng thừa</option>
-              <option value="1">Chỉ trùng thừa</option>
-            </select>
+            <UiSelect value={trungThua} onChange={(v) => setTrungThua(v as typeof trungThua)} placeholder="Tất cả" options={[{ value: "0", label: "Không trùng thừa" }, { value: "1", label: "Chỉ trùng thừa" }]} />
           </Field>
           <Field label="Thứ tự đánh số">
-            <select className="w-full" value={order} onChange={(e) => setOrder(Number(e.target.value))}>
-              {ORDERS.map(([k, l]) => (
-                <option key={k} value={k}>
-                  {k}. {l}
-                </option>
-              ))}
-            </select>
+            <UiSelect value={String(order)} onChange={(v) => setOrder(Number(v))} options={ORDERS.map(([k, l]) => ({ value: String(k), label: `${k}. ${l}` }))} />
           </Field>
           <Field label="Loại tệp">
-            <select className="w-full" value={fileType} onChange={(e) => setFileType(Number(e.target.value) as 1 | 2)}>
-              <option value={1}>Hộp số / Hồ sơ số (hồ sơ chuẩn)</option>
-              <option value={2}>Bó số / Tập số (hết hạn, trùng thừa)</option>
-            </select>
+            <UiSelect value={String(fileType)} onChange={(v) => setFileType(Number(v) as 1 | 2)} options={[{ value: "1", label: "Hộp số / hồ sơ số (hồ sơ chuẩn)" }, { value: "2", label: "Bó số / tập số (hết hạn, trùng thừa)" }]} />
           </Field>
           <Field label="Bắt đầu từ số">
-            <input className="inp w-full" type="number" min={1} value={startAt} onChange={(e) => setStartAt(Math.max(1, Number(e.target.value) || 1))} />
+            <Input type="number" min={1} value={startAt} onChange={(e) => setStartAt(Math.max(1, Number(e.target.value) || 1))} />
           </Field>
-        </div>
-        <div className="flex gap-2 flex-wrap mt-2 items-center text-sm">
-          <span className="muted">THBQ:</span>
+        </FormGrid>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-fg-subtle">THBQ:</span>
           {cat.thbq.map((t) => (
-            <label key={t.id} className={`flex items-center gap-1 border rounded px-2 py-0.5 ${thbqIds.includes(t.id) ? "border-brand-500" : "border-border-subtle"}`}>
-              <input type="checkbox" checked={thbqIds.includes(t.id)} onChange={() => setThbqIds((v) => (v.includes(t.id) ? v.filter((x) => x !== t.id) : [...v, t.id]))} /> {str(t, "ten")}
-            </label>
+            <Chip key={t.id} on={thbqIds.includes(t.id)} onClick={() => setThbqIds((v) => (v.includes(t.id) ? v.filter((x) => x !== t.id) : [...v, t.id]))}>
+              {str(t, "ten")}
+            </Chip>
           ))}
-          <label className="flex items-center gap-1 border border-border-subtle rounded px-2 py-0.5 ml-2">
-            <input type="checkbox" checked={chuaDanhSo} onChange={(e) => setChuaDanhSo(e.target.checked)} /> Chỉ hồ sơ chưa đánh số
-          </label>
+          <Chip on={chuaDanhSo} onClick={() => setChuaDanhSo((v) => !v)}>
+            Chỉ hồ sơ chưa đánh số
+          </Chip>
         </div>
-        <div className="flex gap-2 flex-wrap mt-3 items-center">
-          <button className="btn primary" disabled={khoa || busy || !phongId} onClick={() => void xemTruoc()}>
-            1. Xem trước
-          </button>
-          <button className="btn primary" disabled={khoa || busy || !preview || preview.rows.length === 0 || applied} onClick={() => void apDung()}>
-            2. Áp dụng đánh số
-          </button>
-          <button className="btn" disabled={!preview || preview.rows.length === 0} onClick={() => void xuat()}>
-            3. Xuất mục lục tạm (Excel)
-          </button>
-          <button className="btn" disabled={khoa || busy} onClick={() => fileRef.current?.click()}>
-            4. Nhập tệp đã điền {fileType === 1 ? "hộp" : "bó/tập"}
-          </button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void nhap(f); }} />
-          <button className="btn" disabled={khoa || busy || sel.size === 0} onClick={() => void ganLe()}>
-            Gán {fileType === 1 ? "hộp" : "bó/tập"} cho {sel.size} dòng chọn
-          </button>
-          <div className="flex-1" />
-          {preview && (
-            <span className="muted text-sm">
-              {n(preview.rows.length)} hồ sơ{canhBao > 0 && <span className="text-warning-700"> · {n(canhBao)} cảnh báo</span>}
-            </span>
-          )}
-        </div>
-        {err && <div className="text-danger text-sm mt-2">{err}</div>}
-        {msg && <div className="text-success-700 text-sm mt-2">{msg}</div>}
+        <Toolbar className="mt-4">
+          <Button variant={buoc === 0 ? "primary" : "secondary"} icon="xem" loading={busy && !preview} disabled={khoa || busy || !phongId} onClick={() => void xemTruoc()}>
+            Xem trước
+          </Button>
+          <Button variant={buoc === 1 ? "primary" : "secondary"} icon="duyet" disabled={khoa || busy || !preview || preview.rows.length === 0 || applied} onClick={() => void apDung()}>
+            Áp dụng đánh số
+          </Button>
+          <Button variant={buoc === 2 ? "primary" : "secondary"} icon="tepExcel" disabled={!preview || preview.rows.length === 0} onClick={() => void xuat()}>
+            Xuất mục lục tạm
+          </Button>
+          <Button variant={buoc === 3 ? "primary" : "secondary"} icon="nhapTep" disabled={khoa || busy} onClick={() => fileRef.current?.click()}>
+            Nhập tệp đã điền {tenDonVi}
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            hidden
+            aria-hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void nhap(f);
+            }}
+          />
+        </Toolbar>
         {importRes && importRes.errors.length > 0 && (
-          <div className="mt-2 text-sm">
-            <b className="text-danger">{importRes.errors.length} dòng lỗi:</b>
-            <ul className="m-0 pl-5">
-              {importRes.errors.slice(0, 30).map((e, i) => (
-                <li key={i}>
-                  Dòng {e.row}: {e.message}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <Banner tone="warning" className="mt-3" title={`${importRes.errors.length} dòng lỗi khi nhập`} detail={importRes.errors.map((e) => `Dòng ${e.row}: ${e.message}`).join("\n")} onClose={() => setImportRes(null)}>
+            Đã gán {n(importRes.applied)} hồ sơ. Sửa các dòng lỗi trong tệp rồi nhập lại.
+          </Banner>
         )}
-      </div>
+      </Card>
 
       {preview && (
-        <div className="card mt-3.5">
-          <div className="tbl-scroll">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th style={{ width: 28 }}>
-                    <input type="checkbox" checked={preview.rows.length > 0 && preview.rows.every((r) => sel.has(r.hoSoId))} onChange={(e) => setSel(e.target.checked ? new Set(preview.rows.map((r) => r.hoSoId)) : new Set())} />
-                  </th>
-                  <th className="num">{applied ? "HS số" : "HS số (dự kiến)"}</th>
-                  <th className="num">Số cũ</th>
-                  <th>{fileType === 1 ? "Hộp" : "Bó / Tập"}</th>
-                  <th>Mã hồ sơ mới</th>
-                  <th>Số tạm</th>
-                  <th>Tiêu đề</th>
-                  <th>Phòng ban</th>
-                  <th>Mảng</th>
-                  <th>THBQ</th>
-                  <th>Trạng thái</th>
-                  <th>KT</th>
-                  <th className="num">Số tờ</th>
-                  <th>Cảnh báo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.rows.map((r) => (
-                  <tr key={r.hoSoId} className={r.warnings.length ? "bg-warning-50" : ""}>
-                    <td>
-                      <input type="checkbox" checked={sel.has(r.hoSoId)} onChange={(e) => setSel((s) => { const x = new Set(s); if (e.target.checked) x.add(r.hoSoId); else x.delete(r.hoSoId); return x; })} />
-                    </td>
-                    <td className="num">
-                      <b>{r.stt}</b>
-                    </td>
-                    <td className="num muted">{r.hoSoSoCu ?? ""}</td>
-                    <td>{fileType === 1 ? r.hopSo ?? "" : [r.boSo, r.tapSo].filter((x) => x != null).join(" / ")}</td>
-                    <td className="text-xs">{r.maHoSoMoi ?? <span className="muted">—</span>}</td>
-                    <td>{r.soTam}</td>
-                    <td className="max-w-[420px] truncate" title={r.tieuDe}>
-                      {r.tieuDe}
-                    </td>
-                    <td className="text-sm">{r.tenPhongBan ?? ""}</td>
-                    <td className="text-sm">{r.tenMang ?? ""}</td>
-                    <td className="text-sm">{r.tenThbq ?? ""}</td>
-                    <td>{r.thbqStatus && <span className={`badge ${THBQ_BADGE[r.thbqStatus] ?? "gray"}`}>{THBQ_STATUS_LABEL[r.thbqStatus] ?? r.thbqStatus}</span>}</td>
-                    <td>{r.ngayKetThuc ?? ""}</td>
-                    <td className="num">{r.soTo ?? ""}</td>
-                    <td className="text-warning-700 text-xs">{r.warnings.join("; ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Card
+          padding="none"
+          title={`${n(preview.rows.length)} hồ sơ`}
+          description={canhBao > 0 ? `${n(canhBao)} hồ sơ có cảnh báo, xem cột cuối.` : undefined}
+          actions={
+            <>
+              {canhBao > 0 && <Checkbox checked={chiCanhBao} onChange={setChiCanhBao} label="Chỉ dòng có cảnh báo" />}
+              <Button size="sm" disabled={khoa || busy || sel.size === 0} onClick={() => void ganLe()}>
+                Gán {tenDonVi} cho {n(sel.size)} dòng chọn
+              </Button>
+            </>
+          }
+        >
+          <Table columns={cols} rows={rowsHien} getRowId={(r) => r.hoSoId} dense maxHeight={560} selection={{ selected: sel, onChange: setSel }} rowClassName={(r) => (r.warnings.length ? "bg-warning-50" : undefined)} state={{ empty: { title: chiCanhBao ? "Không có dòng nào có cảnh báo" : "Không có hồ sơ nào khớp bộ lọc" } }} />
+        </Card>
       )}
-    </>
+    </section>
   );
 }

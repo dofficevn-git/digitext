@@ -1,17 +1,21 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Khai thác dữ liệu chỉnh lý (bản sao, offline được): lọc như bản cũ (+ kho / giá, VV / GL / HET, trùng thừa),
-// xem văn bản, và mọi kết xuất: metadata TT05 / TT02, mục lục hồ sơ 6 kiểu (Excel) + bản in, mục lục văn bản,
-// nhãn hộp, sản phẩm mục lục có bìa, phụ lục hướng dẫn tra tìm, lịch sử.
+// Tra cứu và kết xuất dữ liệu chỉnh lý (bản sao, offline được): lọc theo phông / phòng ban / mảng / THBQ / kho / giá,
+// bảng phân trang 100 dòng, xem văn bản; kết xuất: metadata TT05 / TT02, mục lục hồ sơ 6 kiểu (Excel + in),
+// mục lục văn bản, nhãn hộp, sản phẩm có bìa, phụ lục hướng dẫn tra tìm, lịch sử.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
-import { V41p } from "@/live/useLive";
+import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
 import { clHoSoList, clRows, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
-import { ChuaChonDuAn, errText, Field, n, Select, THBQ_BADGE, useClCatalog } from "./common";
+import { Chip, ChuaChonDuAn, n, Select, tenPhong, THBQ_BADGE, useClCatalog } from "./common";
 import { inHtml, inMucLucHoSo, inMucLucVanBan, inNhanHop, inPhuLuc, inSanPham } from "./print";
 import { KIEU_MLHS, xuatLichSu, xuatMucLucHoanThien, xuatMucLucVanBan, xuatPhuLuc, xuatTT02, xuatTT05, type KieuMLHS } from "./excelXuat";
 import VanBanPanel from "./VanBanPanel";
+import { Badge, Button, Card, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type MenuEntry } from "@/ui";
+
+const PAGE = 100;
+const AN_MAC_DINH = ["bo_so", "tap_so", "trung_thua"];
 
 export default function KhaiThacView() {
   const { session } = V460();
@@ -25,36 +29,42 @@ export default function KhaiThacView() {
   const [giaId, setGiaId] = useState("");
   const [status, setStatus] = useState("");
   const [trungThua, setTrungThua] = useState(false);
+  const [themLoc, setThemLoc] = useState(false);
   const [q, setQ] = useState("");
   const [qA, setQA] = useState("");
-  const [rows, setRows] = useState<ClRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [err, setErr] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [open, setOpen] = useState<ClRow | null>(null);
   const [kieu, setKieu] = useState<KieuMLHS | 0>(0);
   const [busy, setBusy] = useState(false);
+  const [anCot, setAnCot] = useState<Set<string>>(() => new Set(AN_MAC_DINH));
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setQA(q.trim());
+      setPage(1);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
   const phong = cat.phong.find((p) => p.id === phongId);
   const phongBans = useMemo(() => cat.phong_ban.filter((p) => str(p, "phong_id") === phongId), [cat.phong_ban, phongId]);
   const mangs = useMemo(() => cat.mang.filter((m) => str(m, "phong_ban_id") === phongBanId), [cat.mang, phongBanId]);
   const gias = useMemo(() => cat.gia.filter((g) => !khoId || str(g, "kho_id") === khoId), [cat.gia, khoId]);
-  const filter: ClHoSoFilter = useMemo(
-    () => ({ phongId: phongId || undefined, phongBanId: phongBanId || undefined, mangId: mangId || undefined, thbqIds: thbqId ? [thbqId] : [], khoId: khoId || undefined, giaId: giaId || undefined, status: (status || undefined) as ClHoSoFilter["status"], trungThua: trungThua ? true : undefined, q: qA || undefined, sort: "ho_so_so", limit: 200000 }),
+  const locGoc: Omit<ClHoSoFilter, "limit" | "offset"> = useMemo(
+    () => ({ phongId: phongId || undefined, phongBanId: phongBanId || undefined, mangId: mangId || undefined, thbqIds: thbqId ? [thbqId] : [], khoId: khoId || undefined, giaId: giaId || undefined, status: (status || undefined) as ClHoSoFilter["status"], trungThua: trungThua ? true : undefined, q: qA || undefined, sort: "ho_so_so" }),
     [phongId, phongBanId, mangId, thbqId, khoId, giaId, status, trungThua, qA],
   );
-  const load = useCallback(async () => {
-    try {
-      const r = await clHoSoList(filter);
-      setRows(r.rows);
-      setTotal(r.total);
-      setErr(null);
-    } catch (e) {
-      setErr(errText(e));
-    }
-  }, [filter]);
-  V41p(load, { topics: ["chinhLy"], enabled: isTauri() });
+  const loader = useCallback(() => (isTauri() ? clHoSoList({ ...locGoc, limit: PAGE, offset: (page - 1) * PAGE }) : Promise.resolve({ rows: [] as ClRow[], total: 0 })), [locGoc, page]);
+  const { data, error, loading, reload } = V41t(loader, { topics: ["chinhLy"], errorText: () => "Không tải được danh sách hồ sơ." });
+  const rows = useMemo(() => data?.rows ?? [], [data]);
+  const total = data?.total ?? 0;
+  const datLoc = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPage(1);
+  };
 
+  /** Toàn bộ hồ sơ khớp bộ lọc (không phân trang), dùng cho kết xuất. */
+  const layTatCa = async (): Promise<ClRow[]> => (await clHoSoList({ ...locGoc, limit: 200000 })).rows;
   const vanBanCua = async (hs: ClRow[]): Promise<Map<string, ClRow[]>> => {
     const ids = new Set(hs.map((h) => h.id));
     const all = await clRows("van_ban", { limit: 200000, order: "so_thu_tu" });
@@ -69,194 +79,188 @@ export default function KhaiThacView() {
     }
     return m;
   };
-  const chay = async (ten: string, f: () => Promise<unknown>) => {
-    if (rows.length === 0) {
-      setErr("Không có hồ sơ khớp bộ lọc để kết xuất.");
+  const chay = async (ten: string, f: (all: ClRow[]) => Promise<unknown>) => {
+    if (total === 0) {
+      toast.warning("Không có hồ sơ khớp bộ lọc để kết xuất.");
       return;
     }
     setBusy(true);
-    setErr(null);
-    setMsg(null);
+    const id = toast.info(`${ten}: đang chuẩn bị ${n(total)} hồ sơ…`);
     try {
-      await f();
-      setMsg(`${ten}: ${n(rows.length)} hồ sơ.`);
+      const all = await layTatCa();
+      await f(all);
+      toast.success(`${ten}: ${n(all.length)} hồ sơ.`);
     } catch (e) {
-      setErr(errText(e));
+      notifyError(e, ten.toLowerCase());
     } finally {
+      toast.dismiss(id);
       setBusy(false);
     }
   };
-  const tenPhong = str(phong, "ten") || (rows[0] ? str(rows[0], "ten_phong") : "");
+  const tenPhongHien = str(phong, "ten") || (rows[0] ? str(rows[0], "ten_phong") : "");
   const tenPb = phongBanId ? str(phongBans.find((p) => p.id === phongBanId), "ten") : "";
   const coThoiHan = status === "GL" || status === "HET" || (thbqId !== "" && str(cat.thbq.find((t) => t.id === thbqId), "trang_thai") !== "1");
 
+  const ketXuat: MenuEntry[] = [
+    { label: "Metadata TT05 (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất metadata TT05", async (all) => xuatTT05(all, await vanBanCua(all), phong)) },
+    { label: "Metadata TT02 (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất metadata TT02", async (all) => xuatTT02(all, await vanBanCua(all), tenPhongHien)) },
+    "-",
+    { label: "Mục lục hồ sơ (Excel)", icon: "tepExcel", hint: kieu === 0 ? "Theo số hồ sơ" : `Kiểu ${kieu}`, onSelect: () => void chay("Xuất mục lục hồ sơ", (all) => xuatMucLucHoanThien(all, kieu, status === "HET" || trungThua, tenPhongHien)) },
+    { label: "In mục lục hồ sơ", icon: "inRa", onSelect: () => void chay("In mục lục hồ sơ", async (all) => inHtml("Mục lục hồ sơ", inMucLucHoSo(all, tenPhongHien, tenPb))) },
+    { label: "In sản phẩm mục lục có bìa", icon: "inRa", onSelect: () => void chay("In sản phẩm", async (all) => inHtml("Mục lục hồ sơ (sản phẩm)", inSanPham(all, tenPhongHien, tenPb, str(phong, "phong_so"), str(phong, "muc_luc_so"), coThoiHan))) },
+    "-",
+    { label: "Mục lục văn bản (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất mục lục văn bản", async (all) => xuatMucLucVanBan(all, await vanBanCua(all))) },
+    { label: "In mục lục văn bản", icon: "inRa", onSelect: () => void chay("In mục lục văn bản", async (all) => inHtml("Mục lục văn bản", inMucLucVanBan(all, await vanBanCua(all), tenPhongHien, tenPb))) },
+    "-",
+    { label: "In nhãn hộp", icon: "inRa", onSelect: () => void chay("In nhãn hộp", async (all) => inHtml("Nhãn hộp", inNhanHop(all, tenPhongHien))) },
+    { label: "In phụ lục hướng dẫn tra tìm", icon: "inRa", onSelect: () => void chay("In phụ lục", async (all) => inHtml("Hướng dẫn tra tìm mục lục", inPhuLuc(all, tenPhongHien))) },
+    { label: "Phụ lục hướng dẫn tra tìm (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất phụ lục", (all) => xuatPhuLuc(all, str(phong, "ma_du_an") || "phong")) },
+    "-",
+    {
+      label: "Lịch sử thay đổi (Excel)",
+      icon: "lichSu",
+      onSelect: () =>
+        void chay("Xuất lịch sử", async (all) => {
+          const ls = await clRows("lich_su", { limit: 200000, order: "at DESC" });
+          const ids = new Set(all.map((r) => r.id));
+          const st = new Map(all.map((r) => [r.id, str(r, "so_tam")]));
+          const sub = ls.rows.filter((l) => ids.has(str(l, "ho_so_id"))).map((l) => ({ ...l, so_tam: st.get(str(l, "ho_so_id")) ?? "" }));
+          await xuatLichSu(sub, str(phong, "ma_du_an") || "LichSu");
+        }),
+    },
+  ];
+
+  const cols: Column<ClRow>[] = [
+    { key: "ten_kho", header: "Kho", cell: (r) => str(r, "ten_kho"), hideBelow: 1400 },
+    { key: "ten_gia", header: "Giá", cell: (r) => str(r, "ten_gia"), hideBelow: 1400 },
+    { key: "ma_ho_so", header: "Mã hồ sơ", className: "text-xs text-fg-subtle", cell: (r) => str(r, "ma_ho_so") },
+    { key: "hop_so", header: "Hộp", align: "right", width: 70, cell: (r) => str(r, "hop_so") },
+    { key: "bo_so", header: "Bó", align: "right", width: 60, cell: (r) => str(r, "bo_so") },
+    { key: "tap_so", header: "Tập", align: "right", width: 60, cell: (r) => str(r, "tap_so") },
+    { key: "ho_so_so", header: "Hồ sơ số", align: "right", width: 90, cell: (r) => str(r, "ho_so_so") },
+    { key: "tieu_de", header: "Tiêu đề", className: "max-w-[420px] whitespace-normal", cell: (r) => str(r, "tieu_de") },
+    { key: "ten_thbq", header: "THBQ", className: "text-sm", cell: (r) => str(r, "ten_thbq") },
+    { key: "so_to", header: "Số tờ", align: "right", width: 70, cell: (r) => str(r, "so_to") },
+    { key: "ngay_bat_dau", header: "Bắt đầu", width: 100, cell: (r) => str(r, "ngay_bat_dau") },
+    { key: "ngay_ket_thuc", header: "Kết thúc", width: 100, cell: (r) => str(r, "ngay_ket_thuc") },
+    { key: "trung_thua", header: "Trùng thừa", width: 90, cell: (r) => (r.trung_thua === true ? <Badge tone="gray">trùng thừa</Badge> : null) },
+    { key: "so_van_ban", header: "Văn bản", align: "right", width: 80, cell: (r) => str(r, "so_van_ban") },
+    {
+      key: "thbq_status",
+      header: "Trạng thái",
+      width: 110,
+      cell: (r) => {
+        const st = str(r, "thbq_status");
+        return st ? <Badge tone={THBQ_BADGE[st] ?? "gray"}>{THBQ_STATUS_LABEL[st] ?? st}</Badge> : null;
+      },
+    },
+  ];
+  const TEN_COT: Record<string, string> = { ten_kho: "Kho", ten_gia: "Giá", ma_ho_so: "Mã hồ sơ", bo_so: "Bó", tap_so: "Tập", trung_thua: "Trùng thừa", so_van_ban: "Văn bản" };
+  const colsHien = cols.filter((c) => !anCot.has(c.key));
+  const soLocThem = [mangId, thbqId, khoId, giaId, trungThua ? "1" : ""].filter(Boolean).length;
+
   return (
-    <>
-      <div className="page-head">
-        <h2>Khai thác dữ liệu chỉnh lý</h2>
-        <div className="sub">· tìm hồ sơ theo phông / phòng ban / mảng / THBQ / kho / giá · xuất & in mục lục, nhãn hộp, sản phẩm, phụ lục, metadata TT02 / TT05</div>
-      </div>
+    <section className="view active">
+      <PageHeader
+        title="Tra cứu và kết xuất"
+        description="Tìm hồ sơ chỉnh lý theo phông, phòng ban, mảng, THBQ, kho, giá. Kết xuất mục lục, nhãn hộp, sản phẩm, phụ lục, metadata."
+        actions={
+          <>
+            <UiSelect size="sm" className="w-64" value={String(kieu)} onChange={(v) => setKieu(Number(v) as KieuMLHS | 0)} aria-label="Kiểu mục lục hồ sơ" options={[{ value: "0", label: "Mục lục theo số hồ sơ (mẫu kho)" }, ...KIEU_MLHS.map(([k, l]) => ({ value: String(k), label: `${k}. ${l}` }))]} />
+            <Menu trigger="button" label={busy ? "Đang kết xuất…" : "Kết xuất"} items={ketXuat} />
+            <Menu label="Cột hiển thị" items={Object.entries(TEN_COT).map(([k, l]) => ({ label: `${anCot.has(k) ? "Hiện" : "Ẩn"} cột ${l}`, onSelect: () => setAnCot((s) => { const x = new Set(s); if (!x.delete(k)) x.add(k); return x; }) }))} />
+          </>
+        }
+      />
       <ChuaChonDuAn />
-      <div className="card mt-3.5">
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))" }}>
+      <Card className="mb-4" padding="sm">
+        <FormGrid cols={4}>
           <Field label="Phông">
-            <Select value={phongId} onChange={(v) => { setPhongId(v); setPhongBanId(""); setMangId(""); }} rows={cat.phong} render={(r) => `${str(r, "ma_du_an")} — ${str(r, "ten")}`} empty="— Tất cả —" />
+            <Select
+              size="sm"
+              value={phongId}
+              onChange={(v) => {
+                setPhongId(v);
+                setPhongBanId("");
+                setMangId("");
+                setPage(1);
+              }}
+              rows={cat.phong}
+              render={tenPhong}
+              empty="Tất cả"
+            />
           </Field>
           <Field label="Phòng ban">
-            <Select value={phongBanId} onChange={(v) => { setPhongBanId(v); setMangId(""); }} rows={phongBans} empty="— Tất cả —" />
+            <Select
+              size="sm"
+              value={phongBanId}
+              onChange={(v) => {
+                setPhongBanId(v);
+                setMangId("");
+                setPage(1);
+              }}
+              rows={phongBans}
+              empty="Tất cả"
+            />
           </Field>
-          <Field label="Mảng">
-            <Select value={mangId} onChange={setMangId} rows={mangs} empty="— Tất cả —" disabled={!phongBanId} />
+          <Field label="Trạng thái THBQ">
+            <UiSelect size="sm" value={status} onChange={datLoc(setStatus)} placeholder="Tất cả" options={[{ value: "VV", label: "Vĩnh viễn" }, { value: "GL", label: "Giữ lại" }, { value: "HET", label: "Hết THBQ" }]} />
           </Field>
-          <Field label="THBQ">
-            <Select value={thbqId} onChange={setThbqId} rows={cat.thbq} empty="— Tất cả —" />
+          <Field label="Tìm">
+            <Input size="sm" prefix="tim" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tiêu đề, số tạm, số hoặc mã hồ sơ" />
           </Field>
-          <Field label="Kho">
-            <Select value={khoId} onChange={(v) => { setKhoId(v); setGiaId(""); }} rows={cat.kho} empty="— Tất cả —" />
-          </Field>
-          <Field label="Giá / kệ">
-            <Select value={giaId} onChange={setGiaId} rows={gias} empty="— Tất cả —" render={(g) => `${str(g, "ten")} (hộp ${str(g, "tu_hop")}–${str(g, "den_hop")})`} />
-          </Field>
-          <Field label="Trạng thái">
-            <select className="w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">— Tất cả —</option>
-              <option value="VV">Vĩnh viễn</option>
-              <option value="GL">Giữ lại</option>
-              <option value="HET">Hết THBQ</option>
-            </select>
-          </Field>
-          <Field label="Tìm (tiêu đề, số tạm, số HS, mã HS)">
-            <input className="inp w-full" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setQA(q.trim())} placeholder="gõ rồi Enter" />
-          </Field>
+        </FormGrid>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="ghost" iconRight={themLoc ? "len" : "xuong"} onClick={() => setThemLoc((v) => !v)} aria-expanded={themLoc}>
+            {soLocThem > 0 ? `Thêm bộ lọc (${soLocThem})` : "Thêm bộ lọc"}
+          </Button>
+          <span className="text-sm text-fg-subtle">{n(total)} hồ sơ khớp</span>
         </div>
-        <div className="flex gap-2 flex-wrap mt-3 items-center">
-          <label className="flex items-center gap-1 text-sm">
-            <input type="checkbox" checked={trungThua} onChange={(e) => setTrungThua(e.target.checked)} /> Chỉ trùng thừa
-          </label>
-          <span className="muted text-sm">{n(total)} hồ sơ</span>
-          <div className="flex-1" />
-          <button className="btn sm" disabled={busy} onClick={() => void chay("Xuất metadata TT05", async () => xuatTT05(rows, await vanBanCua(rows), phong))}>
-            Metadata TT05
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("Xuất metadata TT02", async () => xuatTT02(rows, await vanBanCua(rows), tenPhong))}>
-            Metadata TT02
-          </button>
-        </div>
-        <div className="flex gap-2 flex-wrap mt-2 items-center">
-          <span className="muted text-sm">Mục lục hồ sơ:</span>
-          <select className="max-w-72" value={kieu} onChange={(e) => setKieu(Number(e.target.value) as KieuMLHS | 0)}>
-            <option value={0}>Theo số hồ sơ (mẫu kho)</option>
-            {KIEU_MLHS.map(([k, l]) => (
-              <option key={k} value={k}>
-                {k}. {l}
-              </option>
-            ))}
-          </select>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("Xuất MLHS", () => xuatMucLucHoanThien(rows, kieu, status === "HET" || trungThua, tenPhong))}>
-            Xuất Excel
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("In MLHS", async () => inHtml("Mục lục hồ sơ", inMucLucHoSo(rows, tenPhong, tenPb)))}>
-            In MLHS
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("In sản phẩm", async () => inHtml("Mục lục hồ sơ (sản phẩm)", inSanPham(rows, tenPhong, tenPb, str(phong, "phong_so"), str(phong, "muc_luc_so"), coThoiHan)))}>
-            In sản phẩm (có bìa)
-          </button>
-          <span className="muted text-sm ml-2">Mục lục văn bản:</span>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("Xuất MLVB", async () => xuatMucLucVanBan(rows, await vanBanCua(rows)))}>
-            Xuất Excel
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("In MLVB", async () => inHtml("Mục lục văn bản", inMucLucVanBan(rows, await vanBanCua(rows), tenPhong, tenPb)))}>
-            In MLVB
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("In nhãn hộp", async () => inHtml("Nhãn hộp", inNhanHop(rows, tenPhong)))}>
-            In nhãn hộp
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("In phụ lục", async () => inHtml("Hướng dẫn tra tìm mục lục", inPhuLuc(rows, tenPhong)))}>
-            In phụ lục
-          </button>
-          <button className="btn sm" disabled={busy} onClick={() => void chay("Xuất phụ lục", () => xuatPhuLuc(rows, str(phong, "ma_du_an") || "phong"))}>
-            Xuất phụ lục
-          </button>
-          <button
-            className="btn sm"
-            disabled={busy}
-            onClick={() =>
-              void chay("Xuất lịch sử", async () => {
-                const ls = await clRows("lich_su", { limit: 200000, order: "at DESC" });
-                const ids = new Set(rows.map((r) => r.id));
-                const st = new Map(rows.map((r) => [r.id, str(r, "so_tam")]));
-                const sub = ls.rows.filter((l) => ids.has(str(l, "ho_so_id"))).map((l) => ({ ...l, so_tam: st.get(str(l, "ho_so_id")) ?? "" }));
-                await xuatLichSu(sub, str(phong, "ma_du_an") || "LichSu");
-              })
-            }
-          >
-            Xuất lịch sử
-          </button>
-        </div>
-        {err && <div className="text-danger text-sm mt-2">{err}</div>}
-        {msg && <div className="text-success-700 text-sm mt-2">{msg}</div>}
-      </div>
-      <div className="card mt-3.5">
-        <div className="tbl-scroll">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Kho</th>
-                <th>Giá / kệ</th>
-                <th>Mã hồ sơ</th>
-                <th className="num">Hộp</th>
-                <th className="num">Bó</th>
-                <th className="num">Tập</th>
-                <th className="num">HS số</th>
-                <th>Tiêu đề</th>
-                <th>THBQ</th>
-                <th className="num">Số tờ</th>
-                <th>Bắt đầu</th>
-                <th>Kết thúc</th>
-                <th>T.thừa</th>
-                <th className="num">VB</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.slice(0, 2000).map((r) => {
-                const st = str(r, "thbq_status");
-                return (
-                  <tr key={r.id}>
-                    <td>{str(r, "ten_kho")}</td>
-                    <td>{str(r, "ten_gia")}</td>
-                    <td className="text-xs muted">{str(r, "ma_ho_so")}</td>
-                    <td className="num">{str(r, "hop_so")}</td>
-                    <td className="num">{str(r, "bo_so")}</td>
-                    <td className="num">{str(r, "tap_so")}</td>
-                    <td className="num">{str(r, "ho_so_so")}</td>
-                    <td className="max-w-[420px]">
-                      <button className="link text-left" onClick={() => setOpen(r)}>
-                        {str(r, "tieu_de")}
-                      </button>
-                    </td>
-                    <td className="text-sm">{str(r, "ten_thbq")}</td>
-                    <td className="num">{str(r, "so_to")}</td>
-                    <td>{str(r, "ngay_bat_dau")}</td>
-                    <td>{str(r, "ngay_ket_thuc")}</td>
-                    <td>{r.trung_thua === true ? "✓" : ""}</td>
-                    <td className="num">{str(r, "so_van_ban")}</td>
-                    <td>{st && <span className={`badge ${THBQ_BADGE[st] ?? "gray"}`}>{THBQ_STATUS_LABEL[st] ?? st}</span>}</td>
-                  </tr>
-                );
-              })}
-              {rows.length > 2000 && (
-                <tr>
-                  <td colSpan={15} className="muted">
-                    Chỉ hiện 2.000 dòng đầu; kết xuất vẫn lấy đủ {n(rows.length)} hồ sơ.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {themLoc && (
+          <FormGrid cols={4} className="mt-3">
+            <Field label="Mảng công việc">
+              <Select size="sm" value={mangId} onChange={datLoc(setMangId)} rows={mangs} empty="Tất cả" disabled={!phongBanId} />
+            </Field>
+            <Field label="Thời hạn bảo quản">
+              <Select size="sm" value={thbqId} onChange={datLoc(setThbqId)} rows={cat.thbq} empty="Tất cả" />
+            </Field>
+            <Field label="Kho">
+              <Select
+                size="sm"
+                value={khoId}
+                onChange={(v) => {
+                  setKhoId(v);
+                  setGiaId("");
+                  setPage(1);
+                }}
+                rows={cat.kho}
+                empty="Tất cả"
+              />
+            </Field>
+            <Field label="Giá">
+              <Select size="sm" value={giaId} onChange={datLoc(setGiaId)} rows={gias} empty="Tất cả" render={(g) => `${str(g, "ten")} (hộp ${str(g, "tu_hop")} đến ${str(g, "den_hop")})`} />
+            </Field>
+            <Field label="Trùng thừa" inline className="self-end">
+              <Chip on={trungThua} onClick={() => datLoc(setTrungThua)(!trungThua)}>
+                Chỉ hồ sơ trùng thừa
+              </Chip>
+            </Field>
+          </FormGrid>
+        )}
+      </Card>
+      <Card padding="none">
+        <Table
+          columns={colsHien}
+          rows={rows}
+          getRowId={(r) => r.id}
+          dense
+          onRowClick={(r) => setOpen(r)}
+          rowClassName={(r) => (open?.id === r.id ? "bg-brand-50" : undefined)}
+          pagination={{ page, pageSize: PAGE, total, onChange: setPage }}
+          state={{ loading: loading && !data, error, onRetry: reload, empty: { title: qA || soLocThem || status || phongId ? "Không có hồ sơ nào khớp bộ lọc" : "Chưa có hồ sơ chỉnh lý nào" } }}
+        />
+      </Card>
       {open && <VanBanPanel cat={cat} hoSo={open} canEdit={canEdit} onClose={() => setOpen(null)} />}
-    </>
+    </section>
   );
 }
