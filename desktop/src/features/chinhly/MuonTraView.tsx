@@ -8,7 +8,7 @@ import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { V460 } from "@/state";
 import { clHoSoList, clRemote, clRemoteSave, qs, str, type ClRow } from "@/api/chinhly";
-import { errText, fmtTime, n, useClSync } from "./common";
+import { ChonDuAn, errText, fmtTime, n, useClSync } from "./common";
 
 const TT: Record<string, [string, string]> = { dang_muon: ["Đang mượn", "info"], da_tra: ["Đã trả", "ok"] };
 
@@ -103,6 +103,7 @@ export default function MuonTraView() {
         <h2>Mượn – trả hồ sơ giấy</h2>
         <div className="sub">· phiếu mượn, hạn trả, quá hạn · cần kết nối máy chủ</div>
       </div>
+      <ChonDuAn />
       {!online && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — mượn / trả cần máy chủ.</div>}
       <div className="card mt-3.5">
         <div className="flex gap-2 items-center flex-wrap">

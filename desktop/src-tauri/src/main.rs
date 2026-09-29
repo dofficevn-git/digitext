@@ -202,6 +202,8 @@ fn main() {
             chinhly::commands::cl_remote,
             chinhly::commands::cl_migrate_preview,
             chinhly::commands::cl_migrate_run,
+            chinhly::commands::cl_project_get,
+            chinhly::commands::cl_project_set,
             work::work_list_packages,
             work::work_create_package,
             work::work_get_package,

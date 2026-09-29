@@ -22,6 +22,14 @@ Mọi API và lệnh Tauri trả nguyên dòng bảng (`to_jsonb`) cộng trư�
 `project_id`, `ver` (chuỗi toàn cục `cl_ver_seq`, trigger gán khi INSERT/UPDATE), `created_*`, `updated_*`,
 `deleted_at` (xoá mềm = tombstone).
 
+## Dự án đang làm (`desktop/src-tauri/src/chinhly/project.rs`)
+
+Mọi dữ liệu `cl_*` thuộc một dự án. Tài khoản thường lấy dự án từ phiên đăng nhập; tài khoản **super_admin không gắn
+dự án** nên phải chọn "Dự án đang làm" (thanh ở đầu mỗi màn Chỉnh lý, lệnh `cl_project_get` / `cl_project_set`, lưu
+`settings.cl_project_id`). Chưa chọn → mọi lệnh `cl_*` trả `no_project`, engine đồng bộ báo "Chưa chọn dự án" và
+không kéo gì (kể cả bảng mã THBQ / ngôn ngữ / loại VB). Đổi dự án → engine kéo dữ liệu dự án mới (bản sao giữ theo
+`project_id`, con trỏ đồng bộ riêng từng dự án).
+
 ## Bảng nào sửa được offline
 
 | Sửa offline (push) | Chỉ online (REST) | Chỉ đọc trên máy |

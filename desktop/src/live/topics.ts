@@ -178,6 +178,7 @@ export const V3xc: readonly string[] = [
   "cl_conflicts",
   "cl_outbox",
   "cl_migrate_preview",
+  "cl_project_get",
 ];
 
 export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
@@ -322,6 +323,7 @@ export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
   cl_outbox_discard: ["chinhLy", "clSync"],
   cl_remote: ["chinhLy"],
   cl_migrate_run: ["chinhLy", "clSync", "dossier", "catalog"],
+  cl_project_set: ["chinhLy", "clSync", "dossier", "catalog", "khogia"],
 };
 
 const V3xe: ReadonlySet<string> = new Set(V3xc);

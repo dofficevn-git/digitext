@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
-import { CL_SYNC_EVENT, clCatalogList, clSyncStatus, str, type ClCatalog, type ClRow, type ClSyncStatus } from "@/api/chinhly";
+import { CL_SYNC_EVENT, clCatalogList, clProjectGet, clProjectSet, clSyncStatus, str, type ClCatalog, type ClProjectInfo, type ClRow, type ClSyncStatus } from "@/api/chinhly";
 
 export const errText = (e: unknown) => (e instanceof V3xq || e instanceof Error ? e.message : String(e));
 export const n = (v: number) => v.toLocaleString("vi-VN");
@@ -26,6 +26,59 @@ export function useClCatalog(): { cat: ClCatalog; reload: () => void; error: str
   }, []);
   const { reload } = V41p(load, { topics: ["chinhLy", "catalog"], enabled: isTauri() });
   return { cat, reload, error };
+}
+
+/** Thanh chọn "Dự án đang làm": chỉ hiện với tài khoản không gắn dự án (quản trị hệ thống). */
+export function ChonDuAn() {
+  const [info, setInfo] = useState<ClProjectInfo | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    if (!isTauri()) return;
+    try {
+      setInfo(await clProjectGet());
+      setErr(null);
+    } catch (e) {
+      setErr(errText(e));
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!info || info.fromAccount) return null;
+  const chon = async (id: string) => {
+    if (!id) return;
+    setBusy(true);
+    try {
+      await clProjectSet(id);
+      await load();
+    } catch (e) {
+      setErr(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const chua = !info.projectId;
+  return (
+    <div className={`card mt-3.5 flex items-center gap-3 flex-wrap ${chua ? "border-warning" : ""}`} style={{ padding: "8px 12px" }}>
+      <span className="text-sm font-medium">Dự án đang làm:</span>
+      <select className="min-w-72" value={info.projectId ?? ""} disabled={busy} onChange={(e) => void chon(e.target.value)}>
+        <option value="">— chọn dự án —</option>
+        {info.projects.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.code} — {p.name}
+          </option>
+        ))}
+      </select>
+      <span className="muted text-sm">
+        {chua
+          ? "Tài khoản quản trị không gắn dự án: chọn dự án để nạp và đồng bộ dữ liệu chỉnh lý."
+          : "Dữ liệu chỉnh lý (danh mục, hồ sơ, kho/giá…) thuộc dự án này; đổi dự án sẽ đồng bộ lại."}
+        {info.cached ? " (danh sách lấy từ bộ nhớ đệm — không tới máy chủ)" : ""}
+      </span>
+      {err && <span className="text-danger text-sm">{err}</span>}
+    </div>
+  );
 }
 
 /** Trạng thái engine đồng bộ (sự kiện `chinhly://sync`). */
@@ -60,7 +113,7 @@ export function syncLabel(s: ClSyncStatus | null): { text: string; dot: "ok" | "
     case "locked":
       return { text: "Đang khoá", dot: "unknown", title: "Mở khoá phiên để đồng bộ chỉnh lý." };
     case "no_project":
-      return { text: "Chưa gắn dự án", dot: "unknown", title: "Tài khoản chưa gắn dự án — liên hệ quản trị." };
+      return { text: "Chưa chọn dự án", dot: "warn", title: "Tài khoản không gắn dự án — chọn \"Dự án đang làm\" ở đầu màn Chỉnh lý." };
     case "error":
       return { text: "Lỗi", dot: "err", title: `${s.lastError ?? "Lỗi đồng bộ"}. ${when}` };
     default:

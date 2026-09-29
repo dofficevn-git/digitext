@@ -147,6 +147,16 @@ export const clOutbox = () => invoke<ClOutboxRow[]>("cl_outbox");
 export const clOutboxRetry = (id: number) => invoke<void>("cl_outbox_retry", { id });
 export const clOutboxDiscard = (id: number) => invoke<void>("cl_outbox_discard", { id });
 
+// ---- dự án đang làm (tài khoản quản trị không gắn dự án phải chọn tay)
+export interface ClProjectInfo {
+  projectId: string | null;
+  fromAccount: boolean;
+  projects: { id: string; code: string; name: string }[];
+  cached: boolean;
+}
+export const clProjectGet = () => invoke<ClProjectInfo>("cl_project_get");
+export const clProjectSet = (projectId: string) => invoke<void>("cl_project_set", { projectId });
+
 // ---- chuyển dữ liệu cũ trên máy lên bản sao / máy chủ
 export interface ClMigrateReport {
   phong: number;

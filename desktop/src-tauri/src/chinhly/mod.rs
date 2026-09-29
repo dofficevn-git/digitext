@@ -3,5 +3,6 @@
 //! offline ↔ máy chủ (`sync`), lệnh Tauri (`commands`).
 pub mod commands;
 pub mod legacy;
+pub mod project;
 pub mod store;
 pub mod sync;

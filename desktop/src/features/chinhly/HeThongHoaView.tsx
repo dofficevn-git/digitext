@@ -6,7 +6,7 @@
 import { useMemo, useRef, useState } from "react";
 import { V460 } from "@/state";
 import { clRemote, str, THBQ_STATUS_LABEL } from "@/api/chinhly";
-import { errText, Field, n, Select, THBQ_BADGE, useClCatalog, useClSync } from "./common";
+import { ChonDuAn, errText, Field, n, Select, THBQ_BADGE, useClCatalog, useClSync } from "./common";
 import { docMucLucTam, xuatMucLucTam, type PreviewRow } from "./excel";
 
 const ORDERS: [number, string][] = [
@@ -157,6 +157,7 @@ export default function HeThongHoaView() {
         <h2>Hệ thống hoá hồ sơ</h2>
         <div className="sub">· đánh số hồ sơ chính thức, xuất mục lục tạm, gán hộp / bó / tập · cần kết nối máy chủ</div>
       </div>
+      <ChonDuAn />
       {!canDo && <div className="card mt-3.5 text-warning-700">Tài khoản chưa có quyền hệ thống hoá (dossier.systematize).</div>}
       {!online && <div className="card mt-3.5 text-warning-700">Đang ngoại tuyến — hệ thống hoá thay đổi số hồ sơ của cả tập nên chỉ làm khi có máy chủ.</div>}
       <div className="card mt-3.5">

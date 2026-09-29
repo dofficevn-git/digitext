@@ -112,7 +112,7 @@ pub async fn run_once(app: &AppHandle) -> Result<Status, AppError> {
         st.set(app, s.clone());
         return Ok(s);
     };
-    let Some(project) = session.project_id.clone().filter(|p| !p.trim().is_empty()) else {
+    let Some((project, _)) = super::project::resolve_opt(&db, &auth) else {
         let s = Status { phase: "no_project".into(), ..Default::default() };
         st.set(app, s.clone());
         return Ok(s);
