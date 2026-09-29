@@ -146,6 +146,7 @@ pub fn cl_save(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, ta
         }
     }
     let row = store::write_local(&g, sp, &id, &patch, &store::Who { project_id: &project, user_id: &user }, None)?;
+    super::legacy::project_row(&g, sp.name, &row)?;
     drop(g);
     live::touch(&app, &[Topic::ChinhLy, Topic::ClSync]);
     sync::request_soon(&app);
@@ -162,7 +163,9 @@ pub fn cl_delete(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, 
     let (project, user) = project_of(&auth)?;
     let n = {
         let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-        store::delete_local(&g, sp, &id, &store::Who { project_id: &project, user_id: &user })?
+        let n = store::delete_local(&g, sp, &id, &store::Who { project_id: &project, user_id: &user })?;
+        super::legacy::prune_legacy(&g)?;
+        n
     };
     live::touch(&app, &[Topic::ChinhLy, Topic::ClSync]);
     sync::request_soon(&app);
@@ -243,6 +246,32 @@ pub fn cl_outbox_discard(app: AppHandle, db: State<'_, Db>, auth: State<'_, Auth
     }
     live::touch(&app, &[Topic::ChinhLy, Topic::ClSync]);
     Ok(())
+}
+
+// ------------------------------------------------------------------ chuyển dữ liệu cũ trên máy
+
+/// Số dòng bảng cũ (dossier, van_ban, danh mục…) chưa gắn với cl_* — xem trước wizard.
+#[tauri::command]
+pub fn cl_migrate_preview(db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<super::legacy::MigrateReport, AppError> {
+    require_read(&auth)?;
+    let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+    Ok(super::legacy::count_unmigrated(&g)?)
+}
+
+/// Đẩy mọi dòng cũ chưa gắn cl_id sang bản sao cl_* (rồi outbox → máy chủ); chạy lại an toàn.
+#[tauri::command]
+pub fn cl_migrate_run(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>) -> Result<super::legacy::MigrateReport, AppError> {
+    auth.require_perm(Permission::DossierCreate)?;
+    let (project, user) = project_of(&auth)?;
+    let rep = {
+        let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+        let rep = super::legacy::push_unmigrated(&g, &store::Who { project_id: &project, user_id: &user })?;
+        super::legacy::project_all(&g, &project)?;
+        rep
+    };
+    live::touch(&app, &[Topic::ChinhLy, Topic::ClSync, Topic::Dossier, Topic::Catalog]);
+    sync::request_soon(&app);
+    Ok(rep)
 }
 
 // ------------------------------------------------------------------ proxy online

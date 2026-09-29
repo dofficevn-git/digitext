@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 21;
+const C_P1: i64 = 22;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -225,6 +225,10 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
     if r_1d2 < 21 {
         // Bản sao chỉnh lý (cl_*) + outbox / trạng thái / xung đột đồng bộ (30/9/2026).
         r_1d3.execute_batch(&crate::chinhly::store::schema_sql())?;
+    }
+    if r_1d2 < 22 {
+        // Cột cl_id nối bảng cũ với bản sao cl_* (chiếu / chuyển tiếp).
+        crate::chinhly::legacy::ensure_columns(&r_1d3)?;
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;
     r_1d3.commit()?;

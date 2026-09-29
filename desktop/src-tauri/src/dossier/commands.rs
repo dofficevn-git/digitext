@@ -9,6 +9,38 @@ use digitext_core::{Perm, Permission};
 use tauri::State;
 const C_EG: &str = "ocr_url";
 const C_EF: &str = "http://113.190.252.175:5002/login";
+
+/// Cầu nối sang bản sao cl_* (đồng bộ máy chủ): chỉ khi phiên gắn dự án.
+fn cl_who(auth: &AuthState) -> Option<(String, String)> {
+    let s = auth.snapshot()?;
+    let p = s.project_id.clone().filter(|p| !p.trim().is_empty())?;
+    Some((p, s.user_id))
+}
+fn cl_forward_dossier(conn: &rusqlite::Connection, auth: &AuthState, id: i64) {
+    if let Some((p, u)) = cl_who(auth) {
+        if let Err(e) = crate::chinhly::legacy::forward_dossier(conn, id, &crate::chinhly::store::Who { project_id: &p, user_id: &u }) {
+            tracing::warn!(error = %e, id, "không đẩy được hồ sơ cũ sang cl_ho_so");
+        }
+    }
+}
+fn cl_forward_van_ban(conn: &rusqlite::Connection, auth: &AuthState, id: i64) {
+    if let Some((p, u)) = cl_who(auth) {
+        if let Err(e) = crate::chinhly::legacy::forward_van_ban(conn, id, &crate::chinhly::store::Who { project_id: &p, user_id: &u }) {
+            tracing::warn!(error = %e, id, "không đẩy được văn bản cũ sang cl_van_ban");
+        }
+    }
+}
+fn cl_after_bulk(conn: &rusqlite::Connection, auth: &AuthState) {
+    if let Some((p, u)) = cl_who(auth) {
+        let who = crate::chinhly::store::Who { project_id: &p, user_id: &u };
+        if let Err(e) = crate::chinhly::legacy::push_unmigrated(conn, &who) {
+            tracing::warn!(error = %e, "không đẩy được dữ liệu cũ sang cl_*");
+        }
+        if let Err(e) = crate::chinhly::legacy::reconcile_deleted(conn, &who) {
+            tracing::warn!(error = %e, "không đồng bộ được xoá sang cl_*");
+        }
+    }
+}
 #[tauri::command]
 pub fn dossier_list(
     auth: State<'_, AuthState>,
@@ -69,6 +101,7 @@ pub fn dossier_create(
     tracing::info!(
         id, so_tam = % r_1mp.so_tam, nguoi = % r_1mr.username, "dossier_create"
     );
+    cl_forward_dossier(&r_1mq, &auth, id);
     Ok(id)
 }
 #[tauri::command]
@@ -101,6 +134,7 @@ pub fn dossier_sync_from_kho(
     tracing::info!(
         created = r_1mt.created, nguoi = % r_1mv.username, "dossier_sync_from_kho"
     );
+    cl_after_bulk(&r_1ms, &auth);
     Ok(r_1mt)
 }
 #[tauri::command]
@@ -148,6 +182,7 @@ pub fn dossier_update(
         &r_1mw.tieu_de,
         &r_1my,
     )?;
+    cl_forward_dossier(&r_1mx, &auth, id);
     Ok(())
 }
 #[tauri::command]
@@ -177,6 +212,7 @@ pub fn dossier_delete(
             &r_1n2,
         )?;
     }
+    cl_after_bulk(&r_1mz, &auth);
     Ok(())
 }
 #[tauri::command]
@@ -220,6 +256,7 @@ pub fn van_ban_create(
         r_1n6.trich_yeu.as_deref().unwrap_or(""),
         &r_1n7,
     )?;
+    cl_forward_van_ban(&r_1n4, &auth, id);
     Ok(id)
 }
 #[tauri::command]
@@ -249,6 +286,7 @@ pub fn van_ban_update(
         r_1nb.trich_yeu.as_deref().unwrap_or(""),
         &r_1nc,
     )?;
+    cl_forward_van_ban(&r_1n9, &auth, id);
     Ok(())
 }
 #[tauri::command]
@@ -277,6 +315,7 @@ pub fn van_ban_delete(
         "",
         &r_1ng,
     )?;
+    cl_after_bulk(&r_1ne, &auth);
     Ok(())
 }
 #[tauri::command]
@@ -343,6 +382,18 @@ pub fn dossier_bulk_upsert(
     )?;
     r_1nm.commit()?;
     tracing::info!(count = n, nguoi = % r_1nn.username, "dossier_bulk_upsert");
+    // Excel có thể sửa dòng đã có cl_id → đẩy lại toàn bộ hồ sơ của phông (write_local bỏ qua dòng không đổi).
+    if let Some((p, u)) = cl_who(&auth) {
+        let who = crate::chinhly::store::Who { project_id: &p, user_id: &u };
+        let ids: Vec<i64> = {
+            let mut st = r_1nl.prepare("SELECT id FROM dossier WHERE (?1 IS NULL OR ma_da = ?1)")?;
+            let v = st.query_map(rusqlite::params![args.ma_da.as_deref()], |r| r.get(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            v
+        };
+        for id in ids {
+            let _ = crate::chinhly::legacy::forward_dossier(&r_1nl, id, &who);
+        }
+    }
     Ok(n)
 }
 #[tauri::command]
@@ -373,6 +424,7 @@ pub fn van_ban_bulk_insert(
     )?;
     r_1nr.commit()?;
     tracing::info!(count = n, nguoi = % r_1ns.username, "van_ban_bulk_insert");
+    cl_after_bulk(&r_1no, &auth);
     Ok(n)
 }
 fn nonempty(r_1nt: &Option<String>) -> Option<&str> {
@@ -431,6 +483,7 @@ pub fn dossier_delete_incomplete_van_ban(
     tracing::info!(
         count = n, nguoi = % r_1o0.username, "dossier_delete_incomplete_van_ban"
     );
+    cl_after_bulk(&r_1ny, &auth);
     Ok(n)
 }
 #[tauri::command]

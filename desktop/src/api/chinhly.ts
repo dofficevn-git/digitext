@@ -147,6 +147,21 @@ export const clOutbox = () => invoke<ClOutboxRow[]>("cl_outbox");
 export const clOutboxRetry = (id: number) => invoke<void>("cl_outbox_retry", { id });
 export const clOutboxDiscard = (id: number) => invoke<void>("cl_outbox_discard", { id });
 
+// ---- chuyển dữ liệu cũ trên máy lên bản sao / máy chủ
+export interface ClMigrateReport {
+  phong: number;
+  thbq: number;
+  phongBan: number;
+  mang: number;
+  hoSo: number;
+  vanBan: number;
+  kho: number;
+  gia: number;
+  errors: string[];
+}
+export const clMigratePreview = () => invoke<ClMigrateReport>("cl_migrate_preview");
+export const clMigrateRun = () => invoke<ClMigrateReport>("cl_migrate_run");
+
 // ---- máy chủ (chỉ online)
 export const clRemote = <T = unknown>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
   invoke<T>("cl_remote", { method, path, body: body ?? null });

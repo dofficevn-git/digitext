@@ -200,6 +200,8 @@ fn main() {
             chinhly::commands::cl_outbox_retry,
             chinhly::commands::cl_outbox_discard,
             chinhly::commands::cl_remote,
+            chinhly::commands::cl_migrate_preview,
+            chinhly::commands::cl_migrate_run,
             work::work_list_packages,
             work::work_create_package,
             work::work_get_package,

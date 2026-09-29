@@ -4,7 +4,7 @@
 import { useCallback, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
-import { clConflictResolve, clConflicts, clOutbox, clOutboxDiscard, clOutboxRetry, clSyncNow, str, type ClConflict, type ClOutboxRow } from "@/api/chinhly";
+import { clConflictResolve, clConflicts, clMigratePreview, clMigrateRun, clOutbox, clOutboxDiscard, clOutboxRetry, clSyncNow, str, type ClConflict, type ClMigrateReport, type ClOutboxRow } from "@/api/chinhly";
 import { errText, fmtTime, n, syncLabel, useClSync } from "./common";
 
 const TEN_BANG: Record<string, string> = {
@@ -128,6 +128,60 @@ function XungDot({ c, onDone }: { c: ClConflict; onDone: () => void }) {
   );
 }
 
+function ChuyenDuLieuCu({ onDone }: { onDone: () => void }) {
+  const [rep, setRep] = useState<ClMigrateReport | null>(null);
+  const [res, setRes] = useState<ClMigrateReport | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try {
+      setRep(await clMigratePreview());
+    } catch (e) {
+      setErr(errText(e));
+    }
+  }, []);
+  V41p(load, { topics: ["chinhLy", "dossier"], enabled: isTauri() });
+  const tong = rep ? rep.phong + rep.thbq + rep.phongBan + rep.mang + rep.hoSo + rep.vanBan : 0;
+  const chay = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      setRes(await clMigrateRun());
+      onDone();
+      void load();
+    } catch (e) {
+      setErr(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!rep) return null;
+  return (
+    <div className="card mt-3.5">
+      <h3 className="m-0">Dữ liệu chỉnh lý cũ trên máy này</h3>
+      {tong === 0 ? (
+        <div className="muted text-sm mt-1">Mọi hồ sơ, văn bản, danh mục lập trước đây trên máy đã được nối với máy chủ.</div>
+      ) : (
+        <div className="text-sm mt-1">
+          Chưa lên máy chủ: {n(rep.hoSo)} hồ sơ, {n(rep.vanBan)} văn bản, {n(rep.phong)} phông, {n(rep.phongBan)} phòng ban, {n(rep.mang)} mảng, {n(rep.thbq)} THBQ. Bấm để đưa vào bản sao đồng bộ (số tạm trùng trong phông sẽ bị báo khi đẩy).
+        </div>
+      )}
+      <div className="flex gap-2 mt-2 items-center flex-wrap">
+        <button className="btn primary" disabled={busy || tong === 0} onClick={() => void chay()}>
+          {busy ? "Đang chuyển…" : "Đưa dữ liệu cũ lên máy chủ"}
+        </button>
+        {res && (
+          <span className="text-sm text-success-700">
+            Đã chuyển {n(res.hoSo)} hồ sơ, {n(res.vanBan)} văn bản, {n(res.phong)} phông, {n(res.phongBan)} phòng ban, {n(res.mang)} mảng.
+            {res.errors.length > 0 && <span className="text-danger"> {res.errors.length} lỗi: {res.errors.slice(0, 3).join("; ")}</span>}
+          </span>
+        )}
+        {err && <span className="text-danger text-sm">{err}</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function DongBoView() {
   const sync = useClSync();
   const [outbox, setOutbox] = useState<ClOutboxRow[]>([]);
@@ -179,6 +233,8 @@ export default function DongBoView() {
         {sync?.lastError && <div className="text-danger text-sm mt-2">{sync.lastError}</div>}
         {err && <div className="text-danger text-sm mt-2">{err}</div>}
       </div>
+
+      <ChuyenDuLieuCu onDone={reload} />
 
       <div className="card mt-3.5">
         <h3 className="m-0">Xung đột cần bạn chọn ({n(conflicts.length)})</h3>
