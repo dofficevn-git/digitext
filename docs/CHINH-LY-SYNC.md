@@ -53,6 +53,19 @@ cùng làm sẽ không gộp được.
   `base_json`; `cl_sync_outbox` gộp nhiều lần sửa thành 1 op (giữ base lần đầu); engine chạy khi đăng nhập, mỗi 60 s,
   và 1,5 s sau mỗi lần ghi; sự kiện `chinhly://sync`; ô "Chỉnh lý" ở thanh trạng thái.
 
+## Cầu nối với bảng SQLite cũ trên máy (`desktop/src-tauri/src/chinhly/legacy.rs`)
+
+Các màn Số hoá (Tạo lập CSDL, Đóng gói, lọc OCR theo phòng ban / THBQ, ghép PDF quét) vẫn đọc bảng cũ
+`dossier` / `van_ban` / `phong_ban` / `mang_cong_viec` / `thoi_han_bq` / `kho` / `gia`. Mỗi bảng cũ có thêm cột `cl_id`:
+
+- **Chiếu** cl_* → bảng cũ (`project_row`, `project_rows`, `prune_legacy`): chạy sau mỗi trang kéo về, sau mỗi kết quả
+  đẩy, và ngay sau `cl_save` / `cl_delete`. `pdf_path` của văn bản là dữ liệu máy, không bị ghi đè.
+- **Chuyển tiếp** bảng cũ → cl_* (`forward_dossier`, `forward_van_ban`, `push_unmigrated`, `reconcile_deleted`): mọi
+  lệnh ghi cũ (`dossier_*`, `van_ban_*`, nhập Excel, đồng bộ từ Kho quét) sau khi ghi bảng cũ thì đẩy sang cl_* → outbox
+  → máy chủ. `write_local` bỏ qua khi không có gì đổi nên chạy lại không sinh op thừa.
+- **Wizard**: màn *Đồng bộ & xung đột* → "Đưa dữ liệu cũ lên máy chủ" = `push_unmigrated` cho mọi dòng chưa có `cl_id`
+  (phông theo `ma_du_an`, THBQ khớp tên với bảng mã, ngôn ngữ / loại VB đổi tên → mã TT05). Chạy lại an toàn.
+
 ## Quy tắc nghiệp vụ (đã sửa lỗi bản cũ)
 
 - Số tạm duy nhất trong phông (không phân biệt hoa/thường) ở cả 3 đường; (hồ sơ, STT văn bản) duy nhất; số hộp

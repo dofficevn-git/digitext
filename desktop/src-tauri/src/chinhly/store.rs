@@ -391,7 +391,19 @@ pub fn write_local(conn: &Connection, sp: &TableSpec, id: &str, patch: &Row, who
         }
         row.insert(k.clone(), v.clone());
     }
-    let tx = conn.unchecked_transaction()?;
+    // Không đổi gì so với bản hiện có → không đánh dấu dirty, không tạo op.
+    if let Some(e) = &existing {
+        if writable_only(sp, &e.row) == writable_only(sp, &row) && e.deleted_at.is_none() {
+            return Ok(e.row.clone());
+        }
+    }
+    // Mở giao dịch riêng chỉ khi chưa ở trong giao dịch (caller như push_unmigrated đã mở).
+    let own_tx = conn.is_autocommit();
+    if own_tx {
+        conn.execute_batch("BEGIN")?;
+    }
+    let tx = conn;
+    let done = (|| -> rusqlite::Result<()> {
     match existing {
         None => {
             row.insert("id".into(), json!(id));
@@ -406,7 +418,7 @@ pub fn write_local(conn: &Connection, sp: &TableSpec, id: &str, patch: &Row, who
                 &format!("INSERT INTO {} (id, project_id, ver, dirty, deleted_at, base_json, row_json, local_at) VALUES (?1, ?2, 0, 2, NULL, NULL, ?3, ?4)", sp.name),
                 params![id, who.project_id, Value::Object(row.clone()).to_string(), now],
             )?;
-            outbox_put(&tx, who.project_id, sp.name, id, "upsert", None, &writable_only(sp, &row), edited_at)?;
+            outbox_put(tx, who.project_id, sp.name, id, "upsert", None, &writable_only(sp, &row), edited_at)?;
         }
         Some(e) => {
             row.insert("updated_by".into(), json!(who.user_id));
@@ -418,10 +430,20 @@ pub fn write_local(conn: &Connection, sp: &TableSpec, id: &str, patch: &Row, who
                 params![id, Value::Object(row.clone()).to_string(), dirty, base, now],
             )?;
             let base_row = if e.dirty == 0 { Some(e.row.clone()) } else { e.base.clone() };
-            outbox_put(&tx, who.project_id, sp.name, id, "upsert", base_row.as_ref(), &writable_only(sp, &row), edited_at)?;
+            outbox_put(tx, who.project_id, sp.name, id, "upsert", base_row.as_ref(), &writable_only(sp, &row), edited_at)?;
         }
     }
-    tx.commit()?;
+    Ok(())
+    })();
+    if own_tx {
+        match done {
+            Ok(()) => conn.execute_batch("COMMIT")?,
+            Err(_) => {
+                let _ = conn.execute_batch("ROLLBACK");
+            }
+        }
+    }
+    done?;
     Ok(row)
 }
 
@@ -437,6 +459,9 @@ fn writable_only(sp: &TableSpec, row: &Row) -> Row {
 
 /// Xoá tại máy: dòng chưa từng lên máy chủ thì xoá hẳn; còn lại đánh dấu deleted_at + op delete. Lan xuống con.
 pub fn delete_local(conn: &Connection, sp: &TableSpec, id: &str, who: &Who) -> rusqlite::Result<u64> {
+    if !conn.is_autocommit() {
+        return delete_inner(conn, sp, id, who);
+    }
     let tx = conn.unchecked_transaction()?;
     let n = delete_inner(&tx, sp, id, who)?;
     tx.commit()?;

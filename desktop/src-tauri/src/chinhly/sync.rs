@@ -175,12 +175,18 @@ pub async fn run_once(app: &AppHandle) -> Result<Status, AppError> {
         let results = resp.get("results").and_then(Value::as_array).cloned().unwrap_or_default();
         let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
         let by_id: std::collections::HashMap<String, &store::OutboxRow> = ops.iter().map(|o| (o.op_id.clone(), o)).collect();
+        let mut touched: Vec<(String, Row)> = Vec::new();
         for r in results {
             let Some(op_id) = r.get("opId").and_then(Value::as_str) else { continue };
             let Some(o) = by_id.get(op_id) else { continue };
             apply_push_result(&g, &project, o, &r)?;
+            if let Some(e) = store::get(&g, &o.tbl, &o.row_id)? {
+                touched.push((o.tbl.clone(), e.row));
+            }
             pushed += 1;
         }
+        super::legacy::project_rows(&g, &touched)?;
+        super::legacy::prune_legacy(&g)?;
         drop(g);
         if ops.len() < PUSH_BATCH as usize {
             break;
@@ -222,11 +228,19 @@ pub async fn run_once(app: &AppHandle) -> Result<Status, AppError> {
         {
             let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
             let tx = g.unchecked_transaction()?;
+            let mut touched: Vec<(String, Row)> = Vec::new();
             for r in &rows {
                 let (Some(table), Some(row)) = (r.get("table").and_then(Value::as_str), r.get("row").and_then(Value::as_object)) else { continue };
-                store::upsert_from_server(&tx, table, row, false)?;
+                if store::upsert_from_server(&tx, table, row, false)? {
+                    // chiếu bản đang có trên máy (có thể là bản dirty cục bộ)
+                    if let Some(e) = store::get(&tx, table, row.get("id").and_then(Value::as_str).unwrap_or(""))? {
+                        touched.push((table.to_owned(), e.row));
+                    }
+                }
                 pulled += 1;
             }
+            super::legacy::project_rows(&tx, &touched)?;
+            super::legacy::prune_legacy(&tx)?;
             store::cursor_set(&tx, &project, next)?;
             store::state_error(&tx, &project, None)?;
             tx.commit()?;
