@@ -10,7 +10,7 @@ import { V460, useCollects, useUploads } from "@/state";
 import { V3zr } from "@/state/sessionCore";
 import { Icon, type V41v as IconName } from "@/components/Icon";
 import { V462 as cn } from "@/lib/utils";
-import { Banner, Button, Card, ErrorBanner, Menu, Skeleton, Tip, describeError } from "@/ui";
+import { Banner, Button, Card, ErrorBanner, Skeleton, Tip, describeError } from "@/ui";
 import { V4ez, V4f3 } from "@/api/docs";
 import { workListPackages, workMyPackages, workRejectedItems } from "@/api/work";
 import { V4qt } from "@/api/sign";
@@ -209,54 +209,75 @@ export default function HomeView() {
   const luuTru = useSo(loadLuuTru, ["submissions", "access", "info", "disposal"], coLuuTru);
   const ops = useSo(loadOps, ["ops"], has("bk.view"));
 
-  const allShortcuts: { label: string; icon: IconName; run: () => void; show: boolean }[] = [
-    { label: "Quét tài liệu", icon: "quet", run: () => goto("scan"), show: has("scan.view") },
-    { label: "Đưa lên máy chủ", icon: "taiLen", run: () => goto("upload"), show: has("upload.execute") },
-    { label: "Lập hồ sơ", icon: "hoSo", run: () => gotoHoSo("laphoso"), show: has("dossier.read") },
-    { label: "Ký số", icon: "kySo", run: () => goto("sign"), show: has("sign.view") },
-    { label: "Đăng ký thu nộp", icon: "nhapKho", run: () => goto("submission"), show: has("submission.view") },
-    { label: "Yêu cầu khai thác", icon: "tim", run: () => goto("access"), show: has("access.view") },
-    { label: "Báo cáo", icon: "baoCao", run: () => gotoReport("sohoa"), show: has("stats.view_project") },
+  // Lối tắt theo vòng đời tài liệu, gom theo nhóm như menu trái.
+  type LoiTat = { label: string; icon: IconName; run: () => void; show: boolean };
+  const nhomGoc: { nhom: string; items: LoiTat[] }[] = [
+    {
+      nhom: "Số hoá",
+      items: [
+        { label: "Quét", icon: "quet", run: () => goto("scan"), show: has("scan.view") },
+        { label: "Đưa lên máy chủ", icon: "taiLen", run: () => goto("upload"), show: has("upload.execute") },
+      ],
+    },
+    {
+      nhom: "Xử lý",
+      items: [
+        { label: "OCR và bóc tách", icon: "xuLy", run: () => gotoHoSo("ocr"), show: has("dossier.read") },
+        { label: "Ký số", icon: "kySo", run: () => goto("sign"), show: has("sign.view") },
+        { label: "Đóng gói", icon: "goi", run: () => goto("package"), show: has("package.view") },
+      ],
+    },
+    { nhom: "Chỉnh lý", items: [{ label: "Lập hồ sơ", icon: "hoSo", run: () => gotoHoSo("laphoso"), show: has("dossier.read") }] },
+    {
+      nhom: "Lưu trữ số",
+      items: [
+        { label: "Thu nộp", icon: "nhapKho", run: () => goto("submission"), show: has("submission.view") },
+        { label: "Khai thác", icon: "tim", run: () => goto("access"), show: has("access.view") },
+      ],
+    },
+    { nhom: "Báo cáo", items: [{ label: "Tiến độ dự án", icon: "baoCao", run: () => gotoReport("sohoa"), show: has("stats.view_project") }] },
   ];
-  const shortcuts = allShortcuts.filter((s) => s.show);
-  const hien = shortcuts.slice(0, 3);
-  const them = shortcuts.slice(3);
+  const nhomLoiTat = nhomGoc.map((g) => ({ ...g, items: g.items.filter((i) => i.show) })).filter((g) => g.items.length > 0);
   const syncL = syncLabel(cl);
   const syncTone: Tone = syncL.dot === "err" ? "err" : syncL.dot === "warn" ? "warn" : "ok";
 
   // Việc cần xử lý gộp từ nhiều nguồn; chỉ hiện dòng có quyền.
   const viec: { label: string; value: number; tone?: Tone; run: () => void; show: boolean }[] = [
+    { label: "Tệp bị máy chủ từ chối", value: collect.data?.rejected ?? 0, tone: "err" as Tone, run: () => goto("upload"), show: isAdmin && has("upload.execute") },
     { label: "Mục bị trả lại cho tôi", value: work.data?.rejected ?? 0, tone: "err" as Tone, run: () => goto("work"), show: has("work.execute") },
     { label: "Gói việc chờ duyệt", value: review.data?.review ?? 0, run: () => goto("workManage"), show: has("work.manage") },
     { label: "Gói việc quá hạn", value: review.data?.overdue ?? 0, tone: "err" as Tone, run: () => goto("workManage"), show: has("work.manage") },
     { label: "Tài liệu chờ duyệt bóc tách", value: docs.data?.t.pending ?? 0, run: () => gotoHoSo("ocr"), show: has("document.review") },
-    { label: "Tệp bị máy chủ từ chối", value: collect.data?.rejected ?? 0, tone: "err" as Tone, run: () => goto("upload"), show: isAdmin && has("upload.execute") },
     { label: "Xung đột chỉnh lý", value: notif.clConflicts, tone: "err" as Tone, run: () => gotoHoSo("dongbo"), show: has("dossier.read") && !!projectId },
     { label: "Lần nộp chờ xử lý", value: luuTru.data?.sub ?? 0, run: () => goto("submission"), show: has("submission.view") },
     { label: "Yêu cầu khai thác chờ duyệt", value: luuTru.data?.acc ?? 0, run: () => goto("access"), show: has("access.view") },
     { label: "Yêu cầu thông tin chờ duyệt", value: luuTru.data?.info ?? 0, run: () => goto("info"), show: has("access.view") },
     { label: "Tài liệu chờ xét huỷ", value: luuTru.data?.dis ?? 0, run: () => goto("disposal"), show: has("disposal.view") },
-  ].filter((v) => v.show);
+  ]
+    .filter((v) => v.show)
+    .sort((x, y) => Number(y.value > 0) - Number(x.value > 0));
   const tongViec = viec.reduce((s, v) => s + v.value, 0);
 
   return (
     <section className="view active">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="m-0 text-xl font-semibold text-fg-strong">
-            {chao}, {session?.displayName ?? ""}
-          </h1>
-          <p className="mt-0.5 text-sm text-fg-subtle">{moTa}</p>
-        </div>
-        {shortcuts.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            {hien.map((s) => (
-              <Button key={s.label} size="sm" icon={s.icon} onClick={s.run}>
-                {s.label}
-              </Button>
+      <header className="mb-4">
+        <h1 className="m-0 text-xl font-semibold text-fg-strong">
+          {chao}, {session?.displayName ?? ""}
+        </h1>
+        <p className="mt-0.5 text-sm text-fg-subtle">{moTa}</p>
+        {nhomLoiTat.length > 0 && (
+          <nav aria-label="Lối tắt" className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+            {nhomLoiTat.map((g) => (
+              <div key={g.nhom} className="flex items-center gap-1.5">
+                <span className="mr-0.5 text-xs font-medium uppercase tracking-wide text-fg-subtle">{g.nhom}</span>
+                {g.items.map((i) => (
+                  <Button key={i.label} size="sm" icon={i.icon} onClick={i.run}>
+                    {i.label}
+                  </Button>
+                ))}
+              </div>
             ))}
-            {them.length > 0 && <Menu size="sm" label="Lối tắt khác" items={them.map((s) => ({ label: s.label, icon: s.icon, onSelect: s.run }))} />}
-          </div>
+          </nav>
         )}
       </header>
 
@@ -322,13 +343,13 @@ export default function HomeView() {
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {isAdmin && has("upload.execute") && <StatCard icon="taiLen" label="Đã đẩy lên máy chủ" value={collect.data?.forwarded} loading={collect.loading} error={collect.error} tone={collect.data?.pending ? "warn" : undefined} sub={up.running || col.running ? "Đang truyền tệp…" : collect.data ? `${n(collect.data.pending)} chờ đẩy · ${n(collect.data.rejected)} từ chối` : undefined} onClick={() => goto("upload")} />}
+        {!isAdmin && <StatCard icon="mayTram" label="Trang đã quét trên máy này" value={local.data?.pagesScanned} loading={local.loading} error={local.error} sub={local.data ? `${n(local.data.hoSoCount)} hồ sơ · ${n(local.data.pdfCount)} PDF${local.data.sharing ? ` · đang chia sẻ ${n(local.data.shared)} tệp` : ""}` : undefined} onClick={() => goto("drive")} />}
         {has("work.execute") && <StatCard icon="kiemTra" label="Việc của tôi" value={work.data?.pending} loading={work.loading} error={work.error} tone={work.data && work.data.pending > 0 ? "info" : undefined} sub={work.data ? `${n(work.data.packages)} gói đang mở${work.data.overdue ? ` · ${n(work.data.overdue)} quá hạn` : ""}` : undefined} onClick={() => goto("work")} />}
         {has("work.manage") && <StatCard icon="thanhVien" label="Mục đã xác nhận" value={review.data?.done} loading={review.loading} error={review.error} sub={review.data ? `${n(review.data.review)} gói chờ duyệt` : undefined} onClick={() => goto("workManage")} />}
         {has("sign.view") && <StatCard icon="kySo" label="Chờ ký số" value={sign.data} loading={sign.loading} error={sign.error} tone={sign.data ? "warn" : undefined} sub="Tài liệu đã có PDF/A" onClick={() => goto("sign")} />}
         {has("package.view") && <StatCard icon="goi" label="Gói tin" value={pkg.data?.total} loading={pkg.loading} error={pkg.error} tone={pkg.data?.failed ? "err" : pkg.data?.queued ? "info" : undefined} sub={pkg.data ? (pkg.data.queued || pkg.data.failed ? `${n(pkg.data.queued)} đang tạo · ${n(pkg.data.failed)} lỗi` : "Không có gói đang tạo") : undefined} onClick={() => goto("package")} />}
         {has("dossier.read") && !!projectId && <StatCard icon="chinhly" label="Hồ sơ chỉnh lý" value={clTotal.data} loading={clTotal.loading} error={clTotal.error} tone={syncTone === "ok" ? undefined : syncTone} sub={syncL.text} onClick={() => gotoHoSo("laphoso")} />}
-        {isAdmin && has("upload.execute") && <StatCard icon="taiLen" label="Đã đẩy lên máy chủ" value={collect.data?.forwarded} loading={collect.loading} error={collect.error} tone={collect.data?.pending ? "warn" : undefined} sub={up.running || col.running ? "Đang truyền tệp…" : collect.data ? `${n(collect.data.pending)} chờ đẩy · ${n(collect.data.rejected)} từ chối` : undefined} onClick={() => goto("upload")} />}
-        {!isAdmin && <StatCard icon="mayTram" label="Trang đã quét trên máy này" value={local.data?.pagesScanned} loading={local.loading} error={local.error} sub={local.data ? `${n(local.data.hoSoCount)} hồ sơ · ${n(local.data.pdfCount)} PDF${local.data.sharing ? ` · đang chia sẻ ${n(local.data.shared)} tệp` : ""}` : undefined} onClick={() => goto("drive")} />}
       </div>
 
       {(has("bk.view") || has("stats.view_project")) && (
