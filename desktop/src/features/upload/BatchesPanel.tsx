@@ -54,8 +54,7 @@ export default function V4pp({ isSuper }: { isSuper: boolean }) {
         ) : !view || view.isEmpty ? (
           <EmptyState compact icon="taiLen" title="Chưa có đợt nộp nào" description="Ở màn Đưa lên máy chủ, bấm Đẩy lên máy chủ để bắt đầu." />
         ) : (
-          <div className="tbl-scroll kg-matrix">
-            <table className="tbl kg-table">
+          <Table.Root className="kg-table" maxHeight="min(62vh, 640px)">
               <thead>
                 <tr>
                   <th className="kg-corner">Phông</th>
@@ -109,8 +108,7 @@ export default function V4pp({ isSuper }: { isSuper: boolean }) {
                   ))}
                 </tr>
               </tfoot>
-            </table>
-          </div>
+          </Table.Root>
         )}
         <p className="border-t border-border-subtle px-4 py-2 text-xs text-fg-subtle">{isSuper ? "Chỉ đếm tài liệu đẩy theo đợt; tải lẻ không có máy gửi nên không nằm trong bảng." : "Cột gồm cả quản trị cùng phụ trách phông với bạn."}</p>
       </Card>

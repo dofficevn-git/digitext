@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { V3xu, V3xw, V3xx, V3xt } from "@/domain/types";
+import { confirm } from "@/ui/dialogs/confirmStore";
 import type { V40m, V409, V408 } from "@/api/archive";
 
 export interface V41a {
@@ -73,18 +74,16 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
     V3a.current = V3d;
   }, []);
 
-  const V3e = useCallback(() => {
+  const V3e = useCallback(async () => {
     if (!V3a.current) return true;
-    const V3f = window.confirm(
-      "Có thay đổi chưa lưu trong Trình xử lý ảnh. Rời đi và bỏ các thay đổi?",
-    );
+    const V3f = await confirm({ title: "Rời Trình xử lý ảnh?", body: "Có thay đổi chưa lưu. Rời đi thì các thay đổi bị bỏ.", confirmLabel: "Rời đi", danger: true });
     if (V3f) V3a.current = false;
     return V3f;
   }, []);
 
   const goto = useCallback(
-    (v: V3xt) => {
-      if (v !== "editor" && !V3e()) return;
+    async (v: V3xt) => {
+      if (v !== "editor" && !(await V3e())) return;
       V2t(v);
 
       if (v !== "editor") {

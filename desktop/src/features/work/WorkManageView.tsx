@@ -198,6 +198,7 @@ function TaoGoi({ projectId, packages, docs, onCreated, onClose }: { projectId: 
         </>
       }
     >
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- chỉ bắt Ctrl+Enter để lưu, không phải nút */}
       <div
         onKeyDown={(e) => {
           if (e.ctrlKey && e.key === "Enter" && step === 2) void tao();

@@ -14,7 +14,7 @@ import { V3z9 } from "@/domain/permissions";
 import V4oq from "@/ui/Seg";
 import V4p4 from "@/features/editor/EditorView";
 import { Icon } from "@/components/Icon";
-import { Badge, Banner, Button, Card, Checkbox, Field, IconButton, Kbd, PageHeader, Select, Stepper, Tip } from "@/ui";
+import { Badge, Banner, Button, Card, Checkbox, Field, IconButton, Kbd, PageHeader, Select, Stepper, Tip, errorText } from "@/ui";
 
 const V4p7 = (V27q: number) => V27q === 300 || V27q === 600;
 
@@ -121,7 +121,7 @@ export default function V4p9() {
       })
       .catch((V29q) => {
         V283([]);
-        V289(typeof V29q === "string" ? V29q : V29q instanceof Error ? V29q.message : String(V29q));
+        V289(errorText(V29q));
       })
       .finally(() => V287(false));
   }, []);
@@ -142,7 +142,7 @@ export default function V4p9() {
       V28d({ text: V29u.message, tone: V29u.manual ? "info" : "ok" });
       V29o();
     } catch (V29v) {
-      V28d({ text: V29v instanceof Error ? V29v.message : String(V29v), tone: "err" });
+      V28d({ text: errorText(V29v), tone: "err" });
     } finally {
       V28b(false);
     }
@@ -232,7 +232,7 @@ export default function V4p9() {
     try {
       V299.current = await V476(V2a4({ startIndex: 1, ...V2a7 }), V29w);
     } catch (V2a8) {
-      V294(V2a8 instanceof Error ? V2a8.message : String(V2a8));
+      V294(errorText(V2a8));
       V28y(false);
     }
   };
@@ -244,7 +244,7 @@ export default function V4p9() {
     try {
       V299.current = await V476(V2a4({ startIndex: n }), V29w);
     } catch (V2aa) {
-      V294(V2aa instanceof Error ? V2aa.message : String(V2aa));
+      V294(errorText(V2aa));
       V28y(false);
     }
   };
@@ -283,7 +283,7 @@ export default function V4p9() {
       V29d(V2ag);
       V27u();
     } catch (V2ah) {
-      V29f(V2ah instanceof Error ? V2ah.message : String(V2ah));
+      V29f(errorText(V2ah));
     } finally {
       V29b(false);
     }
@@ -325,7 +325,7 @@ export default function V4p9() {
       V29h(new Set());
       V27u();
     } catch (V2am) {
-      V29n({ text: V2am instanceof Error ? V2am.message : String(V2am), tone: "err" });
+      V29n({ text: errorText(V2am), tone: "err" });
     } finally {
       V29l(false);
     }
@@ -485,14 +485,14 @@ export default function V4p9() {
           <Card className="mb-4" title="Thiết lập máy quét">
             <div className="setup-grid">
               <div className="setup-row">
-                <label>Quét vào</label>
+                <span className="lbl">Quét vào</span>
                 <Badge tone={target ? "info" : "gray"}>
                   <Icon name="thuMuc" size={13} />
                   {target || "Chưa chọn thư mục"}
                 </Badge>
               </div>
               <div className="setup-row">
-                <label>Độ phân giải</label>
+                <span className="lbl">Độ phân giải</span>
                 <V4oq
                   value={String(V28e)}
                   onChange={(v) => V28f(Number(v) as V3y3)}
@@ -503,7 +503,7 @@ export default function V4p9() {
                 />
               </div>
               <div className="setup-row">
-                <label>Máy quét</label>
+                <span className="lbl">Máy quét</span>
                 <div className="flex flex-wrap items-center gap-2">
                   <Select size="sm" value={V284 ?? ""} onChange={(v) => V285(v)} disabled={V286} className="w-64" aria-label="Máy quét">
                     {V286 && <option value="">Đang tìm máy quét…</option>}
@@ -529,7 +529,7 @@ export default function V4p9() {
               </div>
               {V28c && (
                 <div className="setup-row">
-                  <label />
+                  <span className="lbl" />
                   <span className={`muted text-sm${V28c.tone === "err" ? " text-danger-700" : ""}`}>
                     <Icon
                       size={13}
@@ -542,7 +542,7 @@ export default function V4p9() {
                 </div>
               )}
               <div className="setup-row">
-                <label>Màu</label>
+                <span className="lbl">Màu</span>
                 <V4oq
                   value={color}
                   onChange={V28g}
@@ -553,7 +553,7 @@ export default function V4p9() {
                 />
               </div>
               <div className="setup-row">
-                <label>Nguồn giấy</label>
+                <span className="lbl">Nguồn giấy</span>
                 <V4oq
                   value={V28h}
                   onChange={V28i}
@@ -565,7 +565,7 @@ export default function V4p9() {
               </div>
               {V28h === "adf" && (
                 <div className="setup-row">
-                  <label>Hai mặt</label>
+                  <span className="lbl">Hai mặt</span>
                   <V4oq
                     value={V28j ? "on" : "off"}
                     onChange={(v) => V28k(v === "on")}
@@ -577,11 +577,11 @@ export default function V4p9() {
                 </div>
               )}
               <div className="setup-row">
-                <label>Khổ giấy</label>
+                <span className="lbl">Khổ giấy</span>
                 <span className="muted">Tự nhận (ISO 216, ±3mm)</span>
               </div>
               <div className="setup-row">
-                <label>Tự làm sạch</label>
+                <span className="lbl">Tự làm sạch</span>
                 <V4oq
                   value={V28l ? "on" : "off"}
                   onChange={(v) => V28m(v === "on")}
@@ -593,7 +593,7 @@ export default function V4p9() {
               </div>
               {V28l && (
                 <div className="setup-row">
-                  <label />
+                  <span className="lbl" />
                   <div className="enhance-steps">
                     {V4p8.map((s) => (
                       <Tip key={s.key} text={s.hint}>
@@ -672,6 +672,10 @@ export default function V4p9() {
                     <div
                       key={p.index}
                       className={`thumb${V2b7 ? " flag" : ""}${V29g.has(p.index) ? " sel" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Trang ${p.index}`}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                       onClick={() => V298(p.index)}
                       onContextMenu={(V2b8) => {
                         V2b8.preventDefault();
@@ -821,6 +825,10 @@ export default function V4p9() {
             <div className="preview-pane">
               <div
                 className="preview-big"
+                role="button"
+                tabIndex={0}
+                aria-label="Xem trang đang chọn toàn màn"
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => V2b3 && V298(V2b3.index)}
                 title={V2b3 ? "Bấm để xem full" : undefined}
                 style={

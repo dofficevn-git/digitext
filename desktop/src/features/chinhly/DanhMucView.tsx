@@ -157,7 +157,7 @@ function Form({ tab, cat, row, onClose, onSaved }: { tab: Tab; cat: ClCatalog; r
             )}
           </Field>
         ))}
-        <button type="submit" hidden />
+        <button type="submit" hidden aria-hidden tabIndex={-1} />
       </form>
     </Dialog>
   );

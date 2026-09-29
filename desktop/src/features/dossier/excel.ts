@@ -5,7 +5,7 @@ import { V4bf, V4b7 } from "@/domain/catalogImport";
 import { isTauri } from "@/api/ipc";
 import { V4dz } from "@/api/exportFile";
 import type { V4bm, V4cf } from "@/api/dossier";
-import { V4dg, type V4d8, V4db } from "./logic";
+import { V4dg, type V4d8 } from "./logic";
 
 async function V4e1(Vzq: WorkBook, Vzr: string): Promise<void> {
   const Vzs = await import("xlsx");
@@ -68,30 +68,7 @@ export async function V4e5(V100: V4e4[], V101: string): Promise<void> {
   await V4e1(V103, V101);
 }
 
-export async function V4e6(): Promise<void> {
-  const V106: Record<string, unknown> = {
-    Mảng: "",
-    "ID Hồ Sơ": "",
-    "Mã Hồ Sơ": "",
-    "Số Tạm": "",
-    "Tiêu Đề": "",
-    THBQ: "",
-    "Số Tờ": "",
-    "Ngày BĐ": "",
-    "Ngày KT": "",
-    "T.Thừa": "",
-    "T.Thái": "",
-    "Tài Liệu": "",
-    "Chức Năng": "",
-  };
-  await V4e3([V106], "MauHoSo", "mau-lap-ho-so.xlsx");
-}
 
-export async function V4e7(): Promise<void> {
-  const V107: Record<string, unknown> = {};
-  for (const h of V4db) V107[h] = "";
-  await V4e3([V107], "MauVanBan", "mau-nhap-van-ban.xlsx");
-}
 
 export async function V4e8(
   file: File,

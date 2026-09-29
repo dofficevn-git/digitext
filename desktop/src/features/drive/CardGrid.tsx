@@ -53,6 +53,10 @@ export default function V485({ kids: Vfx, marked: Vfy, onToggleMark: Vfz, onMove
             <div
               key={Vgg}
               className={`fcard${Vgh}${Vg5 === Vgg ? " dragover" : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-label={n.name}
+              onKeyDown={(e) => { if (e.key === "Enter") Vg3(Vgg); else if (e.key === " ") { e.preventDefault(); select(Vgg); } }}
               draggable
               onDragStart={(Vgi) => Vg9(Vgi, Vgg)}
               onClick={() => select(Vgg)}
@@ -90,6 +94,10 @@ export default function V485({ kids: Vfx, marked: Vfy, onToggleMark: Vfz, onMove
           <div
             key={Vgg}
             className={`fcard doc${Vgh}`}
+            role="button"
+            tabIndex={0}
+            aria-label={n.name}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
             draggable
             onDragStart={(Vgn) => Vg9(Vgn, Vgg)}
             title={n.path ? "Bấm để mở PDF" : undefined}

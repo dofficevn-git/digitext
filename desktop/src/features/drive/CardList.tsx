@@ -5,6 +5,8 @@ import { V41y } from "@/mocks/fixtures";
 import { V40y } from "@/api/archive";
 import { Icon } from "@/components/Icon";
 
+import { Table } from "@/ui";
+
 interface V486 {
   kids: string[];
   marked: Set<string>;
@@ -40,8 +42,7 @@ export default function V48b({ kids: Vgp, marked: Vgq, onToggleMark: Vgr, onMove
   };
 
   return (
-    <div className="tbl-scroll">
-      <table className="tbl drive-list">
+    <Table.Root className="drive-list">
         <thead>
           <tr>
             <th className="w-7" />
@@ -102,7 +103,6 @@ export default function V48b({ kids: Vgp, marked: Vgq, onToggleMark: Vgr, onMove
             );
           })}
         </tbody>
-      </table>
-    </div>
+    </Table.Root>
   );
 }

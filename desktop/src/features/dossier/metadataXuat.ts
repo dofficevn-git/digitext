@@ -99,7 +99,7 @@ export async function xuatMetadataExcel(rows: MetaRow[], tenTep: string, sheet =
       r.hoSoRef,
       r.relPath,
       ...V4fn.map((k) => r.fields[k] ?? ""),
-      r.daXacNhan ? "✓" : "",
+      r.daXacNhan ? "Có" : "",
       r.trangThai,
       r.nguoiLam ?? "",
       r.kiemTra ?? "",
@@ -139,7 +139,7 @@ export function inMetadata(rows: MetaRow[], tieuDe: string, phu: string): void {
       (r, i) =>
         `<tr><td class="num">${i + 1}</td><td>${esc(r.filename)}</td><td>${esc(r.hoSoRef)}</td>` +
         COT_IN.map(([k]) => `<td>${esc(r.fields[k] ?? "")}</td>`).join("") +
-        `<td class="num">${r.daXacNhan ? "✓" : ""}</td><td>${esc(r.trangThai)}</td></tr>`,
+        `<td class="num">${r.daXacNhan ? "Có" : ""}</td><td>${esc(r.trangThai)}</td></tr>`,
     )
     .join("");
   const html =

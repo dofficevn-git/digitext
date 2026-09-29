@@ -12,7 +12,7 @@ import { V4cw, V4cx, V4cy, V4cz } from "./logic";
 import { V4ge, V4gf, V4gi, V4gj } from "./ocrPrefill";
 import V4h3 from "./OcrBoxLayer";
 import type { V4gk } from "./ocrBoxes";
-import { Banner, Button, Field, Input, notifyError, PageHeader, Textarea, toast } from "@/ui";
+import { Banner, Button, Field, Input, notifyError, PageHeader, Textarea, toast, errorText } from "@/ui";
 
 function baseName(path: string): string {
   const p = path.split(/[\\/]/);
@@ -76,7 +76,7 @@ export default function V4h7({ dossier, file, onBack }: { dossier: V4bm; file: V
     Promise.all([
       V40p(file.filePath)
         .then((p) => alive && (setPages(p), setPageErr(null)))
-        .catch((e) => alive && (setPages([]), setPageErr(e instanceof Error ? e.message : String(e)))),
+        .catch((e) => alive && (setPages([]), setPageErr(errorText(e)))),
       napForm().catch((e) => alive && notifyError(e, "nạp văn bản")),
     ]).finally(() => alive && setLoading(false));
     return () => {
@@ -112,6 +112,7 @@ export default function V4h7({ dossier, file, onBack }: { dossier: V4bm; file: V
   );
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- chỉ bắt Ctrl+Enter để lưu, không phải nút
     <div
       onKeyDown={(e) => {
         if (e.ctrlKey && e.key === "Enter") void luu();

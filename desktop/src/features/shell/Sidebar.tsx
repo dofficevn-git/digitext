@@ -110,6 +110,7 @@ export default function Sidebar() {
 
   return (
     <aside className={cn("sidebar", rail && "collapsed")}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- roving tabindex: nav bắt mũi tên, các mục bên trong là nút thật */}
       <nav ref={navRef} className="nav-scroll" aria-label="Điều hướng chính" onKeyDown={onKeyDown}>
         {rail ? (
           <ul className="flex flex-col items-center gap-1">

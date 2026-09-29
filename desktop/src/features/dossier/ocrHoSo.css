@@ -39,7 +39,7 @@
  
 .oh-duan {
   min-width: 150px;
-  color: var(--muted, #6b6b6b);
+  color: var(--color-fg-subtle);
 }
 
  
@@ -77,7 +77,7 @@
 }
 
 .oh-caret {
-  color: var(--muted, #6b6b6b);
+  color: var(--color-fg-subtle);
 }
 
  

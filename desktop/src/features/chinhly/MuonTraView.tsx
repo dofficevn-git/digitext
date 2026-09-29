@@ -202,11 +202,13 @@ export default function MuonTraView() {
               <Field label="Hồ sơ cho mượn" required hint={hsChon ? undefined : "Gõ tiêu đề, số tạm hoặc mã hồ sơ"}>
                 <Input value={timHs} onChange={(e) => void timHoSo(e.target.value)} prefix="tim" autoFocus />
                 {hsGoiY.length > 0 && !hsChon && (
-                  <ul className="mt-1 max-h-48 overflow-auto rounded-md border border-border-subtle" role="listbox">
+                  <div className="mt-1 max-h-48 overflow-auto rounded-md border border-border-subtle" role="listbox" aria-label="Hồ sơ gợi ý">
                     {hsGoiY.map((h) => (
-                      <li key={h.id}>
+                      <div key={h.id}>
                         <button
                           type="button"
+                          role="option"
+                          aria-selected={false}
                           className="block w-full px-2 py-1.5 text-left text-sm hover:bg-surface-hover"
                           onClick={() => {
                             setHsChon(h);
@@ -220,9 +222,9 @@ export default function MuonTraView() {
                             </Badge>
                           )}
                         </button>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
                 {hsChon && (
                   <p className="mt-1 text-sm">

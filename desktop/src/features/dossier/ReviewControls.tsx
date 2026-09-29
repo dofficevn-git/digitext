@@ -6,6 +6,7 @@ import { V3zt } from "@/state/sessionCore";
 import { V4f5, type V4eh, type V4f4 } from "@/api/docs";
 import { V4hl } from "./ocrReport";
 import { Icon } from "@/components/Icon";
+import { Button, Dialog, Field, Textarea } from "@/ui";
 
 const V4ho = (V1hv: unknown) =>
   V3zt(
@@ -34,33 +35,28 @@ function V4hq({
 }) {
   const [V1i1, V1i2] = useState("");
   return (
-    <div className="overlay" onClick={V1hx ? undefined : V1hy}>
-      <div className="dialog" onClick={(V1i3) => V1i3.stopPropagation()}>
-        <h3>Từ chối kết quả bóc tách</h3>
-        <p className="muted text-sm mt-0">{V1hw} — nêu rõ lý do để người quét biết phải sửa gì.</p>
-        <textarea
-          className="inp w-full resize-y"
-          rows={3}
-          autoFocus
-          placeholder="Ví dụ: ảnh mờ trang 3, bóc sai số quyết định…"
-          value={V1i1}
-          onChange={(V1i4) => V1i2(V1i4.target.value)}
-        />
-        <div className="actions">
-          <button className="btn" onClick={V1hy} disabled={V1hx}>
+    <Dialog
+      open
+      onOpenChange={(o) => !o && !V1hx && V1hy()}
+      closable={!V1hx}
+      title="Từ chối kết quả bóc tách"
+      description={`${V1hw}. Nêu rõ lý do để người quét biết phải sửa gì.`}
+      size="sm"
+      footer={
+        <>
+          <Button onClick={V1hy} disabled={V1hx}>
             Huỷ
-          </button>
-          <button
-            className="btn primary"
-            onClick={() => V1hz(V1i1)}
-            disabled={V1hx || V1i1.trim() === ""}
-            title={V1i1.trim() === "" ? "Phải nêu lý do từ chối" : undefined}
-          >
-            {V1hx ? "Đang lưu…" : "Từ chối"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button variant="danger" icon="tuChoi" loading={V1hx} disabled={V1i1.trim() === ""} onClick={() => V1hz(V1i1)}>
+            Từ chối
+          </Button>
+        </>
+      }
+    >
+      <Field label="Lý do" required>
+        <Textarea rows={3} autoFocus placeholder="Ví dụ: ảnh mờ trang 3, bóc sai số quyết định…" value={V1i1} onChange={(V1i4) => V1i2(V1i4.target.value)} />
+      </Field>
+    </Dialog>
   );
 }
 
