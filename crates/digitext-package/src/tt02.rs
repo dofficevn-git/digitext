@@ -77,6 +77,8 @@ pub struct Tot {
     pub archive_org_code: String,
     pub kind: String,
     pub submission_agreement: Option<String>,
+    pub fond_name: Option<String>,
+    pub archive_org_name: Option<String>,
 }
 #[derive(Debug)]
 pub struct Tor {
@@ -416,6 +418,11 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
         zip_ordinal: None,
         content_information_type: None,
         dip_cert: None,
+        fond_name: opts.fond_name.clone(),
+        archive_org_name: opts.archive_org_name.clone(),
+        packager_name: None,
+        packager_code: None,
+        allow_non_pdfa: false,
         documents: r_425,
     };
     for e in request.shape_errors() {

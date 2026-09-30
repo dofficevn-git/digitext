@@ -29,6 +29,9 @@ pack    Chạy lại bước kiểm, và CHỈ KHI KHÔNG CÒN LỖI NÀO mới 
         --allow-partial            kho còn hồ sơ lỗi vẫn đóng các hồ sơ SẠCH (hồ sơ lỗi bị giữ lại)
         --kind sip_hoso|aip_hoso   loại gói (mặc định aip_hoso)
         --agreement <mã>           mã thoả thuận nộp lưu — bắt buộc với sip_hoso
+        --org-name <tên>           tên cơ quan lưu trữ (agent ARCHIVIST)
+        --fond-name <tên>          tên cơ quan hình thành phông (agent CREATOR)
+        --packager <tên>|<mã>      đơn vị đóng gói (agent CREATOR thứ hai ở METS gốc), vd DO_JSC|0100
         --org <mã>                 mã cơ quan lưu trữ (mặc định: đoạn đầu mã phông, vd H49)
         --only <thư mục|mã hồ sơ>  chỉ đóng hồ sơ này (lặp lại được)
         --limit <n>                chỉ đóng n hồ sơ đầu (chạy thử)
@@ -55,6 +58,9 @@ struct Args {
     kind: String,
     agreement: Option<String>,
     org: Option<String>,
+    org_name: Option<String>,
+    fond_name: Option<String>,
+    packager: Option<String>,
     only: Vec<String>,
     limit: Option<usize>,
     allow_non_tt05: bool,
@@ -71,7 +77,7 @@ fn parse(argv: &[String]) -> Result<Args, String> {
     }
     let mut a = Args {
         cmd, root: PathBuf::new(), excel: PathBuf::new(), report: None, out: None, deep: false,
-        kind: "aip_hoso".into(), agreement: None, org: None, only: Vec::new(), limit: None,
+        kind: "aip_hoso".into(), agreement: None, org: None, org_name: None, fond_name: None, packager: None, only: Vec::new(), limit: None,
         allow_non_tt05: false, verapdf: false, allow_partial: false, force: false, threads: None,
     };
     let mut it = argv[1..].iter();
@@ -85,6 +91,9 @@ fn parse(argv: &[String]) -> Result<Args, String> {
             "--kind" => a.kind = val("--kind")?,
             "--agreement" => a.agreement = Some(val("--agreement")?),
             "--org" => a.org = Some(val("--org")?),
+            "--org-name" => a.org_name = Some(val("--org-name")?),
+            "--fond-name" => a.fond_name = Some(val("--fond-name")?),
+            "--packager" => a.packager = Some(val("--packager")?),
             "--only" => a.only.push(val("--only")?),
             "--limit" => a.limit = Some(val("--limit")?.parse().map_err(|_| "--limit phải là số")?),
             "--threads" => a.threads = Some(val("--threads")?.parse().map_err(|_| "--threads phải là số")?),
@@ -180,6 +189,8 @@ pub fn cli_main(prog: &str, argv: &[String]) -> ExitCode {
     }
     let opts = pack::PackOptions {
         kind: a.kind, org_code: a.org, agreement: a.agreement, out_dir: a.out.expect("đã kiểm"), force: a.force,
+        org_name: a.org_name, fond_name: a.fond_name,
+        packager: a.packager.map(|p| { let (n, c) = p.split_once('|').unwrap_or((p.as_str(), "")); digitext_package::OrgIdent { name: n.trim().into(), code: c.trim().into() } }),
         allow_non_tt05: a.allow_non_tt05, verapdf, allow_partial: a.allow_partial, threads: a.threads.unwrap_or(2), only: a.only, limit: a.limit,
     };
     println!("\nĐóng gói vào {} …", opts.out_dir.display());

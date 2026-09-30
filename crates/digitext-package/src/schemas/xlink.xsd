@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  W3C XLink Schema
+  Source: https://www.w3.org/XML/2008/06/xlink.xsd
+  Namespace: http://www.w3.org/1999/xlink
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xlink="http://www.w3.org/1999/xlink"
+           targetNamespace="http://www.w3.org/1999/xlink"
+           elementFormDefault="qualified">
+
+  <!-- XLink type attribute -->
+  <xs:attribute name="type">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="simple"/>
+        <xs:enumeration value="extended"/>
+        <xs:enumeration value="locator"/>
+        <xs:enumeration value="arc"/>
+        <xs:enumeration value="resource"/>
+        <xs:enumeration value="title"/>
+        <xs:enumeration value="none"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+
+  <!-- XLink href attribute -->
+  <xs:attribute name="href" type="xs:anyURI"/>
+
+  <!-- XLink title attribute -->
+  <xs:attribute name="title" type="xs:string"/>
+
+  <!-- XLink show attribute -->
+  <xs:attribute name="show">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="new"/>
+        <xs:enumeration value="replace"/>
+        <xs:enumeration value="embed"/>
+        <xs:enumeration value="other"/>
+        <xs:enumeration value="none"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+
+  <!-- XLink actuate attribute -->
+  <xs:attribute name="actuate">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="onLoad"/>
+        <xs:enumeration value="onRequest"/>
+        <xs:enumeration value="other"/>
+        <xs:enumeration value="none"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+
+  <!-- XLink role attribute -->
+  <xs:attribute name="role" type="xs:anyURI"/>
+
+  <!-- XLink arcrole attribute -->
+  <xs:attribute name="arcrole" type="xs:anyURI"/>
+
+  <!-- XLink from attribute -->
+  <xs:attribute name="from" type="xs:NCName"/>
+
+  <!-- XLink to attribute -->
+  <xs:attribute name="to" type="xs:NCName"/>
+
+  <!-- XLink label attribute -->
+  <xs:attribute name="label" type="xs:NCName"/>
+
+</xs:schema>

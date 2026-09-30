@@ -19,6 +19,8 @@ export interface V4sm {
   kind: V4sj;
   fondCode: string;
   archiveOrgCode: string;
+  fondName: string;
+  archiveOrgName: string;
 
   fileCode: string;
   title: string;
@@ -60,6 +62,8 @@ export const V4sn: V4sm = {
   kind: "aip_hoso",
   fondCode: "",
   archiveOrgCode: "",
+  fondName: "",
+  archiveOrgName: "",
   fileCode: "",
   title: "",
   maintenance: "01",
@@ -261,6 +265,8 @@ export function V4su(V2oi: V4sm, docs: V4sl[]): V4st {
     kind: V2ok,
     fondCode: V2oi.fondCode.trim(),
     archiveOrgCode: V2oi.archiveOrgCode.trim(),
+    fondName: V2oi.fondName.trim() || null,
+    archiveOrgName: V2oi.archiveOrgName.trim() || null,
     meta: V2or,
     documents: V2os,
     includePremis: V2oi.kind === "dip" ? V2oi.includePremis : false,

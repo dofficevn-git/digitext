@@ -268,7 +268,17 @@ def main() -> int:
         if d is None:
             continue
         digests = {x.text.strip().lower() for x in d.iter() if isinstance(x.tag, str) and etree.QName(x).localname == "messageDigest" and x.text}
-        names = {x.text.strip() for x in d.iter() if isinstance(x.tag, str) and etree.QName(x).localname == "originalName" and x.text}
+        # Tên tệp trong PREMIS: originalName (PREMIS chuẩn), originalFileName (phần mở rộng của
+        # DOffice builder) hoặc tên cuối của contentLocationValue — chấp nhận cả ba.
+        names = set()
+        for x in d.iter():
+            if not isinstance(x.tag, str) or not x.text:
+                continue
+            ln = etree.QName(x).localname
+            if ln in ("originalName", "originalFileName"):
+                names.add(x.text.strip())
+            elif ln == "contentLocationValue":
+                names.add(x.text.strip().replace("\\", "/").rsplit("/", 1)[-1])
         if prem.endswith("PREMIS_rep1.xml"):
             miss = [x for x in data if x not in names]
             badsum = [x for x in data if sha256(os.path.join(ddir, x)) not in digests]
@@ -290,7 +300,9 @@ def main() -> int:
         for x in pdfs:
             with fitz.open(os.path.join(ddir, x)) as pdf:
                 xmp = pdf.get_xml_metadata() or ""
-                if "<pdfaid:part>" not in xmp:
+                # pdfaid:part xuất hiện dạng thẻ <pdfaid:part>2</pdfaid:part> (Acrobat, Ghostscript)
+                # hoặc dạng thuộc tính pdfaid:part="2" (pyHanko, iText) — nhận cả hai.
+                if not re.search(r'pdfaid:part(>|=")\s*\d', xmp):
                     no_mark.append(x)
                 if not any(pdf[i].get_text().strip() for i in range(len(pdf))):
                     no_text.append(x)

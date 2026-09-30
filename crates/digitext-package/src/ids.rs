@@ -35,7 +35,7 @@ pub fn folder_name(r_3yv: &str) -> String {
 pub fn f_2sb(r_3yw: PackageKind, r_3yy: &str, r_3yz: Option<u32>) -> String {
     match (r_3yw, r_3yz) {
         (PackageKind::SipHoso | PackageKind::SipTailieu, Some(r_3yx)) => {
-            format!("{}{}.zip", r_3yx, r_3yy)
+            format!("{}_{}.zip", r_3yx, r_3yy)
         }
         _ => format!("{}.zip", folder_name(r_3yy)),
     }

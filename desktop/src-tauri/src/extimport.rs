@@ -196,6 +196,14 @@ pub struct PackArgs {
     pub agreement: Option<String>,
     #[serde(default)]
     pub org_code: Option<String>,
+    #[serde(default)]
+    pub org_name: Option<String>,
+    #[serde(default)]
+    pub fond_name: Option<String>,
+    #[serde(default)]
+    pub packager_name: Option<String>,
+    #[serde(default)]
+    pub packager_code: Option<String>,
     /// Kho còn hồ sơ lỗi vẫn đóng các hồ sơ sạch. Mặc định false: khớp hết mới đóng.
     #[serde(default)]
     pub allow_partial: bool,
@@ -254,6 +262,9 @@ pub async fn extimport_pack(app: AppHandle, auth: State<'_, AuthState>, args: Pa
         out.started = true;
         let opts = pack::PackOptions {
             kind: args.kind.clone(), org_code: args.org_code.clone().filter(|s| !s.trim().is_empty()), agreement,
+            org_name: args.org_name.clone().filter(|s| !s.trim().is_empty()),
+            fond_name: args.fond_name.clone().filter(|s| !s.trim().is_empty()),
+            packager: args.packager_name.clone().filter(|s| !s.trim().is_empty()).map(|n| digitext_extimport::OrgIdent { name: n, code: args.packager_code.clone().unwrap_or_default() }),
             out_dir: out_dir.clone(), force: args.force, allow_partial: args.allow_partial, allow_non_tt05: false,
             verapdf: args.use_verapdf && pdfa::verapdf_available(),
             threads: 2, only: Vec::new(), limit: None,

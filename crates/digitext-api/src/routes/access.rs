@@ -715,6 +715,11 @@ async fn f_127(
         kind: "dip".into(),
         fond_code: r_9h.unwrap_or_default(),
         archive_org_code: r_9c.unwrap_or_default(),
+        fond_name: None,
+        archive_org_name: Some(r_9n.clone()),
+        packager_name: None,
+        packager_code: None,
+        allow_non_pdfa: true,
         label: Some(format!("DIP khai thác {ma_xac_thuc}")),
         meta: WireMeta::Dip(T4o {
             request_id: ma_xac_thuc.clone(),

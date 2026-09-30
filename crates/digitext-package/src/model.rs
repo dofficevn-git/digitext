@@ -93,6 +93,9 @@ impl PackageKind {
     pub fn requires_submission_agreement(self) -> bool {
         matches!(self, PackageKind::SipHoso | PackageKind::SipTailieu)
     }
+    pub fn is_sip(self) -> bool {
+        matches!(self, PackageKind::SipHoso | PackageKind::SipTailieu)
+    }
 }
 impl std::str::FromStr for PackageKind {
     type Err = String;
@@ -107,6 +110,13 @@ impl std::str::FromStr for PackageKind {
 pub struct Tlv {
     pub name: String,
     pub version: String,
+}
+/// Tổ chức trong metsHdr / PREMIS: tên hiển thị + mã định danh.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgIdent {
+    pub name: String,
+    pub code: String,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackageSourceEvent {
@@ -209,4 +219,14 @@ pub struct Tga {
     pub content_information_type: Option<String>,
     pub dip_cert: Option<T4n>,
     pub cert_font_ttf: Option<Vec<u8>>,
+    /// Tên cơ quan hình thành phông / tổ chức nộp lưu (đi cùng `fond_code`).
+    pub fond_name: Option<String>,
+    /// Tên cơ quan lưu trữ (đi cùng `archive_org_code`).
+    pub archive_org_name: Option<String>,
+    /// Đơn vị đóng gói (ví dụ công ty số hoá), ghi thêm một agent CREATOR ở METS gốc.
+    pub packager: Option<OrgIdent>,
+    /// Hướng dẫn sử dụng gói kèm ở documentation/UserManual.pdf (tuỳ chọn).
+    pub user_manual_pdf: Option<Vec<u8>>,
+    /// CHỈ ĐỂ THỬ: bỏ qua kiểm dấu hiệu PDF/A của tệp tài liệu (Điều 8.2.a).
+    pub allow_non_pdfa: bool,
 }

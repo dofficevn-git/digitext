@@ -207,6 +207,8 @@ pub fn f_2p7(r_43g: PackageKind, r_43e: &BTreeMap<String, Vec<u8>>) -> Vec<Viola
         r_43c.as_str(),
         "representations/rep1/METS.xml",
         "schemas/METS.xsd",
+        "schemas/xlink.xsd",
+        "schemas/DILCISExtensionMETS.xsd",
     ] {
         if !r_43f(required) {
             r_43h.push(Violation::error(

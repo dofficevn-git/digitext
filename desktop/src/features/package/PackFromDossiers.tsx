@@ -62,7 +62,9 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
   const [projectId, setProjectId] = useState(() => nho("pack.projectId"));
   const [phong, setPhong] = useState("");
   const [orgCode, setOrgCode] = useState(() => nho("pack.archiveOrgCode"));
+  const [orgName, setOrgName] = useState(() => nho("pack.archiveOrgName"));
   const [fondCode, setFondCode] = useState(() => dossiers[0]?.maDa ?? "");
+  const [fondName, setFondName] = useState(() => nho("pack.fondName"));
   const [agreement, setAgreement] = useState("");
   const [dip, setDip] = useState<Partial<V4sm>>({ requestDate: new Date().toISOString().slice(0, 10) });
   const [busy, setBusy] = useState(false);
@@ -111,6 +113,8 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
     setBusy(true);
     luu("pack.projectId", projectId);
     luu("pack.archiveOrgCode", orgCode.trim());
+    luu("pack.archiveOrgName", orgName.trim());
+    luu("pack.fondName", fondName.trim());
     const out: KetQua[] = [];
     for (const { r, ds } of ghep) {
       const kq: KetQua = { hoSo: `Hộp ${r.hopSo ?? "—"} · HS ${r.soTam}`, ok: 0, loi: [] };
@@ -125,6 +129,8 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
         kind,
         fondCode: fondCode.trim(),
         archiveOrgCode: orgCode.trim(),
+        fondName: fondName.trim(),
+        archiveOrgName: orgName.trim(),
         fileCode: (r.maHoSo ?? "").trim() || `${fondCode.trim()}.${r.hopSo ?? ""}.${r.soTam}`,
         title: r.tieuDe,
         maintenance: kind.startsWith("sip") ? "01" : maintenanceOf(tenThbq(r.thbq)),
@@ -227,6 +233,12 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
         </Field>
         <Field label="Mã cơ quan lưu trữ">
           <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} />
+        </Field>
+        <Field label="Tên cơ quan hình thành phông" hint="Ghi vào phần cơ quan tạo lập của gói">
+          <Input value={fondName} onChange={(e) => setFondName(e.target.value)} placeholder="UBND xã …" />
+        </Field>
+        <Field label="Tên cơ quan lưu trữ" hint="Ghi vào phần cơ quan lưu trữ của gói">
+          <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Lưu trữ lịch sử tỉnh …" />
         </Field>
         {kind.startsWith("sip") && (
           <Field label="Mã yêu cầu nộp" hint="Thoả thuận nộp lưu, nếu có">

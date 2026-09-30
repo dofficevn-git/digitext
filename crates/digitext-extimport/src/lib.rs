@@ -14,3 +14,11 @@ pub mod excel;
 pub mod pack;
 pub mod pdfa;
 pub mod report;
+
+pub use digitext_package::OrgIdent;
+
+/// Hướng dẫn sử dụng gói (documentation/UserManual.pdf) đọc từ `DIGITEXT_PACKAGE_MANUAL`; không đặt = không kèm.
+pub fn user_manual_pdf() -> Option<Vec<u8>> {
+    let p = std::env::var_os("DIGITEXT_PACKAGE_MANUAL")?;
+    std::fs::read(p).ok().filter(|b| b.starts_with(b"%PDF-"))
+}

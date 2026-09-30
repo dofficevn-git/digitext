@@ -1,6 +1,13 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Bộ XSD đi kèm gói: METS / xlink / DILCIS CSIP (+ SIP) / PREMIS chép nguyên từ tệp chuẩn (gói tự đứng,
+// kiểm được khi không có mạng); EAD*.xsd sinh theo đúng danh sách trường của TT05 cho từng loại gói.
 use crate::model::PackageKind;
 const C_I7: &[&str] = &["language"];
+const METS_XSD: &str = include_str!("schemas/METS.xsd");
+const XLINK_XSD: &str = include_str!("schemas/xlink.xsd");
+const CSIP_XSD: &str = include_str!("schemas/DILCISExtensionMETS.xsd");
+const SIP_XSD: &str = include_str!("schemas/DILCISExtensionSIPMETS.xsd");
+const PREMIS_XSD: &str = include_str!("schemas/PREMIS.xsd");
 fn f_2fi(r_41a: &[&str]) -> String {
     let mut r_41b = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
@@ -32,11 +39,6 @@ fn f_2fi(r_41a: &[&str]) -> String {
          </xs:schema>\n",
     );
     r_41b
-}
-fn f_26g(namespace: &str, location: &str) -> String {
-    format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- Thông tư 05/2025/TT-BNV không cung cấp nội dung XSD này; chuyển hướng\n     tới bản chuẩn tương ứng. -->\n<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n    <xs:import namespace=\"{namespace}\" schemaLocation=\"{location}\"/>\n</xs:schema>\n"
-    )
 }
 pub fn f_1wy(r_41d: PackageKind) -> String {
     match r_41d {
@@ -152,25 +154,25 @@ pub fn f_18k(r_41j: PackageKind) -> String {
     ])
 }
 pub fn f_1sq() -> String {
-    f_26g(
-        "http://www.loc.gov/METS/",
-        "http://www.loc.gov/standards/mets/mets.xsd",
-    )
+    METS_XSD.to_string()
 }
 pub fn f_23g() -> String {
-    f_26g(
-        "http://www.loc.gov/premis/v3",
-        "http://www.loc.gov/standards/premis/premis-3-0-draft.xsd",
-    )
+    PREMIS_XSD.to_string()
 }
+/// Danh sách (tên tệp, nội dung) trong `schemas/`, thứ tự cố định để gói tái tạo được.
 pub fn schema_files(r_41l: PackageKind, r_41m: bool) -> Vec<(String, String)> {
     let mut r_41k = vec![
         ("METS.xsd".to_string(), f_1sq()),
-        (r_41l.package_ead_xsd_name().to_string(), f_1wy(r_41l)),
-        ("EAD_doc.xsd".to_string(), f_18j(r_41l)),
-        ("EAD_media.xsd".to_string(), f_18k(r_41l)),
-        ("EAD_pic.xsd".to_string(), f_18l(r_41l)),
+        ("xlink.xsd".to_string(), XLINK_XSD.to_string()),
+        ("DILCISExtensionMETS.xsd".to_string(), CSIP_XSD.to_string()),
     ];
+    if r_41l.is_sip() {
+        r_41k.push(("DILCISExtensionSIPMETS.xsd".to_string(), SIP_XSD.to_string()));
+    }
+    r_41k.push((r_41l.package_ead_xsd_name().to_string(), f_1wy(r_41l)));
+    r_41k.push(("EAD_doc.xsd".to_string(), f_18j(r_41l)));
+    r_41k.push(("EAD_media.xsd".to_string(), f_18k(r_41l)));
+    r_41k.push(("EAD_pic.xsd".to_string(), f_18l(r_41l)));
     if r_41m {
         r_41k.push(("PREMIS.xsd".to_string(), f_23g()));
     }

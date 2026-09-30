@@ -1571,3 +1571,53 @@ pub fn f_2h7(pdf: &[u8], r_4gh: &str, r_4g4: bool, r_4gc: &[u8]) -> Result<Vec<u
         .map_err(|e| PdfError::Save(e.to_string()))?;
     Ok(r_4g7)
 }
+
+/// Dấu hiệu PDF/A tối thiểu của một tệp: loại tự khai trong XMP (`pdfaid:part`/`conformance`),
+/// có OutputIntent (hồ sơ màu) hay không, và phiên bản PDF ở dòng đầu. Không thay cho veraPDF.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PdfaMarkers {
+    pub declared: Option<String>,
+    pub has_output_intent: bool,
+    pub version: Option<String>,
+}
+fn pdfaid_from_xmp(xmp: &[u8]) -> Option<String> {
+    let find = |hay: &[u8], needle: &[u8]| hay.windows(needle.len()).position(|w| w == needle);
+    let value_after = |key: &[u8]| -> Option<String> {
+        let at = find(xmp, key)? + key.len();
+        let rest = &xmp[at..xmp.len().min(at + 40)];
+        let s: String = rest
+            .iter()
+            .map(|b| *b as char)
+            .skip_while(|c| matches!(c, '>' | '=' | '"' | '\'' | ' ' | '\n' | '\r' | '\t'))
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect();
+        (!s.is_empty()).then_some(s)
+    };
+    let part = value_after(b"pdfaid:part")?;
+    let conf = value_after(b"pdfaid:conformance").unwrap_or_default();
+    Some(format!("PDF/A-{part}{}", conf.to_uppercase()))
+}
+pub fn pdfa_markers(bytes: &[u8]) -> PdfaMarkers {
+    let find = |hay: &[u8], needle: &[u8]| hay.windows(needle.len()).any(|w| w == needle);
+    let version = bytes
+        .get(..8)
+        .and_then(|h| std::str::from_utf8(h).ok())
+        .and_then(|h| h.strip_prefix("%PDF-"))
+        .map(|v| v.chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect::<String>())
+        .filter(|v| !v.is_empty());
+    let mut m = PdfaMarkers { declared: pdfaid_from_xmp(bytes), has_output_intent: find(bytes, b"/OutputIntents"), version };
+    if m.declared.is_none() && find(bytes, b"/Metadata") {
+        if let Ok(doc) = Document::load_mem(bytes) {
+            if let Ok(cat) = doc.catalog() {
+                if let Some(id) = cat.get(b"Metadata").ok().and_then(|o| o.as_reference().ok()) {
+                    if let Ok(Object::Stream(st)) = doc.get_object(id) {
+                        let xmp = st.decompressed_content().unwrap_or_else(|_| st.content.clone());
+                        m.declared = pdfaid_from_xmp(&xmp);
+                    }
+                }
+                m.has_output_intent = m.has_output_intent || cat.get(b"OutputIntents").is_ok();
+            }
+        }
+    }
+    m
+}

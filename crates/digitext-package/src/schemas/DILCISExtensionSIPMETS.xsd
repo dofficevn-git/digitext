@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  DILCIS E-ARK SIP Extension METS Schema
+  Source: https://earksip.dilcis.eu/schema/DILCISExtensionSIPMETS.xsd
+  Namespace: https://DILCIS.eu/XML/METS/SIPExtensionMETS
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="https://DILCIS.eu/XML/METS/SIPExtensionMETS"
+           targetNamespace="https://DILCIS.eu/XML/METS/SIPExtensionMETS"
+           elementFormDefault="qualified">
+
+  <!-- Attribute: FILEFORMATNAME on mets:file -->
+  <xs:attribute name="FILEFORMATNAME" type="xs:string"/>
+
+  <!-- Attribute: FILEFORMATVERSION on mets:file -->
+  <xs:attribute name="FILEFORMATVERSION" type="xs:string"/>
+
+  <!-- Attribute: FORMATREGISTRY on mets:file -->
+  <xs:attribute name="FORMATREGISTRY" type="xs:string"/>
+
+  <!-- Attribute: FORMATREGISTRYKEY on mets:file -->
+  <xs:attribute name="FORMATREGISTRYKEY" type="xs:string"/>
+
+</xs:schema>

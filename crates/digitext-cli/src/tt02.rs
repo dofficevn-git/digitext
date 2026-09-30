@@ -8,6 +8,8 @@ pub struct Toq {
     pub input: String,
     pub fond_code: String,
     pub archive_org_code: String,
+    pub fond_name: Option<String>,
+    pub archive_org_name: Option<String>,
     pub kind: String,
     pub submission_agreement: Option<String>,
     pub map_file: Option<String>,
@@ -17,6 +19,8 @@ pub fn parse_args(r_1wl: &[String]) -> Result<Toq, String> {
     let mut input = None;
     let mut fond = None;
     let mut org = None;
+    let mut fond_name = None;
+    let mut org_name = None;
     let mut kind = "aip_hoso".to_string();
     let mut agreement = None;
     let mut map_file = None;
@@ -32,6 +36,8 @@ pub fn parse_args(r_1wl: &[String]) -> Result<Toq, String> {
         match a.as_str() {
             "--fond" => fond = Some(r_1wn("--fond")?),
             "--org" => org = Some(r_1wn("--org")?),
+            "--fond-name" => fond_name = Some(r_1wn("--fond-name")?),
+            "--org-name" => org_name = Some(r_1wn("--org-name")?),
             "--kind" => kind = r_1wn("--kind")?,
             "--agreement" => agreement = Some(r_1wn("--agreement")?),
             "--map" => map_file = Some(r_1wn("--map")?),
@@ -55,6 +61,8 @@ pub fn parse_args(r_1wl: &[String]) -> Result<Toq, String> {
         input: input.ok_or("thiếu tệp đầu vào (<mục-lục>.json)")?,
         fond_code: fond.ok_or("thiếu --fond <mã phông>")?,
         archive_org_code: org.ok_or("thiếu --org <mã cơ quan lưu trữ>")?,
+        fond_name,
+        archive_org_name: org_name,
         kind,
         submission_agreement: agreement,
         map_file,
@@ -63,7 +71,7 @@ pub fn parse_args(r_1wl: &[String]) -> Result<Toq, String> {
 }
 fn f_2oa(prog: &str) -> String {
     format!(
-        "Cách dùng: {prog} <mục-lục.json> --fond <mã phông> --org <mã cơ quan> [tuỳ chọn]\n\nChuyển hồ sơ cấu trúc TT 02/2019 → yêu cầu đóng gói TT 05/2025 (PK-7, Điều 51.3).\n\n  <mục-lục.json>     Một hồ sơ hoặc mảng hồ sơ theo bảng trường TT 02 (camelCase:\n                     maHoSo, tieuDe, thoiHanBaoQuan, vanBan[{{stt, tenLoai, …}}]…)\n  --fond <mã>        Mã phông lưu trữ (fondCode TT 05)\n  --org <mã>         Mã cơ quan lưu trữ (tiền tố arcFileCode)\n  --kind <loại>      aip_hoso (mặc định) | sip_hoso\n  --agreement <mã>   Mã thoả thuận nộp — bắt buộc với sip_hoso\n  --map <map.json>   Gán documents.id server cho văn bản: {{\"<mã hồ sơ>\": {{\"<stt>\": \"<uuid>\"}}}}\n  --out <thư mục>    Nơi ghi <mã hồ sơ>.wire.json (mặc định: thư mục hiện tại)\n\nTệp wire nộp bằng desktop (Đóng gói theo tiêu chuẩn) hoặc:\n  curl -X POST …/api/v1/packages -d '{{\"request\": <nội dung wire.json>}}'\n"
+        "Cách dùng: {prog} <mục-lục.json> --fond <mã phông> --org <mã cơ quan> [tuỳ chọn]\n\nChuyển hồ sơ cấu trúc TT 02/2019 → yêu cầu đóng gói TT 05/2025 (PK-7, Điều 51.3).\n\n  <mục-lục.json>     Một hồ sơ hoặc mảng hồ sơ theo bảng trường TT 02 (camelCase:\n                     maHoSo, tieuDe, thoiHanBaoQuan, vanBan[{{stt, tenLoai, …}}]…)\n  --fond <mã>        Mã phông lưu trữ (fondCode TT 05)\n  --org <mã>         Mã cơ quan lưu trữ (tiền tố arcFileCode)\n  --fond-name <tên>  Tên cơ quan hình thành phông (agent CREATOR trong METS)\n  --org-name <tên>   Tên cơ quan lưu trữ (agent ARCHIVIST trong METS)\n  --kind <loại>      aip_hoso (mặc định) | sip_hoso\n  --agreement <mã>   Mã thoả thuận nộp — bắt buộc với sip_hoso\n  --map <map.json>   Gán documents.id server cho văn bản: {{\"<mã hồ sơ>\": {{\"<stt>\": \"<uuid>\"}}}}\n  --out <thư mục>    Nơi ghi <mã hồ sơ>.wire.json (mặc định: thư mục hiện tại)\n\nTệp wire nộp bằng desktop (Đóng gói theo tiêu chuẩn) hoặc:\n  curl -X POST …/api/v1/packages -d '{{\"request\": <nội dung wire.json>}}'\n"
     )
 }
 type DocMap = BTreeMap<String, BTreeMap<String, uuid::Uuid>>;
@@ -145,6 +153,8 @@ fn run(a: &Toq) -> Result<bool, String> {
         archive_org_code: a.archive_org_code.clone(),
         kind: a.kind.clone(),
         submission_agreement: a.submission_agreement.clone(),
+        fond_name: a.fond_name.clone(),
+        archive_org_name: a.archive_org_name.clone(),
     };
     let mut clean = true;
     for mut r_1x0 in r_1wz {

@@ -20,6 +20,10 @@ export default function ExternalImportPanel() {
   const [kind, setKind] = useState<"aip_hoso" | "sip_hoso">("aip_hoso");
   const [agreement, setAgreement] = useState("");
   const [orgCode, setOrgCode] = useState("");
+  const [orgName, setOrgName] = useState("");
+  const [fondName, setFondName] = useState("");
+  const [packagerName, setPackagerName] = useState("");
+  const [packagerCode, setPackagerCode] = useState("");
   const [deep, setDeep] = useState(true);
   const [useVera, setUseVeraState] = useState(false);
   const [veraOk, setVeraOk] = useState<boolean | null>(null);
@@ -91,7 +95,7 @@ export default function ExternalImportPanel() {
     setProgress(null);
     setLastNote("");
     try {
-      const r = await extimportPack({ root, excel, outDir, kind, agreement: agreement.trim() || null, orgCode: orgCode.trim() || null, allowPartial, force: false, useVerapdf: useVera && veraOk === true });
+      const r = await extimportPack({ root, excel, outDir, kind, agreement: agreement.trim() || null, orgCode: orgCode.trim() || null, orgName: orgName.trim() || null, fondName: fondName.trim() || null, packagerName: packagerName.trim() || null, packagerCode: packagerCode.trim() || null, allowPartial, force: false, useVerapdf: useVera && veraOk === true });
       setPack(r);
       setCheck(r.check);
     } catch (e) {
@@ -198,6 +202,18 @@ export default function ExternalImportPanel() {
             )}
             <Field label="Mã cơ quan lưu trữ" hint="Để trống thì lấy đoạn đầu mã phông">
               <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} placeholder="H49" />
+            </Field>
+            <Field label="Tên cơ quan lưu trữ">
+              <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Lưu trữ lịch sử tỉnh …" />
+            </Field>
+            <Field label="Tên cơ quan hình thành phông">
+              <Input value={fondName} onChange={(e) => setFondName(e.target.value)} placeholder="UBND xã …" />
+            </Field>
+            <Field label="Đơn vị đóng gói" hint="Tên công ty số hoá, nếu có">
+              <Input value={packagerName} onChange={(e) => setPackagerName(e.target.value)} />
+            </Field>
+            <Field label="Mã đơn vị đóng gói">
+              <Input value={packagerCode} onChange={(e) => setPackagerCode(e.target.value)} />
             </Field>
             <Field label="Thư mục ghi gói tin" required className="sm:col-span-3">
               <div className="flex gap-2">

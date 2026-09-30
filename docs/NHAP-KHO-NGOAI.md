@@ -29,7 +29,10 @@ digitext ext-import pack  --root … --excel … --out "F:\goi-tin" --kind aip_h
 ```
 
 `digitext ext-import --help` liệt kê đủ tuỳ chọn (`--kind sip_hoso --agreement <mã>`, `--org`,
-`--only`, `--limit`, `--allow-partial`, `--force`, `--threads`).
+`--org-name <tên cơ quan lưu trữ>`, `--fond-name <tên cơ quan hình thành phông>`,
+`--packager <tên>|<mã>` (đơn vị đóng gói), `--only`, `--limit`, `--allow-partial`, `--force`,
+`--threads`). Đặt biến môi trường `DIGITEXT_PACKAGE_MANUAL=<tệp.pdf>` để kèm hướng dẫn sử dụng
+vào `documentation/UserManual.pdf` của mỗi gói.
 
 ## 3. Excel phải có gì
 
@@ -112,9 +115,22 @@ Kết quả: `test/dienxa/vera-863/`.
 
 ## 5. Gói tin ra sao
 
-- Một gói / hồ sơ, tên `urn_<mã phông>_uuid_<UUID>.zip` (AIP) — bố cục METS / EAD / PREMIS /
-  schemas / `representations/rep1/data` y hệt gói DigiText tự tạo (cùng bộ dựng `digitext-package`,
-  tự kiểm bằng `validate::f_2p7` trước khi ghi ra đĩa).
+- Một gói / hồ sơ, tên `urn_<mã phông>_uuid_<UUID>.zip` (AIP) hoặc `<số thứ tự>_uuid-<UUID>.zip`
+  (SIP) — bố cục E-ARK CSIP y hệt gói DigiText tự tạo và gói của dự án Đầm Hà (cùng bộ dựng
+  `digitext-package`, tự kiểm bằng `validate::f_2p7` trước khi ghi ra đĩa):
+  - `METS.xml` gốc: 3–4 agent (phần mềm; cơ quan hình thành phông CREATOR; đơn vị đóng gói CREATOR
+    nếu khai; cơ quan lưu trữ ARCHIVIST — có **tên** lẫn mã), SIP có `altRecordID SUBMISSIONAGREEMENT`;
+    `xsi:schemaLocation` trỏ đủ vào `schemas/` (METS, xlink, CSIP, SIP).
+  - `metadata/descriptive/EAD.xml`, `metadata/preservation/PREMIS.xml` (AIP): thực thể trí tuệ,
+    biểu diễn, từng tệp (SHA-256, kích thước, định dạng + phiên bản PDF, tên gốc, tiêu đề, số trang,
+    cơ quan ban hành, vị trí), sự kiện tạo gói + chuyển giao từng tệp, agent phần mềm + cơ quan.
+  - `representations/rep1/`: `METS.xml` (dmdSec trỏ ngược EAD hồ sơ và từng `EAD_doc_*.xml`,
+    structMap `TYPE="NORMALIZED"` gồm Metadata / Data / MetadataLink), `data/`, `metadata/`.
+  - `schemas/`: `METS.xsd`, `xlink.xsd`, `DILCISExtensionMETS.xsd` (+ `DILCISExtensionSIPMETS.xsd`
+    với SIP), `EAD*.xsd`, `PREMIS.xsd` — gói tự đứng, kiểm được khi không có mạng.
+  - `documentation/UserManual.pdf` nếu đặt `DIGITEXT_PACKAGE_MANUAL`.
+- Tệp tài liệu phải mang dấu PDF/A (XMP `pdfaid` + OutputIntent); không có thì bộ dựng từ chối
+  (`--allow-non-tt05` để bỏ qua khi chạy thử).
 - Tệp trong gói được **đổi tên** thành `<mã hồ sơ>.<STT 7 số>.pdf` (quy tắc mã tài liệu TT05);
   tên tệp gốc ghi trong phần mô tả của tài liệu. **Nội dung tệp giữ nguyên từng byte** — chữ ký số
   không bị ảnh hưởng.
