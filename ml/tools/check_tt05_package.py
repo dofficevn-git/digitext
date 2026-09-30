@@ -229,8 +229,9 @@ def main() -> int:
         if code in codes_seen:
             err(f"{e}: mã văn bản trùng {code}")
         codes_seen.add(code)
-        if file_code and not re.fullmatch(re.escape(file_code) + r"\.\d{7}", code):
-            err(f"{e}: mã văn bản {code!r} không theo khuôn <mã hồ sơ>.<STT 7 số>")
+        # Quy tắc: <mã hồ sơ>[.<mục lục số>].<STT 7 số> — mục lục số (vd .01) nằm giữa khi phông có.
+        if file_code and not re.fullmatch(re.escape(file_code) + r"(\.\d{1,3})?\.\d{7}", code):
+            err(f"{e}: mã văn bản {code!r} không theo khuôn <mã hồ sơ>[.<mục lục số>].<STT 7 số>")
         if not any(x.rsplit(".", 1)[0] == code for x in data):
             err(f"{e}: không có tệp dữ liệu tên {code}.*")
         if e.startswith("EAD_doc_") and doc_schema is not None and not doc_schema.validate(d):

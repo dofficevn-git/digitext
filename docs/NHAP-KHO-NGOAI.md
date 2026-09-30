@@ -53,6 +53,10 @@ cơ quan ban hành, trích yếu, số trang, từ khoá, bút tích…) nếu c
 
 **Đơn vị hồ sơ là THƯ MỤC chứa tệp**, không phải «Mã hồ sơ» — vì chính mã hồ sơ có thể sai.
 
+Thư mục gốc: chọn thư mục **chứa** đoạn đầu của đường dẫn trong Excel (Excel ghi `UBND\DCXD\HOP 24\…`
+thì chọn thư mục có `UBND` bên trong, không chọn `…\UBND\DCXD`). Chọn lệch thì bước kiểm tự dò lên
+các cấp cha; không dò được sẽ báo `THU-MUC-GOC-KHONG-CO` kèm thư mục nên chọn.
+
 LỖI (chặn đóng gói):
 
 | Mã | Ý nghĩa |
@@ -65,7 +69,7 @@ LỖI (chặn đóng gói):
 | `TM-LECH-SO-HO-SO` | số hồ sơ của thư mục khác số hồ sơ trong mã |
 | `TL-LECH-THU-MUC` | «Tệp tin hồ sơ» khác thư mục thật của tệp |
 | `TL-MA-LECH-TEN-TEP` | «Mã lưu trữ tài liệu» khác tên tệp thật |
-| `TL-TEN-LECH-PHONG` / `-NAM` / `-SO-HO-SO` | tên tệp mang mã phông / năm / số hồ sơ khác mã hồ sơ |
+| `TL-TEN-LECH-PHONG` / `-NAM` / `-SO-HO-SO` / `-MUC-LUC` | tên tệp mang mã phông / năm / số hồ sơ / mục lục số khác mã hồ sơ (tách theo quy tắc `mã cơ quan.phông.năm.số hồ sơ[.mục lục].STT`, mốc là đoạn năm) |
 | `TL-TRUNG-STT`, `HS-LECH-TONG-TAI-LIEU` | trùng số thứ tự tệp; tổng số tài liệu khai khác số dòng |
 | `HS-THIEU-TRUONG`, `HS-THIEU-SO-TO` | thiếu trường bắt buộc |
 | `PDF-LECH-SO-TRANG` | số trang Excel khác số trang PDF thật |
@@ -131,7 +135,9 @@ Kết quả: `test/dienxa/vera-863/`.
   - `documentation/UserManual.pdf` nếu đặt `DIGITEXT_PACKAGE_MANUAL`.
 - Tệp tài liệu phải mang dấu PDF/A (XMP `pdfaid` + OutputIntent); không có thì bộ dựng từ chối
   (`--allow-non-tt05` để bỏ qua khi chạy thử).
-- Tệp trong gói được **đổi tên** thành `<mã hồ sơ>.<STT 7 số>.pdf` (quy tắc mã tài liệu TT05);
+- Tệp trong gói được **đổi tên** thành `<mã hồ sơ>[.<mục lục số>].<STT 7 số>.pdf` (quy tắc
+  `mã cơ quan.phông số.năm.số hồ sơ.mục lục số (nếu có).STT văn bản`; mục lục số lấy từ tên tệp
+  gốc, vd `H49.101.01.1993.153.01.0000002.pdf` → hồ sơ 153, mục lục 01, STT 2);
   tên tệp gốc ghi trong phần mô tả của tài liệu. **Nội dung tệp giữ nguyên từng byte** — chữ ký số
   không bị ảnh hưởng.
 - Thư mục ra có thêm `ket-qua-dong-goi.csv` (từng hồ sơ: gói, SHA-256, lý do nếu hỏng) và
