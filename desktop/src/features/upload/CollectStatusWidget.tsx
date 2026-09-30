@@ -69,6 +69,7 @@ export default function V4wm() {
                 item={V35v}
                 now={V35r}
                 kind={V35k.kind}
+                direct={V35k.direct}
                 cancelTitle={V35t.cancelRow}
                 onCancel={() => void V35l(V35v.key)}
                 onDrop={() => V35n(V35v.key)}
@@ -108,6 +109,7 @@ function V4wn({
   item: V35w,
   now: V35x,
   kind: V35y,
+  direct: V363,
   cancelTitle: V35z,
   onCancel: V360,
   onDrop: V361,
@@ -115,6 +117,7 @@ function V4wn({
   item: V44v;
   now: number;
   kind: V44o;
+  direct: boolean;
   cancelTitle: string;
   onCancel: () => void;
   onDrop: () => void;
@@ -127,7 +130,7 @@ function V4wn({
       {V35w.state === "downloading" ? (
         <V4wj
           pct={V454(V35w)}
-          label={V35y === "disk" ? "Đang chép vào Kho" : "Đang gom về máy"}
+          label={V363 ? "Đang ghi sổ" : V35y === "disk" ? "Đang chép vào Kho" : "Đang gom về máy"}
         />
       ) : (
         <V4wk state={V35w.state === "skipped" ? "skipped" : V35w.state} />
@@ -137,7 +140,7 @@ function V4wn({
           {V35w.filename}
         </span>
         <div className={`uw-detail${V35w.state === "error" ? " err" : ""}`}>
-          {V459(V35w, V35x, V35y)}
+          {V459(V35w, V35x, V35y, V363)}
         </div>
       </div>
       <button

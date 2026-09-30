@@ -24,6 +24,8 @@ export interface V44w {
   sessionId: number;
 
   kind: V44o;
+  /** Đẩy thẳng từ ổ đĩa: tệp giữ nguyên trên ổ, chỉ ghi sổ. */
+  direct: boolean;
   running: boolean;
 
   stage: string;
@@ -39,6 +41,7 @@ export function V44x(): V44w {
   return {
     sessionId: 0,
     kind: "lan",
+    direct: false,
     running: false,
     stage: "",
     peers: 0,
@@ -63,6 +66,7 @@ export function V450(state: V44w, Vac: V44s): V44w {
       collapsed: state.collapsed,
       sessionId: Vac.sessionId,
       kind: Vac.kind,
+      direct: Vac.direct === true,
       running: true,
       stage: "Đang chuẩn bị…",
     };
@@ -154,10 +158,13 @@ export function V458(s: V44w): string {
   const Vau = s.kind === "disk";
   if (s.running) {
     if (t.downloading > 0) {
-      return Vau
-        ? `Đang thêm ${t.downloading} tệp vào Kho`
-        : `Đang gom ${t.downloading} tệp về máy`;
+      return s.direct
+        ? `Đang ghi sổ ${t.downloading} tệp trên ổ đĩa`
+        : Vau
+          ? `Đang thêm ${t.downloading} tệp vào Kho`
+          : `Đang gom ${t.downloading} tệp về máy`;
     }
+    if (s.direct) return "Đang ghi sổ tài liệu trên ổ đĩa (không chép)";
     if (Vau) return "Đang thêm tài liệu từ ổ cứng";
     return s.peers > 0
       ? `Đang thu thập từ ${s.peers} máy nhân viên`
@@ -176,7 +183,7 @@ export function V458(s: V44w): string {
   return Vav.join(" · ");
 }
 
-export function V459(Vaw: V44v, Vax: number, Vay: V44o = "lan"): string {
+export function V459(Vaw: V44v, Vax: number, Vay: V44o = "lan", direct = false): string {
   const nguon =
     Vay === "disk"
       ? Vaw.hoSoRef
@@ -194,7 +201,7 @@ export function V459(Vaw: V44v, Vax: number, Vay: V44o = "lan"): string {
         V45d(Vaw, Vax),
       );
     case "done":
-      return Vaz(`${Vay === "disk" ? "đã chép" : "đã về"} ${V44a(Vaw.sizeBytes)}`);
+      return Vaz(`${direct ? "đã ghi sổ" : Vay === "disk" ? "đã chép" : "đã về"} ${V44a(Vaw.sizeBytes)}`);
     default:
       return Vaz(Vaw.message ?? "");
   }
@@ -221,11 +228,13 @@ export function V45b(s: V44w, Vb1: boolean): V45a {
   const Vb2 = s.kind === "disk";
 
   const Vb3 = Vb1
-    ? Vb2
-      ? `${t.done} tệp đã vào Kho`
-      : `${t.done} tệp đã về${s.peers > 0 ? ` · ${s.peers} máy` : ""}`
+    ? s.direct
+      ? `${t.done} tệp đã ghi sổ (giữ trên ổ)`
+      : Vb2
+        ? `${t.done} tệp đã vào Kho`
+        : `${t.done} tệp đã về${s.peers > 0 ? ` · ${s.peers} máy` : ""}`
     : [
-        Vb2 ? `${t.done} tệp thêm mới` : `${t.done} tệp gom mới`,
+        s.direct ? `${t.done} tệp ghi sổ mới` : Vb2 ? `${t.done} tệp thêm mới` : `${t.done} tệp gom mới`,
         t.skipped > 0 ? `${t.skipped} đã có sẵn` : "",
         t.errors > 0 ? `${t.errors} lỗi` : "",
         t.cancelled > 0 ? `${t.cancelled} đã hủy` : "",
@@ -234,9 +243,11 @@ export function V45b(s: V44w, Vb1: boolean): V45a {
         .join(" · ");
 
   return {
-    title: Vb2
-      ? "Trạng thái thêm tài liệu từ ổ cứng"
-      : "Trạng thái thu thập",
+    title: s.direct
+      ? "Trạng thái ghi sổ từ ổ đĩa (đẩy thẳng)"
+      : Vb2
+        ? "Trạng thái thêm tài liệu từ ổ cứng"
+        : "Trạng thái thu thập",
     icon: Vb2 ? "them" : "nhapKho",
     empty: Vb2
       ? Vb1

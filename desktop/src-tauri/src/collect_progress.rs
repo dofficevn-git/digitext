@@ -63,12 +63,15 @@ pub struct SessionEvent {
     pub session_id: u64,
     pub phase: SessionPhase,
     pub kind: Kind,
+    /// Đẩy thẳng từ ổ đĩa: chỉ ghi sổ, không chép — giao diện đổi chữ "chép vào Kho" → "ghi sổ".
+    pub direct: bool,
     pub summary: Option<serde_json::Value>,
 }
 pub struct Reporter {
     app: AppHandle,
     session_id: u64,
     kind: Kind,
+    direct: bool,
 }
 impl Reporter {
     pub fn new(app: AppHandle, session_id: u64, kind: Kind) -> Self {
@@ -76,7 +79,13 @@ impl Reporter {
             app,
             session_id,
             kind,
+            direct: false,
         }
+    }
+    /// Phiên "đẩy thẳng từ ổ đĩa" (không chép vào Kho).
+    pub fn direct(mut self, direct: bool) -> Self {
+        self.direct = direct;
+        self
     }
     pub fn session_id(&self) -> u64 {
         self.session_id
@@ -88,6 +97,7 @@ impl Reporter {
                 session_id: self.session_id,
                 phase,
                 kind: self.kind,
+                direct: self.direct,
                 summary,
             },
         );

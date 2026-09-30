@@ -2967,7 +2967,7 @@ pub async fn collect_add_files(
         ..Default::default()
     };
     let session_id = control.begin();
-    let rep = cprog::Reporter::new(app.clone(), session_id, cprog::Kind::Disk);
+    let rep = cprog::Reporter::new(app.clone(), session_id, cprog::Kind::Disk).direct(args.direct);
     rep.session(cprog::SessionPhase::Start, None);
     let r_ym = SessionGuard::new(&rep, |s| control.end(s));
     rep.stage(
@@ -3049,10 +3049,11 @@ pub async fn collect_add_files(
     }
     rep.stage(
         cprog::Stage::Disk,
-        format!(
-            "Đang thêm {} tệp từ ổ cứng vào Kho…",
-            r_yo.len()
-        ),
+        if args.direct {
+            format!("Đang ghi sổ {} tệp trên ổ đĩa (không chép) và gửi lên máy chủ…", r_yo.len())
+        } else {
+            format!("Đang thêm {} tệp từ ổ cứng vào Kho…", r_yo.len())
+        },
         0,
     );
     let r_yz = Ti {
