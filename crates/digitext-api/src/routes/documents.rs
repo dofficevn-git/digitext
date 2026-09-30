@@ -934,6 +934,14 @@ pub struct OcrAllResult {
 }
 /// Trần tài liệu mỗi lần «OCR toàn bộ» (chỉ chặn bất thường; xếp theo lô nên 30.000+ vẫn vài giây).
 const C_EE: i64 = 500_000;
+/// Đang có một lượt «OCR toàn bộ» xếp hàng ở nền.
+static OCR_ALL_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+struct OcrAllGuard;
+impl Drop for OcrAllGuard {
+    fn drop(&mut self) {
+        OCR_ALL_BUSY.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
 async fn ocr_all(
     State(state): State<AppState>,
     r_g4: Ts,
@@ -957,22 +965,38 @@ async fn ocr_all(
         .collect();
     let r_g5 = batch.len();
     let skipped = r_g9.len() - r_g5;
-    let pages = ocr_jobs::enqueue_ocr_bulk(&state.pool, &batch).await?;
-    digitext_db::audit::append(
-        &state.pool,
-        digitext_db::audit::Tp {
-            actor_id: Some(r_g4.user.id),
-            device_id: r_g4.claims.device_id,
-            action: "document.ocr_all",
-            target: None,
-            detail: Some(serde_json::json!(
-                { "documents" : r_g5, "pages" : pages, "skipped" : skipped,
-                "projectId" : r_g8.project_id, }
-            )),
-            ip: r_g4.ip(),
-        },
-    )
-    .await?;
+    let pages: i64 = batch.iter().map(|(_, n)| *n as i64).sum();
+    // Xếp hàng 20.000+ tài liệu (100.000+ trang) mất hơn 15 s → máy trạm từng hết giờ chờ và huỷ
+    // yêu cầu giữa chừng (giao dịch bị cuộn lại, không có trang nào vào hàng). Nay ghi hàng ở NỀN,
+    // trả lời ngay; một lần một (khoá OCR_ALL_BUSY), bấm lần hai khi đang xếp thì báo chờ.
+    if OCR_ALL_BUSY.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return Err(ApiError::conflict("đang xếp hàng OCR lượt trước — chờ một lúc rồi xem Tiến độ"));
+    }
+    let pool = state.pool.clone();
+    let (actor_id, device_id, ip, project_id) = (r_g4.user.id, r_g4.claims.device_id, r_g4.ip(), r_g8.project_id);
+    tokio::spawn(async move {
+        let _guard = OcrAllGuard;
+        match ocr_jobs::enqueue_ocr_bulk(&pool, &batch).await {
+            Ok(pages) => {
+                tracing::info!(documents = r_g5, pages, skipped, "OCR toàn bộ: đã xếp hàng xong (nền)");
+                let _ = digitext_db::audit::append(
+                    &pool,
+                    digitext_db::audit::Tp {
+                        actor_id: Some(actor_id),
+                        device_id,
+                        action: "document.ocr_all",
+                        target: None,
+                        detail: Some(serde_json::json!(
+                            { "documents" : r_g5, "pages" : pages, "skipped" : skipped, "projectId" : project_id, }
+                        )),
+                        ip,
+                    },
+                )
+                .await;
+            }
+            Err(e) => tracing::error!(error = % e, "OCR toàn bộ: xếp hàng ở nền lỗi"),
+        }
+    });
     Ok(Json(OcrAllResult {
         documents: r_g5,
         pages,
