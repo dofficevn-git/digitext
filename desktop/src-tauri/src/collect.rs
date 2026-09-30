@@ -2175,6 +2175,15 @@ pub async fn data_forward(
             }
         }
     };
+    let fcx = ForwardCtx {
+        db: &db,
+        auth: &auth,
+        control: &control,
+        rep: &rep,
+        session_id,
+        batch: r_xn.as_deref(),
+        roots: [r_xp.as_deref(), r_xq.as_deref()],
+    };
     for (done, doc) in pending.iter().enumerate() {
         if control.session_cancelled(session_id) {
             r_xs.cancelled += pending.len() - done;
@@ -2184,81 +2193,7 @@ pub async fn data_forward(
             r_xs.cancelled += 1;
             continue;
         }
-        let r_xr = [r_xp.as_deref(), r_xq.as_deref()]
-            .into_iter()
-            .flatten()
-            .find_map(|r| f_26u(r, &doc.storage_path));
-        let doc = match f_29o(&db, doc).await? {
-            Resync::Unchanged => doc.clone(),
-            Resync::Retagged(d) => {
-                r_xs.retagged += 1;
-                *d
-            }
-            Resync::DuplicateRemoved => {
-                rep.file(&f_2kx(session_id, doc, r_xr.as_deref()).skipped());
-                r_xs.skipped += 1;
-                continue;
-            }
-            Resync::Missing(why) => {
-                {
-                    let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-                    db::f_1r6(&conn, doc.id, &why)?;
-                }
-                rep.file(&f_2kx(session_id, doc, r_xr.as_deref()).error(0, why, false));
-                r_xs.failed += 1;
-                continue;
-            }
-        };
-        let doc = &doc;
-        let ticket = f_2kx(session_id, doc, r_xr.as_deref());
-        rep.file(&ticket.uploading(0));
-        match f_1dj(
-            &db,
-            &auth,
-            doc,
-            r_xn.as_deref(),
-            r_xr.as_deref(),
-            &rep,
-            &ticket,
-            &control,
-        )
-        .await
-        {
-            Ok(Landed::Server { duplicate }) => {
-                {
-                    let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-                    db::f_1r8(&conn, doc.id)?;
-                }
-                rep.file(&if duplicate {
-                    ticket.skipped()
-                } else {
-                    ticket.done()
-                });
-                r_xs.record_landed(duplicate);
-            }
-            Ok(Landed::Cancelled { sent }) => {
-                rep.file(&ticket.cancelled(sent));
-                r_xs.cancelled += 1;
-            }
-            Err(e) => {
-                {
-                    let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-                    if e.permanent {
-                        tracing::warn!(
-                            file = % doc.filename, project = % doc.project_id, error = %
-                            e.message,
-                            "máy chủ từ chối vĩnh viễn — ngừng thử lại"
-                        );
-                        db::f_1r7(&conn, doc.id, &e.message)?;
-                        r_xs.rejected += 1;
-                    } else {
-                        db::f_1r6(&conn, doc.id, &e.message)?;
-                        r_xs.failed += 1;
-                    }
-                }
-                rep.file(&ticket.error(0, e.message, e.permanent));
-            }
-        }
+        forward_one(&fcx, doc, &mut r_xs, false).await?;
     }
     if let Some(id) = &r_xn {
         if let Err(e) = complete_batch(&db, &auth, id, &r_xs).await {
@@ -2283,6 +2218,106 @@ pub async fn data_forward(
         serde_json::to_value(&r_xs).unwrap_or(serde_json::Value::Null),
     );
     Ok(r_xs)
+}
+/// Bối cảnh chung của một phiên gửi lên máy chủ (dùng cho cả phiên thường lẫn đẩy thẳng).
+struct ForwardCtx<'a> {
+    db: &'a State<'a, Db>,
+    auth: &'a State<'a, AuthState>,
+    control: &'a State<'a, ForwardControl>,
+    rep: &'a Reporter,
+    session_id: u64,
+    batch: Option<&'a str>,
+    roots: [Option<&'a Path>; 2],
+}
+/// Gửi một tệp trong sổ Kho lên máy chủ và ghi kết quả vào sổ + tổng kết. `fresh` = tệp vừa
+/// băm xong (đẩy thẳng), không cần băm lại để dò thay đổi.
+async fn forward_one(
+    cx: &ForwardCtx<'_>,
+    doc: &T2w,
+    r_xs: &mut ForwardSummary,
+    fresh: bool,
+) -> Result<(), AppError> {
+    let (db, auth, control, rep, session_id) = (cx.db, cx.auth, cx.control, cx.rep, cx.session_id);
+    // Cây máy chủ: tính sẵn (đẩy thẳng từ ổ đĩa) hoặc suy từ vị trí trong Kho.
+    let r_xr = doc.rel_path.clone().or_else(|| {
+        cx.roots
+            .into_iter()
+            .flatten()
+            .find_map(|r| f_26u(r, &doc.storage_path))
+    });
+    let resync = if fresh { Resync::Unchanged } else { f_29o(db, doc).await? };
+    let doc = match resync {
+        Resync::Unchanged => doc.clone(),
+        Resync::Retagged(d) => {
+            r_xs.retagged += 1;
+            *d
+        }
+        Resync::DuplicateRemoved => {
+            rep.file(&f_2kx(session_id, doc, r_xr.as_deref()).skipped());
+            r_xs.skipped += 1;
+            return Ok(());
+        }
+        Resync::Missing(why) => {
+            {
+                let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+                db::f_1r6(&conn, doc.id, &why)?;
+            }
+            rep.file(&f_2kx(session_id, doc, r_xr.as_deref()).error(0, why, false));
+            r_xs.failed += 1;
+            return Ok(());
+        }
+    };
+    let doc = &doc;
+    let ticket = f_2kx(session_id, doc, r_xr.as_deref());
+    rep.file(&ticket.uploading(0));
+    match f_1dj(
+        db,
+        auth,
+        doc,
+        cx.batch,
+        r_xr.as_deref(),
+        &rep,
+        &ticket,
+        &control,
+    )
+    .await
+    {
+        Ok(Landed::Server { duplicate }) => {
+            {
+                let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+                db::f_1r8(&conn, doc.id)?;
+            }
+            rep.file(&if duplicate {
+                ticket.skipped()
+            } else {
+                ticket.done()
+            });
+            r_xs.record_landed(duplicate);
+        }
+        Ok(Landed::Cancelled { sent }) => {
+            rep.file(&ticket.cancelled(sent));
+            r_xs.cancelled += 1;
+        }
+        Err(e) => {
+            {
+                let conn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+                if e.permanent {
+                    tracing::warn!(
+                        file = % doc.filename, project = % doc.project_id, error = %
+                        e.message,
+                        "máy chủ từ chối vĩnh viễn — ngừng thử lại"
+                    );
+                    db::f_1r7(&conn, doc.id, &e.message)?;
+                    r_xs.rejected += 1;
+                } else {
+                    db::f_1r6(&conn, doc.id, &e.message)?;
+                    r_xs.failed += 1;
+                }
+            }
+            rep.file(&ticket.error(0, e.message, e.permanent));
+        }
+    }
+    Ok(())
 }
 fn f_2kx(session_id: u64, doc: &T2w, r_xt: Option<&str>) -> FileTicket {
     FileTicket::new(
@@ -2326,9 +2361,14 @@ async fn f_29o(db: &Db, doc: &T2w) -> Result<Resync, AppError> {
     let r_xv = match hash_file(Path::new(&doc.storage_path)).await {
         Ok(h) => h,
         Err(e) => {
-            return Ok(Resync::Missing(format!(
-                "không đọc được file trong Kho: {e}"
-            )));
+            return Ok(Resync::Missing(if doc.rel_path.is_some() {
+                format!(
+                    "không đọc được tệp trên ổ nguồn ({}) — cắm lại ổ đĩa rồi bấm Gửi lại: {e}",
+                    doc.storage_path
+                )
+            } else {
+                format!("không đọc được file trong Kho: {e}")
+            }));
         }
     };
     if r_xv.eq_ignore_ascii_case(&doc.blake3) {
@@ -2754,6 +2794,10 @@ pub struct Tf {
     pub phong_ma: Option<String>,
     #[serde(default)]
     pub project_label: Option<String>,
+    /// Đẩy thẳng từ ổ đĩa: không chép vào Kho, tệp vừa ghi sổ là gửi lên máy chủ ngay
+    /// (phiên gửi chạy song song với phiên ghi sổ).
+    #[serde(default)]
+    pub direct: bool,
 }
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -2766,6 +2810,13 @@ pub struct Tg {
     pub project_id: String,
     pub dest: String,
     pub notes: Vec<String>,
+    /// Chế độ đẩy thẳng: kết quả phiên gửi chạy kèm.
+    pub direct: bool,
+    pub pushed: usize,
+    pub push_skipped: usize,
+    pub push_failed: usize,
+    pub push_rejected: usize,
+    pub push_cancelled: usize,
 }
 const C_44: usize = 3;
 fn f_14x(dest_rel: Option<&str>) -> Vec<String> {
@@ -3009,6 +3060,25 @@ pub async fn collect_add_files(
         phong_ma: f_13d(args.phong_ma.as_deref()),
         root: &root,
     };
+    // Đẩy thẳng từ ổ đĩa: phiên gửi lên máy chủ chạy SONG SONG với vòng ghi sổ; mỗi tệp vừa
+    // ghi sổ được đưa qua kênh để gửi ngay, không chờ hết danh sách, không băm lại.
+    let direct = args.direct;
+    let _flease = if direct {
+        Some(guards.try_forward().ok_or_else(|| {
+            AppError::new(
+                "forward_busy",
+                "Đang có một phiên gửi lên máy chủ chạy dở — chờ nó xong rồi thêm tài liệu.",
+            )
+        })?)
+    } else {
+        None
+    };
+    let fctrl: State<'_, ForwardControl> = app.state();
+    let planned_total = r_yo.len();
+    let root_canon = root.canonicalize().ok();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<i64>();
+    let tx = direct.then_some(tx);
+    let add_fut = async {
     for (src, r_yl) in r_yo {
         r_yy.total += 1;
         let size = std::fs::metadata(&src).map(|r_yp| r_yp.len()).unwrap_or(0);
@@ -3026,12 +3096,15 @@ pub async fn collect_add_files(
         }
         rep.file(&ticket.downloading(0));
         let mut r_z1 = AddWatch::new(&rep, &ticket, &control, size);
-        match f_qr(&app, &db, &session, &r_yz, &src, &r_yl, &mut r_z1).await {
-            Ok(AddOutcome::Added) => {
+        match f_qr(&app, &db, &session, &r_yz, &src, &r_yl, &mut r_z1, direct).await {
+            Ok(AddOutcome::Added(id)) => {
                 r_yy.added += 1;
                 rep.file(&ticket.done());
+                if let Some(tx) = &tx {
+                    let _ = tx.send(id);
+                }
             }
-            Ok(AddOutcome::Skipped) => {
+            Ok(AddOutcome::Skipped(id)) => {
                 r_yy.skipped += 1;
                 rep.file(
                     &ticket
@@ -3039,6 +3112,10 @@ pub async fn collect_add_files(
                             "Kho đã có bản giống hệt — không thêm lần hai.",
                         ),
                 );
+                // Đã ghi sổ từ lần trước mà chưa lên máy chủ → vẫn gửi tiếp.
+                if let (Some(tx), Some(id)) = (&tx, id) {
+                    let _ = tx.send(id);
+                }
             }
             Ok(AddOutcome::Cancelled) => {
                 r_yy.cancelled += 1;
@@ -3051,9 +3128,83 @@ pub async fn collect_add_files(
             }
         }
     }
+    drop(tx);
+    };
+    let fwd_fut = async {
+        let mut fsum = ForwardSummary::default();
+        if !direct {
+            return fsum;
+        }
+        let fsession = fctrl.begin();
+        let frep = Reporter::new(app.clone(), fsession);
+        frep.session(SessionPhase::Start, planned_total, None);
+        let fguard = SessionGuard::new(&frep, |s| fctrl.end(s));
+        let batch = match open_batch(&db, &auth).await {
+            Ok(id) => Some(id),
+            Err(e) => {
+                tracing::warn!(error = % e, "không mở được đợt nộp — vẫn gửi, chỉ mất theo dõi");
+                None
+            }
+        };
+        let fcx = ForwardCtx {
+            db: &db,
+            auth: &auth,
+            control: &fctrl,
+            rep: &frep,
+            session_id: fsession,
+            batch: batch.as_deref(),
+            roots: [Some(root.as_path()), root_canon.as_deref()],
+        };
+        while let Some(id) = rx.recv().await {
+            if fctrl.session_cancelled(fsession) || control.session_cancelled(session_id) {
+                // Người dùng dừng: phần còn lại ở nguyên sổ Kho, bấm "Đẩy lên máy chủ" sau.
+                fsum.cancelled += 1;
+                continue;
+            }
+            let docs = {
+                let conn = match db.0.lock() {
+                    Ok(c) => c,
+                    Err(_) => {
+                        fsum.failed += 1;
+                        continue;
+                    }
+                };
+                db::f_10l(&conn, &[id])
+            };
+            let Ok(docs) = docs else {
+                fsum.failed += 1;
+                continue;
+            };
+            for doc in &docs {
+                if let Err(e) = forward_one(&fcx, doc, &mut fsum, true).await {
+                    tracing::warn!(error = % e, file = % doc.filename, "đẩy thẳng: lỗi gửi");
+                    fsum.failed += 1;
+                }
+            }
+        }
+        fsum.total = fsum.forwarded + fsum.skipped + fsum.failed + fsum.rejected + fsum.cancelled;
+        if let Some(id) = &batch {
+            if let Err(e) = complete_batch(&db, &auth, id, &fsum).await {
+                tracing::warn!(error = % e, batch = % id, "không chốt được đợt nộp");
+            }
+        }
+        fguard.finish(
+            fsum.total,
+            serde_json::to_value(&fsum).unwrap_or(serde_json::Value::Null),
+        );
+        fsum
+    };
+    let ((), fsum) = tokio::join!(add_fut, fwd_fut);
+    r_yy.direct = direct;
+    r_yy.pushed = fsum.forwarded;
+    r_yy.push_skipped = fsum.skipped;
+    r_yy.push_failed = fsum.failed;
+    r_yy.push_rejected = fsum.rejected;
+    r_yy.push_cancelled = fsum.cancelled;
     tracing::info!(
         total = r_yy.total, added = r_yy.added, skipped = r_yy.skipped, failed = r_yy
-        .failed, cancelled = r_yy.cancelled, project = % r_yr, "collect_add_files"
+        .failed, cancelled = r_yy.cancelled, direct, pushed = r_yy.pushed, push_failed = r_yy
+        .push_failed, project = % r_yr, "collect_add_files"
     );
     r_ym.finish(
         r_yy.total,
@@ -3096,8 +3247,10 @@ struct Ti<'a> {
     root: &'a Path,
 }
 enum AddOutcome {
-    Added,
-    Skipped,
+    /// Đã ghi sổ Kho, kèm id dòng.
+    Added(i64),
+    /// Đã có sẵn dòng y hệt; kèm id nếu tra được (để đẩy tiếp nếu chưa lên máy chủ).
+    Skipped(Option<i64>),
     Cancelled,
 }
 async fn f_qr(
@@ -3108,6 +3261,7 @@ async fn f_qr(
     src: &Path,
     r_z9: &Path,
     r_zf: &mut AddWatch<'_>,
+    direct: bool,
 ) -> Result<AddOutcome, String> {
     let size = tokio::fs::metadata(src)
         .await
@@ -3126,22 +3280,29 @@ async fn f_qr(
         return Ok(AddOutcome::Cancelled);
     }
     let root = r_zd.root;
+    // Vị trí tệp "lẽ ra" nằm trong Kho — dùng để tính mã hồ sơ và cây máy chủ, kể cả khi
+    // không chép (đẩy thẳng từ ổ đĩa).
+    let planned = if inside(root, src) {
+        src.to_path_buf()
+    } else {
+        r_z9.join(f_14v(&src.file_name().unwrap_or_default().to_string_lossy()))
+    };
+    // Đẩy thẳng: tệp ở nguyên trên ổ nguồn, sổ Kho ghi đường dẫn nguồn.
+    let no_copy = direct && !inside(root, src);
+    let stored: PathBuf = if no_copy { src.to_path_buf() } else { planned.clone() };
     {
         // Chỉ bỏ qua khi ĐÚNG tệp này đã gom (cùng nội dung + cùng chỗ trong Kho). Tệp khác tên
         // mà trùng từng byte (bản quét lưu nhầm hai số) vẫn là văn bản riêng → vẫn thêm.
-        let planned = if inside(root, src) {
-            src.to_path_buf()
-        } else {
-            r_z9.join(f_14v(&src.file_name().unwrap_or_default().to_string_lossy()))
-        };
         let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
-        if db::collected_same_file(&conn, r_zd.project_id, &blake3, &planned.to_string_lossy())
+        if db::collected_same_file(&conn, r_zd.project_id, &blake3, &stored.to_string_lossy())
             .map_err(|e| e.to_string())?
         {
-            return Ok(AddOutcome::Skipped);
+            let id = db::collected_find_id(&conn, r_zd.project_id, &blake3, &stored.to_string_lossy())
+                .map_err(|e| e.to_string())?;
+            return Ok(AddOutcome::Skipped(id));
         }
     }
-    let dest = if inside(root, src) {
+    let dest = if inside(root, src) || no_copy {
         src.to_path_buf()
     } else {
         tokio::fs::create_dir_all(r_z9)
@@ -3181,13 +3342,14 @@ async fn f_qr(
         .await
         .map_err(|e| format!("luồng đọc số trang lỗi ({e})"))?
     };
-    let ho_so_ref = f_1km(root, &dest);
+    let ho_so_ref = f_1km(root, &planned);
+    let rel_path = if no_copy { f_26u(root, &planned.to_string_lossy()) } else { None };
     let filename = dest
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| "tai-lieu.pdf".into());
     let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
-    let r_ze = db::f_1id(
+    let r_ze = db::collected_insert(
         &conn,
         db::Tds {
             source_user_id: &session.user_id,
@@ -3201,12 +3363,12 @@ async fn f_qr(
             blake3: &blake3,
             storage_path: &dest.to_string_lossy(),
         },
+        rel_path.as_deref(),
     )
     .map_err(|e| e.to_string())?;
-    Ok(if r_ze {
-        AddOutcome::Added
-    } else {
-        AddOutcome::Skipped
+    Ok(match r_ze {
+        Some(id) => AddOutcome::Added(id),
+        None => AddOutcome::Skipped(None),
     })
 }
 const C_2C: usize = 1024 * 1024;
