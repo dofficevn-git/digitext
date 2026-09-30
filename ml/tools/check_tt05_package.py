@@ -267,8 +267,8 @@ def main() -> int:
         d = parse(pp)
         if d is None:
             continue
-        digests = {x.text.strip().lower() for x in d.iter() if etree.QName(x).localname == "messageDigest" and x.text}
-        names = {x.text.strip() for x in d.iter() if etree.QName(x).localname == "originalName" and x.text}
+        digests = {x.text.strip().lower() for x in d.iter() if isinstance(x.tag, str) and etree.QName(x).localname == "messageDigest" and x.text}
+        names = {x.text.strip() for x in d.iter() if isinstance(x.tag, str) and etree.QName(x).localname == "originalName" and x.text}
         if prem.endswith("PREMIS_rep1.xml"):
             miss = [x for x in data if x not in names]
             badsum = [x for x in data if sha256(os.path.join(ddir, x)) not in digests]
@@ -278,7 +278,7 @@ def main() -> int:
                 err(f"PREMIS_rep1: {len(badsum)} tệp dữ liệu không có messageDigest SHA-256 khớp, vd {badsum[:2]}")
             if not miss and not badsum:
                 ok(f"PREMIS_rep1: đủ {len(data)} đối tượng, SHA-256 khớp tệp")
-        events = [x.text for x in d.iter() if etree.QName(x).localname == "eventType"]
+        events = [x.text for x in d.iter() if isinstance(x.tag, str) and etree.QName(x).localname == "eventType"]
         ok(f"{prem}: eventType = {events}")
 
     # PDF/A
