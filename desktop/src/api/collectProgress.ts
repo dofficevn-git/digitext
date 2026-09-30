@@ -37,6 +37,8 @@ export interface V44s {
   sessionId: number;
   phase: "start" | "end";
   kind: V44o;
+  /** Đẩy thẳng từ ổ đĩa: chỉ ghi sổ, không chép vào Kho. */
+  direct?: boolean;
 
   summary: V439 | V43e | null;
 }
