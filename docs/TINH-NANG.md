@@ -17,6 +17,7 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 - **Quét trực tiếp** từ máy quét (khay nạp tự động), lưu thẳng vào đúng hồ sơ.
 - **Thêm tài liệu có sẵn** từ ổ cứng/USB/thư mục quét cũ; **thu thập qua mạng LAN** từ máy nhân viên về máy quản trị.
 - **Đẩy lên máy chủ** theo đợt nộp: chia khúc, **nối lại khi đứt mạng**, khử trùng lặp theo nội dung tệp, đối soát số lượng.
+- **Đẩy thẳng từ ổ đĩa của dự án**: chọn ổ cứng là nguồn, tệp giữ nguyên trên ổ (không chép vào Kho máy trạm), băm xong là gửi lên máy chủ ngay; phiên gửi chạy song song với việc ghi sổ, tệp gửi lỗi được ghi nhớ để gửi lại khi cắm ổ.
 - **Kho tài liệu** trên máy trạm tổ chức **theo từng dự án**; tách riêng bản gốc, bản tải về và bản PDF/A.
 
 ## 3. Nhận dạng chữ (OCR)

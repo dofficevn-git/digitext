@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 22;
+const C_P1: i64 = 23;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -229,6 +229,11 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
     if r_1d2 < 22 {
         // Cột cl_id nối bảng cũ với bản sao cl_* (chiếu / chuyển tiếp).
         crate::chinhly::legacy::ensure_columns(&r_1d3)?;
+    }
+    if r_1d2 < 23 && !f_10n(&r_1d3, "collected_docs", "rel_path")? {
+        // Đường dẫn cây máy chủ tính sẵn cho tệp "đẩy thẳng từ ổ đĩa" (tệp nằm ngoài Kho,
+        // không chép) — lúc đẩy không suy được từ storage_path nữa (30/9/2026).
+        r_1d3.execute_batch("ALTER TABLE collected_docs ADD COLUMN rel_path TEXT;")?;
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;
     r_1d3.commit()?;
@@ -931,11 +936,20 @@ pub fn f_10i(r_1f2: &Connection) -> rusqlite::Result<HashSet<String>> {
     r_1f3.collect()
 }
 pub fn f_1id(r_1f5: &Connection, c: Tds) -> rusqlite::Result<bool> {
-    let r_1f6 = r_1f5.execute(
+    Ok(collected_insert(r_1f5, c, None)?.is_some())
+}
+/// Ghi sổ Kho, trả id dòng mới (None = đã có dòng y hệt, bỏ qua). `rel_path` = cây máy chủ
+/// tính sẵn khi tệp nằm ngoài Kho (đẩy thẳng từ ổ đĩa).
+pub fn collected_insert(
+    conn: &Connection,
+    c: Tds,
+    rel_path: Option<&str>,
+) -> rusqlite::Result<Option<i64>> {
+    let n = conn.execute(
         "INSERT OR IGNORE INTO collected_docs \
             (source_user_id, source_username, project_id, phong_ma, ho_so_ref, filename, \
-             page_count, size_bytes, blake3, storage_path) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             page_count, size_bytes, blake3, storage_path, rel_path) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         params![
             c.source_user_id,
             c.source_username,
@@ -947,9 +961,24 @@ pub fn f_1id(r_1f5: &Connection, c: Tds) -> rusqlite::Result<bool> {
             c.size_bytes,
             c.blake3,
             c.storage_path,
+            rel_path,
         ],
     )?;
-    Ok(r_1f6 > 0)
+    Ok((n > 0).then(|| conn.last_insert_rowid()))
+}
+/// Id dòng sổ Kho của đúng tệp này (cùng dự án, hash, đường dẫn) — để đẩy tiếp bản đã ghi sổ.
+pub fn collected_find_id(
+    conn: &Connection,
+    project_id: &str,
+    blake3: &str,
+    storage_path: &str,
+) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT id FROM collected_docs WHERE project_id = ?1 AND blake3 = ?2 AND storage_path = ?3",
+        params![project_id, blake3, storage_path],
+        |r| r.get(0),
+    )
+    .optional()
 }
 #[derive(Debug, Clone)]
 pub struct T2w {
@@ -969,6 +998,8 @@ pub struct T2w {
     pub forward_fatal: bool,
     pub collected_at: String,
     pub forward_error: Option<String>,
+    /// Cây máy chủ tính sẵn (chỉ có với tệp đẩy thẳng từ ổ đĩa, nằm ngoài Kho).
+    pub rel_path: Option<String>,
 }
 fn f_1qr(r: &rusqlite::Row) -> rusqlite::Result<T2w> {
     Ok(T2w {
@@ -988,11 +1019,12 @@ fn f_1qr(r: &rusqlite::Row) -> rusqlite::Result<T2w> {
         forward_fatal: r.get::<_, i64>(13)? != 0,
         collected_at: r.get(14)?,
         forward_error: r.get(15)?,
+        rel_path: r.get(16)?,
     })
 }
 const COLLECTED_COLS: &str = "id, source_user_id, source_username, project_id, phong_ma, \
      ho_so_ref, filename, page_count, size_bytes, blake3, storage_path, forward_tries, \
-     forwarded_at, forward_fatal, collected_at, forward_error";
+     forwarded_at, forward_fatal, collected_at, forward_error, rel_path";
 pub fn f_10h(r_1f7: &Connection, storage_path: &str) -> rusqlite::Result<bool> {
     let r_1f8: i64 = r_1f7.query_row(
         "SELECT COUNT(*) FROM collected_docs \

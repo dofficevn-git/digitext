@@ -207,6 +207,22 @@ function MayQuanTri() {
       /* tiện ích nhớ */
     }
   };
+  // Đẩy thẳng từ ổ đĩa: không chép vào Kho, tệp vừa ghi sổ là gửi lên máy chủ ngay.
+  const [dayThang, setDayThangState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("upload.directPush") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setDayThang = (v: boolean) => {
+    setDayThangState(v);
+    try {
+      localStorage.setItem("upload.directPush", v ? "1" : "0");
+    } catch {
+      /* tiện ích nhớ */
+    }
+  };
   const [projects, setProjects] = useState<V4a9[]>([]);
   const [projectId, setProjectId] = useState("");
   const [themPhong, setThemPhong] = useState("");
@@ -354,9 +370,10 @@ function MayQuanTri() {
     }
     if (!paths.length) return;
     await run("add", "thêm tệp", async () => {
-      const r = await startAddFiles({ paths, projectId: projectId.trim() || undefined, destRel: destRel || undefined, phongMa: themHoSo && themHoSo !== UNSORTED ? themPhong || undefined : undefined, projectLabel: projectLabel || undefined });
-      setKetQua({ tone: r.added > 0 ? "success" : "info", text: V4ps(r) });
-      if (tuDongDay && r.added > 0 && !forwarding) {
+      const r = await startAddFiles({ paths, projectId: projectId.trim() || undefined, destRel: destRel || undefined, phongMa: themHoSo && themHoSo !== UNSORTED ? themPhong || undefined : undefined, projectLabel: projectLabel || undefined, direct: dayThang });
+      setKetQua({ tone: r.direct ? (r.pushFailed + r.pushRejected > 0 ? "warning" : r.pushed > 0 ? "success" : "info") : r.added > 0 ? "success" : "info", text: V4ps(r) });
+      if (r.direct) await load();
+      if (!r.direct && tuDongDay && r.added > 0 && !forwarding) {
         setBusy("forward");
         try {
           const f = await startForward();
@@ -495,7 +512,7 @@ function MayQuanTri() {
 
       {tab === "them" && (
         <div className="mt-3 max-w-3xl space-y-4">
-          <Card title="Thêm PDF có sẵn vào Kho" description="Từ ổ cứng, USB hoặc thư mục quét cũ. Tệp được chép vào Kho máy này rồi đẩy lên máy chủ.">
+          <Card title="Thêm PDF có sẵn vào Kho" description={dayThang ? "Từ ổ cứng của dự án. Tệp giữ nguyên trên ổ, ghi sổ Kho rồi gửi thẳng lên máy chủ, không chép." : "Từ ổ cứng, USB hoặc thư mục quét cũ. Tệp được chép vào Kho máy này rồi đẩy lên máy chủ."}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Dự án đích">
                 <Select value={projectId} onChange={setProjectId} placeholder={projects.length ? "— Chọn dự án —" : "Dự án của tài khoản này"} options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} />
@@ -538,11 +555,18 @@ function MayQuanTri() {
               <Button icon="thuMuc" disabled={busyAny || thieuHoSo} onClick={() => void themTep(true)}>
                 Chọn thư mục
               </Button>
-              <Field label="Đẩy lên máy chủ ngay sau khi thêm" inline>
-                <Checkbox checked={tuDongDay} onChange={setTuDongDay} disabled={busyAny} />
+              <Field label="Đẩy thẳng từ ổ đĩa, không chép vào Kho" inline>
+                <Checkbox checked={dayThang} onChange={setDayThang} disabled={busyAny} />
               </Field>
+              {!dayThang && (
+                <Field label="Đẩy lên máy chủ ngay sau khi thêm" inline>
+                  <Checkbox checked={tuDongDay} onChange={setTuDongDay} disabled={busyAny} />
+                </Field>
+              )}
             </Toolbar>
-            <p className="mt-2 text-sm text-fg-subtle">{thieuHoSo ? "Chọn phông và hồ sơ theo danh mục rồi mới chọn tệp." : `Sẽ lưu vào Kho: ${dest}`}</p>
+            <p className="mt-2 text-sm text-fg-subtle">
+              {thieuHoSo ? "Chọn phông và hồ sơ theo danh mục rồi mới chọn tệp." : dayThang ? `Tệp giữ nguyên trên ổ đĩa; máy chủ xếp theo cây: ${dest}. Tệp gửi lỗi cần cắm lại ổ này để gửi lại.` : `Sẽ lưu vào Kho: ${dest}`}
+            </p>
           </Card>
         </div>
       )}

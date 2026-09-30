@@ -114,6 +114,8 @@ export interface V43d {
 
   /** "<mã> · <tên>" của dự án máy chủ — thành thư mục cấp 1 trong Kho khi tệp không gắn hồ sơ. */
   projectLabel?: string;
+  /** Đẩy thẳng từ ổ đĩa: không chép vào Kho, tệp vừa ghi sổ là gửi lên máy chủ ngay. */
+  direct?: boolean;
 }
 
 export interface V43e {
@@ -129,6 +131,13 @@ export interface V43e {
 
   dest: string;
   notes: string[];
+  /** Chế độ đẩy thẳng: kết quả phiên gửi chạy kèm. */
+  direct: boolean;
+  pushed: number;
+  pushSkipped: number;
+  pushFailed: number;
+  pushRejected: number;
+  pushCancelled: number;
 }
 
 export function V43f(V7p: V43d): Promise<V43e> {
