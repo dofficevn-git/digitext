@@ -420,14 +420,47 @@ pub struct Tof {
     pub pdfa_pages: Option<i32>,
     pub pdfa2b: Option<bool>,
 }
+/// Bộ đệm cây tài liệu theo phạm vi (toàn bộ / danh sách dự án): máy trạm có màn đang mở gọi
+/// lại mỗi vài giây trong lúc đẩy tệp; câu truy vấn quét 36.000 dòng mất ~0,5 s nên giữ kết
+/// quả 3 s — đủ tươi với người xem, giảm tải Postgres gấp nhiều lần.
+static TREE_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, std::sync::Arc<Vec<documents::TreeDocRow>>)>>,
+> = std::sync::OnceLock::new();
+const TREE_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(3);
+async fn tree_rows(state: &AppState, scope: &Scope) -> Result<std::sync::Arc<Vec<documents::TreeDocRow>>, ApiError> {
+    let key = match scope {
+        Scope::All => "*".to_string(),
+        Scope::Projects(ids) => {
+            let mut v: Vec<String> = ids.iter().map(|u| u.to_string()).collect();
+            v.sort();
+            v.join(",")
+        }
+    };
+    let cache = TREE_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Ok(c) = cache.lock() {
+        if let Some((at, rows)) = c.get(&key) {
+            if at.elapsed() < TREE_CACHE_TTL {
+                return Ok(rows.clone());
+            }
+        }
+    }
+    let rows = std::sync::Arc::new(match scope {
+        Scope::All => documents::f_1ol(&state.pool, None).await?,
+        Scope::Projects(ids) => documents::f_1ol(&state.pool, Some(ids)).await?,
+    });
+    if let Ok(mut c) = cache.lock() {
+        c.retain(|_, (at, _)| at.elapsed() < TREE_CACHE_TTL * 10);
+        c.insert(key, (std::time::Instant::now(), rows.clone()));
+    }
+    Ok(rows)
+}
 async fn f_2m3(State(state): State<AppState>, r_ep: Ts) -> Result<Json<Vec<Tof>>, ApiError> {
     r_ep.require_perm(Permission::DocumentList)?;
-    let r_eq = match f_29a(&state.pool, &r_ep.user).await? {
-        Scope::All => documents::f_1ol(&state.pool, None).await?,
-        Scope::Projects(ids) => documents::f_1ol(&state.pool, Some(&ids)).await?,
-    };
+    let scope = f_29a(&state.pool, &r_ep.user).await?;
+    let r_eq = tree_rows(&state, &scope).await?;
     Ok(Json(
-        r_eq.into_iter()
+        r_eq.iter()
+            .cloned()
             .map(|r| Tof {
                 id: r.id,
                 filename: r.filename,

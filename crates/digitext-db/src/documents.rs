@@ -453,20 +453,19 @@ pub async fn f_1ol(r_251: &PgPool, projects: Option<&[Uuid]>) -> sqlx::Result<Ve
                 d.pdfa_pages, d.pdfa_2b \
          FROM documents d \
          JOIN projects p ON p.id = d.project_id \
-         LEFT JOIN LATERAL ( \
-             SELECT count(DISTINCT r.page_no)::bigint AS n \
-             FROM ocr_results r WHERE r.document_id = d.id \
-         ) o ON TRUE \
-         LEFT JOIN LATERAL ( \
-             SELECT count(DISTINCT k.page_no)::bigint AS n \
-             FROM ocr_fields k \
-             WHERE k.document_id = d.id AND length(btrim(k.value)) > 0 \
-         ) k ON TRUE \
-         LEFT JOIN LATERAL ( \
-             SELECT o.status FROM ocr_jobs o \
-             WHERE o.document_id = d.id AND o.kind = 'extract_fields' \
-             ORDER BY o.created_at DESC, o.id DESC LIMIT 1 \
-         ) f ON TRUE \
+         LEFT JOIN ( \
+             SELECT document_id, count(DISTINCT page_no)::bigint AS n \
+             FROM ocr_results GROUP BY document_id \
+         ) o ON o.document_id = d.id \
+         LEFT JOIN ( \
+             SELECT document_id, count(DISTINCT page_no)::bigint AS n \
+             FROM ocr_fields WHERE length(btrim(value)) > 0 GROUP BY document_id \
+         ) k ON k.document_id = d.id \
+         LEFT JOIN ( \
+             SELECT DISTINCT ON (document_id) document_id, status \
+             FROM ocr_jobs WHERE kind = 'extract_fields' \
+             ORDER BY document_id, created_at DESC, id DESC \
+         ) f ON f.document_id = d.id \
          WHERE ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
          ORDER BY p.code, d.rel_path NULLS LAST, d.filename, d.id",
         )

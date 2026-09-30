@@ -176,6 +176,17 @@ function MayQuanTri() {
   const project = useProject();
   const { startForward, retry, running: forwarding } = useUploads();
   const { startCollect, startAddFiles, running: collecting } = useCollects();
+  const runningRef = useRef(false);
+  runningRef.current = forwarding || collecting;
+  // Phiên vừa kết thúc → nạp đủ bảng (bỏ qua nhịp 5 s).
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !(forwarding || collecting)) {
+      lastLoad.current = 0;
+      void loadCollectedRef.current().catch(() => undefined);
+    }
+    wasRunning.current = forwarding || collecting;
+  }, [forwarding, collecting]);
   const isSuper = session?.role === "super_admin";
   const [tab, setTab] = useState<Tab>("gom");
   const [siteCode, setSiteCode] = useState("");
@@ -245,6 +256,13 @@ function MayQuanTri() {
       return;
     }
     lastLoad.current = Date.now();
+    // Đang có phiên gửi/gom: chỉ lấy con số (1 dòng), giữ bảng cũ — nạp 40.000 dòng mỗi 5 s
+    // vừa nặng WebView vừa giữ khoá SQLite mà vòng gửi đang cần. Phiên xong nạp đủ.
+    if (runningRef.current) {
+      const s = await V43i(1);
+      setCollected((prev) => ({ ...s, rows: prev?.rows ?? s.rows }));
+      return;
+    }
     setCollected(await V43i(LOAD_MAX));
   };
   useEffect(

@@ -28,6 +28,8 @@ export interface V43q {
   total: number;
 
   items: V43p[];
+  /** Bộ đếm tích luỹ của phiên — không suy từ `items` vì items bị cắt còn MAX_ROWS dòng. */
+  counts: { done: number; errors: number; cancelled: number };
   summary: V43b | null;
 
   dismissed: boolean;
@@ -37,12 +39,43 @@ export interface V43q {
   keepOnNextSession: boolean;
 }
 
+/** Số dòng tối đa giữ trong khung tiến độ: phiên 125.000 tệp mà vẽ lại cả danh sách mỗi sự kiện
+ *  làm WebView ngốn trọn một lõi CPU. Dòng xong (done/skipped) cũ nhất bị bỏ trước; lỗi, huỷ và
+ *  đang gửi luôn giữ. */
+export const MAX_ROWS = 300;
+
+function isTerminal(st: V43k): boolean {
+  return st === "done" || st === "skipped" || st === "error" || st === "cancelled";
+}
+
+function bump(c: V43q["counts"], st: V43k, d: number): V43q["counts"] {
+  if (st === "done" || st === "skipped") return { ...c, done: c.done + d };
+  if (st === "error") return { ...c, errors: c.errors + d };
+  if (st === "cancelled") return { ...c, cancelled: c.cancelled + d };
+  return c;
+}
+
+function prune(items: V43p[]): V43p[] {
+  if (items.length <= MAX_ROWS) return items;
+  let drop = items.length - MAX_ROWS;
+  const out: V43p[] = [];
+  for (const it of items) {
+    if (drop > 0 && (it.state === "done" || it.state === "skipped")) {
+      drop -= 1;
+      continue;
+    }
+    out.push(it);
+  }
+  return out;
+}
+
 export function V43r(): V43q {
   return {
     sessionId: 0,
     running: false,
     total: 0,
     items: [],
+    counts: { done: 0, errors: 0, cancelled: 0 },
     summary: null,
     dismissed: false,
     collapsed: false,
@@ -67,6 +100,9 @@ function V43v(state: V43q, V81: number, V82: number): V43q {
     collapsed: state.collapsed,
 
     items: state.keepOnNextSession ? state.items.filter(V43t) : [],
+    counts: state.keepOnNextSession
+      ? state.items.filter(V43t).reduce((c, i) => bump(c, i.state, 1), { done: 0, errors: 0, cancelled: 0 })
+      : { done: 0, errors: 0, cancelled: 0 },
     sessionId: V81,
     running: true,
     total: V82,
@@ -99,8 +135,12 @@ export function V43x(state: V43q, V84: V43l, V85: number): V43q {
     bps: V43y(V86, V84, V85),
   };
   const V88 = V86 ? base.items.map((i) => (i.id === V84.id ? V87 : i)) : [...base.items, V87];
+  // Bộ đếm: trừ trạng thái cũ (nếu đã kết thúc), cộng trạng thái mới.
+  let counts = base.counts;
+  if (V86 && isTerminal(V86.state)) counts = bump(counts, V86.state, -1);
+  if (isTerminal(V87.state)) counts = bump(counts, V87.state, 1);
 
-  return { ...base, items: V88, dismissed: V86 ? base.dismissed : false };
+  return { ...base, items: prune(V88), counts, dismissed: V86 ? base.dismissed : false };
 }
 
 function V43y(V89: V43p | undefined, V8a: V43l, V8b: number): number {
@@ -137,8 +177,8 @@ export function V442(s: V43q): boolean {
 }
 
 export function V443(s: V43q): number {
-  const V8k = s.items.filter(V43t).length;
-  return Math.max(0, Math.max(s.total, s.items.length) - V8k);
+  const V8k = s.counts.done + s.counts.errors + s.counts.cancelled;
+  return Math.max(0, Math.max(s.total, V8k) - V8k);
 }
 
 export function V444(s: V43q): {
@@ -146,11 +186,7 @@ export function V444(s: V43q): {
   errors: number;
   cancelled: number;
 } {
-  return {
-    done: s.items.filter((i) => i.state === "done" || i.state === "skipped").length,
-    errors: s.items.filter((i) => i.state === "error").length,
-    cancelled: s.items.filter((i) => i.state === "cancelled").length,
-  };
+  return s.counts;
 }
 
 export function V445(s: V43q): string {
@@ -240,5 +276,6 @@ export function V44d(V8y: number[], V8z: number[]): number[] {
 }
 
 export function V44e(s: V43q, V92: number): V43q {
-  return { ...s, items: s.items.filter((i) => i.id !== V92) };
+  const it = s.items.find((i) => i.id === V92);
+  return { ...s, items: s.items.filter((i) => i.id !== V92), counts: it && isTerminal(it.state) ? bump(s.counts, it.state, -1) : s.counts };
 }

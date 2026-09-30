@@ -2184,17 +2184,24 @@ pub async fn data_forward(
         batch: r_xn.as_deref(),
         roots: [r_xp.as_deref(), r_xq.as_deref()],
     };
-    for (done, doc) in pending.iter().enumerate() {
-        if control.session_cancelled(session_id) {
-            r_xs.cancelled += pending.len() - done;
-            break;
-        }
-        if control.file_cancelled(session_id, &doc.id) {
-            r_xs.cancelled += 1;
-            continue;
-        }
-        forward_one(&fcx, doc, &mut r_xs, false).await?;
+    let summary = std::sync::Mutex::new(r_xs);
+    {
+        use futures_util::StreamExt;
+        let (fcx, summary, control) = (&fcx, &summary, &control);
+        futures_util::stream::iter(pending.iter())
+            .for_each_concurrent(FORWARD_PARALLEL, |doc| async move {
+                if control.session_cancelled(session_id) || control.file_cancelled(session_id, &doc.id) {
+                    sum(summary).cancelled += 1;
+                    return;
+                }
+                if let Err(e) = forward_one(fcx, doc, summary, false).await {
+                    tracing::warn!(error = % e, file = % doc.filename, "gửi lên máy chủ: lỗi");
+                    sum(summary).failed += 1;
+                }
+            })
+            .await;
     }
+    let r_xs = summary.into_inner().unwrap_or_else(|e| e.into_inner());
     if let Some(id) = &r_xn {
         if let Err(e) = complete_batch(&db, &auth, id, &r_xs).await {
             tracing::warn!(
@@ -2231,10 +2238,17 @@ struct ForwardCtx<'a> {
 }
 /// Gửi một tệp trong sổ Kho lên máy chủ và ghi kết quả vào sổ + tổng kết. `fresh` = tệp vừa
 /// băm xong (đẩy thẳng), không cần băm lại để dò thay đổi.
+/// Số tệp gửi song song trong một phiên: đường nội bộ/LAN bị giới hạn bởi thời gian chờ mỗi
+/// lượt (hỏi máy chủ, ghi đĩa, ghi CSDL) chứ không phải băng thông, nên 3 luồng cho tệp nhỏ
+/// nhanh gấp vài lần; mạng chậm thì các luồng tự chia băng thông.
+const FORWARD_PARALLEL: usize = 3;
+fn sum(m: &std::sync::Mutex<ForwardSummary>) -> std::sync::MutexGuard<'_, ForwardSummary> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
+}
 async fn forward_one(
     cx: &ForwardCtx<'_>,
     doc: &T2w,
-    r_xs: &mut ForwardSummary,
+    r_xs: &std::sync::Mutex<ForwardSummary>,
     fresh: bool,
 ) -> Result<(), AppError> {
     let (db, auth, control, rep, session_id) = (cx.db, cx.auth, cx.control, cx.rep, cx.session_id);
@@ -2249,12 +2263,12 @@ async fn forward_one(
     let doc = match resync {
         Resync::Unchanged => doc.clone(),
         Resync::Retagged(d) => {
-            r_xs.retagged += 1;
+            sum(r_xs).retagged += 1;
             *d
         }
         Resync::DuplicateRemoved => {
             rep.file(&f_2kx(session_id, doc, r_xr.as_deref()).skipped());
-            r_xs.skipped += 1;
+            sum(r_xs).skipped += 1;
             return Ok(());
         }
         Resync::Missing(why) => {
@@ -2263,7 +2277,7 @@ async fn forward_one(
                 db::f_1r6(&conn, doc.id, &why)?;
             }
             rep.file(&f_2kx(session_id, doc, r_xr.as_deref()).error(0, why, false));
-            r_xs.failed += 1;
+            sum(r_xs).failed += 1;
             return Ok(());
         }
     };
@@ -2292,11 +2306,11 @@ async fn forward_one(
             } else {
                 ticket.done()
             });
-            r_xs.record_landed(duplicate);
+            sum(r_xs).record_landed(duplicate);
         }
         Ok(Landed::Cancelled { sent }) => {
             rep.file(&ticket.cancelled(sent));
-            r_xs.cancelled += 1;
+            sum(r_xs).cancelled += 1;
         }
         Err(e) => {
             {
@@ -2308,10 +2322,10 @@ async fn forward_one(
                         "máy chủ từ chối vĩnh viễn — ngừng thử lại"
                     );
                     db::f_1r7(&conn, doc.id, &e.message)?;
-                    r_xs.rejected += 1;
+                    sum(r_xs).rejected += 1;
                 } else {
                     db::f_1r6(&conn, doc.id, &e.message)?;
-                    r_xs.failed += 1;
+                    sum(r_xs).failed += 1;
                 }
             }
             rep.file(&ticket.error(0, e.message, e.permanent));
@@ -3156,33 +3170,38 @@ pub async fn collect_add_files(
             batch: batch.as_deref(),
             roots: [Some(root.as_path()), root_canon.as_deref()],
         };
-        while let Some(id) = rx.recv().await {
-            if fctrl.session_cancelled(fsession) || control.session_cancelled(session_id) {
-                // Người dùng dừng: phần còn lại ở nguyên sổ Kho, bấm "Đẩy lên máy chủ" sau.
-                fsum.cancelled += 1;
-                continue;
-            }
-            let docs = {
-                let conn = match db.0.lock() {
-                    Ok(c) => c,
-                    Err(_) => {
-                        fsum.failed += 1;
-                        continue;
+        let fsum = std::sync::Mutex::new(fsum);
+        {
+            use futures_util::StreamExt;
+            let (fcx, fsum, fctrl, control, db) = (&fcx, &fsum, &fctrl, &control, &db);
+            futures_util::stream::poll_fn(|cx| rx.poll_recv(cx))
+                .for_each_concurrent(FORWARD_PARALLEL, |id| async move {
+                    if fctrl.session_cancelled(fsession) || control.session_cancelled(session_id) {
+                        // Người dùng dừng: phần còn lại ở nguyên sổ Kho, bấm "Đẩy lên máy chủ" sau.
+                        sum(fsum).cancelled += 1;
+                        return;
                     }
-                };
-                db::f_10l(&conn, &[id])
-            };
-            let Ok(docs) = docs else {
-                fsum.failed += 1;
-                continue;
-            };
-            for doc in &docs {
-                if let Err(e) = forward_one(&fcx, doc, &mut fsum, true).await {
-                    tracing::warn!(error = % e, file = % doc.filename, "đẩy thẳng: lỗi gửi");
-                    fsum.failed += 1;
-                }
-            }
+                    let docs = match db.0.lock() {
+                        Ok(conn) => db::f_10l(&conn, &[id]),
+                        Err(_) => {
+                            sum(fsum).failed += 1;
+                            return;
+                        }
+                    };
+                    let Ok(docs) = docs else {
+                        sum(fsum).failed += 1;
+                        return;
+                    };
+                    for doc in &docs {
+                        if let Err(e) = forward_one(fcx, doc, fsum, true).await {
+                            tracing::warn!(error = % e, file = % doc.filename, "đẩy thẳng: lỗi gửi");
+                            sum(fsum).failed += 1;
+                        }
+                    }
+                })
+                .await;
         }
+        let mut fsum = fsum.into_inner().unwrap_or_else(|e| e.into_inner());
         fsum.total = fsum.forwarded + fsum.skipped + fsum.failed + fsum.rejected + fsum.cancelled;
         if let Some(id) = &batch {
             if let Err(e) = complete_batch(&db, &auth, id, &fsum).await {
