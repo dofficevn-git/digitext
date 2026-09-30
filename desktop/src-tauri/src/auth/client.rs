@@ -253,6 +253,26 @@ pub async fn f_23d<T: serde::de::DeserializeOwned>(
     )
     .await
 }
+/// POST cho các lệnh "toàn bộ" (OCR / PDF 2 lớp / bóc tách / ghép lại): máy chủ có thể mất
+/// hàng chục giây với vài chục nghìn tài liệu — không dùng hạn 15 s mặc định.
+pub const LONG_POST_TIMEOUT: Duration = Duration::from_secs(600);
+pub async fn post_long<T: serde::de::DeserializeOwned>(
+    base: &str,
+    token: &str,
+    path: &str,
+    body: &serde_json::Value,
+) -> Result<T, ClientError> {
+    parse(
+        http()
+            .post(api(base, path))
+            .timeout(LONG_POST_TIMEOUT)
+            .bearer_auth(token)
+            .json(body)
+            .send()
+            .await,
+    )
+    .await
+}
 pub async fn f_20e<T: serde::de::DeserializeOwned>(
     r_f4: &str,
     r_f6: &str,

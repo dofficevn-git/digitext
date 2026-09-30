@@ -273,7 +273,7 @@ pub async fn docs_ocr_all(
         let project_id = project_id.clone();
         async move {
             let r_1jh = serde_json::json!({ "projectId" : project_id });
-            client::f_23d::<OcrAllResult>(&r_1jg, &r_1ji, "/documents/ocr-all", &r_1jh).await
+            client::post_long::<OcrAllResult>(&r_1jg, &r_1ji, "/documents/ocr-all", &r_1jh).await
         }
     })
     .await
@@ -307,7 +307,7 @@ pub async fn docs_make_pdf2_all(
             let r_1jk = serde_json::json!(
                 { "projectId" : project_id, "documentIds" : document_ids, }
             );
-            client::f_23d::<MakePdf2AllResult>(&r_1jj, &r_1jl, "/documents/make-pdf2-all", &r_1jk)
+            client::post_long::<MakePdf2AllResult>(&r_1jj, &r_1jl, "/documents/make-pdf2-all", &r_1jk)
                 .await
         }
     })
@@ -349,7 +349,7 @@ pub async fn docs_ocr_retry_failed(
                 { "projectId" : project_id, "documentIds" : document_ids,
                 "includePageFailed" : include_page_failed, }
             );
-            client::f_23d::<OcrRetryFailedResult>(
+            client::post_long::<OcrRetryFailedResult>(
                 &r_1jj,
                 &r_1jl,
                 "/documents/ocr-retry-failed",
@@ -394,7 +394,7 @@ pub async fn docs_extract_fields_all(
                 { "projectId" : project_id, "retryFailed" : retry_failed,
                 "documentIds" : document_ids, }
             );
-            client::f_23d::<ExtractFieldsAllResult>(
+            client::post_long::<ExtractFieldsAllResult>(
                 &r_1jm,
                 &r_1jo,
                 "/documents/extract-fields-all",
@@ -661,7 +661,7 @@ pub async fn docs_rebuild_non_pdfa(
         let project_id = project_id.clone();
         async move {
             let r_1k7 = serde_json::json!({ "projectId" : project_id });
-            client::f_23d::<RebuildResult>(&r_1k6, &r_1k8, "/documents/rebuild-non-pdfa", &r_1k7)
+            client::post_long::<RebuildResult>(&r_1k6, &r_1k8, "/documents/rebuild-non-pdfa", &r_1k7)
                 .await
         }
     })
