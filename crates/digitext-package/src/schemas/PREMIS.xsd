@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.loc.gov/premis/v3" xmlns:premis="http://www.loc.gov/premis/v3" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="premis"><xs:complexType><xs:sequence><xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip"/></xs:sequence><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+</xs:schema>

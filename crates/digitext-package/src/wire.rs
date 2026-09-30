@@ -50,6 +50,16 @@ pub struct Tq4 {
     pub content_information_type: Option<String>,
     #[serde(default)]
     pub dip_cert: Option<T4n>,
+    #[serde(default)]
+    pub fond_name: Option<String>,
+    #[serde(default)]
+    pub archive_org_name: Option<String>,
+    #[serde(default)]
+    pub packager_name: Option<String>,
+    #[serde(default)]
+    pub packager_code: Option<String>,
+    #[serde(default)]
+    pub allow_non_pdfa: bool,
     pub documents: Vec<Tq3>,
 }
 impl Tq4 {
@@ -183,6 +193,14 @@ impl Tq4 {
             content_information_type: self.content_information_type.clone(),
             dip_cert: self.dip_cert.clone(),
             cert_font_ttf: r_43u,
+            fond_name: self.fond_name.clone(),
+            archive_org_name: self.archive_org_name.clone(),
+            packager: self.packager_name.as_ref().filter(|n| !n.trim().is_empty()).map(|n| crate::model::OrgIdent {
+                name: n.clone(),
+                code: self.packager_code.clone().unwrap_or_default(),
+            }),
+            user_manual_pdf: None,
+            allow_non_pdfa: self.allow_non_pdfa,
         })
     }
     pub fn display_label(&self) -> String {

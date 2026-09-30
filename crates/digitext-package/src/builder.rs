@@ -1,11 +1,14 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+// Dựng gói SIP / AIP / DIP trong bộ nhớ: kiểm yêu cầu (trường EAD, PDF/A), ghi tệp dữ liệu, EAD từng
+// tài liệu, PREMIS, METS rep1, EAD gói, METS gốc, bộ XSD, tài liệu kèm; nén zip. Bố cục theo E-ARK CSIP
+// và gói mẫu dự án Đầm Hà.
 use crate::ead;
 use crate::fetch;
 use crate::ids::{self, T9n};
 use crate::mets::{self, Td6, Tir, T50, T84};
 use crate::mime;
 use crate::model::*;
-use crate::premis::{self, The, Thf};
+use crate::premis::{self, PremisCtx, PremisFile};
 use crate::schemas;
 use crate::PackageError;
 use chrono::{DateTime, Datelike, FixedOffset, Timelike};
@@ -29,7 +32,20 @@ fn sha256_lower(r_3uw: &[u8]) -> String {
     format!("{:x}", Sha256::digest(r_3uw))
 }
 fn f_1dg(r_3ux: &DateTime<FixedOffset>) -> String {
-    r_3ux.format("%Y-%m-%dT%H:%M:%S%.3f%:z").to_string()
+    r_3ux.format("%Y-%m-%dT%H:%M:%S%:z").to_string()
+}
+fn is_pdf(name: &str, mimetype: &str) -> bool {
+    mimetype == mime::PDF || mimetype == mime::C_FW || name.to_ascii_lowercase().ends_with(".pdf")
+}
+/// Tên định dạng người đọc được cho PREMIS.
+fn format_name(mimetype: &str, name: &str) -> String {
+    if is_pdf(name, mimetype) {
+        return "PDF".into();
+    }
+    match name.rsplit('.').next() {
+        Some(ext) if ext.len() <= 5 && ext != name => ext.to_ascii_uppercase(),
+        _ => mimetype.to_string(),
+    }
 }
 fn f_2pc(r_3v0: &Tga) -> Vec<String> {
     let mut e = Vec::new();
@@ -161,6 +177,27 @@ fn f_2pc(r_3v0: &Tga) -> Vec<String> {
                 ),
             );
         }
+        // Điều 8.2.a TT05: tệp tài liệu phải là PDF/A. Kiểm dấu hiệu tối thiểu (XMP pdfaid + OutputIntent).
+        if let DocumentContent::Bytes(b) = &r_3uy.content {
+            let mt = r_3uy
+                .mimetype
+                .clone()
+                .unwrap_or_else(|| mime::f_1ds(&r_3uy.file_name).to_string());
+            if is_pdf(&r_3uy.file_name, &mt) && !r_3v0.allow_non_pdfa {
+                let m = digitext_pdf::pdfa_markers(b);
+                match (&m.declared, m.has_output_intent) {
+                    (None, _) => e.push(format!(
+                        "'{}': không phải PDF/A (không khai pdfaid trong XMP) — TT05 Điều 8.2.a đòi PDF/A; chuyển sang PDF/A rồi ký lại",
+                        r_3uy.file_name
+                    )),
+                    (Some(d), false) => e.push(format!(
+                        "'{}': khai {d} nhưng không nhúng hồ sơ màu (OutputIntent)",
+                        r_3uy.file_name
+                    )),
+                    _ => {}
+                }
+            }
+        }
         e.extend(ead::f_2oy(&r_3uy.metadata, r_3v0.kind));
     }
     e
@@ -198,12 +235,25 @@ fn f_w6(
         .map_err(|err| PackageError::Zip(err.to_string()))?;
     Ok(r_3v5.into_inner())
 }
+/// Tên + mã tổ chức; thiếu tên thì dùng mã (gói vẫn hợp lệ, chỉ kém đọc).
+fn org(name: &Option<String>, code: &str) -> OrgIdent {
+    OrgIdent {
+        name: name
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| code.to_string()),
+        code: code.to_string(),
+    }
+}
 pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
     let r_3vz = f_2pc(r_3wb);
     if !r_3vz.is_empty() {
         return Err(PackageError::InvalidRequest(r_3vz));
     }
     let r_3vj = f_1dg(&r_3wb.created_at);
+    let date = r_3wb.created_at.format("%Y-%m-%d").to_string();
     let r_3vh = r_3wb
         .content_information_type
         .clone()
@@ -218,11 +268,18 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
         PackageMeta::GoiTin(g) => g.title.clone(),
         PackageMeta::Dip(d) => format!("DIP {}", d.request_id),
     });
+    let identifier = match &r_3wb.meta {
+        PackageMeta::Hoso(h) => h.file_code.clone(),
+        PackageMeta::GoiTin(g) => g.file_code.clone(),
+        PackageMeta::Dip(d) => d.request_id.clone(),
+    };
+    let fond = org(&r_3wb.fond_name, &r_3wb.fond_code);
+    let archive = org(&r_3wb.archive_org_name, &r_3wb.archive_org_code);
     let mut files: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut r_3vn: Vec<(Td6, T50)> = Vec::new();
     let mut r_3vk: Vec<T84> = Vec::new();
     let mut r_3vw: Vec<T84> = Vec::new();
-    let mut r_3w6: Vec<Thf> = Vec::new();
+    let mut r_3w6: Vec<PremisFile> = Vec::new();
     for r_3vm in &r_3wb.documents {
         let r_3vy = matches!(r_3vm.content, DocumentContent::Fetch(_));
         let r_3vl = format!("representations/rep1/data/{}", r_3vm.file_name);
@@ -245,17 +302,29 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
             checksum_upper: f_2en(&bytes),
         };
         if r_3we {
-            r_3w6.push(Thf {
-                object_type: if r_3vy {
-                    "File"
-                } else {
-                    r_3vm.metadata.premis_object_type()
-                },
-                id_value: ids::f_2op(r_3vx),
+            let (doc_title, page_count, creator) = match &r_3vm.metadata {
+                ead::DocEad::Doc(d) => (d.subject.clone(), d.number_of_page, d.organ_name.clone()),
+                ead::DocEad::Pic(p) => (p.image_title.clone(), None, p.photographer.clone()),
+                ead::DocEad::Media(m) => (m.movie_title.clone(), None, m.recorder.clone()),
+            };
+            let version = if r_3vy || !is_pdf(&r_3vm.file_name, &r_3w0) {
+                None
+            } else {
+                digitext_pdf::pdfa_markers(&bytes).version
+            };
+            r_3w6.push(PremisFile {
+                mets_file_id: r_3vu.clone(),
                 original_name: r_3vm.file_name.clone(),
                 sha256_lower: sha256_lower(&bytes),
                 size: bytes.len() as u64,
-                format_name: r_3w0.clone(),
+                format_name: if r_3vy { "TXT".into() } else { format_name(&r_3w0, &r_3vm.file_name) },
+                format_version: version,
+                mimetype: r_3w0.clone(),
+                doc_title,
+                page_count,
+                creator,
+                location: r_3vl.clone(),
+                holey: r_3vy,
             });
         }
         files.insert(r_3vl, bytes);
@@ -280,13 +349,19 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
                 checksum_upper: f_2en(&r_3vb),
             });
             if r_3we {
-                r_3w6.push(Thf {
-                    object_type: "File",
-                    id_value: ids::f_2op(r_3vx),
+                r_3w6.push(PremisFile {
+                    mets_file_id: r_3vc.clone(),
                     original_name: r_3va.file_name.clone(),
                     sha256_lower: sha256_lower(&r_3vb),
                     size: r_3vb.len() as u64,
-                    format_name: r_3vd,
+                    format_name: format_name(&r_3vd, &r_3va.file_name),
+                    format_version: None,
+                    mimetype: r_3vd,
+                    doc_title: None,
+                    page_count: None,
+                    creator: None,
+                    location: format!("representations/rep1/data/{}", r_3va.file_name),
+                    holey: false,
                 });
             }
             files.insert(
@@ -320,16 +395,34 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
             },
         ));
     }
-    let r_3vs = r_3wb.source_event.premis_event_type();
+    // EAD gói (hồ sơ / gói tin / DIP) — ghi trước để METS rep tham chiếu ngược được.
+    let r_3w3 = match &r_3wb.meta {
+        PackageMeta::Hoso(h) => ead::f_190(h, r_3wb.kind.hoso_code_tag()),
+        PackageMeta::GoiTin(g) => ead::f_18z(g, r_3wb.kind),
+        PackageMeta::Dip(d) => ead::f_18w(d),
+    }
+    .into_bytes();
+    let ead_name = r_3wb.kind.package_ead_name();
+    let ead_size = r_3w3.len() as u64;
+    let ead_sum = f_2en(&r_3w3);
+    files.insert(format!("metadata/descriptive/{ead_name}"), r_3w3);
+    let premis_ctx = PremisCtx {
+        kind: r_3wb.kind,
+        objid: &objid,
+        rep_objid: &rep_objid,
+        title: &label,
+        identifier: &identifier,
+        event_type: r_3wb.source_event.premis_event_type(),
+        creation_event_id: format!("event-creation-{}", r_3vx.uuid().to_lowercase()),
+        validation_event_id: format!("event-validation-{}", r_3vx.uuid().to_lowercase()),
+        event_datetime: r_3vj.clone(),
+        date,
+        software: &r_3wb.software,
+        archive: &archive,
+        fond_name: &fond.name,
+    };
     let r_3w9 = if r_3we {
-        let ctx = The {
-            event_type: r_3vs,
-            event_id: r_3vx.uuid(),
-            event_datetime: r_3vj.clone(),
-            software: &r_3wb.software,
-            archive_org_code: &r_3wb.archive_org_code,
-        };
-        let xml = premis::f_27u(&r_3w6, &ctx).into_bytes();
+        let xml = premis::rep_premis(&r_3w6, &premis_ctx).into_bytes();
         let md = Td6 {
             id: ids::f_2op(r_3vx),
             href: "metadata/preservation/PREMIS_rep1.xml".into(),
@@ -344,44 +437,26 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
     } else {
         None
     };
-    let r_3v9 = match r_3wb.kind {
-        PackageKind::AipHoso | PackageKind::AipTailieu => {
-            vec![
-                Tir {
-                    role: "CREATOR",
-                    code: r_3wb.fond_code.clone(),
-                },
-                Tir {
-                    role: "ARCHIVIST",
-                    code: r_3wb.archive_org_code.clone(),
-                },
-            ]
-        }
-        PackageKind::SipHoso | PackageKind::SipTailieu => {
-            vec![Tir {
-                role: "CREATOR",
-                code: r_3wb.fond_code.clone(),
-            }]
-        }
-        PackageKind::Dip => {
-            vec![
-                Tir {
-                    role: "ARCHIVIST",
-                    code: r_3wb.archive_org_code.clone(),
-                },
-                Tir {
-                    role: "DISSEMINATOR",
-                    code: r_3wb
-                        .dissemination_request_id
-                        .clone()
-                        .or_else(|| match &r_3wb.meta {
-                            PackageMeta::Dip(d) => Some(d.request_id.clone()),
-                            _ => None,
-                        })
-                        .unwrap_or_default(),
-                },
-            ]
-        }
+    let rep_agents = match r_3wb.kind {
+        PackageKind::Dip => vec![
+            Tir { role: "ARCHIVIST", name: archive.name.clone(), code: archive.code.clone() },
+            Tir {
+                role: "DISSEMINATOR",
+                name: archive.name.clone(),
+                code: r_3wb
+                    .dissemination_request_id
+                    .clone()
+                    .or_else(|| match &r_3wb.meta {
+                        PackageMeta::Dip(d) => Some(d.request_id.clone()),
+                        _ => None,
+                    })
+                    .unwrap_or_default(),
+            },
+        ],
+        _ => vec![
+            Tir { role: "CREATOR", name: fond.name.clone(), code: fond.code.clone() },
+            Tir { role: "ARCHIVIST", name: archive.name.clone(), code: archive.code.clone() },
+        ],
     };
     let r_3wa = mets::f_27s(
         &mets::Tis {
@@ -390,7 +465,14 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
             label: &label,
             content_information_type: &r_3vh,
             created: &r_3vj,
-            agents: r_3v9,
+            agents: rep_agents,
+            submission_agreement: r_3wb.submission_agreement.as_deref(),
+            package_ead_ref: Td6 {
+                id: ids::f_2op(r_3vx),
+                href: format!("../../metadata/descriptive/{ead_name}"),
+                size: ead_size,
+                checksum_upper: ead_sum.clone(),
+            },
             doc_refs: r_3vn,
             premis_ref: r_3w9,
             data_files: r_3vk,
@@ -407,29 +489,14 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
         checksum_upper: f_2en(&r_3wa),
     };
     files.insert("representations/rep1/METS.xml".into(), r_3wa);
-    let r_3w3 = match &r_3wb.meta {
-        PackageMeta::Hoso(h) => ead::f_190(h, r_3wb.kind.hoso_code_tag()),
-        PackageMeta::GoiTin(g) => ead::f_18z(g, r_3wb.kind),
-        PackageMeta::Dip(d) => ead::f_18w(d),
-    }
-    .into_bytes();
-    let ead_name = r_3wb.kind.package_ead_name();
     let r_3vq = Td6 {
         id: ids::f_2op(r_3vx),
         href: format!("metadata/descriptive/{ead_name}"),
-        size: r_3w3.len() as u64,
-        checksum_upper: f_2en(&r_3w3),
+        size: ead_size,
+        checksum_upper: ead_sum,
     };
-    files.insert(format!("metadata/descriptive/{ead_name}"), r_3w3);
     let r_3w4 = if r_3we {
-        let ctx = The {
-            event_type: r_3vs,
-            event_id: r_3vx.uuid(),
-            event_datetime: r_3vj.clone(),
-            software: &r_3wb.software,
-            archive_org_code: &r_3wb.archive_org_code,
-        };
-        let xml = premis::f_1x3(&objid, &ids::f_2op(r_3vx), &ctx).into_bytes();
+        let xml = premis::package_premis(&r_3w6, &premis_ctx).into_bytes();
         let md = Td6 {
             id: ids::f_2op(r_3vx),
             href: "metadata/preservation/PREMIS.xml".into(),
@@ -454,50 +521,39 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
         files.insert(format!("schemas/{name}"), bytes);
     }
     let mut r_3vo = Vec::new();
+    if let Some(manual) = &r_3wb.user_manual_pdf {
+        r_3vo.push(T84 {
+            id: ids::file_id(r_3vx),
+            href: "documentation/UserManual.pdf".into(),
+            mimetype: mime::PDF.to_string(),
+            size: manual.len() as u64,
+            checksum_upper: f_2en(manual),
+        });
+        files.insert("documentation/UserManual.pdf".into(), manual.clone());
+    }
     if let (Some(r_3vf), Some(font)) = (&r_3wb.dip_cert, &r_3wb.cert_font_ttf) {
         let r_3w1 = format!(
             "{} — {}",
             r_3vf.nguoi_nhan_ho_ten, r_3vf.nguoi_nhan_dinh_danh
         );
         let r_3vt = vec![
-            (
-                "a) Mã xác thực lưu trữ",
-                r_3vf.ma_xac_thuc.clone(),
-            ),
-            (
-                "b) Tên lưu trữ lịch sử",
-                r_3vf.ten_luu_tru_lich_su.clone(),
-            ),
+            ("a) Mã xác thực lưu trữ", r_3vf.ma_xac_thuc.clone()),
+            ("b) Tên lưu trữ lịch sử", r_3vf.ten_luu_tru_lich_su.clone()),
             ("c) Người nhận", r_3w1),
-            (
-                "d) Mã lưu trữ của tài liệu gốc",
-                r_3vf.ma_luu_tru_goc.clone(),
-            ),
+            ("d) Mã lưu trữ của tài liệu gốc", r_3vf.ma_luu_tru_goc.clone()),
             (
                 "đ) Số và ký hiệu của tài liệu gốc",
                 r_3vf.so_ky_hieu_goc.clone().unwrap_or_else(|| "—".into()),
             ),
-            (
-                "e) Tên loại tài liệu",
-                r_3vf.ten_loai.clone(),
-            ),
-            (
-                "g) Trích yếu nội dung / tiêu đề",
-                r_3vf.trich_yeu.clone(),
-            ),
-            (
-                "h) Mục đích sử dụng",
-                r_3vf.muc_dich.clone(),
-            ),
+            ("e) Tên loại tài liệu", r_3vf.ten_loai.clone()),
+            ("g) Trích yếu nội dung / tiêu đề", r_3vf.trich_yeu.clone()),
+            ("h) Mục đích sử dụng", r_3vf.muc_dich.clone()),
             ("i) Ngày cấp", r_3vf.ngay_cap.clone()),
             (
                 "k) Thời hạn sử dụng",
                 r_3vf.thoi_han_su_dung.clone().unwrap_or_else(|| "—".into()),
             ),
-            (
-                "l) Số lượng bản",
-                r_3vf.so_luong_ban.to_string(),
-            ),
+            ("l) Số lượng bản", r_3vf.so_luong_ban.to_string()),
         ];
         let r_3vg: Vec<digitext_pdf::T2m> = r_3vt
             .into_iter()
@@ -522,10 +578,27 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
         });
         files.insert("documentation/VanBanXacThuc.pdf".into(), pdf);
     }
-    let r_3w2 = r_3wb
-        .related_hoso_mets_id
-        .clone()
-        .unwrap_or_else(|| rep_objid.clone());
+    let mut root_agents = vec![Tir { role: "CREATOR", name: fond.name.clone(), code: fond.code.clone() }];
+    if let Some(p) = &r_3wb.packager {
+        if !p.name.trim().is_empty() {
+            root_agents.push(Tir { role: "CREATOR", name: p.name.trim().to_string(), code: p.code.trim().to_string() });
+        }
+    }
+    root_agents.push(Tir { role: "ARCHIVIST", name: archive.name.clone(), code: archive.code.clone() });
+    if r_3wb.kind == PackageKind::Dip {
+        root_agents.push(Tir {
+            role: "DISSEMINATOR",
+            name: archive.name.clone(),
+            code: r_3wb
+                .dissemination_request_id
+                .clone()
+                .or_else(|| match &r_3wb.meta {
+                    PackageMeta::Dip(d) => Some(d.request_id.clone()),
+                    _ => None,
+                })
+                .unwrap_or_default(),
+        });
+    }
     let r_3w5 = mets::f_1x0(
         &mets::Tgb {
             kind: r_3wb.kind,
@@ -534,13 +607,14 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
             content_information_type: &r_3vh,
             created: &r_3vj,
             software: &r_3wb.software,
+            agents: root_agents,
             submission_agreement: r_3wb.submission_agreement.as_deref(),
             ead_ref: r_3vq,
             premis_ref: r_3w4,
             schema_files: r_3wc,
             rep_files: vec![r_3w8],
             documentation_files: r_3vo,
-            outer_div_label: &r_3w2,
+            outer_div_label: r_3wb.related_hoso_mets_id.as_deref(),
         },
         r_3vx,
     )

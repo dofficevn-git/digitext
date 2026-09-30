@@ -143,7 +143,7 @@ Sắp theo tầng phụ thuộc, dưới không phụ thuộc trên:
 
 | Crate | LOC | Việc |
 | --- | --- | --- |
-| [digitext-package](../crates/digitext-package/) | 3291 | **Đóng gói AIP.** `mets.rs` (METS), `premis.rs` (PREMIS bảo quản số), `ead.rs` (EAD mô tả lưu trữ), `tt02.rs` (chuẩn VN), `builder.rs`, `validate.rs`, `schemas.rs` |
+| [digitext-package](../crates/digitext-package/) | 3291 | **Đóng gói SIP/AIP/DIP (E-ARK CSIP).** `mets.rs` (METS gốc + rep), `premis.rs` (PREMIS đầy đủ), `ead.rs` (EAD mô tả lưu trữ), `tt02.rs` (chuẩn VN), `builder.rs`, `validate.rs`, `schemas.rs` (+ `src/schemas/*.xsd` chép nguyên từ chuẩn, nhúng bằng `include_str!`); `examples/sample_pack.rs` dựng gói mẫu từ một PDF để soi bằng `ml/tools/check_tt05_package.py` |
 | [digitext-sign-verify](../crates/digitext-sign-verify/) | 2827 | **Ký số PAdES-LTV.** `cms.rs` (CMS/PKCS#7), `tsa.rs` (timestamp), `ocsp.rs` (kiểm thu hồi), `chain.rs` (chuỗi tin cậy), `dss.rs` (Document Security Store, 30KB — file to nhất), `pdf.rs` (nhúng chữ ký vào PDF) |
 | [digitext-ocr](../crates/digitext-ocr/) | 5191 | **Crate phức tạp nhất.** Xem mục 4 |
 | [digitext-token-signpdf](../crates/digitext-token-signpdf/) | 1169 | Ký PDF bằng USB token / thẻ chữ ký số |

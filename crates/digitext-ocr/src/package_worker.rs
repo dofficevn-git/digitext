@@ -296,9 +296,13 @@ impl<'a> PackageWorker<'a> {
             None
         };
         let r_3cc = Utc::now().with_timezone(&f_2qd());
-        let r_3c8 = r_3cj
+        let mut r_3c8 = r_3cj
             .to_build_request(r_3cf, self.software.clone(), r_3cc, r_3ca)
             .map_err(BuildStepError::Data)?;
+        // documentation/UserManual.pdf: đọc từ DIGITEXT_PACKAGE_MANUAL nếu máy chủ có đặt.
+        r_3c8.user_manual_pdf = std::env::var_os("DIGITEXT_PACKAGE_MANUAL")
+            .and_then(|p| std::fs::read(p).ok())
+            .filter(|b| b.starts_with(b"%PDF-"));
         let built = f_vn(&r_3c8, &mut Tic).map_err(|e| BuildStepError::Data(e.to_string()))?;
         let r_3ch = match self.scanner {
             None => "not_configured".to_string(),

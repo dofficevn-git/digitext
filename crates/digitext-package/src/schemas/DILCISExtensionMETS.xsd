@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  DILCIS E-ARK CSIP Extension METS Schema
+  Source: https://earkcsip.dilcis.eu/schema/DILCISExtensionMETS.xsd
+  Namespace: https://DILCIS.eu/XML/METS/CSIPExtensionMETS
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="https://DILCIS.eu/XML/METS/CSIPExtensionMETS"
+           targetNamespace="https://DILCIS.eu/XML/METS/CSIPExtensionMETS"
+           elementFormDefault="qualified">
+
+  <!-- Attribute: CONTENTINFORMATIONTYPE on mets:mets -->
+  <xs:attribute name="CONTENTINFORMATIONTYPE">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="ERMS"/>
+        <xs:enumeration value="SIARD1"/>
+        <xs:enumeration value="SIARD2"/>
+        <xs:enumeration value="SIARDDK"/>
+        <xs:enumeration value="GeoData"/>
+        <xs:enumeration value="citcarchival_v1_0"/>
+        <xs:enumeration value="citsarchival_v1_0"/>
+        <xs:enumeration value="csarchival_v1_0"/>
+        <xs:enumeration value="citspremis_v1_0"/>
+        <xs:enumeration value="cspremis_v1_0"/>
+        <xs:enumeration value="OTHER"/>
+        <xs:enumeration value="MIXED"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+
+  <!-- Attribute: OTHERCONTENTINFORMATIONTYPE on mets:mets -->
+  <xs:attribute name="OTHERCONTENTINFORMATIONTYPE" type="xs:string"/>
+
+  <!-- Attribute: OAISPACKAGETYPE on mets:metsHdr -->
+  <xs:attribute name="OAISPACKAGETYPE">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="AIP"/>
+        <xs:enumeration value="SIP"/>
+        <xs:enumeration value="DIP"/>
+        <xs:enumeration value="AIU"/>
+        <xs:enumeration value="AIC"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+
+  <!-- Attribute: NOTETYPE on mets:note -->
+  <xs:attribute name="NOTETYPE">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="SOFTWARE VERSION"/>
+        <xs:enumeration value="IDENTIFICATIONCODE"/>
+        <xs:enumeration value="SUBMISSIONAGREEMENT"/>
+        <xs:enumeration value="PREVIOUSSUBMISSIONAGREEMENT"/>
+        <xs:enumeration value="REFERENCECODE"/>
+        <xs:enumeration value="PREVIOUSREFERENCECODE"/>
+        <xs:enumeration value="SENDINGTRANSFERINGORGANIZATION"/>
+        <xs:enumeration value="ARCHIVALHISTORY"/>
+        <xs:enumeration value="CUSTODIALHISTORY"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+
+</xs:schema>

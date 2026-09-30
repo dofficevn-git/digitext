@@ -91,6 +91,10 @@ export function extimportPack(args: {
   kind: "aip_hoso" | "sip_hoso";
   agreement: string | null;
   orgCode: string | null;
+  orgName: string | null;
+  fondName: string | null;
+  packagerName: string | null;
+  packagerCode: string | null;
   allowPartial: boolean;
   force: boolean;
   useVerapdf: boolean;

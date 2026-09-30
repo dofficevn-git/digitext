@@ -54,7 +54,8 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 
 ## 8. Đóng gói theo TT05
 
-- Tạo gói **SIP** (nộp lưu), **AIP** (bảo quản), **DIP** (khai thác có xác thực) theo bố cục E-ARK: METS, EAD, PREMIS, schemas, checksum SHA-256.
+- Tạo gói **SIP** (nộp lưu), **AIP** (bảo quản), **DIP** (khai thác có xác thực) theo bố cục E-ARK CSIP như gói của các dự án đã nghiệm thu (Đầm Hà): METS gốc + METS biểu diễn, EAD hồ sơ + EAD từng văn bản, PREMIS đầy đủ (đối tượng, sự kiện, agent), bộ XSD tự đứng, checksum SHA-256, tên cơ quan hình thành phông / cơ quan lưu trữ / đơn vị đóng gói ghi trong gói, kèm được hướng dẫn sử dụng.
+- Chỉ nhận tệp mang dấu PDF/A (TT05 Điều 8.2.a); tệp chưa phải PDF/A bị từ chối ngay khi đóng gói.
 - **Tự kiểm gói** trước khi xuất; có thêm **bộ kiểm độc lập** để nghiệm thu gói của chính mình hoặc của đơn vị khác (đã dùng kiểm 2 gói bên ngoài: phát hiện 72/72 tệp không phải PDF/A).
 - Gắn gói SIP với lần nộp lưu và dải số thứ tự mục lục; biên bản giao nhận.
 - **Đóng gói kho tài liệu từ bên ngoài**: nhận thư mục đã quét sẵn (Phông/Hộp/Hồ sơ) + một tệp Excel metadata; đối chiếu thư mục với Excel (mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu/thừa tệp, số trang, điều kiện Điều 8 TT05) và **khớp hết mới đóng gói**, mỗi hồ sơ một gói; có báo cáo lỗi theo từng dòng Excel.

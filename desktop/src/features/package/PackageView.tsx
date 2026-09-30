@@ -94,6 +94,8 @@ export default function V4sx() {
           {sel3("kind", "Loại gói", (Object.keys(V4sk) as V4sj[]).map((k) => [k, V4sk[k]]))}
           {txt("fondCode", "Mã phông", "G09")}
           {txt("archiveOrgCode", "Mã cơ quan lưu trữ", "V01")}
+          {txt("fondName", "Tên cơ quan hình thành phông", "UBND xã …")}
+          {txt("archiveOrgName", "Tên cơ quan lưu trữ", "Lưu trữ lịch sử tỉnh …")}
           {!isDip && (
             <>
               {txt("fileCode", isHoSo ? "Mã hồ sơ lưu trữ" : "Mã gói tin", "V01.G09.2021.01")}

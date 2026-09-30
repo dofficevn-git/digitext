@@ -24,6 +24,12 @@ pub struct PackOptions {
     pub org_code: Option<String>,
     /// Mã thoả thuận nộp lưu — bắt buộc với SIP.
     pub agreement: Option<String>,
+    /// Tên cơ quan lưu trữ (ghi vào agent ARCHIVIST và PREMIS); None = dùng mã.
+    pub org_name: Option<String>,
+    /// Tên cơ quan hình thành phông (agent CREATOR); None = dùng mã phông.
+    pub fond_name: Option<String>,
+    /// Đơn vị đóng gói (agent CREATOR thứ hai ở METS gốc), ví dụ công ty số hoá.
+    pub packager: Option<digitext_package::OrgIdent>,
     pub out_dir: PathBuf,
     /// Dựng lại cả hồ sơ đã có gói.
     pub force: bool,
@@ -161,6 +167,7 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
     let (hs, _names) = to_tt02(d);
     let conv = f_11h(&hs, &Tot {
         fond_code: fond, archive_org_code: org, kind: o.kind.clone(), submission_agreement: o.agreement.clone(),
+        fond_name: o.fond_name.clone(), archive_org_name: o.org_name.clone(),
     });
     let mut notes: Vec<String> = conv.report.notes;
     notes.sort();
@@ -226,8 +233,17 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
     }
     let software = digitext_package::Tlv { name: "DigiText (nhập kho ngoài)".into(), version: env!("CARGO_PKG_VERSION").into() };
     let now = chrono::Utc::now().with_timezone(&chrono::FixedOffset::east_opt(7 * 3600).expect("+07:00"));
-    let req = match conv.request.to_build_request(bytes, software, now, None) {
-        Ok(r) => r,
+    let mut wire = conv.request.clone();
+    if let Some(pk) = &o.packager {
+        wire.packager_name = Some(pk.name.clone());
+        wire.packager_code = Some(pk.code.clone());
+    }
+    wire.allow_non_pdfa = o.allow_non_tt05;
+    let req = match wire.to_build_request(bytes, software, now, None) {
+        Ok(mut r) => {
+            r.user_manual_pdf = crate::user_manual_pdf();
+            r
+        }
         Err(e) => {
             res.error = Some(e);
             return res;

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.loc.gov/METS/"
+           xmlns:mets="http://www.loc.gov/METS/"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+  <xs:complexType name="AnyMetsElementType">
+    <xs:sequence><xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip"/></xs:sequence>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+  <xs:element name="name" type="xs:string"/>
+  <xs:element name="note"><xs:complexType mixed="true"><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="altRecordID"><xs:complexType mixed="true"><xs:attribute name="TYPE" type="xs:string" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="agent">
+    <xs:complexType><xs:sequence><xs:element ref="mets:name"/><xs:element ref="mets:note" minOccurs="0" maxOccurs="unbounded"/></xs:sequence>
+      <xs:attribute name="ROLE" type="xs:string" use="required"/><xs:attribute name="TYPE" type="xs:string" use="required"/><xs:attribute name="OTHERTYPE" type="xs:string"/><xs:attribute name="OTHERROLE" type="xs:string"/><xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="metsHdr">
+    <xs:complexType><xs:sequence><xs:element ref="mets:agent" minOccurs="1" maxOccurs="unbounded"/><xs:element ref="mets:altRecordID" minOccurs="0" maxOccurs="unbounded"/></xs:sequence>
+      <xs:attribute name="CREATEDATE" type="xs:dateTime" use="required"/><xs:attribute name="LASTMODDATE" type="xs:dateTime"/><xs:attribute name="RECORDSTATUS" type="xs:string"/><xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mdRef">
+    <xs:complexType><xs:attribute name="ID" type="xs:ID"/><xs:attribute name="LOCTYPE" type="xs:string" use="required"/><xs:attribute name="MDTYPE" type="xs:string" use="required"/><xs:attribute name="OTHERMDTYPE" type="xs:string"/><xs:attribute name="MDTYPEVERSION" type="xs:string"/><xs:attribute name="MIMETYPE" type="xs:string"/><xs:attribute name="SIZE" type="xs:nonNegativeInteger"/><xs:attribute name="CREATED" type="xs:dateTime"/><xs:attribute name="CHECKSUMTYPE" type="xs:string"/><xs:attribute name="CHECKSUM" type="xs:string"/><xs:anyAttribute processContents="skip"/></xs:complexType>
+  </xs:element>
+  <xs:element name="dmdSec"><xs:complexType><xs:sequence><xs:element ref="mets:mdRef"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:attribute name="CREATED" type="xs:dateTime"/><xs:attribute name="STATUS" type="xs:string"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="digiprovMD"><xs:complexType><xs:sequence><xs:element ref="mets:mdRef"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:attribute name="STATUS" type="xs:string"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="amdSec"><xs:complexType><xs:sequence><xs:element ref="mets:digiprovMD" minOccurs="1" maxOccurs="unbounded"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="FLocat"><xs:complexType><xs:attribute name="LOCTYPE" type="xs:string" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="file"><xs:complexType><xs:sequence><xs:element ref="mets:FLocat"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:attribute name="MIMETYPE" type="xs:string"/><xs:attribute name="SIZE" type="xs:nonNegativeInteger"/><xs:attribute name="CREATED" type="xs:dateTime"/><xs:attribute name="CHECKSUMTYPE" type="xs:string"/><xs:attribute name="CHECKSUM" type="xs:string"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="fileGrp"><xs:complexType><xs:sequence><xs:element ref="mets:file" minOccurs="0" maxOccurs="unbounded"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:attribute name="USE" type="xs:string" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="fileSec"><xs:complexType><xs:sequence><xs:element ref="mets:fileGrp" minOccurs="1" maxOccurs="unbounded"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="fptr"><xs:complexType><xs:attribute name="FILEID" type="xs:IDREF" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="mptr"><xs:complexType><xs:attribute name="LOCTYPE" type="xs:string" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="div">
+    <xs:complexType><xs:choice minOccurs="0" maxOccurs="unbounded"><xs:element ref="mets:div"/><xs:element ref="mets:fptr"/><xs:element ref="mets:mptr"/></xs:choice>
+      <xs:attribute name="ID" type="xs:ID" use="required"/><xs:attribute name="LABEL" type="xs:string"/><xs:attribute name="TYPE" type="xs:string"/><xs:attribute name="DMDID" type="xs:IDREFS"/><xs:attribute name="ADMID" type="xs:IDREFS"/><xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="structMap"><xs:complexType><xs:sequence><xs:element ref="mets:div" minOccurs="1" maxOccurs="unbounded"/></xs:sequence><xs:attribute name="ID" type="xs:ID" use="required"/><xs:attribute name="TYPE" type="xs:string"/><xs:attribute name="LABEL" type="xs:string" use="required"/><xs:anyAttribute processContents="skip"/></xs:complexType></xs:element>
+  <xs:element name="mets">
+    <xs:complexType><xs:sequence><xs:element ref="mets:metsHdr"/><xs:element ref="mets:dmdSec" minOccurs="1" maxOccurs="unbounded"/><xs:element ref="mets:amdSec" minOccurs="0"/><xs:element ref="mets:fileSec"/><xs:element ref="mets:structMap" minOccurs="1" maxOccurs="unbounded"/></xs:sequence>
+      <xs:attribute name="OBJID" type="xs:string" use="required"/><xs:attribute name="LABEL" type="xs:string"/><xs:attribute name="TYPE" type="xs:string" use="required"/><xs:attribute name="PROFILE" type="xs:anyURI" use="required"/><xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
