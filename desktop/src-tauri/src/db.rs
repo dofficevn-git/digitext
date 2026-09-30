@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 23;
+const C_P1: i64 = 24;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -234,6 +234,12 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
         // Đường dẫn cây máy chủ tính sẵn cho tệp "đẩy thẳng từ ổ đĩa" (tệp nằm ngoài Kho,
         // không chép) — lúc đẩy không suy được từ storage_path nữa (30/9/2026).
         r_1d3.execute_batch("ALTER TABLE collected_docs ADD COLUMN rel_path TEXT;")?;
+    }
+    if r_1d2 < 24 {
+        // Tra sổ theo đường dẫn khi chạy lại "Chọn thư mục" trên ổ lớn (bỏ qua tệp cũ không băm).
+        r_1d3.execute_batch(
+            "CREATE INDEX IF NOT EXISTS ix_collected_path ON collected_docs (project_id, storage_path);",
+        )?;
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;
     r_1d3.commit()?;
@@ -1081,6 +1087,21 @@ pub fn f_1r8(r_1fe: &Connection, id: i64) -> rusqlite::Result<()> {
 }
 /// Đúng tệp này (cùng nội dung + cùng chỗ trong Kho) đã gom chưa. Khác `f_10m` (chỉ so nội
 /// dung): hai văn bản khác tên có thể trùng từng byte mà vẫn phải lưu đủ cả hai.
+/// Dòng sổ Kho đã có cho đúng đường dẫn + kích thước này (chưa cần băm): chạy lại "Chọn thư
+/// mục" trên ổ 125.000 tệp thì bỏ qua tệp cũ tức thì thay vì đọc lại cả ổ để băm.
+pub fn collected_find_by_path(
+    conn: &Connection,
+    project_id: &str,
+    storage_path: &str,
+    size_bytes: i64,
+) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT id FROM collected_docs WHERE project_id = ?1 AND storage_path = ?2 AND size_bytes = ?3 LIMIT 1",
+        params![project_id, storage_path, size_bytes],
+        |r| r.get(0),
+    )
+    .optional()
+}
 pub fn collected_same_file(conn: &Connection, project_id: &str, blake3: &str, storage_path: &str) -> rusqlite::Result<bool> {
     let n: i64 = conn.query_row(
         "SELECT COUNT(*) FROM collected_docs WHERE project_id = ?1 AND blake3 = ?2 AND storage_path = ?3",

@@ -3293,6 +3293,16 @@ async fn f_qr(
     if r_zf.cancelled() {
         return Ok(AddOutcome::Cancelled);
     }
+    // Tệp nằm ngoài Kho mà đẩy thẳng, hoặc đã nằm trong Kho: đường dẫn lưu sổ chính là `src`.
+    // Có dòng cùng đường dẫn + kích thước → đã ghi sổ lần trước, bỏ qua không cần băm.
+    if direct || inside(r_zd.root, src) {
+        let conn = db.0.lock().map_err(|_| "DB bận".to_string())?;
+        if let Some(id) = db::collected_find_by_path(&conn, r_zd.project_id, &src.to_string_lossy(), size)
+            .map_err(|e| e.to_string())?
+        {
+            return Ok(AddOutcome::Skipped(Some(id)));
+        }
+    }
     let blake3 = hash_file(src)
         .await
         .map_err(|e| format!("băm tệp lỗi ({e})"))?;
