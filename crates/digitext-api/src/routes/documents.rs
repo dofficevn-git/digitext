@@ -38,6 +38,7 @@ pub fn router() -> Router<AppState> {
         .route("/documents/rebuild-non-pdfa", post(rebuild_non_pdfa))
         .route("/documents/progress", get(progress))
         .route("/documents/pdfa-report", get(f_21r))
+        .route("/documents/pdfa-rejected", get(pdfa_rejected))
         .route("/documents/report", get(report))
         .route("/documents/{id}/review", post(f_29u))
         .route("/documents/review-bulk", post(review_bulk))
@@ -1406,6 +1407,41 @@ pub struct PdfaRow {
     pub reason: Option<String>,
 }
 const C_FV: i64 = 1000;
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfaRejectedOut {
+    pub id: Uuid,
+    pub project_code: String,
+    pub rel_path: Option<String>,
+    pub filename: String,
+    pub page_count: Option<i32>,
+    pub size_bytes: i64,
+    pub uploaded_at: DateTime<Utc>,
+    pub reason: String,
+}
+/// Danh sách tài liệu máy chủ từ chối ghép PDF 2 lớp (bản quét dưới 200 dpi, OCR không ra chữ…)
+/// kèm cây thư mục và lý do — để máy trạm xuất báo cáo Excel giao quét lại.
+async fn pdfa_rejected(State(state): State<AppState>, r: Ts) -> Result<Json<Vec<PdfaRejectedOut>>, ApiError> {
+    r.require_perm(Permission::DocumentList)?;
+    let rows = match f_29a(&state.pool, &r.user).await? {
+        Scope::All => ocr_jobs::pdf2_rejected_rows(&state.pool, None).await?,
+        Scope::Projects(ids) => ocr_jobs::pdf2_rejected_rows(&state.pool, Some(&ids)).await?,
+    };
+    Ok(Json(
+        rows.into_iter()
+            .map(|x| PdfaRejectedOut {
+                id: x.document_id,
+                project_code: x.project_code,
+                rel_path: x.rel_path,
+                filename: x.filename,
+                page_count: x.page_count,
+                size_bytes: x.size_bytes,
+                uploaded_at: x.uploaded_at,
+                reason: x.reason,
+            })
+            .collect(),
+    ))
+}
 fn f_1fz(status: &str) -> bool {
     matches!(
         status,

@@ -90,6 +90,22 @@ pub async fn docs_tree(
     )
     .await
 }
+/// Tài liệu bị từ chối ghép PDF/A trên máy chủ (đường dẫn, lý do) — chuyển nguyên JSON cho giao diện xuất Excel.
+#[tauri::command]
+pub async fn docs_pdfa_rejected(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+) -> Result<serde_json::Value, AppError> {
+    f_2r8(
+        &db,
+        &auth,
+        Permission::DocumentList,
+        move |base, token| async move {
+            client::f_1eo::<serde_json::Value>(&base, &token, "/documents/pdfa-rejected").await
+        },
+    )
+    .await
+}
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadArgs {
