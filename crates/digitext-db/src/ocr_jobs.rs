@@ -290,6 +290,8 @@ pub struct Pdf2RejectedRow {
     pub size_bytes: i64,
     pub uploaded_at: DateTime<Utc>,
     pub reason: String,
+    /// "rejected" = chưa có PDF/A; "exception" = đã ghép theo ngoại lệ dự án, vẫn cần quét lại.
+    pub outcome: String,
 }
 pub async fn pdf2_rejected_rows(
     pool: &PgPool,
@@ -298,13 +300,15 @@ pub async fn pdf2_rejected_rows(
     let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
     sqlx::query_as::<_, Pdf2RejectedRow>(
         "SELECT j.document_id, p.code AS project_code, d.rel_path, d.filename, d.page_count, \
-                d.size_bytes, d.uploaded_at, COALESCE(j.last_error, '') AS reason \
-         FROM (SELECT DISTINCT ON (document_id) document_id, last_error \
-               FROM ocr_jobs WHERE kind = 'make_pdf2' AND status = 'page_failed' \
+                d.size_bytes, d.uploaded_at, COALESCE(j.last_error, '') AS reason, \
+                CASE WHEN j.status = 'done' THEN 'exception' ELSE 'rejected' END AS outcome \
+         FROM (SELECT DISTINCT ON (document_id) document_id, status, last_error \
+               FROM ocr_jobs WHERE kind = 'make_pdf2' \
+                 AND (status = 'page_failed' OR (status = 'done' AND last_error LIKE 'Ngoại lệ dự án:%')) \
                ORDER BY document_id, updated_at DESC) j \
          JOIN documents d ON d.id = j.document_id \
          JOIN projects p ON p.id = d.project_id \
-         WHERE d.pdfa_key IS NULL \
+         WHERE (j.status = 'done' OR d.pdfa_key IS NULL) \
            AND ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
          ORDER BY p.code, d.rel_path NULLS LAST, d.filename",
     )
@@ -488,6 +492,22 @@ pub async fn f_1ra(r_281: &PgPool, r_280: Uuid, r_283: &str) -> sqlx::Result<boo
     .execute(r_281)
     .await?;
     Ok(r_282.rows_affected() > 0)
+}
+/// Tiền tố ghi chú khi job make_pdf2 XONG nhưng theo ngoại lệ dự án (bản quét dưới 200 dpi) —
+/// báo cáo PDF/A vẫn liệt kê để chủ dự án biết cần quét lại.
+pub const PDF2_EXCEPTION_PREFIX: &str = "Ngoại lệ dự án: đã ghép PDF/A dù ";
+/// Đánh dấu job xong nhưng giữ ghi chú trong last_error (ngoại lệ dự án).
+pub async fn done_with_note(pool: &PgPool, id: Uuid, worker_id: &str, note: &str) -> sqlx::Result<bool> {
+    let r = sqlx::query(
+        "UPDATE ocr_jobs SET status = 'done', last_error = $3, locked_by = NULL, lease_until = NULL, \
+             updated_at = now() WHERE id = $1 AND status = 'running' AND locked_by = $2",
+    )
+    .bind(id)
+    .bind(worker_id)
+    .bind(note)
+    .execute(pool)
+    .await?;
+    Ok(r.rows_affected() > 0)
 }
 pub async fn f_1re(r_286: &PgPool, r_285: Uuid, r_288: &str, r_284: &str) -> sqlx::Result<bool> {
     let r_287 = sqlx::query(

@@ -1418,6 +1418,8 @@ pub struct PdfaRejectedOut {
     pub size_bytes: i64,
     pub uploaded_at: DateTime<Utc>,
     pub reason: String,
+    /// "rejected" = chưa có PDF/A; "exception" = đã ghép theo ngoại lệ dự án (vẫn cần quét lại).
+    pub outcome: String,
 }
 /// Danh sách tài liệu máy chủ từ chối ghép PDF 2 lớp (bản quét dưới 200 dpi, OCR không ra chữ…)
 /// kèm cây thư mục và lý do — để máy trạm xuất báo cáo Excel giao quét lại.
@@ -1438,6 +1440,7 @@ async fn pdfa_rejected(State(state): State<AppState>, r: Ts) -> Result<Json<Vec<
                 size_bytes: x.size_bytes,
                 uploaded_at: x.uploaded_at,
                 reason: x.reason,
+                outcome: x.outcome,
             })
             .collect(),
     ))
