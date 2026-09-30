@@ -5,7 +5,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { V41p } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
-import { V4ex, V4ev, V4ez, V4ek, docsOcrRetryFailed, type V4ey, type V4ej } from "@/api/docs";
+import { V4ex, V4ev, V4ez, V4ek, docsOcrRetryFailed, docsPdfaRejected, type V4ey, type V4ej } from "@/api/docs";
+import { V4e5 } from "@/features/dossier/excel";
 import { listHoSo, V40w, type V40d, type V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
 import { V4br, type V4bm } from "@/api/dossier";
@@ -136,6 +137,53 @@ export default function V4k5() {
     else await V1ol();
   };
 
+  // Báo cáo Excel các tài liệu máy chủ từ chối ghép PDF/A: cây thư mục, tên tệp, dpi, lý do, cách xử lý.
+  const [xuatLoi, setXuatLoi] = useState(false);
+  const xuatLoiPdfa = async () => {
+    setXuatLoi(true);
+    try {
+      const rows = await docsPdfaRejected();
+      if (rows.length === 0) {
+        toast.info("Không có tài liệu nào bị từ chối ghép PDF/A.");
+        return;
+      }
+      const dpiOf = (r: string) => {
+        const m = /độ phân giải ([0-9.]+) dpi/.exec(r);
+        return m ? Number(m[1]) : "";
+      };
+      const cachXuLy = (r: string) =>
+        /độ phân giải/.test(r) ? "Quét lại ≥ 200 dpi (300 dpi với bản đồ, bản vẽ) rồi đưa lên thay thế" : "Kiểm tra bản quét: OCR không nhận ra chữ";
+      const aoa: (string | number)[][] = [
+        ["STT", "Dự án", "Phông / Hộp / Hồ sơ (cây máy chủ)", "Tên tệp", "Số trang", "Dung lượng (KB)", "Đưa lên lúc", "Độ phân giải (dpi)", "Lý do máy chủ từ chối", "Cách xử lý"],
+        ...rows.map((r, i) => [
+          i + 1,
+          r.projectCode,
+          (r.relPath ?? "").split("/").join(" / "),
+          r.filename,
+          r.pageCount ?? 0,
+          Math.round(r.sizeBytes / 1024),
+          new Date(r.uploadedAt).toLocaleString("vi-VN"),
+          dpiOf(r.reason),
+          r.reason,
+          cachXuLy(r.reason),
+        ]),
+      ];
+      const tongHop = new Map<string, number>();
+      for (const r of rows) {
+        const d = dpiOf(r.reason);
+        const k = `${r.projectCode}\t${d === "" ? "OCR không ra chữ" : `${d} dpi`}`;
+        tongHop.set(k, (tongHop.get(k) ?? 0) + 1);
+      }
+      const tong: (string | number)[][] = [["Dự án", "Nguyên nhân", "Số tài liệu"], ...[...tongHop.entries()].sort().map(([k, v]) => [...k.split("\t"), v]), ["", "Tổng", rows.length]];
+      const ngay = new Date().toISOString().slice(0, 10);
+      await V4e5([{ name: "PDF-A không đạt", aoa }, { name: "Tổng hợp", aoa: tong }], `pdfa-khong-dat-${ngay}.xlsx`);
+      toast.success(`Đã xuất ${fmtN(rows.length)} tài liệu bị từ chối ghép PDF/A.`);
+    } catch (e) {
+      notifyError(e, "xuất báo cáo PDF/A lỗi");
+    } finally {
+      setXuatLoi(false);
+    }
+  };
   const chayPdf2 = async () => {
     V1o1("pdf2");
     try {
@@ -272,6 +320,11 @@ export default function V4k5() {
               sub={view ? `${fmtN(view.docsFieldsDone)}/${fmtN(view.docs)} tài liệu (${pctFields}%)` : "…"}
             />
             <div className="flex flex-col gap-2 justify-center">
+              {(view?.docsPdf2Rejected ?? 0) > 0 && (
+                <Button size="sm" icon="tepExcel" loading={xuatLoi} disabled={busy} onClick={() => void xuatLoiPdfa()}>
+                  Xuất Excel {fmtN(view?.docsPdf2Rejected ?? 0)} tài liệu cần quét lại
+                </Button>
+              )}
               {(view?.docsFieldsFailed ?? 0) > 0 && (
                 <Button size="sm" icon="lamMoi" disabled={busy} onClick={() => void chayBocTach(true)}>
                   Bóc lại {fmtN(view?.docsFieldsFailed ?? 0)} tài liệu hỏng

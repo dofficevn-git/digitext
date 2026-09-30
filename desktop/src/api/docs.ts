@@ -141,6 +141,21 @@ export interface OcrRetryFailedResult {
 }
 
 /** Xếp hàng lại trang OCR lỗi. `includePageFailed` kèm cả trang hỏng vĩnh viễn. */
+/** Tài liệu máy chủ từ chối ghép PDF/A (bản quét dưới 200 dpi, OCR không ra chữ…) kèm lý do. */
+export interface PdfaRejectedRow {
+  id: string;
+  projectCode: string;
+  relPath: string | null;
+  filename: string;
+  pageCount: number | null;
+  sizeBytes: number;
+  uploadedAt: string;
+  reason: string;
+}
+export function docsPdfaRejected(): Promise<PdfaRejectedRow[]> {
+  return invoke<PdfaRejectedRow[]>("docs_pdfa_rejected");
+}
+
 export function docsOcrRetryFailed(
   projectId?: string,
   documentIds?: string[],

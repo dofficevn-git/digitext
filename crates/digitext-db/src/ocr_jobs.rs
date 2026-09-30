@@ -278,6 +278,40 @@ pub async fn pdf2_rejected(
     .fetch_all(pool)
     .await
 }
+/// Một tài liệu bị từ chối ghép PDF 2 lớp (vd. bản quét dưới 200 dpi) — đủ cột để xuất báo cáo
+/// giao người quét lại.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct Pdf2RejectedRow {
+    pub document_id: Uuid,
+    pub project_code: String,
+    pub rel_path: Option<String>,
+    pub filename: String,
+    pub page_count: Option<i32>,
+    pub size_bytes: i64,
+    pub uploaded_at: DateTime<Utc>,
+    pub reason: String,
+}
+pub async fn pdf2_rejected_rows(
+    pool: &PgPool,
+    projects: Option<&[Uuid]>,
+) -> sqlx::Result<Vec<Pdf2RejectedRow>> {
+    let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
+    sqlx::query_as::<_, Pdf2RejectedRow>(
+        "SELECT j.document_id, p.code AS project_code, d.rel_path, d.filename, d.page_count, \
+                d.size_bytes, d.uploaded_at, COALESCE(j.last_error, '') AS reason \
+         FROM (SELECT DISTINCT ON (document_id) document_id, last_error \
+               FROM ocr_jobs WHERE kind = 'make_pdf2' AND status = 'page_failed' \
+               ORDER BY document_id, updated_at DESC) j \
+         JOIN documents d ON d.id = j.document_id \
+         JOIN projects p ON p.id = d.project_id \
+         WHERE d.pdfa_key IS NULL \
+           AND ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
+         ORDER BY p.code, d.rel_path NULLS LAST, d.filename",
+    )
+    .bind(projects)
+    .fetch_all(pool)
+    .await
+}
 pub async fn ocr_failed_counts(
     r_27k: &PgPool,
     projects: Option<&[Uuid]>,

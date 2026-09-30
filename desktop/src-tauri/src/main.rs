@@ -107,6 +107,7 @@ fn main() {
             stats::stats_summary,
             docs::docs_list,
             docs::docs_tree,
+            docs::docs_pdfa_rejected,
             docs::docs_download,
             docs::docs_pdf_for_view,
             docs::docs_upload_local,
