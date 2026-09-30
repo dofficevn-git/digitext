@@ -8,7 +8,7 @@
 //! Tệp trong gói được ĐỔI TÊN thành `<mã hồ sơ>.<STT 7 số>.pdf` (quy tắc mã tài liệu của
 //! TT05); tên tệp gốc ghi vào phần mô tả của tài liệu. Nội dung tệp giữ nguyên từng byte —
 //! chữ ký số trong PDF không bị ảnh hưởng.
-use crate::check::{inspect_pdf, norm_date, rel_to_path, seq_of, Dossier, Plan};
+use crate::check::{inspect_pdf, norm_date, parse_doc_name, rel_to_path, seq_of, Dossier, Plan};
 use digitext_package::tt02::{f_11h, Tos, Tot, Tou};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
@@ -111,6 +111,7 @@ pub fn to_tt02(d: &Dossier) -> (Tos, Vec<String>) {
             let origin = format!("Tệp gốc: {}", names[i]);
             Tou {
                 stt,
+                muc_luc: if use_seq { parse_doc_name(&names[i]).muc_luc } else { None },
                 ten_loai: r.doc_type.clone(),
                 so_van_ban: r.doc_number.clone(),
                 ky_hieu: r.doc_notation.clone(),

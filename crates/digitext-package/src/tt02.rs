@@ -38,6 +38,10 @@ pub struct Tos {
 #[serde(rename_all = "camelCase")]
 pub struct Tou {
     pub stt: u32,
+    /// Mục lục số nằm giữa số hồ sơ và STT trong tên tệp (`…153.01.0000002`); có thì mã văn bản
+    /// = `<mã hồ sơ>.<mục lục>.<STT>` theo quy tắc đặt tên.
+    #[serde(default)]
+    pub muc_luc: Option<String>,
     #[serde(default)]
     pub ten_loai: Option<String>,
     #[serde(default)]
@@ -366,7 +370,10 @@ pub fn f_11h(hoso: &Tos, opts: &Tot) -> Tor {
             .as_deref()
             .and_then(|r_426| r_426.rsplit_once('.').map(|(_, e)| format!(".{e}")))
             .unwrap_or_else(|| ".pdf".into());
-        let doc_code = format!("{file_code}.{}", f_1wk(r_42b.stt));
+        let doc_code = match r_42b.muc_luc.as_deref().map(str::trim).filter(|m| !m.is_empty()) {
+            Some(ml) if !file_code.ends_with(&format!(".{ml}")) => format!("{file_code}.{ml}.{}", f_1wk(r_42b.stt)),
+            _ => format!("{file_code}.{}", f_1wk(r_42b.stt)),
+        };
         r_425.push(Tq3 {
             document_id: r_42b.document_id,
             file_name: format!("{doc_code}{ext}"),

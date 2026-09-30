@@ -156,13 +156,53 @@ pub fn lenient_u32(s: &str) -> Option<(u32, bool)> {
 }
 /// Số thứ tự 7 chữ số ở đuôi tên tệp: `H49.132.02.2009.001.0000012.pdf` → 12.
 pub fn seq_of(file_name: &str) -> Option<u32> {
-    let stem = file_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(file_name);
-    let last = stem.rsplit('.').next()?;
-    if last.len() == 7 && last.bytes().all(|b| b.is_ascii_digit()) {
-        last.parse().ok()
-    } else {
-        None
+    parse_doc_name(file_name).stt
+}
+
+/// Tên tệp / mã văn bản tách theo quy tắc
+/// `<mã cơ quan>.<phông số>.<năm>.<số hồ sơ>[.<mục lục số>].<STT 7 số>`:
+/// `H49.101.01.1993.153.01.0000002.pdf` → năm 1993, hồ sơ 153, mục lục "01", STT 2.
+/// Mốc nhận diện là đoạn NĂM (4 chữ số) — mã cơ quan có thể 1 hay 2 đoạn (H49 / H49.101).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DocName {
+    pub year: Option<String>,
+    pub hs_no: Option<u32>,
+    pub muc_luc: Option<String>,
+    pub stt: Option<u32>,
+}
+fn is_year(s: &str) -> bool {
+    s.len() == 4 && s.bytes().all(|b| b.is_ascii_digit()) && (1800..=2100).contains(&s.parse::<u32>().unwrap_or(0))
+}
+pub fn parse_doc_name(file_name: &str) -> DocName {
+    let stem = match file_name.rsplit_once('.') {
+        Some((s, ext)) if ext.len() <= 4 && !ext.bytes().all(|b| b.is_ascii_digit()) => s,
+        _ => file_name,
+    };
+    let mut parts: Vec<&str> = stem.split('.').collect();
+    let mut out = DocName::default();
+    if let Some(last) = parts.last() {
+        if last.len() == 7 && last.bytes().all(|b| b.is_ascii_digit()) {
+            out.stt = last.parse().ok();
+            parts.pop();
+        }
     }
+    let Some(y) = parts.iter().position(|p| is_year(p)) else { return out };
+    out.year = Some(parts[y].to_string());
+    out.hs_no = parts.get(y + 1).and_then(|p| p.parse().ok());
+    let rest = &parts[(y + 2).min(parts.len())..];
+    if !rest.is_empty() && rest.iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit())) {
+        out.muc_luc = Some(rest.join("."));
+    }
+    out
+}
+/// Số hồ sơ trong mã hồ sơ: đoạn ngay sau năm (`H49.101.01.1993.153` → 153, kể cả khi mã còn
+/// đuôi mục lục `…153.01`); mã không có năm thì lấy đoạn cuối.
+pub fn hs_no_of_code(code: &str) -> Option<u32> {
+    let d = parse_doc_name(code);
+    if d.year.is_some() {
+        return d.hs_no;
+    }
+    code.rsplit('.').next().and_then(|s| s.parse().ok())
 }
 
 /// Gom dòng Excel thành hồ sơ theo thư mục. `root` được tự chỉnh nếu người dùng trỏ vào
@@ -172,10 +212,15 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
     if let Some(first) = sheet.rows.iter().find_map(|r| r.doc_path.as_deref()) {
         let rel = norm_rel(first);
         if !rel_to_path(&root, &rel).exists() {
-            if let Some(parent) = root.parent() {
+            // Người dùng hay trỏ vào thư mục CON (…\UBND\DCXD) trong khi Excel ghi đường dẫn từ
+            // «UBND\DCXD\…»: lùi dần lên các cấp cha tới khi tìm thấy tệp đầu tiên.
+            let mut cur = root.clone();
+            while let Some(parent) = cur.parent() {
                 if rel_to_path(parent, &rel).exists() {
                     root = parent.to_path_buf();
+                    break;
                 }
+                cur = parent.to_path_buf();
             }
         }
     }
@@ -516,11 +561,11 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
     // ---- thư mục ↔ mã hồ sơ: …\HOPnn\<số hồ sơ>
     let code_parts: Vec<&str> = hs.split('.').collect();
     let segs: Vec<&str> = dir.split('\\').collect();
-    let code_hs_no = code_parts.last().and_then(|s| s.parse::<u32>().ok());
+    let code_hs_no = hs_no_of_code(&hs);
     if let (Some(last), Some(no)) = (segs.last(), code_hs_no) {
         if let Ok(dno) = last.parse::<u32>() {
             if dno != no {
-                sink.error("TM-LECH-SO-HO-SO", dir, &hs, Some(first.line), None, format!("thư mục hồ sơ số {dno} nhưng mã hồ sơ «{hs}» kết thúc bằng {no}"));
+                sink.error("TM-LECH-SO-HO-SO", dir, &hs, Some(first.line), None, format!("thư mục hồ sơ số {dno} nhưng mã hồ sơ «{hs}» mang số hồ sơ {no}"));
             }
         }
     }
@@ -555,13 +600,20 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
             Some(s) => *seqs.entry(s).or_default() += 1,
             None => sink.warn("TL-TEN-KHONG-CO-STT", dir, &hs, Some(r.line), Some(&name), format!("tên tệp «{name}» không kết thúc bằng số thứ tự 7 chữ số — sẽ đánh số theo thứ tự dòng")),
         }
-        // năm + số hồ sơ trong tên tệp so với mã hồ sơ
+        // năm + số hồ sơ trong tên tệp so với mã hồ sơ — tách theo quy tắc
+        // <mã cơ quan>.<phông>.<năm>.<số hồ sơ>[.<mục lục>].<STT>, mốc là đoạn năm.
         let stem_parts: Vec<&str> = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(&name).split('.').collect();
+        let dn = parse_doc_name(&name);
         if stem_parts.len() >= 3 && code_parts.len() >= 2 {
-            let f_hs = stem_parts[stem_parts.len() - 2].parse::<u32>().ok();
-            if let (Some(a), Some(b)) = (f_hs, code_hs_no) {
+            if let (Some(a), Some(b)) = (dn.hs_no, code_hs_no) {
                 if a != b {
                     sink.error("TL-TEN-LECH-SO-HO-SO", dir, &hs, Some(r.line), Some(&name), format!("tên tệp mang số hồ sơ {a}, mã hồ sơ là {b}"));
+                }
+            }
+            // Mã hồ sơ đã có đuôi mục lục thì tên tệp phải cùng mục lục.
+            if let (Some(ml_code), Some(ml_name)) = (parse_doc_name(&hs).muc_luc.as_deref(), dn.muc_luc.as_deref()) {
+                if ml_code != ml_name {
+                    sink.error("TL-TEN-LECH-MUC-LUC", dir, &hs, Some(r.line), Some(&name), format!("tên tệp mang mục lục số {ml_name}, mã hồ sơ ghi mục lục {ml_code}"));
                 }
             }
             // So với phần mã phông NẰM TRONG mã hồ sơ (3 đoạn đầu) — cột «Mã phông» lệch mã hồ
@@ -573,9 +625,10 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
                     sink.error("TL-TEN-LECH-PHONG", dir, &hs, Some(r.line), Some(&name), format!("tên tệp «{name}» không bắt đầu bằng mã phông «{fc}» của mã hồ sơ"));
                 }
             }
-            let f_year = stem_parts[stem_parts.len() - 3];
-            if f_year.len() == 4 && f_year.bytes().all(|b| b.is_ascii_digit()) && !code_parts.contains(&f_year) {
-                sink.error("TL-TEN-LECH-NAM", dir, &hs, Some(r.line), Some(&name), format!("tên tệp mang năm {f_year}, không có trong mã hồ sơ «{hs}»"));
+            if let Some(f_year) = dn.year.as_deref() {
+                if !code_parts.contains(&f_year) {
+                    sink.error("TL-TEN-LECH-NAM", dir, &hs, Some(r.line), Some(&name), format!("tên tệp mang năm {f_year}, không có trong mã hồ sơ «{hs}»"));
+                }
             }
         }
         if r.doc_subject.is_none() {
@@ -721,7 +774,14 @@ pub fn run(
     for t in &tops {
         let p = plan.root.join(t);
         if !p.is_dir() {
-            sink.error("THU-MUC-GOC-KHONG-CO", "", "", None, None, format!("không thấy thư mục «{}» dưới {}", t, plan.root.display()));
+            // Gợi ý thư mục đúng: cấp cha nào của thư mục đã chọn có tên trùng «t» thì gốc là cha của nó.
+            let hint = plan
+                .root
+                .ancestors()
+                .find(|a| a.file_name().map_or(false, |n| n.to_string_lossy().eq_ignore_ascii_case(t)))
+                .and_then(|a| a.parent().map(|g| format!(" — Excel ghi đường dẫn từ «{t}\\…», hãy chọn thư mục chứa «{t}»: {}", g.display())))
+                .unwrap_or_default();
+            sink.error("THU-MUC-GOC-KHONG-CO", "", "", None, None, format!("không thấy thư mục «{}» dưới {}{hint}", t, plan.root.display()));
         }
         walk_pdfs(&p, &plan.root, &mut disk);
     }
@@ -854,6 +914,22 @@ mod tests {
         assert_eq!(norm_date("12/14/20").1, false);
         assert_eq!(norm_date("2021").1, false);
         assert_eq!(norm_date("01/01/2017 - 31/12/2017").1, false);
+    }
+    #[test]
+    fn tach_ten_tep_theo_quy_tac_co_muc_luc() {
+        // Có mục lục số: …<năm>.<số hồ sơ>.<mục lục>.<STT>
+        let d = parse_doc_name("H49.101.01.1993.153.01.0000002.pdf");
+        assert_eq!(d, DocName { year: Some("1993".into()), hs_no: Some(153), muc_luc: Some("01".into()), stt: Some(2) });
+        // Không mục lục
+        let d = parse_doc_name("H49.139.01.2011.599.0000001.pdf");
+        assert_eq!(d, DocName { year: Some("2011".into()), hs_no: Some(599), muc_luc: None, stt: Some(1) });
+        // Mã cơ quan một đoạn
+        assert_eq!(parse_doc_name("H49.02.2009.001.0000012.pdf").hs_no, Some(1));
+        // Số hồ sơ trong mã hồ sơ (có / không đuôi mục lục)
+        assert_eq!(hs_no_of_code("H49.101.01.1993.153"), Some(153));
+        assert_eq!(hs_no_of_code("H49.101.01.1993.153.01"), Some(153));
+        assert_eq!(hs_no_of_code("ABC.153"), Some(153));
+        assert_eq!(seq_of("MLVB.pdf"), None);
     }
     #[test]
     fn ma_luu_tru_khong_duoi_van_khop_ten_tep() {
