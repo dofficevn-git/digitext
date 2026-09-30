@@ -43,6 +43,9 @@ pub const ENV_OCR_HTTP_TIMEOUT_MS: &str = "DIGITEXT_OCR_HTTP_TIMEOUT_MS";
 pub const C_5H: &str = "DIGITEXT_FIELDS_V2_MAX_PAGES";
 pub const C_64: &str = "DIGITEXT_PDF_DPI";
 pub const C_65: &str = "DIGITEXT_PDF_RASTER_DPI";
+/// Mã hoặc id dự án (phân cách bằng dấu phẩy) được ghép PDF 2 lớp DÙ bản quét dưới 200 dpi —
+/// ngoại lệ tạm thời theo yêu cầu chủ dự án; job vẫn ghi lý do vào last_error để báo cáo.
+pub const ENV_PDF2_ALLOW_LOW_DPI_PROJECTS: &str = "DIGITEXT_PDF2_ALLOW_LOW_DPI_PROJECTS";
 pub const C_63: &str = "DIGITEXT_PDFTOPPM_BIN";
 pub const C_67: &str = "DIGITEXT_PDF_STORE_DIR";
 pub const C_66: &str = "DIGITEXT_PDF_STORE_BUCKET";
@@ -119,6 +122,8 @@ pub struct WorkerConfig {
     pub fields_v2_max_pages: u32,
     pub pdf_dpi: u32,
     pub pdf_raster_dpi: u32,
+    /// Dự án (mã hoặc id, chữ thường) được ghép PDF 2 lớp dù dưới 200 dpi.
+    pub pdf2_allow_low_dpi_projects: Vec<String>,
     pub pdftoppm_bin: String,
     pub pdf_store_dir: Option<String>,
     pub pdf_store_bucket: Option<String>,
@@ -127,7 +132,7 @@ pub struct WorkerConfig {
     pub auto_make_pdf2: bool,
 }
 impl WorkerConfig {
-    pub const ENV_KEYS: [&'static str; 41] = [
+    pub const ENV_KEYS: [&'static str; 42] = [
         C_5G,
         C_6D,
         C_6E,
@@ -159,6 +164,7 @@ impl WorkerConfig {
         C_5H,
         C_64,
         C_65,
+        ENV_PDF2_ALLOW_LOW_DPI_PROJECTS,
         C_63,
         C_67,
         C_66,
@@ -340,6 +346,10 @@ impl WorkerConfig {
         let fields_v2_max_pages = f_1eu::<u32>(r_30y, C_5H, 1, 1, 10)?;
         let pdf_dpi = f_1eu::<u32>(r_30y, C_64, 300, 72, 1200)?;
         let pdf_raster_dpi = f_1eu::<u32>(r_30y, C_65, digitext_pdf::FM1_MIN_DPI, 72, 600)?;
+        let pdf2_allow_low_dpi_projects: Vec<String> = r_30y
+            .get(ENV_PDF2_ALLOW_LOW_DPI_PROJECTS)
+            .map(|v| v.split(',').map(|x| x.trim().to_ascii_lowercase()).filter(|x| !x.is_empty()).collect())
+            .unwrap_or_default();
         let pdftoppm_bin = r_30y
             .get(C_63)
             .map(|s| s.trim())
@@ -424,6 +434,7 @@ impl WorkerConfig {
             fields_v2_max_pages,
             pdf_dpi,
             pdf_raster_dpi,
+            pdf2_allow_low_dpi_projects,
             pdftoppm_bin,
             pdf_store_dir,
             pdf_store_bucket,

@@ -154,7 +154,7 @@ export default function V4k5() {
       const cachXuLy = (r: string) =>
         /độ phân giải/.test(r) ? "Quét lại ≥ 200 dpi (300 dpi với bản đồ, bản vẽ) rồi đưa lên thay thế" : "Kiểm tra bản quét: OCR không nhận ra chữ";
       const aoa: (string | number)[][] = [
-        ["STT", "Dự án", "Phông / Hộp / Hồ sơ (cây máy chủ)", "Tên tệp", "Số trang", "Dung lượng (KB)", "Đưa lên lúc", "Độ phân giải (dpi)", "Lý do máy chủ từ chối", "Cách xử lý"],
+        ["STT", "Dự án", "Phông / Hộp / Hồ sơ (cây máy chủ)", "Tên tệp", "Số trang", "Dung lượng (KB)", "Đưa lên lúc", "Độ phân giải (dpi)", "Kết quả", "Lý do máy chủ ghi nhận", "Cách xử lý"],
         ...rows.map((r, i) => [
           i + 1,
           r.projectCode,
@@ -164,6 +164,7 @@ export default function V4k5() {
           Math.round(r.sizeBytes / 1024),
           new Date(r.uploadedAt).toLocaleString("vi-VN"),
           dpiOf(r.reason),
+          r.outcome === "exception" ? "Đã ghép PDF/A theo ngoại lệ dự án" : "Chưa ghép (bị từ chối)",
           r.reason,
           cachXuLy(r.reason),
         ]),

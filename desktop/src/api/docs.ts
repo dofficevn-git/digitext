@@ -151,6 +151,8 @@ export interface PdfaRejectedRow {
   sizeBytes: number;
   uploadedAt: string;
   reason: string;
+  /** "rejected" = chưa có PDF/A; "exception" = đã ghép theo ngoại lệ dự án, vẫn cần quét lại. */
+  outcome: "rejected" | "exception";
 }
 export function docsPdfaRejected(): Promise<PdfaRejectedRow[]> {
   return invoke<PdfaRejectedRow[]>("docs_pdfa_rejected");

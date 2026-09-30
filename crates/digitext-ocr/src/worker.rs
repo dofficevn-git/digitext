@@ -930,7 +930,23 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             return Ok(RunOutcome::Done(job.id));
         };
         let r_3n1 = digitext_pdf::f_2p9(&r_3n4, r_3n2.page_count);
-        if !r_3n1.ok {
+        // Ngoại lệ dự án: chỉ vướng độ phân giải (dưới 200 dpi) và dự án nằm trong danh sách
+        // DIGITEXT_PDF2_ALLOW_LOW_DPI_PROJECTS → vẫn ghép, nhưng ghi lý do vào job để báo cáo.
+        let low_dpi_note: Option<String> = if !r_3n1.ok {
+            let reason = r_3n1.reason.clone().unwrap_or_default();
+            if reason.starts_with("độ phân giải") && self.low_dpi_allowed(r_3n2.project_id).await? {
+                tracing::warn!(
+                    job = % job.id, r_3n2 = % job.document_id, reason = % reason,
+                    "PDF 2 lớp dưới 200 dpi — GHÉP THEO NGOẠI LỆ DỰ ÁN, ghi lý do để báo cáo"
+                );
+                Some(format!("{}{reason}", ocr_jobs::PDF2_EXCEPTION_PREFIX))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        if !r_3n1.ok && low_dpi_note.is_none() {
             let reason = r_3n1
                 .reason
                 .unwrap_or_else(|| "không đạt".into());
@@ -969,7 +985,10 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     = % r_3n3,
                     "PDF 2 lớp đã PUT kho warm → to_sign, chờ ký (§S5.4 G)"
                 );
-                ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
+                match &low_dpi_note {
+                    Some(note) => ocr_jobs::done_with_note(self.pool, job.id, self.worker_id, note).await?,
+                    None => ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?,
+                };
                 Ok(RunOutcome::Done(job.id))
             }
             Err(e) => {
@@ -977,6 +996,18 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     .await
             }
         }
+    }
+    /// Dự án có trong DIGITEXT_PDF2_ALLOW_LOW_DPI_PROJECTS (so theo id hoặc mã, không phân biệt hoa thường)?
+    async fn low_dpi_allowed(&self, project_id: uuid::Uuid) -> sqlx::Result<bool> {
+        let list = &self.cfg.pdf2_allow_low_dpi_projects;
+        if list.is_empty() {
+            return Ok(false);
+        }
+        if list.iter().any(|x| x == &project_id.to_string().to_ascii_lowercase()) {
+            return Ok(true);
+        }
+        let Some(p) = digitext_db::projects::get(self.pool, project_id).await? else { return Ok(false) };
+        Ok(list.iter().any(|x| x == &p.code.to_ascii_lowercase()))
     }
     async fn notify_pdf2_rejected(
         &self,
