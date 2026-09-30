@@ -1071,6 +1071,7 @@ dependencies = [
  "digitext-core",
  "digitext-extimport",
  "ed25519-dalek",
+ "futures-util",
  "hkdf",
  "if-addrs",
  "image",

@@ -32,9 +32,46 @@ export interface V44w {
 
   peers: number;
   items: V44v[];
+  /** Bộ đếm tích luỹ — `items` chỉ giữ MAX_ROWS dòng gần nhất. */
+  counts: { done: number; skipped: number; errors: number; cancelled: number };
   summary: V439 | V43e | null;
   dismissed: boolean;
   collapsed: boolean;
+}
+
+export const MAX_ROWS = 300;
+
+function isTerminal(st: V44n): boolean {
+  return st !== "downloading";
+}
+
+function bump(c: V44w["counts"], st: V44n, d: number): V44w["counts"] {
+  switch (st) {
+    case "done":
+      return { ...c, done: c.done + d };
+    case "skipped":
+      return { ...c, skipped: c.skipped + d };
+    case "error":
+      return { ...c, errors: c.errors + d };
+    case "cancelled":
+      return { ...c, cancelled: c.cancelled + d };
+    default:
+      return c;
+  }
+}
+
+function prune(items: V44v[]): V44v[] {
+  if (items.length <= MAX_ROWS) return items;
+  let drop = items.length - MAX_ROWS;
+  const out: V44v[] = [];
+  for (const it of items) {
+    if (drop > 0 && (it.state === "done" || it.state === "skipped")) {
+      drop -= 1;
+      continue;
+    }
+    out.push(it);
+  }
+  return out;
 }
 
 export function V44x(): V44w {
@@ -46,6 +83,7 @@ export function V44x(): V44w {
     stage: "",
     peers: 0,
     items: [],
+    counts: { done: 0, skipped: 0, errors: 0, cancelled: 0 },
     summary: null,
     dismissed: false,
     collapsed: false,
@@ -107,7 +145,10 @@ export function V452(state: V44w, Vaf: V44q, Vag: number): V44w {
     bps: V453(Vah, Vaf, Vag),
   };
   const Vaj = Vah ? base.items.map((i) => (i.key === Vaf.key ? Vai : i)) : [...base.items, Vai];
-  return { ...base, items: Vaj, dismissed: Vah ? base.dismissed : false };
+  let counts = base.counts;
+  if (Vah && isTerminal(Vah.state)) counts = bump(counts, Vah.state, -1);
+  if (isTerminal(Vai.state)) counts = bump(counts, Vai.state, 1);
+  return { ...base, items: prune(Vaj), counts, dismissed: Vah ? base.dismissed : false };
 }
 
 function V453(Vak: V44v | undefined, Val: V44q, Vam: number): number {
@@ -145,10 +186,7 @@ export function V457(s: V44w): {
   downloading: number;
 } {
   return {
-    done: s.items.filter((i) => i.state === "done").length,
-    skipped: s.items.filter((i) => i.state === "skipped").length,
-    errors: s.items.filter((i) => i.state === "error").length,
-    cancelled: s.items.filter((i) => i.state === "cancelled").length,
+    ...s.counts,
     downloading: s.items.filter((i) => i.state === "downloading").length,
   };
 }

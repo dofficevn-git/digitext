@@ -98,7 +98,7 @@ export default function V4wp() {
             {V36j ? (
               <>
                 <span>
-                  {V36i.done}/{Math.max(V363.total, V363.items.length)} tệp xong
+                  {V36i.done}/{Math.max(V363.total, V36i.done + V36i.errors + V36i.cancelled)} tệp xong
                 </span>
                 <span className="flex-1" />
                 <button className="uw-linkbtn" onClick={() => void V364()}>
