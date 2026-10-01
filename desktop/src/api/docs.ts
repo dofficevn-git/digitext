@@ -190,8 +190,11 @@ export interface V4ey {
   docsOcrDone: number;
   docsPdf2Done: number;
 
-  /** OCR xong nhưng ghép PDF 2 lớp bị từ chối vĩnh viễn (vd. < 200 dpi). */
+  /** OCR xong nhưng ghép PDF 2 lớp bị từ chối vĩnh viễn — tổng và tách theo lý do. */
   docsPdf2Rejected?: number;
+  docsPdf2RejectedDpi?: number;
+  docsPdf2RejectedNoText?: number;
+  docsPdf2RejectedOther?: number;
 
   docsFieldsDone?: number;
 

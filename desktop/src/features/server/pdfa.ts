@@ -20,7 +20,7 @@ export interface V4w4 {
 export function V4w5(V336: V4w3): string {
   switch (V336) {
     case "rejected":
-      return "Không đạt dpi — cần quét lại";
+      return "Máy chủ từ chối ghép PDF/A — xem lý do";
     case "missing":
       return "Thiếu tệp PDF";
     case "invalid":

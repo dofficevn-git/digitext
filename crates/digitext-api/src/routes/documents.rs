@@ -1343,8 +1343,14 @@ pub struct ProgressDto {
     /// phủ dưới ngưỡng (còn chữ chưa có khung → chưa vào lớp text PDF/A).
     pub pages_ink_measured: i64,
     pub pages_ink_low: i64,
-    /// OCR xong nhưng ghép PDF 2 lớp bị từ chối vĩnh viễn (vd. < 200 dpi) — cần quét lại.
+    /// OCR xong nhưng ghép PDF 2 lớp bị từ chối vĩnh viễn — tổng, và tách theo lý do.
     pub docs_pdf2_rejected: i64,
+    /// Bản quét dưới 200 dpi (Điều 8.2.a) — phải quét lại.
+    pub docs_pdf2_rejected_dpi: i64,
+    /// OCR không ra chữ nào (lớp chữ rỗng) — kiểm tra bản quét / OCR lại.
+    pub docs_pdf2_rejected_no_text: i64,
+    /// Lý do khác.
+    pub docs_pdf2_rejected_other: i64,
     pub by_status: std::collections::HashMap<String, i64>,
 }
 /// Cùng biến môi trường + mặc định với worker (`digitext-ocr/src/config.rs`).
@@ -1388,9 +1394,22 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
         docs_ocr_failed: r_gs.docs_failed,
         pages_ink_measured,
         pages_ink_low,
-        docs_pdf2_rejected: ocr_jobs::pdf2_rejected(&state.pool, projects.as_deref()).await?.len() as i64,
+        docs_pdf2_rejected: 0,
+        docs_pdf2_rejected_dpi: 0,
+        docs_pdf2_rejected_no_text: 0,
+        docs_pdf2_rejected_other: 0,
         by_status: std::collections::HashMap::new(),
     };
+    for (_, reason) in ocr_jobs::pdf2_rejected(&state.pool, projects.as_deref()).await? {
+        r_gp.docs_pdf2_rejected += 1;
+        if reason.contains("độ phân giải") {
+            r_gp.docs_pdf2_rejected_dpi += 1;
+        } else if reason.contains("lớp text rỗng") {
+            r_gp.docs_pdf2_rejected_no_text += 1;
+        } else {
+            r_gp.docs_pdf2_rejected_other += 1;
+        }
+    }
     for (status, docs, pages) in counts {
         r_gp.by_status.insert(status.clone(), docs);
         let Ok(r_gr) = status.parse::<DocStatus>() else {

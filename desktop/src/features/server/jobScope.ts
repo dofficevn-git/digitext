@@ -111,8 +111,11 @@ export interface V4jt {
   docsOcrPending: number;
   docsOcrDone: number;
   docsPdf2Done: number;
-  /** Ghép PDF 2 lớp bị từ chối vĩnh viễn (vd. < 200 dpi) — chỉ có ở chế độ toàn kho. */
+  /** Ghép PDF 2 lớp bị từ chối vĩnh viễn — chỉ có ở chế độ toàn kho; tách theo lý do. */
   docsPdf2Rejected: number;
+  docsPdf2RejectedDpi: number;
+  docsPdf2RejectedNoText: number;
+  docsPdf2RejectedOther: number;
   docsFieldsDone: number;
   docsFieldsActive: number;
   docsFieldsFailed: number;
@@ -130,6 +133,9 @@ const V4ju: V4jt = {
   docsOcrDone: 0,
   docsPdf2Done: 0,
   docsPdf2Rejected: 0,
+  docsPdf2RejectedDpi: 0,
+  docsPdf2RejectedNoText: 0,
+  docsPdf2RejectedOther: 0,
   docsFieldsDone: 0,
   docsFieldsActive: 0,
   docsFieldsFailed: 0,
