@@ -1,5 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-use chrono::{FixedOffset, Utc};
+use chrono::FixedOffset;
 use digitext_core::DocStatus;
 use digitext_db::packages::{self, T1e, Tgc};
 use digitext_package::wire::Tq4;
@@ -295,7 +295,8 @@ impl<'a> PackageWorker<'a> {
         } else {
             None
         };
-        let r_3cc = Utc::now().with_timezone(&f_2qd());
+        // Ngày tạo gói = đồng hồ máy chủ đang đóng gói (múi giờ máy).
+        let r_3cc = chrono::Local::now().fixed_offset();
         let mut r_3c8 = r_3cj
             .to_build_request(r_3cf, self.software.clone(), r_3cc, r_3ca)
             .map_err(BuildStepError::Data)?;

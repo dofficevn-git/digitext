@@ -4,6 +4,7 @@ pub mod codes;
 pub mod ead;
 pub mod fetch;
 pub mod ids;
+pub mod manual;
 mod mets;
 pub mod mime;
 pub mod model;

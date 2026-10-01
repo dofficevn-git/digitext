@@ -233,7 +233,8 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
         }
     }
     let software = digitext_package::Tlv { name: "DigiText (nhập kho ngoài)".into(), version: env!("CARGO_PKG_VERSION").into() };
-    let now = chrono::Utc::now().with_timezone(&chrono::FixedOffset::east_opt(7 * 3600).expect("+07:00"));
+    // Đồng hồ và múi giờ của máy đang đóng gói: chỉnh ngày máy là chỉnh được ngày tạo gói.
+    let now = chrono::Local::now().fixed_offset();
     let mut wire = conv.request.clone();
     if let Some(pk) = &o.packager {
         wire.packager_name = Some(pk.name.clone());
