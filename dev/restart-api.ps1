@@ -1,4 +1,4 @@
-# Khởi động lại RIÊNG API digitext-api (Scheduled Task DigiText-API, chạy bằng SYSTEM) — worker OCR giữ nguyên,
+﻿# Khởi động lại RIÊNG API digitext-api (Scheduled Task DigiText-API, chạy bằng SYSTEM) — worker OCR giữ nguyên,
 # hàng OCR/PDF-A đang chạy không bị gián đoạn. Tự xin quyền admin (UAC) nếu chưa có:
 #   powershell -ExecutionPolicy Bypass -File D:\DigiText\dev\restart-api.ps1
 # Build khi API đang chạy: đổi tên exe trước rồi build (như restart-services.ps1):
