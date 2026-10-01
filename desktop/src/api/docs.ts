@@ -161,6 +161,26 @@ export interface ReviewSummaryRow {
   ocrDenom: number;
   approved: number;
   rejected: number;
+  ocrPendingDocs: number;
+  ocrDoneDocs: number;
+  pdf2DoneDocs: number;
+  fieldsDone: number;
+  fieldsActive: number;
+  fieldsFailed: number;
+  signedDocs: number;
+  pdfaOnlyDocs: number;
+}
+/** Nạp tài liệu cho nhiều hồ sơ, tự chia lô ≤ 500 hồ sơ mỗi lượt và gộp theo dự án. */
+export async function docsForGroups(groups: { projectId: string; phong: string; hop: string; hoSo: string }[]): Promise<V4ej[]> {
+  const byProject = new Map<string, { phong: string; hop: string; hoSo: string }[]>();
+  for (const g of groups) byProject.set(g.projectId, [...(byProject.get(g.projectId) ?? []), { phong: g.phong, hop: g.hop, hoSo: g.hoSo }]);
+  const out: V4ej[] = [];
+  for (const [projectId, gs] of byProject) {
+    for (let i = 0; i < gs.length; i += 500) {
+      out.push(...(await docsReviewGroupDocs({ projectId, groups: gs.slice(i, i + 500) })));
+    }
+  }
+  return out;
 }
 export function docsReviewSummary(args: { projectId?: string; q?: string; pendingOnly?: boolean }): Promise<ReviewSummaryRow[]> {
   return invoke<ReviewSummaryRow[]>("docs_review_summary", { args: { projectId: args.projectId ?? null, q: args.q ?? null, pendingOnly: args.pendingOnly ?? false } });

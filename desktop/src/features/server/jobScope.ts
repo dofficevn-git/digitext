@@ -1,7 +1,7 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
 import type { V40d, V40v } from "@/api/archive";
-import type { V4ej } from "@/api/docs";
+import type { V4ej, ReviewSummaryRow } from "@/api/docs";
 import { V4jd, V4jc, V4j1, V4j3, V4jb, type V4j6, type V4iz } from "@/features/upload/khoFilter";
 import { V4iu, type V4is, type V4ir } from "@/features/upload/syncMatrix";
 
@@ -168,6 +168,44 @@ export function V4jv(docs: V4ej[]): V4jt {
       default:
         break;
     }
+  }
+  return p;
+}
+
+/** Lọc số liệu gộp theo hồ sơ theo phạm vi (phòng ban / mảng / THBQ) — cùng quy tắc với V4jo. */
+export function locHoSoGop(rows: ReviewSummaryRow[], filter: V4iz, V1nm: V4ji, tree: V4ir, V1nn: V4j6): { rows: ReviewSummaryRow[]; unknown: number } {
+  if (!V4j1(filter)) return { rows, unknown: 0 };
+  const V1np = V4j3(filter);
+  const out: ReviewSummaryRow[] = [];
+  let unknown = 0;
+  for (const row of rows) {
+    const gia = { relPath: [row.phong, row.hop, row.hoSo].filter((x) => x !== "").join("/"), hoSoRef: row.hop || row.hoSo ? `${row.hop}/${row.hoSo}` : null } as V4ej;
+    const r = V4jm(gia, V1nm);
+    const h = V4iu(r, tree);
+    if (filter.maDa && V4jb(r, h) !== filter.maDa) continue;
+    if (V1np) {
+      const a = V4jc(r, h, V1nn);
+      if (!a) {
+        unknown += row.files;
+        continue;
+      }
+      if (!V4jd(a, filter)) continue;
+    }
+    out.push(row);
+  }
+  return { rows: out, unknown };
+}
+/** Tiến độ từ số liệu gộp theo hồ sơ (các trường chỉ có ở chế độ toàn kho để 0). */
+export function tienDoGop(rows: ReviewSummaryRow[]): V4jt {
+  const p = { ...V4ju };
+  for (const r of rows) {
+    p.docs += r.files;
+    p.docsOcrPending += r.ocrPendingDocs;
+    p.docsOcrDone += r.ocrDoneDocs;
+    p.docsPdf2Done += r.pdf2DoneDocs;
+    p.docsFieldsDone += r.fieldsDone;
+    p.docsFieldsActive += r.fieldsActive;
+    p.docsFieldsFailed += r.fieldsFailed;
   }
   return p;
 }

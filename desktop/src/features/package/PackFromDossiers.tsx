@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
-import { V4ek, type V4ej } from "@/api/docs";
+import { docsForGroups, docsReviewSummary, type V4ej, type ReviewSummaryRow } from "@/api/docs";
+import { reviewKey, reviewKeyOf } from "@/features/dossier/reviewScope";
 import { V4ru, V4rv, V4rw, type V4rt } from "@/api/packaging";
 import type { V4bm } from "@/api/dossier";
 import type { V3yo } from "@/domain/types";
@@ -16,17 +17,6 @@ const so = (s: string | null | undefined): number | null => {
   const m = /(\d+)/.exec(s ?? "");
   return m ? Number(m[1]) : null;
 };
-const phongOf = (d: V4ej) => {
-  const p = (d.relPath ?? "").split("/").filter((x) => x.trim() !== "");
-  return p.length >= 2 ? p[0].trim() : "";
-};
-function hopHoSo(d: V4ej): [number | null, number | null] {
-  const ref = d.hoSoRef ?? "";
-  const i = ref.indexOf("/");
-  if (i > 0) return [so(ref.slice(0, i)), so(ref.slice(i + 1))];
-  const p = (d.relPath ?? "").split("/").filter((x) => x.trim() !== "");
-  return p.length >= 3 ? [so(p[1]), so(p[2])] : [null, null];
-}
 /** Tên THBQ → mã thời hạn bảo quản (TT02): 01 vĩnh viễn, 02 70 năm … 07 khác. */
 function maintenanceOf(tenThbq: string): string {
   const t = tenThbq.toLowerCase();
@@ -56,7 +46,7 @@ interface KetQua {
 }
 
 export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thbqs: V3yo[]; onClose: () => void }) {
-  const [docs, setDocs] = useState<V4ej[] | null>(null);
+  const [docs, setDocs] = useState<ReviewSummaryRow[] | null>(null);
   const [docErr, setDocErr] = useState<unknown>(null);
   const [kind, setKind] = useState<V4sj>("aip_hoso");
   const [projectId, setProjectId] = useState(() => nho("pack.projectId"));
@@ -72,11 +62,11 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
 
   useEffect(() => {
     if (!isTauri()) return;
-    V4ek().then(setDocs).catch(setDocErr);
+    docsReviewSummary({}).then(setDocs).catch(setDocErr);
   }, []);
   const duAn = useMemo(() => {
     const m = new Map<string, string>();
-    for (const d of docs ?? []) if (d.projectId) m.set(d.projectId, `${d.projectCode ?? ""} · ${d.projectName ?? ""}`);
+    for (const d of docs ?? []) if (d.projectId) m.set(d.projectId, `${d.projectCode} · ${d.projectName}`);
     return [...m.entries()];
   }, [docs]);
   useEffect(() => {
@@ -84,7 +74,7 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
   }, [duAn, projectId]);
   const dsPhong = useMemo(() => {
     const s = new Set<string>();
-    for (const d of docs ?? []) if (d.projectId === projectId && phongOf(d)) s.add(phongOf(d));
+    for (const d of docs ?? []) if (d.projectId === projectId && d.phong) s.add(d.phong);
     return [...s].sort(new Intl.Collator("vi", { numeric: true }).compare);
   }, [docs, projectId]);
   useEffect(() => {
@@ -93,18 +83,14 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
       setPhong(dsPhong.find((p) => ma && p.toUpperCase().includes(ma)) ?? dsPhong[0] ?? "");
     }
   }, [dsPhong, phong, dossiers]);
+  // Ghép hồ sơ danh mục với nhóm hồ sơ trên máy chủ theo số hộp / số hồ sơ; tệp nạp lúc chạy.
   const ghep = useMemo(() => {
-    const trongPhong = (docs ?? []).filter((d) => d.projectId === projectId && (dsPhong.length === 0 || phongOf(d) === phong));
+    const trongPhong = (docs ?? []).filter((d) => d.projectId === projectId && (dsPhong.length === 0 || d.phong === phong));
     return dossiers.map((r) => {
       const hop = so(r.hopSo);
       const hs = so(r.soTam);
-      const ds = trongPhong
-        .filter((d) => {
-          const [h, s] = hopHoSo(d);
-          return h != null && s != null && h === hop && s === hs;
-        })
-        .sort((a, b) => a.filename.localeCompare(b.filename, "vi", { numeric: true }));
-      return { r, ds };
+      const nhom = trongPhong.filter((d) => so(d.hop) === hop && so(d.hoSo) === hs);
+      return { r, nhom, soTep: nhom.reduce((a, d) => a + d.files, 0) };
     });
   }, [docs, dossiers, projectId, phong, dsPhong.length]);
   const tenThbq = (id?: number) => thbqs.find((t) => t.thbqid === id)?.tenThbq ?? "";
@@ -116,9 +102,24 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
     luu("pack.archiveOrgName", orgName.trim());
     luu("pack.fondName", fondName.trim());
     const out: KetQua[] = [];
-    for (const { r, ds } of ghep) {
+    // Nạp tệp cho mọi hồ sơ khớp một lượt rồi chia theo nhóm.
+    const tepTheoNhom = new Map<string, V4ej[]>();
+    try {
+      const all = await docsForGroups(ghep.flatMap((g) => g.nhom.map((d) => ({ projectId: d.projectId, phong: d.phong, hop: d.hop, hoSo: d.hoSo }))));
+      for (const d of all) {
+        if (d.status === "disposed") continue;
+        const k = reviewKeyOf(d);
+        tepTheoNhom.set(k, [...(tepTheoNhom.get(k) ?? []), d]);
+      }
+    } catch (e) {
+      notifyError(e, "nạp tài liệu trên máy chủ");
+      setBusy(false);
+      return;
+    }
+    for (const { r, nhom: nhomHoSo } of ghep) {
       const kq: KetQua = { hoSo: `Hộp ${r.hopSo ?? "—"} · HS ${r.soTam}`, ok: 0, loi: [] };
       out.push(kq);
+      const ds: V4ej[] = nhomHoSo.flatMap((d) => tepTheoNhom.get(reviewKey(d.projectId, d.phong, d.hop, d.hoSo)) ?? []).sort((a, b) => a.filename.localeCompare(b.filename, "vi", { numeric: true }));
       if (ds.length === 0) {
         kq.loi.push("không có tài liệu nào trên máy chủ khớp phông, hộp, hồ sơ này");
         continue;
@@ -168,19 +169,20 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
     else toast.error("Không tạo được gói nào. Xem cột Kết quả.");
   };
 
-  const khop = ghep.filter((g) => g.ds.length > 0).length;
-  const cols: Column<{ r: V4bm; ds: V4ej[] }>[] = [
+  const khop = ghep.filter((g) => g.soTep > 0).length;
+  type Ghep = { r: V4bm; nhom: ReviewSummaryRow[]; soTep: number };
+  const cols: Column<Ghep>[] = [
     { key: "hopSo", header: "Hộp", align: "right", width: 70, cell: (g) => g.r.hopSo },
     { key: "soTam", header: "HS số", align: "right", width: 80, cell: (g) => g.r.soTam },
     { key: "tieuDe", header: "Tiêu đề", className: "whitespace-normal", cell: (g) => g.r.tieuDe },
-    { key: "ds", header: "Tài liệu trên máy chủ", width: 170, cell: (g) => (docs == null ? "…" : g.ds.length ? <Badge tone="ok">{g.ds.length} tài liệu</Badge> : <Badge tone="err">Không khớp</Badge>) },
+    { key: "ds", header: "Tài liệu trên máy chủ", width: 170, cell: (g) => (docs == null ? "…" : g.soTep ? <Badge tone="ok">{g.soTep} tài liệu</Badge> : <Badge tone="err">Không khớp</Badge>) },
     ...(ketQua
       ? [
           {
             key: "kq",
             header: "Kết quả",
             className: "whitespace-normal text-sm",
-            cell: (g: { r: V4bm; ds: V4ej[] }) => {
+            cell: (g: Ghep) => {
               const kq = ketQua[ghep.indexOf(g)];
               if (!kq) return "…";
               return (
@@ -190,7 +192,7 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
                 </>
               );
             },
-          } as Column<{ r: V4bm; ds: V4ej[] }>,
+          } as Column<Ghep>,
         ]
       : []),
   ];

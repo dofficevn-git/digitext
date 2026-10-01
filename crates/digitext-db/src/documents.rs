@@ -467,6 +467,14 @@ pub struct ReviewSummaryRow {
     pub ocr_denom: i64,
     pub approved: i64,
     pub rejected: i64,
+    pub ocr_pending_docs: i64,
+    pub ocr_done_docs: i64,
+    pub pdf2_done_docs: i64,
+    pub fields_done: i64,
+    pub fields_active: i64,
+    pub fields_failed: i64,
+    pub signed_docs: i64,
+    pub pdfa_only_docs: i64,
 }
 pub async fn review_summary(
     pool: &PgPool,
@@ -488,7 +496,15 @@ pub async fn review_summary(
                 count(*) FILTER (WHERE COALESCE(dd.pdfa_pages, 0) > 0 AND dd.pdfa_2b = false)::bigint AS pdfa_cu, \
                 COALESCE(sum(COALESCE(dd.page_count, dd.ocr_pages)), 0)::bigint AS ocr_denom, \
                 count(*) FILTER (WHERE dd.review_status = 'approved')::bigint AS approved, \
-                count(*) FILTER (WHERE dd.review_status = 'rejected')::bigint AS rejected \
+                count(*) FILTER (WHERE dd.review_status = 'rejected')::bigint AS rejected, \
+                count(*) FILTER (WHERE dd.status IN ('uploaded', 'ocr_pending'))::bigint AS ocr_pending_docs, \
+                count(*) FILTER (WHERE dd.status IN ('ocr_done', 'to_sign', 'signing', 'signed', 'sign_rejected', 'archived'))::bigint AS ocr_done_docs, \
+                count(*) FILTER (WHERE dd.status IN ('to_sign', 'signing', 'signed', 'sign_rejected', 'archived'))::bigint AS pdf2_done_docs, \
+                count(*) FILTER (WHERE dd.fields_status = 'done')::bigint AS fields_done, \
+                count(*) FILTER (WHERE dd.fields_status IN ('queued', 'running'))::bigint AS fields_active, \
+                count(*) FILTER (WHERE dd.fields_status IN ('failed_transient', 'page_failed'))::bigint AS fields_failed, \
+                count(*) FILTER (WHERE dd.status IN ('signed', 'archived'))::bigint AS signed_docs, \
+                count(*) FILTER (WHERE dd.status NOT IN ('signed', 'archived') AND COALESCE(dd.pdfa_pages, 0) > 0)::bigint AS pdfa_only_docs \
          FROM derived dd JOIN projects p ON p.id = dd.project_id \
          WHERE ($2::text IS NULL OR dd.filename ILIKE $2 OR COALESCE(dd.ho_so_ref, '') ILIKE $2 OR COALESCE(dd.rel_path, '') ILIKE $2) \
            AND (NOT $3::bool OR dd.review_status NOT IN ('approved', 'rejected')) \

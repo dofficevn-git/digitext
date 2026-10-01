@@ -6,8 +6,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { V41p } from "@/live/useLive";
 import { useNavigation, V460 } from "@/state";
 import { isTauri } from "@/api/ipc";
-import { V4ek, V4el, V4fb, V4fc, type DownloadKind, type V4ej, type V4f9 } from "@/api/docs";
-import { isPdfaOnlyDoc, isSignedDoc, V4vi, V4vj, V4vq, V4vt, V4vv, V4vw, V4vx, V4vy, V4vz, V4w1, V4w2, type V4vl, type V4vu } from "./serverTree";
+import { docsForGroups, docsReviewSummary, V4el, V4fb, V4fc, type DownloadKind, type V4ej, type V4f9, type ReviewSummaryRow } from "@/api/docs";
+import { isPdfaOnlyDoc, isSignedDoc, V4vi, V4vj, V4vt, V4vx, V4vy, V4vz, V4w2, filesUnder, findFolderByRelPath, groupKeyOf, leavesUnder, treeFromSummary, type FolderGroup, type V4vl, type V4vu } from "./serverTree";
+import { reviewKeyOf } from "@/features/dossier/reviewScope";
 import { V4w5, V4w9 } from "./pdfa";
 import { V4k1 } from "./progress";
 import "./server.css";
@@ -70,7 +71,11 @@ export default function V4wh() {
   const [reveal, setReveal] = useState<{ relPath: string; filename: string } | null>(null);
   const [hit, setHit] = useState<{ folderPath: string; filename: string } | null>(null);
   const hitRef = useRef<HTMLTableRowElement | null>(null);
-  const [tree, setTree] = useState<V4vl | null>(null);
+  const [summary, setSummary] = useState<ReviewSummaryRow[] | null>(null);
+  // Tệp của từng thư mục lá, nạp khi mở / tích chọn / tải cả thư mục.
+  const [docsByPath, setDocsByPath] = useState<ReadonlyMap<string, V4ej[]>>(() => new Map());
+  const docsRef = useRef(docsByPath);
+  docsRef.current = docsByPath;
   const [openSet, setOpenSet] = useState<Set<string>>(new Set());
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -86,12 +91,9 @@ export default function V4wh() {
     if (!isTauri()) return;
     setLoading(true);
     try {
-      const t = V4vq(await V4ek());
-      setTree(t);
-      if (!firstOpen.current) {
-        firstOpen.current = true;
-        setOpenSet(V4vt(t));
-      }
+      // Số liệu gộp theo hồ sơ (vài nghìn dòng) thay cho cả cây 160.000 tài liệu; tệp nạp khi mở.
+      setSummary(await docsReviewSummary({}));
+      setDocsByPath(new Map());
     } catch (e) {
       notifyError(e, "tải kho máy chủ");
     } finally {
@@ -100,8 +102,55 @@ export default function V4wh() {
   }, []);
   V41p(load, { topics: ["docs", "ocr", "sign", "uploadBatches"] });
 
-  const allFiles = useMemo<V4vu[]>(() => (tree ? V4vv(tree) : []), [tree]);
-  const idsByFolder = useMemo<Map<string, string[]>>(() => (tree ? V4vw(tree) : new Map()), [tree]);
+  const built = useMemo(() => (summary ? treeFromSummary(summary) : null), [summary]);
+  const tree = built?.root ?? null;
+  const groupOf = useMemo<ReadonlyMap<string, FolderGroup>>(() => built?.groupOf ?? new Map(), [built]);
+  const pathOfKey = useMemo<ReadonlyMap<string, string>>(() => built?.pathOfKey ?? new Map(), [built]);
+  useEffect(() => {
+    if (tree && !firstOpen.current) {
+      firstOpen.current = true;
+      setOpenSet(V4vt(tree));
+    }
+  }, [tree]);
+
+  // Nạp tệp cho mọi thư mục lá chưa có dưới `f`; trả về bộ đệm mới.
+  const napTep = useCallback(
+    async (f: V4vl): Promise<ReadonlyMap<string, V4ej[]>> => {
+      const cur = docsRef.current;
+      const can = leavesUnder(f, groupOf).filter((l) => !cur.has(l.path));
+      if (can.length === 0) return cur;
+      const docs = await docsForGroups(can.map((l) => groupOf.get(l.path)!));
+      const moi = new Map(docsRef.current);
+      for (const l of can) moi.set(l.path, []);
+      const col = new Intl.Collator("vi", { numeric: true });
+      for (const d of docs) {
+        if (d.status === "disposed") continue;
+        const path = pathOfKey.get(reviewKeyOf(d)) ?? pathOfKey.get(groupKeyOf({ projectId: d.projectId ?? "", phong: "", hop: "", hoSo: "" }));
+        if (!path) continue;
+        moi.set(path, [...(moi.get(path) ?? []), d]);
+      }
+      for (const l of can) moi.set(l.path, [...(moi.get(l.path) ?? [])].sort((a, b) => col.compare(a.filename, b.filename)));
+      docsRef.current = moi;
+      setDocsByPath(moi);
+      return moi;
+    },
+    [groupOf, pathOfKey],
+  );
+
+  const allFiles = useMemo<V4vu[]>(() => (tree ? filesUnder(tree, docsByPath) : []), [tree, docsByPath]);
+  const idsByFolder = useMemo<Map<string, string[]>>(() => {
+    const m = new Map<string, string[]>();
+    if (!tree) return m;
+    const walk = (f: V4vl): string[] => {
+      const ids: string[] = [];
+      for (const c of f.folders) ids.push(...walk(c));
+      for (const d of docsByPath.get(f.path) ?? []) ids.push(d.id);
+      m.set(f.path, ids);
+      return ids;
+    };
+    walk(tree);
+    return m;
+  }, [tree, docsByPath]);
   const allDocs = useMemo<V4ej[]>(() => allFiles.map((f) => f.doc), [allFiles]);
   const pdfaBad = useMemo(() => (pdfa ? V4w9(pdfa, allDocs) : []), [pdfa, allDocs]);
   const pdfaBadIds = useMemo(() => new Set(pdfaBad.map((p) => p.id)), [pdfaBad]);
@@ -114,15 +163,24 @@ export default function V4wh() {
   }, [serverReveal, clearServerReveal]);
   useEffect(() => {
     if (!reveal || !tree) return;
-    const folder = V4w1(tree, reveal);
-    if (folder === null) toast.warning(`Chưa thấy "${reveal.filename}" trong kho máy chủ. Có thể chưa đồng bộ xong.`);
-    else {
+    const folder = findFolderByRelPath(tree, reveal.relPath);
+    setReveal(null);
+    if (folder === null) {
+      toast.warning(`Chưa thấy "${reveal.filename}" trong kho máy chủ. Có thể chưa đồng bộ xong.`);
+      return;
+    }
+    const node = (() => {
+      let cur: V4vl | undefined = tree;
+      for (const seg of V4vz(folder)) cur = cur?.folders.find((c) => c.path === seg);
+      return cur;
+    })();
+    void (async () => {
+      if (node) await napTep(node).catch((e) => notifyError(e, "nạp tệp của hồ sơ"));
       setOpenSet((s) => new Set([...s, ...V4vz(folder)]));
       firstOpen.current = true;
       setHit({ folderPath: folder, filename: reveal.filename });
-    }
-    setReveal(null);
-  }, [reveal, tree]);
+    })();
+  }, [reveal, tree, napTep]);
   useEffect(() => {
     if (!hit) return;
     hitRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -130,13 +188,35 @@ export default function V4wh() {
     return () => clearTimeout(t);
   }, [hit, tree]);
 
-  const toggleOpen = (path: string) =>
+  const toggleOpen = (f: V4vl) => {
+    const path = f.path;
+    const dangMo = openSet.has(path);
     setOpenSet((s) => {
       const m = new Set(s);
       if (m.has(path)) m.delete(path);
       else m.add(path);
       return m;
     });
+    if (!dangMo && groupOf.has(path) && !docsByPath.has(path)) void napTep(f).catch((e) => notifyError(e, "nạp tệp của hồ sơ"));
+  };
+  // Tích chọn cả thư mục: nạp tệp bên dưới trước (mỗi lượt tối đa 500 hồ sơ).
+  const chonThuMuc = async (f: V4vl) => {
+    try {
+      const m = await napTep(f);
+      const ids = filesUnder(f, m).map((x) => x.doc.id);
+      toggleSel(ids);
+    } catch (e) {
+      notifyError(e, "chọn thư mục");
+    }
+  };
+  const taiThuMuc = async (f: V4vl) => {
+    try {
+      const m = await napTep(f);
+      await taiXuong(filesUnder(f, m), `trong "${f.name}"`);
+    } catch (e) {
+      notifyError(e, "nạp tệp để tải");
+    }
+  };
   const toggleSel = (ids: readonly string[]) =>
     setSel((s) => {
       const m = new Set(s);
@@ -264,10 +344,10 @@ export default function V4wh() {
         rows.push(
           <tr key={`f:${sub.path}`} className="srv-folder">
             <td className="srv-tickcell">
-              <Tick state={V4vy(ids, sel)} onToggle={() => toggleSel(ids)} title={`Chọn cả ${sub.name} (${n(ids.length)} tệp)`} />
+              <Tick state={V4vy(ids, sel)} onToggle={() => void chonThuMuc(sub)} title={`Chọn cả ${sub.name} (${n(sub.docCount)} tệp)`} />
             </td>
             <td>
-              <button type="button" className="srv-name w-full text-left" style={{ paddingLeft: depth * INDENT }} onClick={() => toggleOpen(sub.path)} aria-expanded={isOpen}>
+              <button type="button" className="srv-name w-full text-left" style={{ paddingLeft: depth * INDENT }} onClick={() => toggleOpen(sub)} aria-expanded={isOpen}>
                 <span className="srv-caret" aria-hidden>
                   <Icon name={isOpen ? "xuong" : "moNhanh"} size={13} />
                 </span>
@@ -282,13 +362,24 @@ export default function V4wh() {
               {sub.signedCount > 0 && <Badge tone="ok">{n(sub.signedCount)} đã ký</Badge>} {sub.pdfaOnlyCount > 0 && <Badge tone="gray">{n(sub.pdfaOnlyCount)} PDF/A</Badge>}
             </td>
             <td>
-              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dl !== null || sub.docCount === 0} onClick={() => void taiXuong(V4vv(sub), `trong "${sub.name}"`)} />
+              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dl !== null || sub.docCount === 0} onClick={() => void taiThuMuc(sub)} />
             </td>
           </tr>,
         );
         if (isOpen) walk(sub, depth + 1);
       }
-      for (const d of f.docs) docRow(d, depth, f.path);
+      const docsO = docsByPath.get(f.path);
+      if (groupOf.has(f.path) && docsO === undefined && openSet.has(f.path)) {
+        rows.push(
+          <tr key={`l:${f.path}`}>
+            <td />
+            <td colSpan={7} className="text-sm text-fg-subtle" style={{ paddingLeft: depth * INDENT + INDENT }}>
+              Đang nạp tệp…
+            </td>
+          </tr>,
+        );
+      }
+      for (const d of docsO ?? []) docRow(d, depth, f.path);
     };
     walk(tree, 0);
   }
@@ -398,7 +489,7 @@ export default function V4wh() {
                   <thead>
                     <tr>
                       <th className="srv-tickcell">
-                        <Tick state={V4vy(rootIds, sel)} onToggle={() => toggleSel(rootIds)} title="Chọn tất cả" />
+                        <Tick state={V4vy(rootIds, sel)} onToggle={() => void (tree && chonThuMuc(tree))} title="Chọn tất cả (nạp tệp của mọi hồ sơ)" />
                       </th>
                       <th>Dự án / hộp / hồ sơ</th>
                       <th className="num">

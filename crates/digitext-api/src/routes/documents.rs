@@ -453,7 +453,7 @@ pub struct ReviewSummaryArgs {
     #[serde(default)]
     pub pending_only: bool,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewSummaryOut {
     pub project_id: Uuid,
@@ -474,7 +474,20 @@ pub struct ReviewSummaryOut {
     pub ocr_denom: i64,
     pub approved: i64,
     pub rejected: i64,
+    pub ocr_pending_docs: i64,
+    pub ocr_done_docs: i64,
+    pub pdf2_done_docs: i64,
+    pub fields_done: i64,
+    pub fields_active: i64,
+    pub fields_failed: i64,
+    pub signed_docs: i64,
+    pub pdfa_only_docs: i64,
 }
+/// Bộ đệm số liệu gộp theo hồ sơ (3 s) — nhiều màn cùng mở (Kho máy chủ, Chạy xử lý, Soát & duyệt,
+/// Đóng gói) cùng hỏi một thứ khi có sự kiện; câu gộp quét 160.000 tài liệu mất ~1 s.
+static SUMMARY_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, std::sync::Arc<Vec<ReviewSummaryOut>>)>>,
+> = std::sync::OnceLock::new();
 async fn review_scope(state: &AppState, r: &Ts, project_id: Option<Uuid>) -> Result<Option<Vec<Uuid>>, ApiError> {
     Ok(match project_id {
         Some(id) => {
@@ -496,9 +509,22 @@ async fn review_summary(
 ) -> Result<Json<Vec<ReviewSummaryOut>>, ApiError> {
     r.require_perm(Permission::DocumentList)?;
     let projects = review_scope(&state, &r, a.project_id).await?;
+    let key = format!(
+        "{}|{}|{}",
+        projects.as_ref().map(|v| { let mut v: Vec<String> = v.iter().map(|u| u.to_string()).collect(); v.sort(); v.join(",") }).unwrap_or_else(|| "*".into()),
+        a.q.as_deref().unwrap_or("").trim(),
+        a.pending_only
+    );
+    let cache = SUMMARY_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Ok(c) = cache.lock() {
+        if let Some((at, rows)) = c.get(&key) {
+            if at.elapsed() < TREE_CACHE_TTL {
+                return Ok(Json(rows.as_ref().clone()));
+            }
+        }
+    }
     let rows = documents::review_summary(&state.pool, projects.as_deref(), a.q.as_deref(), a.pending_only).await?;
-    Ok(Json(
-        rows.into_iter()
+    let out: Vec<ReviewSummaryOut> = rows.into_iter()
             .map(|x| ReviewSummaryOut {
                 project_id: x.project_id,
                 project_code: x.project_code,
@@ -518,9 +544,21 @@ async fn review_summary(
                 ocr_denom: x.ocr_denom,
                 approved: x.approved,
                 rejected: x.rejected,
+                ocr_pending_docs: x.ocr_pending_docs,
+                ocr_done_docs: x.ocr_done_docs,
+                pdf2_done_docs: x.pdf2_done_docs,
+                fields_done: x.fields_done,
+                fields_active: x.fields_active,
+                fields_failed: x.fields_failed,
+                signed_docs: x.signed_docs,
+                pdfa_only_docs: x.pdfa_only_docs,
             })
-            .collect(),
-    ))
+            .collect();
+    if let Ok(mut c) = cache.lock() {
+        c.retain(|_, (at, _)| at.elapsed() < TREE_CACHE_TTL * 10);
+        c.insert(key, (std::time::Instant::now(), std::sync::Arc::new(out.clone())));
+    }
+    Ok(Json(out))
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
