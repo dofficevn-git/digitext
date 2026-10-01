@@ -2,7 +2,7 @@
 // Thanh trạng thái: Máy chủ · Phiên · Máy quét (khi có quyền quét) · Chỉnh lý · Ổ lưu trữ (chỉ khi lỗi).
 // Mỗi ô là nút: bấm mở Cài đặt / Quét / Đồng bộ. Hỏi lại mỗi 6 s, tự dừng khi cửa sổ ẩn.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
 import { V3z9 } from "@/domain/permissions";
@@ -60,9 +60,12 @@ export default function StatusBar() {
   const [storage, setStorage] = useState<V47l["storage"]>(null);
   const canScan = !!session && V3z9(session.permissions, "scan.view");
 
+  // Một lượt ping hỏng (máy chủ đang bận, mạng nghẽn thoáng qua) chưa phải mất kết nối: chỉ báo sau 2 lượt liên tiếp.
+  const pingHong = useRef(0);
   const pollMain = useCallback(async () => {
     const [up, st] = await Promise.all([V47g().catch(() => false), V47i().catch(() => null)]);
-    setServerUp(up);
+    pingHong.current = up ? 0 : pingHong.current + 1;
+    setServerUp((cu) => (up ? true : pingHong.current >= 2 || cu === null ? false : cu));
     setStorage(st ? { configured: st.configured, exists: st.exists } : null);
   }, []);
   V41p(pollMain, { topics: ["session", "settings"], enabled: isTauri(), pollMs: 6_000 });

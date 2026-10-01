@@ -1488,7 +1488,7 @@ async fn rebuild_non_pdfa(
         skipped_signed,
     }))
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgressDto {
     pub docs: i64,
@@ -1529,12 +1529,49 @@ fn min_ink_coverage_threshold() -> f32 {
         .filter(|v| (0.0..=1.0).contains(v))
         .unwrap_or(0.90)
 }
+/// Thống kê toàn kho (progress / report) quét 160k+ tài liệu, ~1 s mỗi lần; mọi màn (Tổng quan, OCR, thanh trạng
+/// thái) đều hỏi và trước đây hỏi theo từng sự kiện OCR → Postgres kín CPU. Giữ kết quả 30 s theo phạm vi dự án
+/// (+ khoảng ngày): đủ tươi với người xem, một lần tính dùng chung cho mọi máy trạm.
+static STATS_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, std::sync::Arc<dyn std::any::Any + Send + Sync>)>>,
+> = std::sync::OnceLock::new();
+const STATS_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(30);
+fn stats_cache_get<T: Clone + Send + Sync + 'static>(key: &str) -> Option<T> {
+    let cache = STATS_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    let c = cache.lock().ok()?;
+    let (at, v) = c.get(key)?;
+    if at.elapsed() >= STATS_CACHE_TTL {
+        return None;
+    }
+    v.downcast_ref::<T>().cloned()
+}
+fn stats_cache_put<T: Clone + Send + Sync + 'static>(key: String, v: &T) {
+    let cache = STATS_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Ok(mut c) = cache.lock() {
+        c.retain(|_, (at, _)| at.elapsed() < STATS_CACHE_TTL * 10);
+        c.insert(key, (std::time::Instant::now(), std::sync::Arc::new(v.clone())));
+    }
+}
+fn scope_key(scope: &Option<Vec<Uuid>>) -> String {
+    match scope {
+        None => "*".to_string(),
+        Some(ids) => {
+            let mut v: Vec<String> = ids.iter().map(|u| u.to_string()).collect();
+            v.sort();
+            v.join(",")
+        }
+    }
+}
 async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<ProgressDto>, ApiError> {
     r_go.require_perm(Permission::DocumentList)?;
     let projects: Option<Vec<Uuid>> = match f_29a(&state.pool, &r_go.user).await? {
         Scope::All => None,
         Scope::Projects(ids) => Some(ids),
     };
+    let cache_key = format!("progress|{}", scope_key(&projects));
+    if let Some(hit) = stats_cache_get::<ProgressDto>(&cache_key) {
+        return Ok(Json(hit));
+    }
     let counts = documents::status_counts(&state.pool, projects.as_deref()).await?;
     let pages_ocr_done = digitext_db::ocr_results::f_1y3(&state.pool, projects.as_deref()).await?;
     let r_gq = ocr_jobs::f_1ax(&state.pool, projects.as_deref()).await?;
@@ -1598,6 +1635,7 @@ async fn progress(State(state): State<AppState>, r_go: Ts) -> Result<Json<Progre
             r_gp.docs_pdf2_done += docs;
         }
     }
+    stats_cache_put(cache_key, &r_gp);
     Ok(Json(r_gp))
 }
 #[derive(Debug, Serialize)]
@@ -1756,7 +1794,7 @@ async fn f_21r(State(state): State<AppState>, r_gs: Ts) -> Result<Json<Vec<PdfaR
     }
     Ok(Json(r_gt))
 }
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportCounts {
     pub docs: i64,
@@ -1770,7 +1808,7 @@ pub struct ReportCounts {
     pub rejected: i64,
     pub pending: i64,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Thp {
     pub project_id: Uuid,
@@ -1780,7 +1818,7 @@ pub struct Thp {
     #[serde(flatten)]
     pub counts: ReportCounts,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportDto {
     pub projects_count: i64,
@@ -1901,15 +1939,21 @@ async fn report(
             Some(ids),
         ),
     };
+    let cache_key = format!("report|{}|{:?}|{:?}", scope_key(&scope_ids), from, to);
+    if let Some(hit) = stats_cache_get::<ReportDto>(&cache_key) {
+        return Ok(Json(hit));
+    }
     let r_h5 = documents::f_281(&state.pool, scope_ids.as_deref(), from, to).await?;
     let (r_h7, totals) = f_2a6(projects, r_h5);
-    Ok(Json(ReportDto {
+    let dto = ReportDto {
         projects_count: r_h7.len() as i64,
         from,
         to,
         totals,
         projects: r_h7,
-    }))
+    };
+    stats_cache_put(cache_key, &dto);
+    Ok(Json(dto))
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
