@@ -483,11 +483,19 @@ pub struct ReviewSummaryOut {
     pub signed_docs: i64,
     pub pdfa_only_docs: i64,
 }
-/// Bộ đệm số liệu gộp theo hồ sơ (3 s) — nhiều màn cùng mở (Kho máy chủ, Chạy xử lý, Soát & duyệt,
-/// Đóng gói) cùng hỏi một thứ khi có sự kiện; câu gộp quét 160.000 tài liệu mất ~1 s.
+/// Bộ đệm số liệu gộp theo hồ sơ (20 s; xoá ngay khi có quyết định duyệt) — nhiều màn cùng mở (Kho máy chủ,
+/// Chạy xử lý, Soát & duyệt, Đóng gói) cùng hỏi một thứ khi có sự kiện; câu gộp quét 160.000 tài liệu mất ~1,3 s.
 static SUMMARY_CACHE: std::sync::OnceLock<
     std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, std::sync::Arc<Vec<ReviewSummaryOut>>)>>,
 > = std::sync::OnceLock::new();
+const SUMMARY_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(20);
+fn summary_cache_clear() {
+    if let Some(c) = SUMMARY_CACHE.get() {
+        if let Ok(mut c) = c.lock() {
+            c.clear();
+        }
+    }
+}
 async fn review_scope(state: &AppState, r: &Ts, project_id: Option<Uuid>) -> Result<Option<Vec<Uuid>>, ApiError> {
     Ok(match project_id {
         Some(id) => {
@@ -518,7 +526,7 @@ async fn review_summary(
     let cache = SUMMARY_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
     if let Ok(c) = cache.lock() {
         if let Some((at, rows)) = c.get(&key) {
-            if at.elapsed() < TREE_CACHE_TTL {
+            if at.elapsed() < SUMMARY_CACHE_TTL {
                 return Ok(Json(rows.as_ref().clone()));
             }
         }
@@ -555,7 +563,7 @@ async fn review_summary(
             })
             .collect();
     if let Ok(mut c) = cache.lock() {
-        c.retain(|_, (at, _)| at.elapsed() < TREE_CACHE_TTL * 10);
+        c.retain(|_, (at, _)| at.elapsed() < SUMMARY_CACHE_TTL * 10);
         c.insert(key, (std::time::Instant::now(), std::sync::Arc::new(out.clone())));
     }
     Ok(Json(out))
@@ -2022,6 +2030,7 @@ async fn f_29u(
         },
     )
     .await?;
+    summary_cache_clear();
     Ok(Json(ReviewResult {
         id,
         review_status: r_hb.review_status,
@@ -2109,6 +2118,7 @@ async fn review_bulk(
         },
     )
     .await?;
+    summary_cache_clear();
     Ok(Json(ReviewBulkResult {
         updated: r_hd.len() as i64,
         skipped: (ids.len() - r_hd.len()) as i64,

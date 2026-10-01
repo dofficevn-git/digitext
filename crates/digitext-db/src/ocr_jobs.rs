@@ -474,6 +474,13 @@ pub async fn f_1gk(r_27u: &PgPool, r_27s: Uuid, r_27w: &str, r_27t: i64) -> sqlx
     Ok(r_27v.rows_affected() > 0)
 }
 pub async fn requeue_expired(r_27y: &PgPool, r_27x: i32) -> sqlx::Result<u64> {
+    // Như packages::requeue_expired: UPDATE 0 dòng vẫn làm trigger phát sự kiện "ocr" → chỉ chạy khi thật có.
+    let any: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ocr_jobs WHERE status = 'running' AND lease_until < now())")
+        .fetch_one(r_27y)
+        .await?;
+    if !any {
+        return Ok(0);
+    }
     let r_27z = sqlx::query(
             "UPDATE ocr_jobs SET attempts = attempts + 1, last_error = COALESCE(last_error, 'lease hết hạn — worker không phản hồi'), status = CASE WHEN attempts + 1 > $1 THEN 'failed_transient' ELSE 'queued' END, not_before = CASE WHEN attempts + 1 > $1 THEN NULL ELSE now() + interval '5 seconds' END, locked_by = NULL, lease_until = NULL, updated_at = now() WHERE status = 'running' AND lease_until < now()",
         )

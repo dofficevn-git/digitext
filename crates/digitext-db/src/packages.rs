@@ -167,6 +167,14 @@ pub async fn f_w8(r_29x: &PgPool, submission_id: Uuid) -> sqlx::Result<Vec<Tgc>>
     .await
 }
 pub async fn requeue_expired(r_29z: &PgPool, r_29y: i32) -> sqlx::Result<u64> {
+    // Trigger AFTER STATEMENT trên `packages` phát sự kiện "packages" kể cả khi UPDATE không chạm dòng nào;
+    // worker gọi hàm này mỗi vài giây → mọi máy trạm nạp lại danh sách gói vô ích. Chỉ UPDATE khi thật có gói quá hạn.
+    let any: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM packages WHERE status = 'building' AND lease_until < now())")
+        .fetch_one(r_29z)
+        .await?;
+    if !any {
+        return Ok(0);
+    }
     let r_2a0 = sqlx::query(
             "UPDATE packages SET status = CASE WHEN attempts >= $1 THEN 'failed' ELSE 'queued' END, error = CASE WHEN attempts >= $1 THEN COALESCE(error, 'lease hết hạn — worker không phản hồi') ELSE error END, locked_by = NULL, lease_until = NULL, updated_at = now() WHERE status = 'building' AND lease_until < now()",
         )
