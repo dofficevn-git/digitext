@@ -28,6 +28,9 @@ function V4k4(p: V4ey): V4jt {
     docsOcrDone: p.docsOcrDone,
     docsPdf2Done: p.docsPdf2Done,
     docsPdf2Rejected: p.docsPdf2Rejected ?? 0,
+    docsPdf2RejectedDpi: p.docsPdf2RejectedDpi ?? 0,
+    docsPdf2RejectedNoText: p.docsPdf2RejectedNoText ?? 0,
+    docsPdf2RejectedOther: p.docsPdf2RejectedOther ?? 0,
     docsFieldsDone: p.docsFieldsDone ?? 0,
     docsFieldsActive: p.docsFieldsActive ?? 0,
     docsFieldsFailed: p.docsFieldsFailed ?? 0,
@@ -185,6 +188,14 @@ export default function V4k5() {
       setXuatLoi(false);
     }
   };
+  // "8 không ghép được PDF/A (6 OCR không ra chữ, 2 dưới 200 dpi)" — nói đúng lý do, không gán hết cho dpi.
+  const lyDoTuChoi = (v: V4jt): string => {
+    const parts: string[] = [];
+    if (v.docsPdf2RejectedNoText > 0) parts.push(`${fmtN(v.docsPdf2RejectedNoText)} OCR không ra chữ`);
+    if (v.docsPdf2RejectedDpi > 0) parts.push(`${fmtN(v.docsPdf2RejectedDpi)} dưới 200 dpi`);
+    if (v.docsPdf2RejectedOther > 0) parts.push(`${fmtN(v.docsPdf2RejectedOther)} lý do khác`);
+    return parts.length ? ` (${parts.join(", ")})` : "";
+  };
   const chayPdf2 = async () => {
     V1o1("pdf2");
     try {
@@ -309,7 +320,7 @@ export default function V4k5() {
               busy={V1o0 === "pdf2"}
               disabled={busy || chuaCo}
               onClick={() => void chayPdf2()}
-              sub={view ? `${fmtN(view.docsPdf2Done)}/${fmtN(view.docsOcrDone)} tài liệu (${pctPdf2}%)${view.docsPdf2Rejected > 0 ? ` · ${fmtN(view.docsPdf2Rejected)} cần quét lại` : ""}` : "…"}
+              sub={view ? `${fmtN(view.docsPdf2Done)}/${fmtN(view.docsOcrDone)} tài liệu (${pctPdf2}%)${view.docsPdf2Rejected > 0 ? ` · ${fmtN(view.docsPdf2Rejected)} không ghép được` : ""}` : "…"}
             />
             <ProgressButton
               label="Bóc tách 16 trường"
@@ -323,7 +334,7 @@ export default function V4k5() {
             <div className="flex flex-col gap-2 justify-center">
               {(view?.docsPdf2Rejected ?? 0) > 0 && (
                 <Button size="sm" icon="tepExcel" loading={xuatLoi} disabled={busy} onClick={() => void xuatLoiPdfa()}>
-                  Xuất Excel {fmtN(view?.docsPdf2Rejected ?? 0)} tài liệu cần quét lại
+                  Xuất Excel {fmtN(view?.docsPdf2Rejected ?? 0)} tài liệu không ghép được PDF/A
                 </Button>
               )}
               {(view?.docsFieldsFailed ?? 0) > 0 && (
@@ -347,7 +358,7 @@ export default function V4k5() {
           <p className="mt-3 text-sm text-fg-subtle">
             {V1ok ? "Phạm vi đang lọc: " : ""}
             {fmtN(view.docs)} tài liệu · chờ OCR {fmtN(view.docsOcrPending)} · OCR xong {fmtN(view.docsOcrDone)} · có PDF 2 lớp {fmtN(view.docsPdf2Done)}
-            {view.docsPdf2Rejected > 0 ? ` (${fmtN(view.docsPdf2Rejected)} bản quét dưới 200 dpi)` : ""} · bóc 16 trường {fmtN(view.docsFieldsDone)}
+            {view.docsPdf2Rejected > 0 ? ` · ${fmtN(view.docsPdf2Rejected)} không ghép được PDF/A${lyDoTuChoi(view)}` : ""} · bóc 16 trường {fmtN(view.docsFieldsDone)}
             {view.docsFieldsFailed > 0 ? ` (${fmtN(view.docsFieldsFailed)} lỗi)` : ""}
             {view.pagesOcrFailed > 0 ? ` · OCR lỗi ${fmtN(view.pagesOcrFailed)} trang / ${fmtN(view.docsOcrFailed)} tài liệu` : ""}
             {view.pagesInkMeasured > 0 ? (view.pagesInkLow > 0 ? ` · còn sót chữ ${fmtN(view.pagesInkLow)}/${fmtN(view.pagesInkMeasured)} trang đã đo` : ` · bắt đủ chữ ${fmtN(view.pagesInkMeasured)} trang đã đo`) : ""}
