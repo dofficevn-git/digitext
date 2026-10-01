@@ -294,8 +294,18 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
         res.error = Some(format!("gói dựng xong nhưng tự kiểm không đạt: {}", bad.join("; ")));
         return res;
     }
-    let target = o.out_dir.join(&built.zip_name);
-    let tmp = o.out_dir.join(format!("{}.part", built.zip_name));
+    // Ghi gói vào thư mục con TRÙNG cây của kho (Phông/Hộp/Hồ sơ) như gói mẫu Đầm Hà
+    // (02.AIP\Phông 01…\Hộp số 356\Hoso599\urn_….zip); đổ phẳng vào một thư mục thì không
+    // biết gói nào của hồ sơ nào. `zip_name` ghi đường dẫn tương đối từ thư mục ra.
+    let rel = format!("{}/{}", d.dir.replace('\\', "/"), built.zip_name);
+    let target = rel_to_path(&o.out_dir, &rel);
+    if let Some(parent) = target.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            res.error = Some(format!("không tạo được thư mục {}: {e}", parent.display()));
+            return res;
+        }
+    }
+    let tmp = target.with_file_name(format!("{}.part", built.zip_name));
     if let Err(e) = std::fs::write(&tmp, &built.zip_bytes).and_then(|_| std::fs::rename(&tmp, &target)) {
         let _ = std::fs::remove_file(&tmp);
         res.error = Some(format!("không ghi được {}: {e}", target.display()));
@@ -305,7 +315,7 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
     res.zip_size = Some(built.zip_bytes.len() as u64);
     res.zip_sha256 = Some(built.zip_sha256.clone());
     res.objid = Some(built.objid.clone());
-    res.zip_name = Some(built.zip_name);
+    res.zip_name = Some(rel);
     res
 }
 
@@ -350,7 +360,7 @@ pub fn run(
                 } else if let Some(p) = prev.filter(|p| {
                     !o.force && p.status == "built"
                         && p.zip_name.as_ref().map_or(false, |z| {
-                            std::fs::metadata(o.out_dir.join(z)).map(|m| Some(m.len()) == p.zip_size).unwrap_or(false)
+                            std::fs::metadata(rel_to_path(&o.out_dir, z)).map(|m| Some(m.len()) == p.zip_size).unwrap_or(false)
                         })
                 }) {
                     PackResult { status: "skipped_existing".into(), ..p }
@@ -362,7 +372,7 @@ pub fn run(
                     // Dựng lại (force): xoá gói cũ của hồ sơ này để không lẫn hai bản.
                     if let Some(old) = st.get(&d.dir).and_then(|p| p.zip_name.clone()) {
                         if Some(&old) != res.zip_name.as_ref() {
-                            let _ = std::fs::remove_file(o.out_dir.join(old));
+                            let _ = std::fs::remove_file(rel_to_path(&o.out_dir, &old));
                         }
                     }
                     st.insert(d.dir.clone(), res.clone());

@@ -131,7 +131,8 @@ Kết quả: `test/dienxa/vera-863/`.
 
 ## 5. Gói tin ra sao
 
-- Một gói / hồ sơ, tên `urn_<mã phông>_uuid_<UUID>.zip` (AIP) hoặc `<số thứ tự>_uuid-<UUID>.zip`
+- Một gói / hồ sơ, **ghi vào thư mục con trùng cây của kho** (`<thư mục ra>\UBND\DCXD\HOP 24\HO SO 153\…zip`,
+  như gói mẫu Đầm Hà), tên `urn_<mã phông>_uuid_<UUID>.zip` (AIP) hoặc `<số thứ tự>_uuid-<UUID>.zip`
   (SIP) — bố cục E-ARK CSIP y hệt gói DigiText tự tạo và gói của dự án Đầm Hà (cùng bộ dựng
   `digitext-package`, tự kiểm bằng `validate::f_2p7` trước khi ghi ra đĩa):
   - `METS.xml` gốc: 3–4 agent (phần mềm; cơ quan hình thành phông CREATOR; đơn vị đóng gói CREATOR
