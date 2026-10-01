@@ -126,13 +126,13 @@ impl CheckReport {
 pub struct Plan {
     pub root: PathBuf,
     pub dossiers: Vec<Dossier>,
-    /// Số dòng Excel là mục lục văn bản (MLVB.pdf) đã bỏ qua.
+    /// Số tệp bìa / mục lục (BIA.pdf, MLVB.pdf) nhận mã theo thư mục.
     pub mlvb_skipped: usize,
 }
 
-/// Tệp phụ trợ trong thư mục hồ sơ, KHÔNG phải tài liệu lưu trữ và không mang mã phông / mã hồ sơ
-/// trong tên: `MLVB.pdf` (mục lục văn bản — gói TT05 có EAD thay cho mục lục) và `BIA.pdf` (bìa hồ
-/// sơ). Dòng Excel và tệp trên đĩa mang tên này được bỏ qua, có ghi chú số lượng.
+/// Tệp phụ trợ trong thư mục hồ sơ: `BIA.pdf` (bìa hồ sơ) và `MLVB.pdf` (mục lục văn bản). Vẫn
+/// được đóng gói như tài liệu của hồ sơ, nhưng tên KHÔNG mang mã phông / mã hồ sơ nên: mã phông,
+/// mã hồ sơ nhận theo các tệp cùng thư mục; không kiểm tên; STT đánh tiếp sau số lớn nhất.
 pub fn is_mlvb(name: &str) -> bool {
     let stem = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(name);
     let t = stem.trim();
@@ -257,10 +257,6 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
     let mut mlvb_skipped = 0usize;
     for r in &sheet.rows {
         let rel = r.doc_path.as_deref().map(norm_rel).unwrap_or_default();
-        if !rel.is_empty() && is_mlvb(base_of(&rel)) {
-            mlvb_skipped += 1;
-            continue;
-        }
         let dir = if rel.is_empty() {
             r.hs_dir.as_deref().map(norm_rel).unwrap_or_else(|| format!("?dòng {}", r.line))
         } else {
@@ -271,6 +267,34 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
             r.hs_code = Some(normalize_hs_code(c));
         }
         map.entry(dir).or_default().push(r);
+    }
+    // Tệp bìa / mục lục: ô mã của dòng đó thường ghi "BIA", "MLVB" hoặc trống → nhận mã phông,
+    // mã hồ sơ theo các tệp cùng thư mục (tên tệp của chúng là chuẩn).
+    let la_ma = |c: Option<&str>| c.map(|x| parse_doc_name(x.trim()).year.is_some()).unwrap_or(false);
+    for rows in map.values_mut() {
+        let hs = rows.iter().filter(|r| la_ma(r.hs_code.as_deref())).find_map(|r| r.hs_code.clone());
+        let fond = rows
+            .iter()
+            .filter(|r| la_ma(r.hs_code.as_deref()))
+            .find_map(|r| r.fond_code.as_deref().map(str::trim).filter(|x| !x.is_empty()).map(str::to_string));
+        for r in rows.iter_mut() {
+            let name = r.doc_path.as_deref().map(|p| base_of(&norm_rel(p)).to_string()).unwrap_or_default();
+            if !is_mlvb(&name) {
+                continue;
+            }
+            mlvb_skipped += 1;
+            if !la_ma(r.hs_code.as_deref()) {
+                if let Some(h) = &hs {
+                    r.hs_code = Some(h.clone());
+                }
+            }
+            let fc_ok = r.fond_code.as_deref().map(str::trim).map(|x| !x.is_empty() && !is_mlvb(x)).unwrap_or(false);
+            if !fc_ok {
+                if let Some(f) = &fond {
+                    r.fond_code = Some(f.clone());
+                }
+            }
+        }
     }
     let dossiers = map
         .into_iter()
@@ -293,9 +317,6 @@ fn walk_pdfs(dir: &Path, root: &Path, out: &mut HashMap<String, (String, u64)>) 
         if ft.is_dir() {
             walk_pdfs(&p, root, out);
         } else if p.extension().map_or(false, |x| x.eq_ignore_ascii_case("pdf")) {
-            if p.file_name().map(|n| is_mlvb(&n.to_string_lossy())).unwrap_or(false) {
-                continue;
-            }
             if let Ok(rel) = p.strip_prefix(root) {
                 let rel = rel.components().map(|c| c.as_os_str().to_string_lossy().to_string()).collect::<Vec<_>>().join("\\");
                 let size = e.metadata().map(|m| m.len()).unwrap_or(0);
@@ -639,13 +660,14 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
         }
         match seq_of(&name) {
             Some(s) => *seqs.entry(s).or_default() += 1,
+            None if is_mlvb(&name) => {}
             None => sink.warn("TL-TEN-KHONG-CO-STT", dir, &hs, Some(r.line), Some(&name), format!("tên tệp «{name}» không kết thúc bằng số thứ tự 7 chữ số — sẽ đánh số theo thứ tự dòng")),
         }
         // năm + số hồ sơ trong tên tệp so với mã hồ sơ — tách theo quy tắc
         // <mã cơ quan>.<phông>.<năm>.<số hồ sơ>[.<mục lục>].<STT>, mốc là đoạn năm.
         let stem_parts: Vec<&str> = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(&name).split('.').collect();
         let dn = parse_doc_name(&name);
-        if stem_parts.len() >= 3 && code_parts.len() >= 2 {
+        if !is_mlvb(&name) && stem_parts.len() >= 3 && code_parts.len() >= 2 {
             if let (Some(a), Some(b)) = (dn.hs_no, code_hs_no) {
                 if a != b {
                     sink.error("TL-TEN-LECH-SO-HO-SO", dir, &hs, Some(r.line), Some(&name), format!("tên tệp mang số hồ sơ {a}, mã hồ sơ là {b}"));
@@ -803,7 +825,7 @@ pub fn run(
 ) -> CheckReport {
     let mut sink = Sink::new();
     if plan.mlvb_skipped > 0 {
-        sink.info("MLVB-BO-QUA", "", "", None, Some("MLVB.pdf / BIA.pdf"), format!("bỏ qua {} dòng mục lục văn bản (MLVB.pdf) và bìa hồ sơ (BIA.pdf) — không phải tài liệu lưu trữ, gói TT05 dùng EAD thay mục lục; tệp cùng tên trên đĩa cũng không tính", plan.mlvb_skipped));
+        sink.info("BIA-MLVB", "", "", None, Some("BIA.pdf / MLVB.pdf"), format!("{} tệp bìa hồ sơ (BIA.pdf) / mục lục văn bản (MLVB.pdf) nhận mã phông, mã hồ sơ theo các tệp cùng thư mục; vẫn đóng gói, STT đánh tiếp sau số lớn nhất", plan.mlvb_skipped));
     }
     // ---- liệt kê đĩa: chỉ quét các thư mục cấp đầu mà Excel nhắc tới
     let mut tops: BTreeSet<String> = BTreeSet::new();

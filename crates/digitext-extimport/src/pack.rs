@@ -8,7 +8,7 @@
 //! Tệp trong gói được ĐỔI TÊN thành `<mã hồ sơ>.<STT 7 số>.pdf` (quy tắc mã tài liệu của
 //! TT05); tên tệp gốc ghi vào phần mô tả của tài liệu. Nội dung tệp giữ nguyên từng byte —
 //! chữ ký số trong PDF không bị ảnh hưởng.
-use crate::check::{inspect_pdf, norm_date, parse_doc_name, rel_to_path, seq_of, Dossier, Plan};
+use crate::check::{inspect_pdf, is_mlvb, norm_date, parse_doc_name, rel_to_path, seq_of, Dossier, Plan};
 use digitext_package::tt02::{f_11h, Tos, Tot, Tou};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
@@ -97,27 +97,53 @@ pub fn to_tt02(d: &Dossier) -> (Tos, Vec<String>) {
         .iter()
         .map(|r| r.doc_path.as_deref().unwrap_or("").rsplit(['\\', '/']).next().unwrap_or("").to_string())
         .collect();
-    // STT lấy từ đuôi tên tệp nếu đủ và không trùng; không thì đánh theo thứ tự dòng.
-    let seqs: Vec<Option<u32>> = names.iter().map(|n| seq_of(n)).collect();
-    let uniq: HashSet<u32> = seqs.iter().flatten().copied().collect();
-    let use_seq = seqs.iter().all(Option::is_some) && uniq.len() == seqs.len();
+    // STT lấy từ đuôi tên tệp nếu đủ và không trùng; không thì đánh theo thứ tự dòng. Tệp bìa /
+    // mục lục (BIA.pdf, MLVB.pdf) không có STT trong tên → đánh tiếp sau số lớn nhất của hồ sơ,
+    // mục lục số kế thừa từ các tệp cùng thư mục.
+    let phu_tro: Vec<bool> = names.iter().map(|n| is_mlvb(n)).collect();
+    let mut seqs: Vec<Option<u32>> = names.iter().map(|n| seq_of(n)).collect();
+    let chinh: Vec<u32> = seqs.iter().zip(&phu_tro).filter(|(_, p)| !**p).filter_map(|(s, _)| *s).collect();
+    let n_chinh = phu_tro.iter().filter(|p| !**p).count();
+    let uniq: HashSet<u32> = chinh.iter().copied().collect();
+    let use_seq = chinh.len() == n_chinh && uniq.len() == chinh.len();
+    let mut next = chinh.iter().copied().max().unwrap_or(0);
+    if use_seq {
+        for (i, p) in phu_tro.iter().enumerate() {
+            if *p && seqs[i].is_none() {
+                next += 1;
+                seqs[i] = Some(next);
+            }
+        }
+    }
+    let muc_luc_chung: Option<String> = {
+        let mls: HashSet<String> = names.iter().zip(&phu_tro).filter(|(_, p)| !**p).filter_map(|(n, _)| parse_doc_name(n).muc_luc).collect();
+        if mls.len() == 1 { mls.into_iter().next() } else { None }
+    };
     let lang = |s: &Option<String>| s.clone().map(|x| vec![x]).unwrap_or_default();
     let van_ban = d
         .rows
         .iter()
         .enumerate()
         .map(|(i, r)| {
-            let stt = if use_seq { seqs[i].unwrap() } else { i as u32 + 1 };
+            let stt = if use_seq { seqs[i].unwrap_or(i as u32 + 1) } else { i as u32 + 1 };
             let origin = format!("Tệp gốc: {}", names[i]);
             Tou {
                 stt,
-                muc_luc: if use_seq { parse_doc_name(&names[i]).muc_luc } else { None },
+                muc_luc: if use_seq { parse_doc_name(&names[i]).muc_luc.or_else(|| if phu_tro[i] { muc_luc_chung.clone() } else { None }) } else { None },
                 ten_loai: r.doc_type.clone(),
                 so_van_ban: r.doc_number.clone(),
                 ky_hieu: r.doc_notation.clone(),
                 ngay_thang: date(&r.doc_date),
                 co_quan_ban_hanh: r.doc_organ.clone(),
-                trich_yeu: r.doc_subject.clone(),
+                trich_yeu: r.doc_subject.clone().map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).or_else(|| {
+                    if !phu_tro[i] {
+                        None
+                    } else if names[i].to_ascii_lowercase().starts_with("bia") {
+                        Some("Bìa hồ sơ".to_string())
+                    } else {
+                        Some("Mục lục văn bản".to_string())
+                    }
+                }),
                 ngon_ngu: lang(&r.doc_lang),
                 so_trang: num(&r.doc_pages),
                 ghi_chu: Some(match &r.doc_note {
