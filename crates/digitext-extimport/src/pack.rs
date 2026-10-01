@@ -45,6 +45,9 @@ pub struct PackOptions {
     /// Chỉ đóng các hồ sơ này (theo thư mục HOẶC mã hồ sơ); rỗng = tất cả.
     pub only: Vec<String>,
     pub limit: Option<usize>,
+    /// Phiên bản phần mềm ghi vào METS/PREMIS/tờ hướng dẫn (ứng dụng desktop truyền phiên bản
+    /// của nó; None = phiên bản crate).
+    pub software_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -258,7 +261,10 @@ fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
             }
         }
     }
-    let software = digitext_package::Tlv { name: "DigiText (nhập kho ngoài)".into(), version: env!("CARGO_PKG_VERSION").into() };
+    let software = digitext_package::Tlv {
+        name: "DigiText".into(),
+        version: o.software_version.clone().unwrap_or_else(|| env!("CARGO_PKG_VERSION").into()),
+    };
     // Đồng hồ và múi giờ của máy đang đóng gói: chỉnh ngày máy là chỉnh được ngày tạo gói.
     let now = chrono::Local::now().fixed_offset();
     let mut wire = conv.request.clone();
