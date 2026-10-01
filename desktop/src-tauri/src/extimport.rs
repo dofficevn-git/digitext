@@ -212,6 +212,10 @@ pub struct PackArgs {
     /// Trước khi dựng, xác minh ISO từng tệp bằng veraPDF (cần Docker).
     #[serde(default)]
     pub use_verapdf: bool,
+    /// Đóng gói nhanh: chỉ đối chiếu Excel (mã, đường dẫn, tên tệp, số trang), KHÔNG kiểm dpi /
+    /// PDF/A / lớp chữ / chữ ký (Điều 8.2.a TT05) — theo yêu cầu chủ dự án, gói có thể chưa đạt.
+    #[serde(default)]
+    pub allow_non_tt05: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -265,8 +269,8 @@ pub async fn extimport_pack(app: AppHandle, auth: State<'_, AuthState>, args: Pa
             org_name: args.org_name.clone().filter(|s| !s.trim().is_empty()),
             fond_name: args.fond_name.clone().filter(|s| !s.trim().is_empty()),
             packager: args.packager_name.clone().filter(|s| !s.trim().is_empty()).map(|n| digitext_extimport::OrgIdent { name: n, code: args.packager_code.clone().unwrap_or_default() }),
-            out_dir: out_dir.clone(), force: args.force, allow_partial: args.allow_partial, allow_non_tt05: false,
-            verapdf: args.use_verapdf && pdfa::verapdf_available(),
+            out_dir: out_dir.clone(), force: args.force, allow_partial: args.allow_partial, allow_non_tt05: args.allow_non_tt05,
+            verapdf: args.use_verapdf && !args.allow_non_tt05 && pdfa::verapdf_available(),
             threads: 2, only: Vec::new(), limit: None,
         };
         let app2 = app.clone();
