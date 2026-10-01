@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
-import type { V4ej } from "@/api/docs";
+import type { V4ej, ReviewSummaryRow } from "@/api/docs";
 
 export const V4ve = "(Chưa rõ phông)";
 
@@ -67,6 +67,112 @@ export function V4vo(d: V4ej): string {
 
 export function V4vp(d: V4ej): string {
   return `${V4vn(V4vm(d))}/${V4vo(d)}`;
+}
+
+/** Nhóm hồ sơ (dự án/phông/hộp/hồ sơ) ứng với một thư mục lá — để nạp tệp khi mở. */
+export interface FolderGroup {
+  projectId: string;
+  phong: string;
+  hop: string;
+  hoSo: string;
+}
+export function groupKeyOf(g: FolderGroup): string {
+  return JSON.stringify([g.projectId, g.phong, g.hop, g.hoSo]);
+}
+/** Đường dẫn thư mục của một hồ sơ trong cây Kho máy chủ — cùng quy ước với V4vp/V4vo. */
+function folderSegments(r: ReviewSummaryRow): string[] {
+  const code = r.projectCode.trim();
+  const name = r.projectName.trim();
+  const duAn = (code && name ? `${code} · ${name}` : code || name || V4vg).replace(/[/\\]/g, "-").trim();
+  if (r.phong) return [duAn, r.phong, r.hop, r.hoSo].filter((x) => x.trim() !== "");
+  if (r.hop || r.hoSo) return [duAn, V4ve, r.hop, r.hoSo].filter((x) => x.trim() !== "");
+  return [duAn, V4vf];
+}
+/** Cây Kho máy chủ dựng từ số liệu gộp sẵn của máy chủ (một dòng mỗi hồ sơ, không có tệp).
+ *  Tệp của thư mục lá nạp khi người dùng mở (`docsByPath`). Trả thêm bảng khoá nhóm → đường dẫn. */
+export function treeFromSummary(rows: ReviewSummaryRow[]): { root: V4vl; groupOf: Map<string, FolderGroup>; pathOfKey: Map<string, string> } {
+  const root: V4vl = { name: "", path: "", depth: -1, folders: [], docs: [], docCount: 0, pageCount: 0, sizeBytes: 0, boxCount: null, dossierCount: null, signedCount: 0, pdfaOnlyCount: 0 };
+  const byPath = new Map<string, V4vl>([["", root]]);
+  const groupOf = new Map<string, FolderGroup>();
+  const pathOfKey = new Map<string, string>();
+  const ensure = (segs: string[]): V4vl => {
+    let cur = root;
+    let path = "";
+    for (const seg of segs) {
+      path = path === "" ? seg : `${path}/${seg}`;
+      let f = byPath.get(path);
+      if (!f) {
+        f = { name: seg, path, depth: cur.depth + 1, folders: [], docs: [], docCount: 0, pageCount: 0, sizeBytes: 0, boxCount: null, dossierCount: null, signedCount: 0, pdfaOnlyCount: 0 };
+        byPath.set(path, f);
+        cur.folders.push(f);
+      }
+      cur = f;
+    }
+    return cur;
+  };
+  for (const r of rows) {
+    const leaf = ensure(folderSegments(r));
+    leaf.docCount += r.files;
+    leaf.pageCount += r.pages;
+    leaf.sizeBytes += r.sizeBytes;
+    leaf.signedCount += r.signedDocs;
+    leaf.pdfaOnlyCount += r.pdfaOnlyDocs;
+    const g: FolderGroup = { projectId: r.projectId, phong: r.phong, hop: r.hop, hoSo: r.hoSo };
+    groupOf.set(leaf.path, g);
+    pathOfKey.set(groupKeyOf(g), leaf.path);
+  }
+  const col = new Intl.Collator("vi", { numeric: true });
+  const fin = (f: V4vl) => {
+    f.folders.sort((a, b) => col.compare(a.name, b.name));
+    for (const c of f.folders) fin(c);
+    if (f.folders.length > 0) {
+      f.docCount += f.folders.reduce((n, c) => n + c.docCount, 0);
+      f.pageCount += f.folders.reduce((n, c) => n + c.pageCount, 0);
+      f.sizeBytes += f.folders.reduce((n, c) => n + c.sizeBytes, 0);
+      f.signedCount += f.folders.reduce((n, c) => n + c.signedCount, 0);
+      f.pdfaOnlyCount += f.folders.reduce((n, c) => n + c.pdfaOnlyCount, 0);
+    }
+    f.boxCount = f.depth === V4vi ? f.folders.length : f.depth < V4vi ? f.folders.reduce((n, c) => n + (c.boxCount ?? 0), 0) : null;
+    f.dossierCount = f.depth === V4vj ? f.folders.length : f.depth < V4vj ? f.folders.reduce((n, c) => n + (c.dossierCount ?? 0), 0) : null;
+  };
+  fin(root);
+  return { root, groupOf, pathOfKey };
+}
+/** Các thư mục lá (có nhóm hồ sơ) dưới một thư mục. */
+export function leavesUnder(f: V4vl, groupOf: ReadonlyMap<string, FolderGroup>): V4vl[] {
+  const out: V4vl[] = [];
+  const walk = (n: V4vl) => {
+    if (groupOf.has(n.path)) out.push(n);
+    for (const c of n.folders) walk(c);
+  };
+  walk(f);
+  return out;
+}
+/** Tệp đã nạp dưới một thư mục (chỉ những lá đã nạp). */
+export function filesUnder(f: V4vl, docsByPath: ReadonlyMap<string, V4ej[]>): V4vu[] {
+  const out: V4vu[] = [];
+  const walk = (n: V4vl) => {
+    for (const c of n.folders) walk(c);
+    for (const d of docsByPath.get(n.path) ?? []) out.push({ doc: d, folderPath: n.path });
+  };
+  walk(f);
+  return out;
+}
+/** Thư mục có đường dẫn kết thúc bằng tầng cuối của relPath (dùng cho "đi tới tệp"). */
+export function findFolderByRelPath(root: V4vl, relPath: string): string | null {
+  const segs = V4vz(relPath);
+  const last = segs[segs.length - 1];
+  let hit: string | null = null;
+  const walk = (f: V4vl) => {
+    if (hit !== null) return;
+    if (f.path === last || f.path.endsWith(`/${last}`)) {
+      hit = f.path;
+      return;
+    }
+    for (const c of f.folders) walk(c);
+  };
+  walk(root);
+  return hit;
 }
 
 export function V4vq(docs: V4ej[]): V4vl {

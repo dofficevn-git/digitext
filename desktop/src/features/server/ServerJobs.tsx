@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { V41p } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
-import { V4ex, V4ev, V4ez, V4ek, docsOcrRetryFailed, docsPdfaRejected, type V4ey, type V4ej } from "@/api/docs";
+import { V4ex, V4ev, V4ez, docsForGroups, docsOcrRetryFailed, docsPdfaRejected, docsReviewSummary, type V4ey, type ReviewSummaryRow } from "@/api/docs";
 import { V4e5 } from "@/features/dossier/excel";
 import { listHoSo, V40w, type V40d, type V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
@@ -14,7 +14,7 @@ import { V4cm, V4cl } from "@/features/dossier/logic";
 import type { V3ym, V3yl, V3yo } from "@/domain/types";
 import { V4j9, V4j4, V4j0, V4j1, V4j3, type V4iz } from "@/features/upload/khoFilter";
 import { V4it } from "@/features/upload/syncMatrix";
-import { V4jj, V4jw, V4jo, V4jv, type V4jt } from "./jobScope";
+import { V4jj, locHoSoGop, tienDoGop, type V4jt } from "./jobScope";
 import { V4k2, V4k0, V4jz } from "./progress";
 import "./server.css";
 import { Button, Card, Checkbox, Field, FormGrid, Help, notifyError, Skeleton, toast } from "@/ui";
@@ -67,7 +67,7 @@ export default function V4k5() {
   const [V1od, V1oe] = useState<V3yo[]>([]);
   const [V1of, V1og] = useState<V4bm[]>([]);
 
-  const [tree, V1oh] = useState<V4ej[] | null>(null);
+  const [tree, V1oh] = useState<ReviewSummaryRow[] | null>(null);
   const [V1oi, V1oj] = useState(false);
 
   const V1ok = V4j1(flt);
@@ -85,7 +85,7 @@ export default function V4k5() {
     if (!isTauri()) return;
     V1oj(true);
     try {
-      V1oh(await V4ek());
+      V1oh(await docsReviewSummary({}));
     } catch (e) {
       notifyError(e, "đọc kho máy chủ");
     } finally {
@@ -125,15 +125,20 @@ export default function V4k5() {
   const V1os = useMemo(() => V4jj(V1o5), [V1o5]);
   const V1ot = useMemo(() => V4it(V1o7), [V1o7]);
   const V1ou = useMemo(() => V4j9(V1of, V1o7, V1od), [V1of, V1o7, V1od]);
-  const V1ov = useMemo(() => V4jo(tree ?? [], flt, V1os, V1ot, V1ou), [tree, flt, V1os, V1ot, V1ou]);
+  const V1ov = useMemo(() => locHoSoGop(tree ?? [], flt, V1os, V1ot, V1ou), [tree, flt, V1os, V1ot, V1ou]);
 
   const view = useMemo<V4jt | null>(() => {
-    if (V1ok) return tree === null ? null : V4jv(V1ov.docs);
+    if (V1ok) return tree === null ? null : tienDoGop(V1ov.rows);
     return progress === null ? null : V4k4(progress);
   }, [V1ok, tree, V1ov, progress]);
 
-  const V1ow = () => (V1ok ? V4jw(V1ov.docs) : undefined);
-  const V1ox = () => (V1ok ? ` Phạm vi đang lọc: ${fmtN(V1ov.docs.length)} tài liệu.` : "");
+  // Danh sách id tài liệu trong phạm vi lọc — chỉ nạp khi bấm chạy (theo hồ sơ, ≤ 500 hồ sơ mỗi lượt).
+  const V1ow = async (): Promise<string[] | undefined> => {
+    if (!V1ok) return undefined;
+    const docs = await docsForGroups(V1ov.rows.map((r) => ({ projectId: r.projectId, phong: r.phong, hop: r.hop, hoSo: r.hoSo })));
+    return docs.filter((d) => d.status !== "disposed").map((d) => d.id);
+  };
+  const V1ox = () => (V1ok ? ` Phạm vi đang lọc: ${fmtN(V1ov.rows.reduce((a, r) => a + r.files, 0))} tài liệu.` : "");
 
   const reload = async () => {
     if (V1ok) await V1on();
@@ -199,7 +204,7 @@ export default function V4k5() {
   const chayPdf2 = async () => {
     V1o1("pdf2");
     try {
-      const r = await V4ev(undefined, V1ow());
+      const r = await V4ev(undefined, await V1ow());
       const bo = (r.skippedRejected ?? 0) > 0 ? ` Bỏ qua ${fmtN(r.skippedRejected ?? 0)} tài liệu bản quét dưới 200 dpi, cần quét lại.` : "";
       if (r.documents > 0) toast.success(`Đã đưa ${fmtN(r.documents)} tài liệu vào hàng đợi ghép PDF 2 lớp.${bo}${V1ox()}`);
       else toast.info(`Không có tài liệu nào sẵn sàng ghép PDF 2 lớp, cần OCR xong trước.${bo}${V1ox()}`);
@@ -214,7 +219,7 @@ export default function V4k5() {
   const chayBocTach = async (thuLaiHong = false) => {
     V1o1("fields");
     try {
-      const r = await V4ex(undefined, thuLaiHong, V1ow());
+      const r = await V4ex(undefined, thuLaiHong, await V1ow());
       toast.success(V4k2(r) + V1ox());
       await reload();
     } catch (e) {
@@ -227,7 +232,7 @@ export default function V4k5() {
   const thuLaiOcr = async () => {
     V1o1("ocrretry");
     try {
-      const r = await docsOcrRetryFailed(undefined, V1ow(), keCaHong);
+      const r = await docsOcrRetryFailed(undefined, await V1ow(), keCaHong);
       const boQua = r.skippedSigned > 0 ? ` Bỏ qua ${fmtN(r.skippedSigned)} tài liệu đã sang bước ký.` : "";
       if (r.pages > 0) toast.success(`Đã xếp hàng lại ${fmtN(r.pages)} trang OCR lỗi của ${fmtN(r.documents)} tài liệu.${boQua}${V1ox()}`);
       else toast.info(`Không có trang OCR lỗi nào trong phạm vi.${boQua}`);

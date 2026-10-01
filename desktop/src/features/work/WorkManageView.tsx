@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
-import { V4ek, type V4ej } from "@/api/docs";
+import { docsReviewSummary, type ReviewSummaryRow } from "@/api/docs";
 import { V4ac, V4ak, type V4a8, type V4a9 } from "@/api/users";
 import {
   ITEM_STATUS_LABEL,
@@ -57,23 +57,21 @@ function TienDo({ p }: { p: WorkPackage }) {
 }
 
 /** Phạm vi phông / hộp / hồ sơ suy từ cây tài liệu máy chủ. */
-function useScope(docs: V4ej[], projectId: string) {
+function useScope(docs: ReviewSummaryRow[], projectId: string) {
   return useMemo(() => {
     const phong = new Set<string>();
     const hop = new Map<string, Set<string>>();
     const hoso = new Map<string, Set<string>>();
     for (const d of docs) {
-      if (d.projectId !== projectId) continue;
-      const p = (d.relPath ?? "").split("/").filter((x) => x.trim() !== "");
-      if (p.length < 1) continue;
-      phong.add(p[0]);
-      if (p.length >= 2) {
-        if (!hop.has(p[0])) hop.set(p[0], new Set());
-        hop.get(p[0])!.add(p[1]);
-        if (p.length >= 3) {
-          const k = `${p[0]}/${p[1]}`;
+      if (d.projectId !== projectId || !d.phong) continue;
+      phong.add(d.phong);
+      if (d.hop) {
+        if (!hop.has(d.phong)) hop.set(d.phong, new Set());
+        hop.get(d.phong)!.add(d.hop);
+        if (d.hoSo) {
+          const k = `${d.phong}/${d.hop}`;
           if (!hoso.has(k)) hoso.set(k, new Set());
-          hoso.get(k)!.add(p[2]);
+          hoso.get(k)!.add(d.hoSo);
         }
       }
     }
@@ -87,7 +85,7 @@ function useScope(docs: V4ej[], projectId: string) {
 }
 
 // ---------------- Tạo gói (hộp thoại 3 bước)
-function TaoGoi({ projectId, packages, docs, onCreated, onClose }: { projectId: string; packages: WorkPackage[]; docs: V4ej[]; onCreated: () => void; onClose: () => void }) {
+function TaoGoi({ projectId, packages, docs, onCreated, onClose }: { projectId: string; packages: WorkPackage[]; docs: ReviewSummaryRow[]; onCreated: () => void; onClose: () => void }) {
   const scope = useScope(docs, projectId);
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
@@ -565,7 +563,7 @@ export default function WorkManageView() {
   const project = useProject();
   const [projects, setProjects] = useState<V4a9[]>([]);
   const [projectId, setProjectId] = useState(project.projectId ?? "");
-  const [docs, setDocs] = useState<V4ej[]>([]);
+  const [docs, setDocs] = useState<ReviewSummaryRow[]>([]);
   const [tao, setTao] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -576,7 +574,7 @@ export default function WorkManageView() {
     V4ak()
       .then((p) => setProjects(p.filter((x) => x.isActive)))
       .catch(() => {});
-    V4ek().then(setDocs).catch(() => {});
+    docsReviewSummary({}).then(setDocs).catch(() => {});
   }, []);
   const load = useCallback(() => workListPackages(projectId || undefined), [projectId]);
   const { data: pkgs, error, loading, refreshing, reload } = V41t(load, { topics: ["work"], enabled: isTauri() });
