@@ -191,6 +191,7 @@ pub fn cli_main(prog: &str, argv: &[String]) -> ExitCode {
         kind: a.kind, org_code: a.org, agreement: a.agreement, out_dir: a.out.expect("đã kiểm"), force: a.force,
         org_name: a.org_name, fond_name: a.fond_name,
         packager: a.packager.map(|p| { let (n, c) = p.split_once('|').unwrap_or((p.as_str(), "")); digitext_package::OrgIdent { name: n.trim().into(), code: c.trim().into() } }),
+        software_version: None,
         allow_non_tt05: a.allow_non_tt05, verapdf, allow_partial: a.allow_partial, threads: a.threads.unwrap_or(2), only: a.only, limit: a.limit,
     };
     println!("\nĐóng gói vào {} …", opts.out_dir.display());

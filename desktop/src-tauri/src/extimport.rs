@@ -279,6 +279,7 @@ pub async fn extimport_pack(app: AppHandle, auth: State<'_, AuthState>, args: Pa
             out_dir: out_dir.clone(), force: args.force, allow_partial: args.allow_partial, allow_non_tt05: args.allow_non_tt05,
             verapdf: args.use_verapdf && !args.allow_non_tt05 && pdfa::verapdf_available(),
             threads: 2, only: Vec::new(), limit: None,
+            software_version: Some(app.package_info().version.to_string()),
         };
         let app2 = app.clone();
         let results = pack::run(&plan, &rep.packable(), &opts, &move |done, total, r| {

@@ -3,6 +3,7 @@
 mod glyphless;
 mod icc;
 pub mod pdfa;
+pub mod manual;
 use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Dictionary, Document, Object, Stream, StringFormat};
 #[derive(Debug, Clone)]
@@ -595,6 +596,25 @@ pub fn f_1cr(text: &str) -> Option<std::path::PathBuf> {
     C_1M.iter()
         .map(std::path::PathBuf::from)
         .find(|p| p.is_file() && r_4bd(p))
+}
+/// Font không chân (sans) cho tài liệu kỹ thuật kèm gói (tờ hướng dẫn gói tin); không có thì
+/// quay về `f_1cq`. Ưu tiên `DIGITEXT_CERT_FONT` nếu đặt.
+pub fn sans_font() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("DIGITEXT_CERT_FONT") {
+        let p = std::path::PathBuf::from(p);
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+    const SANS: &[&str] = &[
+        "C:\\Windows\\Fonts\\arial.ttf",
+        "C:\\Windows\\Fonts\\segoeui.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/Library/Fonts/Arial.ttf",
+    ];
+    SANS.iter().map(std::path::PathBuf::from).find(|p| p.is_file()).or_else(f_1cq)
 }
 const C_1M: &[&str] = &[
     "/System/Library/Fonts/Supplemental/Times New Roman.ttf",

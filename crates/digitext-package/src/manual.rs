@@ -6,7 +6,7 @@
 use crate::ead::DocEad;
 use crate::model::{OrgIdent, PackageKind, PackageMeta, Tga, Tlv};
 use chrono::{DateTime, FixedOffset};
-use digitext_pdf::FormBlock;
+use digitext_pdf::manual::ManualBlock;
 
 pub struct ManualCtx<'a> {
     pub req: &'a Tga,
@@ -19,8 +19,8 @@ pub struct ManualCtx<'a> {
     pub include_premis: bool,
 }
 
-fn field(label: &str, value: impl Into<String>) -> FormBlock {
-    FormBlock::Field { label: label.to_string(), value: value.into() }
+fn kv(label: &str, value: impl Into<String>) -> (String, String) {
+    (label.to_string(), value.into())
 }
 fn opt(v: &Option<String>) -> String {
     v.as_deref().map(str::trim).filter(|s| !s.is_empty()).unwrap_or("—").to_string()
@@ -98,7 +98,8 @@ pub fn type_name(code: &str) -> &'static str {
     }
 }
 
-/// Dựng nội dung và kết xuất PDF. Trả `Err` khi font hỏng hoặc không ghi được PDF.
+/// Dựng nội dung và kết xuất PDF theo mẫu gói dự án (tiêu đề xanh, thanh mục, bảng hai cột,
+/// bảng danh sách văn bản). Trả `Err` khi font hỏng hoặc không ghi được PDF.
 pub fn user_manual(cx: &ManualCtx<'_>, font: &[u8]) -> Result<Vec<u8>, String> {
     let req = cx.req;
     let kind = match req.kind {
@@ -107,107 +108,119 @@ pub fn user_manual(cx: &ManualCtx<'_>, font: &[u8]) -> Result<Vec<u8>, String> {
         PackageKind::Dip => "DIP",
     };
     let ngay = cx.created_at.format("%d/%m/%Y %H:%M:%S").to_string();
-    let chuan = match kind {
-        "SIP" => "E-ARK CSIP/SIP — Thông tư 05/2025/TT-BNV",
-        "DIP" => "E-ARK CSIP/DIP — Thông tư 05/2025/TT-BNV",
-        _ => "E-ARK CSIP — Thông tư 05/2025/TT-BNV",
-    };
-    let (ma, tieu_de) = match &req.meta {
-        PackageMeta::Hoso(h) => (h.file_code.clone(), h.title.clone()),
-        PackageMeta::GoiTin(g) => (g.file_code.clone(), g.title.clone()),
-        PackageMeta::Dip(d) => (d.request_id.clone(), format!("Bản sao khai thác theo yêu cầu {}", d.request_id)),
+    let chuan = format!("E-ARK CSIP/{kind} — Thông tư 05/2025/TT-BNV");
+    let (ma_nhan, ma, tieu_de) = match &req.meta {
+        PackageMeta::Hoso(h) => ("Mã hồ sơ", h.file_code.clone(), h.title.clone()),
+        PackageMeta::GoiTin(g) => ("Mã gói tin", g.file_code.clone(), g.title.clone()),
+        PackageMeta::Dip(d) => ("Mã yêu cầu", d.request_id.clone(), format!("Bản sao khai thác theo yêu cầu {}", d.request_id)),
     };
     let phan_mem = format!("{} v{}", cx.software.name, cx.software.version);
-    let mut b: Vec<FormBlock> = Vec::new();
+    let mut b: Vec<ManualBlock> = Vec::new();
+    b.push(ManualBlock::Title(format!("TÀI LIỆU HƯỚNG DẪN GÓI TIN {kind}")));
+    b.push(ManualBlock::Subtitle(format!("{ma_nhan}: {ma}")));
+    b.push(ManualBlock::Subtitle(tieu_de.clone()));
+    b.push(ManualBlock::Gap(4.0));
 
-    b.push(FormBlock::SectionHeading("1. THÔNG TIN TỔ CHỨC VÀ DỰ ÁN".into()));
-    b.push(field("Đơn vị tạo lập", org(req.packager.as_ref().unwrap_or(cx.fond))));
-    b.push(field("Cơ quan hình thành phông", org(cx.fond)));
-    b.push(field("Cơ quan lưu trữ", org(cx.archive)));
-    b.push(field("Phần mềm đóng gói", phan_mem.clone()));
-    b.push(field(&format!("Ngày tạo gói {kind}"), ngay.clone()));
-    b.push(field("Chuẩn áp dụng", chuan));
+    b.push(ManualBlock::SectionBar("1. THÔNG TIN TỔ CHỨC VÀ DỰ ÁN".into()));
+    let mut r1 = vec![kv("Đơn vị tạo lập", org(req.packager.as_ref().unwrap_or(cx.fond)))];
+    if req.packager.is_some() {
+        r1.push(kv("Cơ quan hình thành phông", org(cx.fond)));
+    }
+    r1.push(kv("Cơ quan lưu trữ", org(cx.archive)));
+    r1.push(kv("Phần mềm đóng gói", phan_mem.clone()));
+    r1.push(kv(&format!("Ngày tạo gói {kind}"), ngay.clone()));
+    r1.push(kv("Chuẩn áp dụng", chuan));
+    b.push(ManualBlock::KeyValue(r1));
 
-    b.push(FormBlock::SectionHeading(match &req.meta {
+    b.push(ManualBlock::SectionBar(match &req.meta {
         PackageMeta::Hoso(_) => "2. THÔNG TIN HỒ SƠ".into(),
         PackageMeta::GoiTin(_) => "2. THÔNG TIN GÓI TIN TÀI LIỆU".into(),
         PackageMeta::Dip(_) => "2. THÔNG TIN YÊU CẦU KHAI THÁC".into(),
     }));
+    let mut r2: Vec<(String, String)> = Vec::new();
     if let Some(a) = req.submission_agreement.as_deref().filter(|s| !s.trim().is_empty()) {
-        b.push(field("Mã yêu cầu nộp", a));
+        r2.push(kv("Mã yêu cầu nộp", a));
     }
     if let Some(n) = req.zip_ordinal {
-        b.push(field("Số thứ tự trong lần nộp", n.to_string()));
+        r2.push(kv("Số thứ tự trong lần nộp", n.to_string()));
     }
-    b.push(field(&format!("Tên ZIP {kind}"), cx.zip_name));
-    b.push(field("Package ID (OBJID)", cx.objid));
+    r2.push(kv(&format!("Tên ZIP {kind}"), cx.zip_name));
+    r2.push(kv("Package ID (OBJID)", cx.objid));
     match &req.meta {
         PackageMeta::Hoso(h) => {
-            b.push(field("Mã hồ sơ", &h.file_code));
-            b.push(field("Tên cơ quan / Mã phông", format!("{} (Phông: {})", cx.fond.name, req.fond_code)));
-            b.push(field("Tiêu đề hồ sơ", &h.title));
-            b.push(field("Thời gian", format!("{} — {}", opt(&h.start_date), opt(&h.end_date))));
-            b.push(field("Ngôn ngữ", if h.language.is_empty() { "—".to_string() } else { h.language.iter().map(|c| language_name(c)).collect::<Vec<_>>().join(", ") }));
-            b.push(field("Thời hạn bảo quản", maintenance_name(&h.maintenance)));
-            b.push(field("Chế độ sử dụng", match h.mode.as_str() { "01" => "Công khai", "02" => "Hạn chế", "03" => "Mật", _ => "—" }));
-            b.push(field("Số tài liệu", format!("{} tài liệu", req.documents.len())));
+            r2.push(kv("Mã hồ sơ", &h.file_code));
+            r2.push(kv("Tên cơ quan / Mã phông", format!("{} (Phông: {})", cx.fond.name, req.fond_code)));
+            r2.push(kv("Tiêu đề hồ sơ", &h.title));
+            r2.push(kv("Thời gian", format!("{} — {}", opt(&h.start_date), opt(&h.end_date))));
+            r2.push(kv("Ngôn ngữ", if h.language.is_empty() { "—".to_string() } else { h.language.iter().map(|c| language_name(c)).collect::<Vec<_>>().join(", ") }));
+            r2.push(kv("Thời hạn bảo quản", maintenance_name(&h.maintenance)));
+            r2.push(kv("Chế độ sử dụng", match h.mode.as_str() { "01" => "Công khai", "02" => "Hạn chế", "03" => "Mật", _ => "—" }));
+            r2.push(kv("Số tài liệu", format!("{} tài liệu", req.documents.len())));
             if let Some(p) = h.paper_file_code.as_deref().filter(|s| !s.trim().is_empty()) {
-                b.push(field("Mã hồ sơ giấy", p));
+                r2.push(kv("Mã hồ sơ giấy", p));
             }
         }
         PackageMeta::GoiTin(g) => {
-            b.push(field("Mã gói tin", &g.file_code));
-            b.push(field("Tên cơ quan / Mã phông", format!("{} (Phông: {})", cx.fond.name, req.fond_code)));
-            b.push(field("Tiêu đề", &g.title));
-            b.push(field("Nguồn", &g.source));
-            b.push(field("Số tài liệu", format!("{} tài liệu", req.documents.len())));
+            r2.push(kv("Mã gói tin", &g.file_code));
+            r2.push(kv("Tên cơ quan / Mã phông", format!("{} (Phông: {})", cx.fond.name, req.fond_code)));
+            r2.push(kv("Tiêu đề", &g.title));
+            r2.push(kv("Nguồn", &g.source));
+            r2.push(kv("Số tài liệu", format!("{} tài liệu", req.documents.len())));
         }
         PackageMeta::Dip(d) => {
-            b.push(field("Mã yêu cầu", &d.request_id));
-            b.push(field("Ngày yêu cầu", &d.request_date));
-            b.push(field("Mục đích", opt(&d.purpose_content)));
-            b.push(field("Số tài liệu", format!("{} tài liệu", req.documents.len())));
+            r2.push(kv("Mã yêu cầu", &d.request_id));
+            r2.push(kv("Ngày yêu cầu", &d.request_date));
+            r2.push(kv("Mục đích", opt(&d.purpose_content)));
+            r2.push(kv("Số tài liệu", format!("{} tài liệu", req.documents.len())));
         }
     }
+    b.push(ManualBlock::KeyValue(r2));
 
-    b.push(FormBlock::SectionHeading(format!("3. CẤU TRÚC GÓI {kind}")));
-    let mut cau_truc = vec![
-        format!("METS.xml — File METS gốc mô tả toàn bộ gói {kind}"),
-        format!("metadata/descriptive/{} — Metadata mô tả (EAD)", req.kind.package_ead_name()),
+    b.push(ManualBlock::SectionBar(format!("3. CẤU TRÚC GÓI {kind}")));
+    let ead = req.kind.package_ead_name();
+    let mut ct: Vec<(usize, String, String)> = vec![
+        (0, "METS.xml".into(), format!("File METS gốc mô tả toàn bộ gói {kind}")),
+        (0, "metadata/".into(), "Chứa các file metadata".into()),
+        (1, "descriptive/".into(), format!("Metadata mô tả hồ sơ (EAD: {ead})")),
     ];
     if cx.include_premis {
-        cau_truc.push("metadata/preservation/PREMIS.xml — Metadata bảo quản (PREMIS): đối tượng, sự kiện, agent".into());
+        ct.push((1, "preservation/".into(), "Metadata bảo quản (PREMIS.xml): đối tượng, sự kiện, agent".into()));
     }
-    cau_truc.push("representations/rep1/METS.xml — METS mô tả đại diện rep1".into());
-    cau_truc.push("representations/rep1/data/ — Các tệp PDF tài liệu".into());
-    cau_truc.push("representations/rep1/metadata/descriptive/ — EAD_doc_* của từng tài liệu".into());
+    ct.push((0, "representations/".into(), "Các đại diện số của hồ sơ".into()));
+    ct.push((1, "rep1/".into(), "Đại diện số cấp 1".into()));
+    ct.push((2, "METS.xml".into(), "METS mô tả đại diện rep1".into()));
+    ct.push((2, "data/".into(), "Chứa các file PDF tài liệu".into()));
+    ct.push((2, "metadata/descriptive/".into(), "Chứa EAD_doc_* của từng tài liệu".into()));
     if cx.include_premis {
-        cau_truc.push("representations/rep1/metadata/preservation/PREMIS_rep1.xml — PREMIS của đại diện rep1".into());
+        ct.push((2, "metadata/preservation/".into(), "PREMIS_rep1.xml của đại diện rep1".into()));
     }
-    cau_truc.push("schemas/ — Các file XSD (METS, xlink, DILCIS CSIP, EAD, EAD_doc, PREMIS)".into());
-    cau_truc.push(format!("documentation/ — Tài liệu hướng dẫn gói {kind} (UserManual.pdf){}", if req.kind == PackageKind::Dip { " và văn bản xác thực (VanBanXacThuc.pdf)" } else { "" }));
-    b.push(FormBlock::Bullets(cau_truc));
+    ct.push((0, "schemas/".into(), "Các file XSD schema (METS, EAD, EAD_doc, xlink, DILCIS, PREMIS)".into()));
+    ct.push((0, "documentation/".into(), format!("Tài liệu hướng dẫn gói {kind} (UserManual.pdf){}", if req.kind == PackageKind::Dip { ", văn bản xác thực (VanBanXacThuc.pdf)" } else { "" })));
+    b.push(ManualBlock::PathTable(ct));
 
-    b.push(FormBlock::SectionHeading("4. DANH SÁCH TÀI LIỆU TRONG HỒ SƠ".into()));
-    for (i, d) in req.documents.iter().enumerate() {
-        let dong = match &d.metadata {
-            DocEad::Doc(x) => format!(
-                "{}. {} — Ngày VB: {} — {} trang — {} — {}",
-                i + 1,
+    b.push(ManualBlock::SectionBar("4. DANH SÁCH TÀI LIỆU TRONG HỒ SƠ".into()));
+    let rows: Vec<Vec<String>> = req
+        .documents
+        .iter()
+        .enumerate()
+        .map(|(i, d)| match &d.metadata {
+            DocEad::Doc(x) => vec![
+                (i + 1).to_string(),
                 opt(&x.subject),
                 opt(&x.issued_date),
                 x.number_of_page.map(|n| n.to_string()).unwrap_or_else(|| "—".into()),
                 opt(&x.organ_name),
-                type_name(&x.type_name)
-            ),
-            DocEad::Pic(x) => format!("{}. {} — Ảnh — {}", i + 1, opt(&x.image_title), opt(&x.photographer)),
-            DocEad::Media(x) => format!("{}. {} — Phim/âm thanh — {}", i + 1, opt(&x.movie_title), opt(&x.recorder)),
-        };
-        b.push(FormBlock::Paragraph(format!("{dong} ({})", d.file_name)));
-    }
-    b.push(FormBlock::Paragraph(format!("Sinh tự động bởi {phan_mem}  |  {ngay}  |  E-ARK CSIP — TT05/2025/TT-BNV")));
-
-    let title = format!("TÀI LIỆU HƯỚNG DẪN GÓI TIN {kind}");
-    let sub = format!("Mã: {ma} — {tieu_de}");
-    digitext_pdf::render_form_plain(&title, Some(&sub), &b, font).map_err(|e| e.to_string())
+                type_name(&x.type_name).to_string(),
+            ],
+            DocEad::Pic(x) => vec![(i + 1).to_string(), opt(&x.image_title), "—".into(), "—".into(), opt(&x.photographer), "Ảnh".into()],
+            DocEad::Media(x) => vec![(i + 1).to_string(), opt(&x.movie_title), "—".into(), "—".into(), opt(&x.recorder), "Phim / âm thanh".into()],
+        })
+        .collect();
+    b.push(ManualBlock::Table {
+        headers: ["#", "Trích yếu nội dung", "Ngày VB", "Số trang", "Cơ quan ban hành", "Loại văn bản"].iter().map(|s| s.to_string()).collect(),
+        widths: vec![5.0, 36.0, 12.0, 9.0, 22.0, 16.0],
+        rows,
+    });
+    b.push(ManualBlock::Footer(format!("Sinh tự động bởi {phan_mem}  |  {ngay}  |  E-ARK CSIP — TT05/2025/TT-BNV")));
+    digitext_pdf::manual::render_manual(&b, font).map_err(|e| e.to_string())
 }

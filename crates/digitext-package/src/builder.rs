@@ -526,10 +526,10 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
     let manual_bytes: Option<Vec<u8>> = match &r_3wb.user_manual_pdf {
         Some(m) => Some(m.clone()),
         None => {
-            let font = r_3wb
-                .cert_font_ttf
-                .clone()
-                .or_else(|| digitext_pdf::f_1cq().and_then(|p| std::fs::read(p).ok()));
+            // Tờ hướng dẫn dùng font không chân (Arial…) cho giống mẫu; font chứng thực DIP vẫn riêng.
+            let font = digitext_pdf::sans_font()
+                .and_then(|p| std::fs::read(p).ok())
+                .or_else(|| r_3wb.cert_font_ttf.clone());
             match font {
                 Some(f) => crate::manual::user_manual(
                     &crate::manual::ManualCtx {
