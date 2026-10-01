@@ -6,6 +6,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 fn esc(s: &str) -> String {
+    // Chuỗi toàn chữ số dài (mã hồ sơ kiểu 20300000000001…) hoặc có số 0 đứng đầu: Excel mở CSV
+    // sẽ đổi thành số và hiện 2.03E+13 / mất số 0. Ghi dạng công thức ="…" để Excel giữ là chữ.
+    let digits = !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    if digits && (s.len() >= 12 || (s.len() > 1 && s.starts_with('0'))) {
+        return format!("=\"{s}\"");
+    }
     if s.contains([',', '"', '\n', '\r', ';']) {
         format!("\"{}\"", s.replace('"', "\"\""))
     } else {
