@@ -182,10 +182,11 @@ export default function ExternalImportPanel({ nhanh = false }: { nhanh?: boolean
             <Table
               columns={[
                 { key: "severity", header: "Mức", width: 100, cell: (c) => <Badge tone={c.severity === "error" ? "err" : c.severity === "warning" ? "warn" : "info"}>{c.severity === "error" ? "Lỗi" : c.severity === "warning" ? "Cảnh báo" : "Thông tin"}</Badge> },
-                { key: "code", header: "Vấn đề", width: 220 },
+                { key: "code", header: "Vấn đề", width: 240, className: "whitespace-normal", cell: (c) => <div><div>{c.label}</div><div className="text-xs text-fg-subtle">{c.code}</div></div> },
                 { key: "count", header: "Số lần", align: "right", width: 80, cell: (c) => fmt(c.count) },
                 { key: "dossiers", header: "Hồ sơ", align: "right", width: 80, cell: (c) => fmt(c.dossiers) },
                 { key: "example", header: "Ví dụ", className: "whitespace-normal text-sm" },
+                { key: "fix", header: "Cách xử lý", className: "whitespace-normal text-sm" },
               ]}
               rows={check.byCode}
               getRowId={(c) => `${c.severity}-${c.code}`}

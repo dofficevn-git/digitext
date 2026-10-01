@@ -70,12 +70,15 @@ pub fn write_check(r: &CheckReport, out_dir: &Path) -> Result<Vec<PathBuf>, Stri
     let p1 = out_dir.join("kiem-tra-van-de.csv");
     write_csv(
         &p1,
-        &["Mức độ", "Mã vấn đề", "Thư mục hồ sơ", "Mã hồ sơ", "Dòng Excel", "Tệp", "Số lần", "Nội dung"],
-        r.issues.iter().map(|i| vec![
-            i.severity.label().to_string(), i.code.to_string(), i.dossier.clone(), i.hs_code.clone(),
-            i.line.map(|l| l.to_string()).unwrap_or_default(), i.file.clone().unwrap_or_default(),
-            i.count.to_string(), i.message.clone(),
-        ]).collect(),
+        &["Mức độ", "Vấn đề", "Thư mục hồ sơ", "Mã hồ sơ", "Dòng Excel", "Tệp", "Số lần", "Nội dung", "Cách xử lý", "Mã vấn đề"],
+        r.issues.iter().map(|i| {
+            let (ten, cach) = crate::check::huong_dan(i.code);
+            vec![
+                i.severity.label().to_string(), if ten.is_empty() { i.code.to_string() } else { ten.to_string() }, i.dossier.clone(), i.hs_code.clone(),
+                i.line.map(|l| l.to_string()).unwrap_or_default(), i.file.clone().unwrap_or_default(),
+                i.count.to_string(), i.message.clone(), cach.to_string(), i.code.to_string(),
+            ]
+        }).collect(),
     )?;
     let p2 = out_dir.join("kiem-tra-ho-so.csv");
     let o = |v: Option<u32>| v.map(|x| x.to_string()).unwrap_or_default();
