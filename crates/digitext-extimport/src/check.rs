@@ -130,11 +130,32 @@ pub struct Plan {
     pub mlvb_skipped: usize,
 }
 
-/// Tệp mục lục văn bản (`MLVB.pdf`, `MLVB`) nằm trong thư mục hồ sơ — KHÔNG phải tài liệu lưu trữ
-/// (gói TT05 có EAD thay cho mục lục). Dòng Excel và tệp trên đĩa mang tên này được bỏ qua.
+/// Tệp phụ trợ trong thư mục hồ sơ, KHÔNG phải tài liệu lưu trữ và không mang mã phông / mã hồ sơ
+/// trong tên: `MLVB.pdf` (mục lục văn bản — gói TT05 có EAD thay cho mục lục) và `BIA.pdf` (bìa hồ
+/// sơ). Dòng Excel và tệp trên đĩa mang tên này được bỏ qua, có ghi chú số lượng.
 pub fn is_mlvb(name: &str) -> bool {
     let stem = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(name);
-    stem.trim().eq_ignore_ascii_case("mlvb")
+    let t = stem.trim();
+    t.eq_ignore_ascii_case("mlvb") || t.eq_ignore_ascii_case("bia")
+}
+/// Ô «Mã hồ sơ» đôi khi ghi MÃ VĂN BẢN (có đuôi STT 7 số, có khi cả mục lục số):
+/// `H49.57.11.2011.01.01.0000001` → mã hồ sơ `H49.57.11.2011.01`. Cắt STT và mục lục số theo
+/// quy tắc tên tệp (mốc là đoạn năm) để các dòng cùng hồ sơ không bị coi là nhiều mã.
+pub fn normalize_hs_code(cell: &str) -> String {
+    let t = cell.trim();
+    let d = parse_doc_name(t);
+    if d.stt.is_none() {
+        return t.to_string();
+    }
+    let mut parts: Vec<&str> = t.split('.').collect();
+    parts.pop();
+    if let Some(ml) = d.muc_luc.as_deref() {
+        let n = ml.split('.').count();
+        if parts.len() > n {
+            parts.truncate(parts.len() - n);
+        }
+    }
+    parts.join(".")
 }
 pub fn rel_to_path(root: &Path, rel: &str) -> PathBuf {
     let mut p = root.to_path_buf();
@@ -245,7 +266,11 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
         } else {
             dir_of(&rel)
         };
-        map.entry(dir).or_default().push(r.clone());
+        let mut r = r.clone();
+        if let Some(c) = r.hs_code.as_deref() {
+            r.hs_code = Some(normalize_hs_code(c));
+        }
+        map.entry(dir).or_default().push(r);
     }
     let dossiers = map
         .into_iter()
@@ -778,7 +803,7 @@ pub fn run(
 ) -> CheckReport {
     let mut sink = Sink::new();
     if plan.mlvb_skipped > 0 {
-        sink.info("MLVB-BO-QUA", "", "", None, Some("MLVB.pdf"), format!("bỏ qua {} dòng mục lục văn bản (MLVB.pdf) — không phải tài liệu lưu trữ, gói TT05 dùng EAD thay mục lục; tệp MLVB.pdf trên đĩa cũng không tính", plan.mlvb_skipped));
+        sink.info("MLVB-BO-QUA", "", "", None, Some("MLVB.pdf / BIA.pdf"), format!("bỏ qua {} dòng mục lục văn bản (MLVB.pdf) và bìa hồ sơ (BIA.pdf) — không phải tài liệu lưu trữ, gói TT05 dùng EAD thay mục lục; tệp cùng tên trên đĩa cũng không tính", plan.mlvb_skipped));
     }
     // ---- liệt kê đĩa: chỉ quét các thư mục cấp đầu mà Excel nhắc tới
     let mut tops: BTreeSet<String> = BTreeSet::new();
@@ -949,6 +974,11 @@ mod tests {
         assert_eq!(hs_no_of_code("H49.101.01.1993.153.01"), Some(153));
         assert_eq!(hs_no_of_code("ABC.153"), Some(153));
         assert_eq!(seq_of("MLVB.pdf"), None);
+        // Ô mã hồ sơ ghi mã văn bản → cắt STT và mục lục số
+        assert_eq!(normalize_hs_code("H49.57.11.2011.01.01.0000001"), "H49.57.11.2011.01");
+        assert_eq!(normalize_hs_code("H49.139.01.2011.599.0000001"), "H49.139.01.2011.599");
+        assert_eq!(normalize_hs_code("H49.101.01.1993.153"), "H49.101.01.1993.153");
+        assert!(is_mlvb("BIA.pdf") && is_mlvb("bia") && is_mlvb("MLVB.PDF") && !is_mlvb("H49.101.01.1993.153.01.0000001.pdf"));
     }
     #[test]
     fn ma_luu_tru_khong_duoi_van_khop_ten_tep() {
