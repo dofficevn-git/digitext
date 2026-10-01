@@ -90,6 +90,42 @@ pub async fn docs_tree(
     )
     .await
 }
+/// Soát & duyệt: số liệu gộp theo hồ sơ (JSON nguyên) — thay cho tải cả cây 160.000 tài liệu.
+#[tauri::command]
+pub async fn docs_review_summary(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+    args: serde_json::Value,
+) -> Result<serde_json::Value, AppError> {
+    f_2r8(
+        &db,
+        &auth,
+        Permission::DocumentList,
+        move |base, token| {
+            let args = args.clone();
+            async move { client::post_long::<serde_json::Value>(&base, &token, "/documents/review-summary", &args).await }
+        },
+    )
+    .await
+}
+/// Soát & duyệt: tài liệu của các hồ sơ đã chọn (JSON nguyên).
+#[tauri::command]
+pub async fn docs_review_group_docs(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+    args: serde_json::Value,
+) -> Result<serde_json::Value, AppError> {
+    f_2r8(
+        &db,
+        &auth,
+        Permission::DocumentList,
+        move |base, token| {
+            let args = args.clone();
+            async move { client::post_long::<serde_json::Value>(&base, &token, "/documents/review-group-docs", &args).await }
+        },
+    )
+    .await
+}
 /// Tài liệu bị từ chối ghép PDF/A trên máy chủ (đường dẫn, lý do) — chuyển nguyên JSON cho giao diện xuất Excel.
 #[tauri::command]
 pub async fn docs_pdfa_rejected(

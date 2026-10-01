@@ -221,7 +221,8 @@ export default function OcrPane() {
     },
   ];
 
-  const chonDuAnUI = !duAnTaiKhoan && projects.length > 0 && (
+  // Topbar đã chọn dự án thì không lặp lại ô chọn ở đây; chỉ hiện khi Topbar đang để "mọi dự án".
+  const chonDuAnUI = !duAnTaiKhoan && !duAnTopbar.projectId && projects.length > 0 && (
     <Select size="sm" className="w-56" value={chonDuAn} onChange={setChonDuAn} placeholder="Tất cả dự án" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} aria-label="Dự án" />
   );
 

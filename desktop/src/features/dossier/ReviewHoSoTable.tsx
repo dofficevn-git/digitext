@@ -5,13 +5,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
-import { V4f8, V4ek, V4f7, type V4eh, type V4ej } from "@/api/docs";
+import { V4f8, V4f7, docsReviewSummary, docsReviewGroupDocs, type V4eh, type ReviewSummaryRow } from "@/api/docs";
 import { V4hl } from "./ocrReport";
-import { bocTachState, V4kq, V4kr, V4kv, V4kw, V4kf, V4ke, V4kx, V4ku, pdfaPercent, pdfaState, V4kt, V4ks, phongOf, type V4kg, type V4k8, type V4kb, type V4kc, type V4k7 } from "./reviewScope";
+import { bocTachState, V4kr, V4kv, V4kf, V4ke, V4kx, pdfaPercent, pdfaState, V4ks, docToFile, groupsFromSummary, reviewKeyOf, type V4kg, type V4k8, type V4kb, type V4k7 } from "./reviewScope";
 import "./ocrHoSo.css";
 import { Icon } from "@/components/Icon";
 import type { V41v } from "@/components/Icon";
-import { Badge, Button, Card, Checkbox, Dialog, EmptyState, ErrorBanner, Field, IconButton, Input, Select, Skeleton, Table, Textarea, Tip, Toolbar, notifyError, toast } from "@/ui";
+import { Badge, Button, Card, Checkbox, Dialog, EmptyState, ErrorBanner, Field, IconButton, Input, Pagination, Select, Skeleton, Table, Textarea, Tip, Toolbar, notifyError, pageSlice, toast, usePagination } from "@/ui";
 
 const fmtN = (n: number) => n.toLocaleString("vi-VN");
 const mb = (b: number) => (b / 1_048_576).toFixed(1);
@@ -179,54 +179,105 @@ function DongTep({ row, selected, busy, canReview, onToggle, onOpen }: { row: V4
 }
 
 export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpenDoc, onDone }: { canReview: boolean; actions?: ReactNode; onlyProject?: string; onOpenDoc: (f: V4k8) => void; onDone?: () => void }) {
-  const loader = useCallback(() => (isTauri() ? V4ek() : Promise.resolve([] as V4ej[])), []);
-  const { data, error, loading, reload } = V41t(loader, { topics: ["docs", "ocr"], errorText: () => "Không tải được danh sách tài liệu trên máy chủ." });
-  const docs = useMemo(() => data ?? [], [data]);
+  // Số liệu gộp theo hồ sơ lấy từ máy chủ (vài nghìn dòng); tệp của từng hồ sơ nạp khi mở hoặc tích chọn.
+  const [q, setQ] = useState("");
+  const [qTim, setQTim] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setQTim(q.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
+  const [chiChoXacNhan, setChiChoXacNhan] = useState(false);
+  const loader = useCallback(
+    () => (isTauri() ? docsReviewSummary({ projectId: onlyProject || undefined, q: qTim || undefined, pendingOnly: chiChoXacNhan }) : Promise.resolve([] as ReviewSummaryRow[])),
+    [onlyProject, qTim, chiChoXacNhan],
+  );
+  const { data, error, loading, reload } = V41t(loader, { topics: ["docs", "ocr"], errorText: () => "Không tải được danh sách hồ sơ trên máy chủ." });
+  const summary = useMemo(() => data ?? [], [data]);
 
+  const [files, setFiles] = useState<ReadonlyMap<string, V4k8[]>>(() => new Map());
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set<string>());
   const [moRong, setMoRong] = useState<ReadonlySet<string>>(new Set<string>());
-  const [chiChoXacNhan, setChiChoXacNhan] = useState(false);
-  const [q, setQ] = useState("");
+  const [dangNap, setDangNap] = useState<ReadonlySet<string>>(new Set<string>());
   const [quyetDinh, setQuyetDinh] = useState<V4eh | null>(null);
   const [tienDo, setTienDo] = useState<{ done: number; total: number } | null>(null);
 
   const [phongLoc, setPhongLoc] = useState("");
-  const docsDuAn = useMemo(() => (onlyProject ? docs.filter((d) => (d.projectId ?? "") === onlyProject) : docs), [docs, onlyProject]);
   const dsPhong = useMemo(() => {
     const s = new Set<string>();
-    for (const d of docsDuAn) {
-      const p = phongOf(d);
-      if (p) s.add(p);
-    }
+    for (const r of summary) if (r.phong) s.add(r.phong);
     return [...s].sort(new Intl.Collator("vi", { numeric: true }).compare);
-  }, [docsDuAn]);
+  }, [summary]);
   useEffect(() => {
     if (phongLoc && !dsPhong.includes(phongLoc)) setPhongLoc("");
   }, [dsPhong, phongLoc]);
-  const nhom = useMemo(() => {
-    const src = phongLoc ? docsDuAn.filter((d) => phongOf(d) === phongLoc) : docsDuAn;
-    return V4kq(V4kw(src, { chiChoXacNhan, q }));
-  }, [docsDuAn, phongLoc, chiChoXacNhan, q]);
-
-  useEffect(() => {
-    setSelected((cu) => {
-      const moi = V4kt(cu, nhom);
-      return moi.size === cu.size ? cu : moi;
-    });
-  }, [nhom]);
+  const nhom = useMemo(() => groupsFromSummary(phongLoc ? summary.filter((r) => r.phong === phongLoc) : summary, files), [summary, phongLoc, files]);
+  const flat = useMemo(() => nhom.flatMap((g) => g.rows.map((r) => ({ g, r }))), [nhom]);
+  const trang = usePagination(100);
+  const { setPage } = trang;
+  useEffect(() => setPage(1), [qTim, chiChoXacNhan, phongLoc, onlyProject, setPage]);
+  const pageRows = useMemo(() => pageSlice(flat, trang), [flat, trang]);
 
   const busy = tienDo !== null;
-  const daChon = useMemo(() => V4ku(nhom, selected), [nhom, selected]);
-  const tatCaId = useMemo(() => nhom.flatMap((g) => g.ids), [nhom]);
+  const daChon = useMemo(() => [...selected], [selected]);
+  const tongTep = useMemo(() => nhom.reduce((n, g) => n + g.tally.files, 0), [nhom]);
+  const idsTrang = useMemo(() => pageRows.flatMap((x) => x.r.ids), [pageRows]);
 
-  const toggleMoRong = useCallback((key: string) => {
-    setMoRong((cu) => {
-      const s = new Set(cu);
-      if (!s.delete(key)) s.add(key);
-      return s;
-    });
-  }, []);
+  // Nạp tệp cho các hồ sơ chưa có trong bộ đệm; trả về bộ đệm sau khi gộp.
+  const napTep = useCallback(
+    async (rows: V4kb[]): Promise<ReadonlyMap<string, V4k8[]>> => {
+      const can = rows.filter((r) => !files.has(r.key));
+      if (can.length === 0) return files;
+      setDangNap((cu) => new Set([...cu, ...can.map((r) => r.key)]));
+      try {
+        const theoDuAn = new Map<string, V4kb[]>();
+        for (const r of can) theoDuAn.set(r.projectId, [...(theoDuAn.get(r.projectId) ?? []), r]);
+        const moi = new Map(files);
+        for (const r of can) moi.set(r.key, []);
+        for (const [projectId, rs] of theoDuAn) {
+          const docs = await docsReviewGroupDocs({ projectId, groups: rs.map((r) => ({ phong: r.phong, hop: r.hopSo, hoSo: r.hoSoSo })) });
+          for (const d of docs) {
+            if (d.status === "disposed") continue;
+            const k = reviewKeyOf(d);
+            moi.set(k, [...(moi.get(k) ?? []), docToFile(d)]);
+          }
+        }
+        setFiles(moi);
+        return moi;
+      } finally {
+        setDangNap((cu) => {
+          const s = new Set(cu);
+          for (const r of can) s.delete(r.key);
+          return s;
+        });
+      }
+    },
+    [files],
+  );
+
+  const toggleMoRong = useCallback(
+    (row: V4kb) => {
+      setMoRong((cu) => {
+        const s = new Set(cu);
+        if (!s.delete(row.key)) s.add(row.key);
+        return s;
+      });
+      if (!row.loaded) napTep([row]).catch((e) => notifyError(e, "nạp tệp của hồ sơ"));
+    },
+    [napTep],
+  );
   const chon = useCallback((ids: string[], v: boolean) => setSelected((cu) => V4ks(cu, ids, v)), []);
+  const chonHoSo = useCallback(
+    async (rows: V4kb[], v: boolean) => {
+      try {
+        const m = await napTep(rows);
+        const ids = rows.flatMap((r) => (m.get(r.key) ?? []).map((f) => f.id));
+        chon(ids, v);
+      } catch (e) {
+        notifyError(e, "chọn hồ sơ");
+      }
+    },
+    [napTep, chon],
+  );
 
   const ghiQuyetDinh = async (d: V4eh, note: string) => {
     const ids = daChon;
@@ -251,12 +302,13 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
       setQuyetDinh(null);
     } finally {
       setTienDo(null);
+      setFiles(new Map());
       reload();
       onDone?.();
     }
   };
 
-  const soHoSo = nhom.reduce((n, g) => n + g.rows.length, 0);
+  const soHoSo = flat.length;
 
   return (
     <Card padding="none">
@@ -265,90 +317,106 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
         {dsPhong.length > 0 && <Select size="sm" className="w-56" value={phongLoc} onChange={setPhongLoc} placeholder={`Tất cả phông (${dsPhong.length})`} options={dsPhong.map((p) => ({ value: p, label: p }))} aria-label="Lọc theo phông" />}
         <Checkbox checked={chiChoXacNhan} disabled={busy} onChange={setChiChoXacNhan} label="Chỉ phần chờ xác nhận" />
         <Toolbar.Spacer />
-        <span className="text-sm text-fg-subtle">{loading ? "Đang tải…" : `${fmtN(soHoSo)} hồ sơ · ${fmtN(tatCaId.length)} tài liệu`}</span>
+        <span className="text-sm text-fg-subtle">{loading && summary.length === 0 ? "Đang tải…" : `${fmtN(soHoSo)} hồ sơ · ${fmtN(tongTep)} tài liệu`}</span>
         {actions}
         <IconButton label="Tải lại" icon="lamMoi" size="sm" onClick={reload} disabled={busy} />
       </Toolbar>
 
       {error !== null && error !== undefined && <ErrorBanner error={error} className="mx-4 mb-3" onRetry={reload} />}
 
-      {loading && docs.length === 0 ? (
+      {loading && summary.length === 0 ? (
         <div className="px-4 pb-4">
           <Skeleton.Rows rows={6} />
         </div>
-      ) : nhom.length === 0 ? (
+      ) : flat.length === 0 ? (
         <EmptyState
           compact
           icon="taiLieu"
-          title={docs.length === 0 ? "Chưa có tài liệu nào trên máy chủ" : "Không có hồ sơ nào khớp bộ lọc"}
-          description={docs.length === 0 ? "Đưa dữ liệu lên qua Số hoá › Đưa lên máy chủ." : onlyProject ? "Dự án đang chọn chưa có hồ sơ nào khớp." : chiChoXacNhan ? "Không còn tài liệu nào chờ xác nhận." : undefined}
+          title={summary.length === 0 && !qTim && !chiChoXacNhan ? "Chưa có tài liệu nào trên máy chủ" : "Không có hồ sơ nào khớp bộ lọc"}
+          description={summary.length === 0 && !qTim && !chiChoXacNhan ? "Đưa dữ liệu lên qua Số hoá › Đưa lên máy chủ." : onlyProject ? "Dự án đang chọn chưa có hồ sơ nào khớp." : chiChoXacNhan ? "Không còn tài liệu nào chờ xác nhận." : undefined}
         />
       ) : (
-        <Table.Root className="oh-table" maxHeight="min(62vh, 640px)">
-          <Table.Head>
-            <tr>
-              <Table.HeadCell className="oh-check">{canReview && <TriCheck state={V4kr(tatCaId, selected)} disabled={busy || tatCaId.length === 0} label="Chọn toàn bộ tài liệu đang hiện" onChange={(v) => chon(tatCaId, v)} />}</Table.HeadCell>
-              <Table.HeadCell>Dự án</Table.HeadCell>
-              <Table.HeadCell>Phông</Table.HeadCell>
-              <Table.HeadCell>Hộp số</Table.HeadCell>
-              <Table.HeadCell>Hồ sơ số</Table.HeadCell>
-              <Table.HeadCell className="oh-files">Tổng số tệp</Table.HeadCell>
-              <Table.HeadCell>Tài liệu</Table.HeadCell>
-              <Table.HeadCell>OCR · PDF/A</Table.HeadCell>
-            </tr>
-          </Table.Head>
-          <Table.Body>
-              {nhom.map((g: V4kc) => (
-                <Fragment key={g.key}>
-                  <Table.Row className="oh-grouprow">
-                    <Table.Cell className="oh-check">{canReview && <TriCheck state={V4kr(g.ids, selected)} disabled={busy || g.ids.length === 0} label={`Chọn cả dự án ${g.label}`} onChange={(v) => chon(g.ids, v)} />}</Table.Cell>
-                    <th scope="row" className="oh-groupname px-3" colSpan={4}>
-                      <Icon name="thuMuc" /> Dự án: {g.label}
-                    </th>
-                    <Table.Cell className="oh-num oh-files">{fmtN(g.tally.files)}</Table.Cell>
-                    <Table.Cell>
-                      <TallyCell t={g.tally} />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <OcrCell t={g.tally} />
-                    </Table.Cell>
-                  </Table.Row>
-                  {g.rows.map((r) => {
-                    const mo = moRong.has(r.key);
-                    return (
-                      <Fragment key={r.key}>
-                        <Table.Row>
-                          <Table.Cell className="oh-check">{canReview && <TriCheck state={V4kr(r.ids, selected)} disabled={busy || r.ids.length === 0} label={`Chọn cả hồ sơ ${r.hoSoSo || "chưa gán"}`} onChange={(v) => chon(r.ids, v)} />}</Table.Cell>
-                          <th scope="row" className="oh-duan px-3 text-left font-normal">{g.label}</th>
-                          <th scope="row" className="px-3 text-left font-normal">{r.phong || "—"}</th>
-                          <th scope="row" className="px-3 text-left font-normal">{r.hopSo || V4ke}</th>
-                          <th scope="row" className="px-3 text-left font-normal">
-                            {r.hoSoSo || V4kf}
-                            {r.counts.rejected > 0 && <div className="text-xs text-danger-700">{fmtN(r.counts.rejected)} tài liệu bị từ chối</div>}
-                          </th>
-                          <Table.Cell className="oh-num oh-files">
-                            <button type="button" className="oh-expand" onClick={() => toggleMoRong(r.key)} aria-expanded={mo} aria-label={mo ? "Thu gọn danh sách tệp" : "Xem từng tệp trong hồ sơ"}>
-                              <span className="oh-caret">
-                                <Icon name={mo ? "xuong" : "moNhanh"} size={13} />
-                              </span>
-                              {fmtN(r.tally.files)}
-                            </button>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <TallyCell t={r.tally} />
-                          </Table.Cell>
-                          <Table.Cell>
-                            <OcrCell t={r.tally} />
-                          </Table.Cell>
-                        </Table.Row>
-                        {mo && <DongTep row={r} selected={selected} busy={busy} canReview={canReview} onToggle={chon} onOpen={onOpenDoc} />}
-                      </Fragment>
-                    );
-                  })}
-                </Fragment>
-              ))}
-          </Table.Body>
-        </Table.Root>
+        <>
+          <Table.Root className="oh-table" maxHeight="min(62vh, 640px)">
+            <Table.Head>
+              <tr>
+                <Table.HeadCell className="oh-check">
+                  {canReview && <TriCheck state={V4kr(idsTrang, selected)} disabled={busy || pageRows.length === 0} label="Chọn toàn bộ hồ sơ ở trang này" onChange={(v) => void chonHoSo(pageRows.map((x) => x.r), v)} />}
+                </Table.HeadCell>
+                <Table.HeadCell>Dự án</Table.HeadCell>
+                <Table.HeadCell>Phông</Table.HeadCell>
+                <Table.HeadCell>Hộp số</Table.HeadCell>
+                <Table.HeadCell>Hồ sơ số</Table.HeadCell>
+                <Table.HeadCell className="oh-files">Tổng số tệp</Table.HeadCell>
+                <Table.HeadCell>Tài liệu</Table.HeadCell>
+                <Table.HeadCell>OCR · PDF/A</Table.HeadCell>
+              </tr>
+            </Table.Head>
+            <Table.Body>
+              {pageRows.map(({ g, r }, i) => {
+                const mo = moRong.has(r.key);
+                const dauNhom = i === 0 || pageRows[i - 1].g.key !== g.key;
+                return (
+                  <Fragment key={r.key}>
+                    {dauNhom && (
+                      <Table.Row className="oh-grouprow">
+                        <Table.Cell className="oh-check" />
+                        <th scope="row" className="oh-groupname px-3" colSpan={4}>
+                          <Icon name="thuMuc" /> Dự án: {g.label}
+                        </th>
+                        <Table.Cell className="oh-num oh-files">{fmtN(g.tally.files)}</Table.Cell>
+                        <Table.Cell>
+                          <TallyCell t={g.tally} />
+                        </Table.Cell>
+                        <Table.Cell>
+                          <OcrCell t={g.tally} />
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
+                    <Table.Row>
+                      <Table.Cell className="oh-check">{canReview && <TriCheck state={r.loaded ? V4kr(r.ids, selected) : "none"} disabled={busy || dangNap.has(r.key)} label={`Chọn cả hồ sơ ${r.hoSoSo || "chưa gán"}`} onChange={(v) => void chonHoSo([r], v)} />}</Table.Cell>
+                      <th scope="row" className="oh-duan px-3 text-left font-normal">{g.label}</th>
+                      <th scope="row" className="px-3 text-left font-normal">{r.phong || "—"}</th>
+                      <th scope="row" className="px-3 text-left font-normal">{r.hopSo || V4ke}</th>
+                      <th scope="row" className="px-3 text-left font-normal">
+                        {r.hoSoSo || V4kf}
+                        {r.counts.rejected > 0 && <div className="text-xs text-danger-700">{fmtN(r.counts.rejected)} tài liệu bị từ chối</div>}
+                      </th>
+                      <Table.Cell className="oh-num oh-files">
+                        <button type="button" className="oh-expand" onClick={() => toggleMoRong(r)} aria-expanded={mo} aria-label={mo ? "Thu gọn danh sách tệp" : "Xem từng tệp trong hồ sơ"}>
+                          <span className="oh-caret">
+                            <Icon name={mo ? "xuong" : "moNhanh"} size={13} />
+                          </span>
+                          {fmtN(r.tally.files)}
+                        </button>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <TallyCell t={r.tally} />
+                      </Table.Cell>
+                      <Table.Cell>
+                        <OcrCell t={r.tally} />
+                      </Table.Cell>
+                    </Table.Row>
+                    {mo && !r.loaded && (
+                      <Table.Row className="oh-filerow">
+                        <Table.Cell className="oh-check" />
+                        <Table.Cell colSpan={7} className="text-sm text-fg-subtle">
+                          Đang nạp tệp của hồ sơ…
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
+                    {mo && r.loaded && <DongTep row={r} selected={selected} busy={busy} canReview={canReview} onToggle={chon} onOpen={onOpenDoc} />}
+                  </Fragment>
+                );
+              })}
+            </Table.Body>
+          </Table.Root>
+          {flat.length > trang.pageSize && (
+            <div className="px-4 py-2">
+              <Pagination page={trang.page} pageSize={trang.pageSize} total={flat.length} onChange={trang.setPage} onPageSizeChange={trang.setPageSize} pageSizeOptions={[50, 100, 200]} />
+            </div>
+          )}
+        </>
       )}
 
       {canReview && (

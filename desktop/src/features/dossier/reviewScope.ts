@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
-import type { V4eh, V4ej } from "@/api/docs";
+import type { V4eh, V4ej, ReviewSummaryRow } from "@/api/docs";
 
 export interface V4k6 {
   docs: number;
@@ -70,10 +70,13 @@ export function pdfaState(f: V4k8): V4ka {
 
 export interface V4kb {
   key: string;
+  projectId: string;
   /** Phông = tầng đầu của relPath (cây Dự án/Phông/Hộp/Hồ sơ). "" nếu không xác định. */
   phong: string;
   hopSo: string;
   hoSoSo: string;
+  /** Danh sách tệp đã nạp chưa (số liệu gộp có ngay; tệp nạp khi mở/tích chọn hồ sơ). */
+  loaded: boolean;
   files: V4k8[];
 
   ids: string[];
@@ -199,9 +202,11 @@ export function V4kq(docs: V4ej[]): V4kc[] {
     if (!row) {
       row = {
         key: V1pl,
+        projectId: V1pj,
         phong,
         hopSo: hop,
         hoSoSo: V1pk,
+        loaded: true,
         files: [],
         ids: [],
         tally: V4kk(),
@@ -267,6 +272,64 @@ export function V4kq(docs: V4ej[]): V4kc[] {
     V1po.push(g);
   }
   return V1po.sort((a, b) => V4kn.compare(a.label, b.label));
+}
+
+/** Khoá nhóm hồ sơ của một tài liệu — cùng quy tắc với máy chủ (review_summary). */
+export function reviewKey(projectId: string, phong: string, hop: string, hoSo: string): string {
+  return JSON.stringify([projectId, phong, hop, hoSo]);
+}
+export function reviewKeyOf(d: V4ej): string {
+  const { hop, hoSo } = V4ki(d);
+  return reviewKey(d.projectId ?? "", phongOf(d), hop, hoSo);
+}
+/** Dòng tệp cho bảng Soát & duyệt từ một tài liệu trên cây máy chủ. */
+export function docToFile(d: V4ej): V4k8 {
+  return {
+    id: d.id,
+    filename: d.filename,
+    pages: d.pageCount ?? null,
+    sizeBytes: d.sizeBytes,
+    status: d.status,
+    ocrPages: Math.max(0, d.ocrPages ?? 0),
+    fieldPages: Math.max(0, d.fieldPages ?? 0),
+    pdfaPages: Math.max(0, d.pdfaPages ?? 0),
+    pdfa2b: d.pdfa2b ?? null,
+    ocrKnown: d.ocrPages != null || d.fieldPages != null,
+    review: V4kh(d),
+  };
+}
+/** Nhóm theo dự án từ số liệu gộp sẵn của máy chủ; tệp lấy từ bộ đệm `files` (nếu đã nạp). */
+export function groupsFromSummary(rows: ReviewSummaryRow[], files: ReadonlyMap<string, V4k8[]>): V4kc[] {
+  const byProject = new Map<string, V4kc>();
+  for (const r of rows) {
+    let g = byProject.get(r.projectId);
+    if (!g) {
+      g = { key: `p:${r.projectId}`, label: r.projectName.trim() || r.projectCode.trim() || V4kd, rows: [], ids: [], tally: V4kk(), counts: V4kj() };
+      byProject.set(r.projectId, g);
+    }
+    const key = reviewKey(r.projectId, r.phong, r.hop, r.hoSo);
+    const fs = files.get(key);
+    const tally: V4k7 = {
+      files: r.files,
+      pages: r.pages,
+      unknownPages: r.unknownPages,
+      sizeBytes: r.sizeBytes,
+      ocrPages: r.ocrPages,
+      fieldDocs: r.fieldDocs,
+      unknownOcr: 0,
+      pdfaDocs: r.pdfaDocs,
+      pdfaPages: r.pdfaPages,
+      pdfaCu: r.pdfaCu,
+      ocrDenom: r.ocrDenom,
+    };
+    const counts: V4k6 = { docs: r.files, pending: Math.max(0, r.files - r.approved - r.rejected), approved: r.approved, rejected: r.rejected };
+    const row: V4kb = { key, projectId: r.projectId, phong: r.phong, hopSo: r.hop, hoSoSo: r.hoSo, loaded: fs !== undefined, files: fs ?? [], ids: fs ? fs.map((f) => f.id) : [], tally, counts };
+    g.rows.push(row);
+    g.ids.push(...row.ids);
+    V4kl(g.tally, tally);
+    V4km(g.counts, counts);
+  }
+  return [...byProject.values()];
 }
 
 export function V4kr(V1pr: string[], V1ps: ReadonlySet<string>): V4kg {
