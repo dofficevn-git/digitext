@@ -200,7 +200,8 @@ export default function HomeView() {
   const coLuuTru = has("submission.review") || has("access.review") || has("disposal.view");
   const work = useSo(loadWork, ["work"], has("work.execute"));
   const review = useSo(loadReview, ["work"], has("work.manage"));
-  const docs = useSo(loadDocs, ["docs", "ocr"], has("document.list"));
+  // Thống kê nặng (quét toàn bộ tài liệu trên máy chủ): chỉ nạp theo đồng hồ 60 s, không theo từng sự kiện OCR.
+  const docs = useSo(loadDocs, [], has("document.list"));
   const sign = useSo(loadSign, ["sign"], has("sign.view"));
   const pkg = useSo(loadPkg, ["packages"], has("package.view"));
   const clTotal = useSo(loadCl, ["chinhLy", "clSync"], has("dossier.read") && !!projectId);

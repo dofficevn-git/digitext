@@ -51,7 +51,7 @@ pub async fn f_22y(r_eq: &str) -> bool {
     for r_er in f_1gh(r_eq) {
         if let Ok(r) = http()
             .get(r_er)
-            .timeout(Duration::from_secs(4))
+            .timeout(Duration::from_secs(8))
             .send()
             .await
         {

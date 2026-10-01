@@ -383,6 +383,16 @@ giao đi — xem mục 0.
 Hệ quả của `strip_comments.py`. Đừng đi tìm chú thích giải thích ý đồ — không có.
 Ý đồ phải suy từ tên module (còn giữ nguyên) và từ luồng dữ liệu.
 
+### Sự kiện "thay đổi" và thống kê nặng (1/10/2026)
+
+- `change_log` do trigger AFTER STATEMENT `note_change(topic)` trên từng bảng ghi, **không** do code Rust.
+  Từ migration `0013_change_log_throttle.sql` trigger bỏ qua sự kiện cùng topic trong 15 s (`ocr`, `ocrFields`)
+  hoặc 3 s (còn lại) — worker OCR xong mỗi trang từng phát một sự kiện (≈ 7.000 / giờ) khiến mọi máy trạm nạp
+  lại thống kê liên tục.
+- `GET /documents/progress` và `/documents/report` quét toàn bộ tài liệu (~1 s / 160k tài liệu): kết quả giữ
+  30 s trong `STATS_CACHE` (`routes/documents.rs`) theo phạm vi dự án; màn Tổng quan chỉ nạp theo chu kỳ 60 s.
+  Thêm màn hỏi thống kê toàn kho thì dùng lại hai endpoint này, đừng viết truy vấn gộp mới theo sự kiện.
+
 ---
 
 ## 9. Điểm nóng theo graph
