@@ -72,7 +72,7 @@ LỖI (chặn đóng gói):
 | `TEP-KHONG-CO-TREN-DIA` / `TEP-KHONG-CO-TRONG-EXCEL` | Excel khai mà không có tệp / tệp có mà Excel không khai |
 | `EXCEL-TRUNG-TEP`, `TEP-RONG`, `PDF-HONG` | cùng tệp khai hai dòng; tệp 0 byte; PDF không mở được |
 | `HS-TRUNG-MA` | một mã hồ sơ dùng cho nhiều thư mục hồ sơ |
-| `HS-NHIEU-MA` | một thư mục hồ sơ mà Excel ghi nhiều mã hồ sơ / mã phông |
+| `HS-NHIEU-MA` | một thư mục hồ sơ mà Excel ghi nhiều mã hồ sơ / mã phông. Dòng và tệp `MLVB.pdf` (mục lục văn bản) được tự bỏ qua, không tính là tài liệu (thông tin `MLVB-BO-QUA`) |
 | `HS-MA-LECH-PHONG` | mã hồ sơ không bắt đầu bằng mã phông |
 | `TM-LECH-SO-HO-SO` | số hồ sơ của thư mục khác số hồ sơ trong mã |
 | `TL-LECH-THU-MUC` | «Tệp tin hồ sơ» khác thư mục thật của tệp |
