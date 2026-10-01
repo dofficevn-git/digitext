@@ -94,6 +94,11 @@ pub async fn list(
     .await
 }
 pub async fn claim_next(r_29l: &PgPool, r_29m: &str, r_29k: i64) -> sqlx::Result<Option<Tgc>> {
+    // Worker hỏi mỗi vài giây; UPDATE không chạm dòng nào vẫn làm trigger phát sự kiện "packages" cho mọi máy trạm.
+    let any: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM packages WHERE status = 'queued')").fetch_one(r_29l).await?;
+    if !any {
+        return Ok(None);
+    }
     sqlx::query_as::<_, Tgc>(&format!(
         "UPDATE packages SET status = 'building', locked_by = $1, attempts = attempts + 1, \
              lease_until = now() + ($2 * interval '1 second'), updated_at = now() \

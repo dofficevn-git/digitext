@@ -445,6 +445,16 @@ pub async fn f_zj(
     kinds: &[&str],
 ) -> sqlx::Result<Option<Ta2>> {
     let kinds: Vec<String> = kinds.iter().map(|r_27o| (*r_27o).to_owned()).collect();
+    // UPDATE không chạm dòng nào vẫn làm trigger phát sự kiện "ocr" cho mọi máy trạm — chỉ UPDATE khi có việc chờ.
+    let any: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ocr_jobs WHERE status = 'queued' AND kind = ANY($1) AND (not_before IS NULL OR not_before <= now()))",
+    )
+    .bind(&kinds)
+    .fetch_one(r_27q)
+    .await?;
+    if !any {
+        return Ok(None);
+    }
     sqlx::query_as::<_, Ta2>(&format!(
         "UPDATE ocr_jobs SET status = 'running', locked_by = $1, \
              lease_until = now() + ($2 * interval '1 second'), updated_at = now() \
