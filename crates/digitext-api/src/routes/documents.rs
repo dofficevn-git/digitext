@@ -39,6 +39,8 @@ pub fn router() -> Router<AppState> {
         .route("/documents/progress", get(progress))
         .route("/documents/pdfa-report", get(f_21r))
         .route("/documents/pdfa-rejected", get(pdfa_rejected))
+        .route("/documents/review-summary", post(review_summary))
+        .route("/documents/review-group-docs", post(review_group_docs))
         .route("/documents/report", get(report))
         .route("/documents/{id}/review", post(f_29u))
         .route("/documents/review-bulk", post(review_bulk))
@@ -420,6 +422,134 @@ pub struct Tof {
     pub field_pages: i64,
     pub pdfa_pages: Option<i32>,
     pub pdfa2b: Option<bool>,
+}
+fn tof(r: documents::TreeDocRow) -> Tof {
+    Tof {
+        id: r.id,
+        filename: r.filename,
+        rel_path: r.rel_path,
+        ho_so_ref: r.ho_so_ref,
+        page_count: r.page_count,
+        size_bytes: r.size_bytes,
+        status: r.status,
+        project_id: r.project_id,
+        project_code: r.project_code,
+        project_name: r.project_name,
+        fields_status: r.fields_status,
+        review_status: r.review_status,
+        ocr_pages: r.ocr_pages,
+        field_pages: r.field_pages,
+        pdfa_pages: r.pdfa_pages,
+        pdfa2b: r.pdfa_2b,
+    }
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewSummaryArgs {
+    #[serde(default)]
+    pub project_id: Option<Uuid>,
+    #[serde(default)]
+    pub q: Option<String>,
+    #[serde(default)]
+    pub pending_only: bool,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewSummaryOut {
+    pub project_id: Uuid,
+    pub project_code: String,
+    pub project_name: String,
+    pub phong: String,
+    pub hop: String,
+    pub ho_so: String,
+    pub files: i64,
+    pub pages: i64,
+    pub unknown_pages: i64,
+    pub size_bytes: i64,
+    pub ocr_pages: i64,
+    pub field_docs: i64,
+    pub pdfa_docs: i64,
+    pub pdfa_pages: i64,
+    pub pdfa_cu: i64,
+    pub ocr_denom: i64,
+    pub approved: i64,
+    pub rejected: i64,
+}
+async fn review_scope(state: &AppState, r: &Ts, project_id: Option<Uuid>) -> Result<Option<Vec<Uuid>>, ApiError> {
+    Ok(match project_id {
+        Some(id) => {
+            authorize_project(state, r, id).await?;
+            Some(vec![id])
+        }
+        None => match f_29a(&state.pool, &r.user).await? {
+            Scope::All => None,
+            Scope::Projects(ids) => Some(ids),
+        },
+    })
+}
+/// Màn Soát & duyệt: một dòng mỗi hồ sơ với số liệu gộp sẵn — 160.000 tài liệu thành ~5.000 dòng,
+/// máy trạm không phải tải và gộp cả cây nữa.
+async fn review_summary(
+    State(state): State<AppState>,
+    r: Ts,
+    Json(a): Json<ReviewSummaryArgs>,
+) -> Result<Json<Vec<ReviewSummaryOut>>, ApiError> {
+    r.require_perm(Permission::DocumentList)?;
+    let projects = review_scope(&state, &r, a.project_id).await?;
+    let rows = documents::review_summary(&state.pool, projects.as_deref(), a.q.as_deref(), a.pending_only).await?;
+    Ok(Json(
+        rows.into_iter()
+            .map(|x| ReviewSummaryOut {
+                project_id: x.project_id,
+                project_code: x.project_code,
+                project_name: x.project_name,
+                phong: x.phong,
+                hop: x.hop,
+                ho_so: x.ho_so,
+                files: x.files,
+                pages: x.pages,
+                unknown_pages: x.unknown_pages,
+                size_bytes: x.size_bytes,
+                ocr_pages: x.ocr_pages,
+                field_docs: x.field_docs,
+                pdfa_docs: x.pdfa_docs,
+                pdfa_pages: x.pdfa_pages,
+                pdfa_cu: x.pdfa_cu,
+                ocr_denom: x.ocr_denom,
+                approved: x.approved,
+                rejected: x.rejected,
+            })
+            .collect(),
+    ))
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewGroupKey {
+    pub phong: String,
+    pub hop: String,
+    pub ho_so: String,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewGroupDocsArgs {
+    pub project_id: Uuid,
+    pub groups: Vec<ReviewGroupKey>,
+}
+const REVIEW_GROUPS_MAX: usize = 500;
+/// Tài liệu của các hồ sơ đã chọn (mở xem từng tệp / tích chọn cả hồ sơ / chọn cả trang).
+async fn review_group_docs(
+    State(state): State<AppState>,
+    r: Ts,
+    Json(a): Json<ReviewGroupDocsArgs>,
+) -> Result<Json<Vec<Tof>>, ApiError> {
+    r.require_perm(Permission::DocumentList)?;
+    authorize_project(&state, &r, a.project_id).await?;
+    if a.groups.len() > REVIEW_GROUPS_MAX {
+        return Err(ApiError::bad_request(format!("tối đa {REVIEW_GROUPS_MAX} hồ sơ mỗi lượt")));
+    }
+    let groups: Vec<(String, String, String)> = a.groups.into_iter().map(|g| (g.phong, g.hop, g.ho_so)).collect();
+    let rows = documents::review_group_docs(&state.pool, a.project_id, &groups).await?;
+    Ok(Json(rows.into_iter().map(tof).collect()))
 }
 /// Bộ đệm cây tài liệu theo phạm vi (toàn bộ / danh sách dự án): máy trạm có màn đang mở gọi
 /// lại mỗi vài giây trong lúc đẩy tệp; câu truy vấn quét 36.000 dòng mất ~0,5 s nên giữ kết

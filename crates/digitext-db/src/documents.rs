@@ -422,6 +422,114 @@ pub async fn list_for_projects(
     .fetch_all(r_24z)
     .await
 }
+/// Cây tài liệu dẫn xuất phông / hộp / hồ sơ ĐÚNG như máy trạm từng tính (reviewScope.ts
+/// `phongOf` + `V4ki`): phông = tầng 1 của rel_path khi có ≥ 2 tầng; hộp/hồ sơ lấy từ ho_so_ref
+/// ("<hộp>/<hồ sơ>" hoặc chỉ "<hồ sơ>"), không có thì tầng 2/3 của rel_path.
+const REVIEW_DERIVED_CTE: &str = "WITH base AS ( \
+      SELECT d.id, d.project_id, d.filename, d.rel_path, d.ho_so_ref, d.page_count, d.size_bytes, \
+             d.status, d.review_status, d.pdfa_pages, d.pdfa_2b, \
+             COALESCE(o.n, 0)::bigint AS ocr_pages, COALESCE(k.n, 0)::bigint AS field_pages, \
+             f.status AS fields_status, \
+             array_remove(string_to_array(COALESCE(d.rel_path, ''), '/'), '') AS seg, \
+             NULLIF(btrim(COALESCE(d.ho_so_ref, '')), '') AS hsr \
+      FROM documents d \
+      LEFT JOIN (SELECT document_id, count(DISTINCT page_no)::bigint AS n FROM ocr_results GROUP BY document_id) o ON o.document_id = d.id \
+      LEFT JOIN (SELECT document_id, count(DISTINCT page_no)::bigint AS n FROM ocr_fields WHERE length(btrim(value)) > 0 GROUP BY document_id) k ON k.document_id = d.id \
+      LEFT JOIN (SELECT DISTINCT ON (document_id) document_id, status FROM ocr_jobs WHERE kind = 'extract_fields' ORDER BY document_id, created_at DESC, id DESC) f ON f.document_id = d.id \
+      WHERE d.status <> 'disposed' AND ($1::uuid[] IS NULL OR d.project_id = ANY($1)) \
+    ), derived AS ( \
+      SELECT b.*, \
+        CASE WHEN cardinality(seg) >= 2 THEN btrim(seg[1]) ELSE '' END AS phong, \
+        CASE WHEN hsr IS NOT NULL THEN CASE WHEN position('/' IN hsr) > 1 THEN btrim(split_part(hsr, '/', 1)) ELSE '' END \
+             WHEN cardinality(seg) >= 3 THEN btrim(seg[2]) ELSE '' END AS hop, \
+        CASE WHEN hsr IS NOT NULL THEN CASE WHEN position('/' IN hsr) > 1 THEN btrim(substr(hsr, position('/' IN hsr) + 1)) ELSE hsr END \
+             WHEN cardinality(seg) >= 3 THEN btrim(seg[3]) ELSE '' END AS ho_so \
+      FROM base b \
+    ) ";
+/// Một dòng hồ sơ trong màn Soát & duyệt: số liệu gộp sẵn (máy trạm không phải tải cả cây).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ReviewSummaryRow {
+    pub project_id: Uuid,
+    pub project_code: String,
+    pub project_name: String,
+    pub phong: String,
+    pub hop: String,
+    pub ho_so: String,
+    pub files: i64,
+    pub pages: i64,
+    pub unknown_pages: i64,
+    pub size_bytes: i64,
+    pub ocr_pages: i64,
+    pub field_docs: i64,
+    pub pdfa_docs: i64,
+    pub pdfa_pages: i64,
+    pub pdfa_cu: i64,
+    pub ocr_denom: i64,
+    pub approved: i64,
+    pub rejected: i64,
+}
+pub async fn review_summary(
+    pool: &PgPool,
+    projects: Option<&[Uuid]>,
+    q: Option<&str>,
+    pending_only: bool,
+) -> sqlx::Result<Vec<ReviewSummaryRow>> {
+    let projects: Option<Vec<Uuid>> = projects.map(|p| p.to_vec());
+    let like = q.map(|x| x.trim()).filter(|x| !x.is_empty()).map(|x| format!("%{}%", x.replace('%', "\\%").replace('_', "\\_")));
+    let sql = format!(
+        "{REVIEW_DERIVED_CTE} \
+         SELECT dd.project_id, p.code AS project_code, p.name AS project_name, dd.phong, dd.hop, dd.ho_so, \
+                count(*)::bigint AS files, COALESCE(sum(dd.page_count), 0)::bigint AS pages, \
+                count(*) FILTER (WHERE dd.page_count IS NULL)::bigint AS unknown_pages, \
+                COALESCE(sum(dd.size_bytes), 0)::bigint AS size_bytes, COALESCE(sum(dd.ocr_pages), 0)::bigint AS ocr_pages, \
+                count(*) FILTER (WHERE dd.field_pages > 0)::bigint AS field_docs, \
+                count(*) FILTER (WHERE COALESCE(dd.pdfa_pages, 0) > 0)::bigint AS pdfa_docs, \
+                COALESCE(sum(COALESCE(dd.pdfa_pages, 0)), 0)::bigint AS pdfa_pages, \
+                count(*) FILTER (WHERE COALESCE(dd.pdfa_pages, 0) > 0 AND dd.pdfa_2b = false)::bigint AS pdfa_cu, \
+                COALESCE(sum(COALESCE(dd.page_count, dd.ocr_pages)), 0)::bigint AS ocr_denom, \
+                count(*) FILTER (WHERE dd.review_status = 'approved')::bigint AS approved, \
+                count(*) FILTER (WHERE dd.review_status = 'rejected')::bigint AS rejected \
+         FROM derived dd JOIN projects p ON p.id = dd.project_id \
+         WHERE ($2::text IS NULL OR dd.filename ILIKE $2 OR COALESCE(dd.ho_so_ref, '') ILIKE $2 OR COALESCE(dd.rel_path, '') ILIKE $2) \
+           AND (NOT $3::bool OR dd.review_status NOT IN ('approved', 'rejected')) \
+         GROUP BY 1, 2, 3, 4, 5, 6 \
+         ORDER BY p.code, dd.phong COLLATE vi_so, dd.hop COLLATE vi_so, dd.ho_so COLLATE vi_so"
+    );
+    sqlx::query_as::<_, ReviewSummaryRow>(&sql)
+        .bind(projects)
+        .bind(like)
+        .bind(pending_only)
+        .fetch_all(pool)
+        .await
+}
+/// Tài liệu của các nhóm (phông, hộp, hồ sơ) đã chọn trong một dự án — nạp khi người dùng mở
+/// một hồ sơ hoặc tích chọn cả hồ sơ.
+pub async fn review_group_docs(
+    pool: &PgPool,
+    project_id: Uuid,
+    groups: &[(String, String, String)],
+) -> sqlx::Result<Vec<TreeDocRow>> {
+    let phongs: Vec<String> = groups.iter().map(|g| g.0.clone()).collect();
+    let hops: Vec<String> = groups.iter().map(|g| g.1.clone()).collect();
+    let hosos: Vec<String> = groups.iter().map(|g| g.2.clone()).collect();
+    let sql = format!(
+        "{REVIEW_DERIVED_CTE} \
+         SELECT dd.id, dd.filename, dd.rel_path, dd.ho_so_ref, dd.page_count, dd.size_bytes, dd.status, \
+                dd.project_id, p.code AS project_code, p.name AS project_name, dd.fields_status, \
+                dd.review_status, dd.ocr_pages, dd.field_pages, dd.pdfa_pages, dd.pdfa_2b \
+         FROM derived dd JOIN projects p ON p.id = dd.project_id \
+         WHERE EXISTS (SELECT 1 FROM unnest($2::text[], $3::text[], $4::text[]) AS g(a, b, c) \
+                       WHERE g.a = dd.phong AND g.b = dd.hop AND g.c = dd.ho_so) \
+         ORDER BY dd.phong COLLATE vi_so, dd.hop COLLATE vi_so, dd.ho_so COLLATE vi_so, dd.filename COLLATE vi_so"
+    );
+    sqlx::query_as::<_, TreeDocRow>(&sql)
+        .bind(Some(vec![project_id]))
+        .bind(phongs)
+        .bind(hops)
+        .bind(hosos)
+        .fetch_all(pool)
+        .await
+}
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TreeDocRow {
     pub id: Uuid,

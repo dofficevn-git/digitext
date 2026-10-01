@@ -141,6 +141,35 @@ export interface OcrRetryFailedResult {
 }
 
 /** Xếp hàng lại trang OCR lỗi. `includePageFailed` kèm cả trang hỏng vĩnh viễn. */
+/** Soát & duyệt: một dòng mỗi hồ sơ, số liệu gộp sẵn trên máy chủ (thay cho tải cả cây tài liệu). */
+export interface ReviewSummaryRow {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  phong: string;
+  hop: string;
+  hoSo: string;
+  files: number;
+  pages: number;
+  unknownPages: number;
+  sizeBytes: number;
+  ocrPages: number;
+  fieldDocs: number;
+  pdfaDocs: number;
+  pdfaPages: number;
+  pdfaCu: number;
+  ocrDenom: number;
+  approved: number;
+  rejected: number;
+}
+export function docsReviewSummary(args: { projectId?: string; q?: string; pendingOnly?: boolean }): Promise<ReviewSummaryRow[]> {
+  return invoke<ReviewSummaryRow[]>("docs_review_summary", { args: { projectId: args.projectId ?? null, q: args.q ?? null, pendingOnly: args.pendingOnly ?? false } });
+}
+/** Tài liệu của các hồ sơ (phông, hộp, hồ sơ) đã chọn trong một dự án — nạp khi mở hoặc tích chọn hồ sơ. */
+export function docsReviewGroupDocs(args: { projectId: string; groups: { phong: string; hop: string; hoSo: string }[] }): Promise<V4ej[]> {
+  return invoke<V4ej[]>("docs_review_group_docs", { args });
+}
+
 /** Tài liệu máy chủ từ chối ghép PDF/A (bản quét dưới 200 dpi, OCR không ra chữ…) kèm lý do. */
 export interface PdfaRejectedRow {
   id: string;
