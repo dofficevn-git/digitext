@@ -98,6 +98,8 @@ export function extimportPack(args: {
   allowPartial: boolean;
   force: boolean;
   useVerapdf: boolean;
+  /** Đóng gói nhanh: không kiểm dpi / PDF/A / lớp chữ / chữ ký, chỉ đối chiếu Excel. */
+  allowNonTt05?: boolean;
 }): Promise<ExtPackSummary> {
   return invoke<ExtPackSummary>("extimport_pack", { args });
 }

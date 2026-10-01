@@ -13,7 +13,8 @@ const PHASE_LABEL: Record<ExtProgress["phase"], string> = { excel: "Đang đọc
 const gb = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${(n / 1e6).toFixed(0)} MB`);
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 
-export default function ExternalImportPanel() {
+/** `nhanh`: Đóng gói nhanh — chỉ đối chiếu Excel, bỏ qua kiểm dpi / PDF/A / lớp chữ / chữ ký. */
+export default function ExternalImportPanel({ nhanh = false }: { nhanh?: boolean } = {}) {
   const [root, setRoot] = useState("");
   const [excel, setExcel] = useState("");
   const [outDir, setOutDir] = useState("");
@@ -82,7 +83,7 @@ export default function ExternalImportPanel() {
     setBusy("check");
     setProgress(null);
     try {
-      setCheck(await extimportCheck({ root, excel, deep, useVerapdf: useVera && veraOk === true }));
+      setCheck(await extimportCheck({ root, excel, deep: deep && !nhanh, useVerapdf: !nhanh && useVera && veraOk === true }));
     } catch (e) {
       setErr(e);
     } finally {
@@ -95,7 +96,7 @@ export default function ExternalImportPanel() {
     setProgress(null);
     setLastNote("");
     try {
-      const r = await extimportPack({ root, excel, outDir, kind, agreement: agreement.trim() || null, orgCode: orgCode.trim() || null, orgName: orgName.trim() || null, fondName: fondName.trim() || null, packagerName: packagerName.trim() || null, packagerCode: packagerCode.trim() || null, allowPartial, force: false, useVerapdf: useVera && veraOk === true });
+      const r = await extimportPack({ root, excel, outDir, kind, agreement: agreement.trim() || null, orgCode: orgCode.trim() || null, orgName: orgName.trim() || null, fondName: fondName.trim() || null, packagerName: packagerName.trim() || null, packagerCode: packagerCode.trim() || null, allowPartial, force: false, useVerapdf: !nhanh && useVera && veraOk === true, allowNonTt05: nhanh });
       setPack(r);
       setCheck(r.check);
     } catch (e) {
@@ -114,6 +115,11 @@ export default function ExternalImportPanel() {
     <div className="space-y-4">
       <Stepper current={step} steps={[{ key: "chon", label: "Chọn Excel và thư mục" }, { key: "kiem", label: "Kiểm khớp" }, { key: "goi", label: "Đóng gói" }, { key: "xong", label: "Kết quả" }]} />
 
+      {nhanh && (
+        <Banner tone="warning" title="Đóng gói nhanh: chỉ đối chiếu với Excel">
+          Kiểm mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu hoặc thừa tệp và số trang. Không kiểm độ phân giải, PDF/A, lớp chữ, chữ ký số, nên gói có thể chưa đạt Điều 8.2.a TT05. Dùng khi chủ dự án chấp nhận bản quét hiện có.
+        </Banner>
+      )}
       <Card title="Nguồn dữ liệu" description="Một thư mục chia theo Phông / Hộp / Hồ sơ và một tệp Excel metadata, mỗi dòng một tài liệu.">
         <FormGrid cols={2}>
           <Field label="Tệp Excel metadata">
@@ -134,22 +140,26 @@ export default function ExternalImportPanel() {
           </Field>
         </FormGrid>
         <Toolbar className="mt-3">
-          <Field label="Mở từng PDF để kiểm số trang, PDF/A, dpi, màu, chữ ký" inline>
-            <Checkbox checked={deep} onChange={setDeep} disabled={!!busy} />
-          </Field>
-          <Tip text={veraOk === false ? "Máy này chưa có Docker nên không chạy được veraPDF" : "Kiểm đúng chuẩn ISO 19005 bằng veraPDF, tệp không đạt là lỗi"}>
-            <span>
-              <Field label="Dự án yêu cầu đạt chuẩn ISO 19005" inline>
-                <Checkbox checked={useVera && veraOk === true} onChange={setUseVera} disabled={!!busy || veraOk !== true} />
+          {!nhanh && (
+            <>
+              <Field label="Mở từng PDF để kiểm số trang, PDF/A, dpi, màu, chữ ký" inline>
+                <Checkbox checked={deep} onChange={setDeep} disabled={!!busy} />
               </Field>
-            </span>
-          </Tip>
+              <Tip text={veraOk === false ? "Máy này chưa có Docker nên không chạy được veraPDF" : "Kiểm đúng chuẩn ISO 19005 bằng veraPDF, tệp không đạt là lỗi"}>
+                <span>
+                  <Field label="Dự án yêu cầu đạt chuẩn ISO 19005" inline>
+                    <Checkbox checked={useVera && veraOk === true} onChange={setUseVera} disabled={!!busy || veraOk !== true} />
+                  </Field>
+                </span>
+              </Tip>
+            </>
+          )}
           <Toolbar.Spacer />
           <Button variant="primary" icon="kiemTra" loading={busy === "check"} disabled={!ready} onClick={() => void runCheck()}>
             Kiểm tra khớp với Excel
           </Button>
         </Toolbar>
-        <p className="mt-2 text-xs text-fg-subtle">Kho lớn: mở từng PDF mất vài chục phút, kiểm veraPDF mất vài giờ.</p>
+        {!nhanh && <p className="mt-2 text-xs text-fg-subtle">Kho lớn: mở từng PDF mất vài chục phút, kiểm veraPDF mất vài giờ.</p>}
       </Card>
 
       {busy && progress && (

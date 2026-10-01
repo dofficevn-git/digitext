@@ -21,6 +21,14 @@ liệu» tính từ đó; trỏ nhầm vào thư mục con cùng tên vẫn tự
 
 Quyền cần có: *Tạo gói tin*.
 
+## 1b. Tab "Đóng gói nhanh" (bỏ qua Điều 8.2.a)
+
+Cùng màn Đóng gói, tab **Đóng gói nhanh** chạy đúng luồng Từ kho ngoài nhưng **chỉ đối chiếu với Excel**
+(mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu/thừa tệp, số trang). Không mở từng PDF để kiểm
+độ phân giải, PDF/A, lớp chữ, chữ ký số; bộ dựng cũng không chặn tệp không phải PDF/A
+(`allowNonTt05`, tương đương `--allow-non-tt05` ở dòng lệnh). Dùng khi chủ dự án chấp nhận bản quét
+hiện có; gói có thể chưa đạt Điều 8.2.a TT05 và màn có dải cảnh báo nói rõ điều đó.
+
 ## 2. Dùng bằng dòng lệnh (kho lớn, chạy qua đêm)
 
 ```

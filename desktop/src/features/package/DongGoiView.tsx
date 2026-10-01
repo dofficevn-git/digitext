@@ -13,7 +13,7 @@ import ExternalImportPanel from "./ExternalImportPanel";
 import PdfaCheckPanel from "./PdfaCheckPanel";
 import { PageHeader, Tabs } from "@/ui";
 
-type Tab = "hoso" | "goi" | "nangcao" | "ngoai" | "pdfa";
+type Tab = "hoso" | "goi" | "nangcao" | "ngoai" | "nhanh" | "pdfa";
 
 export default function DongGoiView() {
   const [tab, setTab] = useState<Tab>("hoso");
@@ -35,6 +35,7 @@ export default function DongGoiView() {
           { value: "goi", label: "Gói tin", icon: "goi" },
           { value: "nangcao", label: "Nâng cao", icon: "caiDat" },
           { value: "ngoai", label: "Từ kho ngoài", icon: "nhapKho" },
+          { value: "nhanh", label: "Đóng gói nhanh", icon: "chay" },
           { value: "pdfa", label: "Kiểm PDF/A", icon: "kiemTraPdfa" },
         ]}
       />
@@ -43,6 +44,7 @@ export default function DongGoiView() {
         {tab === "goi" && <PackageList />}
         {tab === "nangcao" && <V4sx />}
         {tab === "ngoai" && <ExternalImportPanel />}
+        {tab === "nhanh" && <ExternalImportPanel nhanh />}
         {tab === "pdfa" && <PdfaCheckPanel />}
       </div>
     </section>
