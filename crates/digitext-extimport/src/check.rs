@@ -126,8 +126,16 @@ impl CheckReport {
 pub struct Plan {
     pub root: PathBuf,
     pub dossiers: Vec<Dossier>,
+    /// Số dòng Excel là mục lục văn bản (MLVB.pdf) đã bỏ qua.
+    pub mlvb_skipped: usize,
 }
 
+/// Tệp mục lục văn bản (`MLVB.pdf`, `MLVB`) nằm trong thư mục hồ sơ — KHÔNG phải tài liệu lưu trữ
+/// (gói TT05 có EAD thay cho mục lục). Dòng Excel và tệp trên đĩa mang tên này được bỏ qua.
+pub fn is_mlvb(name: &str) -> bool {
+    let stem = name.rsplit_once('.').map(|(s, _)| s).unwrap_or(name);
+    stem.trim().eq_ignore_ascii_case("mlvb")
+}
 pub fn rel_to_path(root: &Path, rel: &str) -> PathBuf {
     let mut p = root.to_path_buf();
     for seg in rel.split(['\\', '/']).filter(|s| !s.is_empty()) {
@@ -225,8 +233,13 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
         }
     }
     let mut map: BTreeMap<String, Vec<Row>> = BTreeMap::new();
+    let mut mlvb_skipped = 0usize;
     for r in &sheet.rows {
         let rel = r.doc_path.as_deref().map(norm_rel).unwrap_or_default();
+        if !rel.is_empty() && is_mlvb(base_of(&rel)) {
+            mlvb_skipped += 1;
+            continue;
+        }
         let dir = if rel.is_empty() {
             r.hs_dir.as_deref().map(norm_rel).unwrap_or_else(|| format!("?dòng {}", r.line))
         } else {
@@ -244,7 +257,7 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
             Dossier { dir, rows }
         })
         .collect();
-    Plan { root, dossiers }
+    Plan { root, dossiers, mlvb_skipped }
 }
 
 fn walk_pdfs(dir: &Path, root: &Path, out: &mut HashMap<String, (String, u64)>) {
@@ -255,6 +268,9 @@ fn walk_pdfs(dir: &Path, root: &Path, out: &mut HashMap<String, (String, u64)>) 
         if ft.is_dir() {
             walk_pdfs(&p, root, out);
         } else if p.extension().map_or(false, |x| x.eq_ignore_ascii_case("pdf")) {
+            if p.file_name().map(|n| is_mlvb(&n.to_string_lossy())).unwrap_or(false) {
+                continue;
+            }
             if let Ok(rel) = p.strip_prefix(root) {
                 let rel = rel.components().map(|c| c.as_os_str().to_string_lossy().to_string()).collect::<Vec<_>>().join("\\");
                 let size = e.metadata().map(|m| m.len()).unwrap_or(0);
@@ -761,6 +777,9 @@ pub fn run(
     progress: &(dyn Fn(usize, usize) + Sync),
 ) -> CheckReport {
     let mut sink = Sink::new();
+    if plan.mlvb_skipped > 0 {
+        sink.info("MLVB-BO-QUA", "", "", None, Some("MLVB.pdf"), format!("bỏ qua {} dòng mục lục văn bản (MLVB.pdf) — không phải tài liệu lưu trữ, gói TT05 dùng EAD thay mục lục; tệp MLVB.pdf trên đĩa cũng không tính", plan.mlvb_skipped));
+    }
     // ---- liệt kê đĩa: chỉ quét các thư mục cấp đầu mà Excel nhắc tới
     let mut tops: BTreeSet<String> = BTreeSet::new();
     for d in &plan.dossiers {
