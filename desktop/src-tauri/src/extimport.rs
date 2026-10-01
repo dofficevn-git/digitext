@@ -60,6 +60,10 @@ pub struct CheckArgs {
 pub struct CodeSummary {
     pub severity: check::Severity,
     pub code: String,
+    /// Tên dễ hiểu của vấn đề.
+    pub label: String,
+    /// Cách xử lý.
+    pub fix: String,
     pub count: u32,
     pub dossiers: usize,
     pub example: String,
@@ -122,7 +126,10 @@ fn summarize(rep: &check::CheckReport, report_dir: &std::path::Path, files: Vec<
         by_code: by
             .into_iter()
             .map(|((severity, code), (count, ds, ex))| CodeSummary {
-                severity, code: code.to_string(), count, dossiers: ds.len(), example: ex.to_string(),
+                severity, code: code.to_string(),
+                label: { let (t, _) = check::huong_dan(code); if t.is_empty() { code.to_string() } else { t.to_string() } },
+                fix: check::huong_dan(code).1.to_string(),
+                count, dossiers: ds.len(), example: ex.to_string(),
             })
             .collect(),
         issues: rep.issues.iter().take(300).cloned().collect(),

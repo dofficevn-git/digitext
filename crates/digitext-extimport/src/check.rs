@@ -40,6 +40,54 @@ impl Severity {
     }
 }
 
+/// Tên dễ hiểu và cách xử lý cho từng mã vấn đề — in ra Excel / màn hình cạnh thông điệp kỹ thuật.
+pub fn huong_dan(code: &str) -> (&'static str, &'static str) {
+    match code {
+        "THU-MUC-GOC-KHONG-CO" => ("Chọn sai thư mục kho", "Chọn thư mục CHỨA đoạn đầu của đường dẫn trong Excel (Excel ghi UBND\\… thì chọn thư mục có UBND bên trong)."),
+        "TEP-KHONG-CO-TREN-DIA" => ("Excel khai tệp nhưng trên đĩa không có", "Kiểm tra lại đường dẫn ở cột «Tệp tin tài liệu» và tên tệp thật trong thư mục; chép tệp còn thiếu vào đúng chỗ hoặc xoá dòng Excel thừa."),
+        "TEP-KHONG-CO-TRONG-EXCEL" => ("Trên đĩa có tệp nhưng Excel không khai", "Thêm dòng cho tệp đó vào Excel, hoặc chuyển tệp ra khỏi thư mục kho nếu không thuộc hồ sơ."),
+        "EXCEL-TRUNG-TEP" => ("Một tệp được khai hai dòng", "Xoá dòng Excel trùng, giữ một dòng."),
+        "TEP-RONG" => ("Tệp 0 byte", "Quét lại hoặc chép lại tệp từ nguồn."),
+        "PDF-HONG" => ("PDF không mở được", "Mở thử bằng Acrobat; hỏng thì quét lại hoặc chép lại từ nguồn."),
+        "TEP-KHONG-DOC-DUOC" => ("Không đọc được tệp", "Kiểm tra quyền truy cập, ổ đĩa hoặc tệp đang bị chương trình khác khoá."),
+        "HS-TRUNG-MA" => ("Một mã hồ sơ dùng cho nhiều thư mục", "Mỗi thư mục hồ sơ phải có mã riêng; sửa cột «Mã hồ sơ» của các dòng bị trùng."),
+        "HS-NHIEU-MA" => ("Một thư mục hồ sơ có nhiều mã hồ sơ / mã phông", "Các dòng cùng thư mục phải cùng mã hồ sơ và mã phông; sửa dòng ghi khác."),
+        "HS-MA-LECH-PHONG" => ("Mã phông không khớp mã hồ sơ", "Mã hồ sơ phải bắt đầu bằng mã phông. Sửa cột «Mã phông» theo phần trước năm trong mã hồ sơ, hoặc đổi tên tệp nếu mã phông đúng."),
+        "HS-KHONG-THONG-NHAT" => ("Các dòng cùng hồ sơ ghi thông tin hồ sơ khác nhau", "Thống nhất tiêu đề, thời hạn, ngày… của hồ sơ trên mọi dòng (lấy theo dòng đầu)."),
+        "HS-THIEU-TRUONG" => ("Thiếu trường bắt buộc của hồ sơ", "Điền Mã phông, Mã hồ sơ, Tiêu đề hồ sơ, Thời hạn lưu trữ, Số lượng tờ."),
+        "HS-THIEU-SO-TO" => ("Thiếu số lượng tờ", "Điền cột «Số lượng tờ» của hồ sơ."),
+        "HS-SO-TO-CO-RAC" => ("Số lượng tờ có ký tự lạ", "Chỉ ghi số (ví dụ 36), bỏ chữ «tờ», dấu nháy…"),
+        "HS-LECH-TONG-TAI-LIEU" => ("Tổng số tài liệu khai khác số dòng", "Sửa cột «Tổng số tài liệu» cho bằng số tệp thật, hoặc bổ sung dòng còn thiếu."),
+        "HS-LECH-TONG-TRANG" => ("Tổng số trang khai khác tổng thật", "Sửa «Số lượng trang» của hồ sơ bằng tổng số trang các tệp."),
+        "HS-NGAY-SAI-DANG" | "TL-NGAY-SAI-DANG" => ("Ngày không đúng dạng dd/mm/yyyy", "Ghi ngày dạng 09/07/2012; thiếu ngày/tháng thì ghi 01/07/2012 hoặc để trống."),
+        "HS-NGAY-NGUOC" => ("Ngày bắt đầu sau ngày kết thúc", "Đổi lại hai ô thời gian bắt đầu / kết thúc."),
+        "TM-LECH-SO-HO-SO" => ("Số hồ sơ của thư mục khác số trong mã", "Thư mục «HO SO 153» phải chứa hồ sơ có mã kết thúc bằng 153; sửa tên thư mục hoặc mã hồ sơ."),
+        "TL-THIEU-DUONG-DAN" => ("Dòng không có đường dẫn tệp", "Điền cột «Tệp tin tài liệu» (đường dẫn tương đối tới PDF)."),
+        "TL-LECH-THU-MUC" => ("Cột «Tệp tin hồ sơ» khác thư mục thật", "Sửa cột «Tệp tin hồ sơ» cho đúng thư mục chứa tệp."),
+        "TL-MA-LECH-TEN-TEP" => ("Mã lưu trữ tài liệu khác tên tệp", "Cột «Mã lưu trữ tài liệu» phải bằng tên tệp (có hoặc không đuôi .pdf)."),
+        "TL-TEN-LECH-PHONG" => ("Tên tệp không bắt đầu bằng mã phông", "Đặt tên tệp theo <mã cơ quan>.<phông>.<năm>.<số hồ sơ>[.<mục lục>].<STT 7 số>.pdf."),
+        "TL-TEN-LECH-NAM" => ("Năm trong tên tệp khác năm trong mã hồ sơ", "Sửa tên tệp hoặc mã hồ sơ cho cùng năm."),
+        "TL-TEN-LECH-SO-HO-SO" => ("Số hồ sơ trong tên tệp khác mã hồ sơ", "Tệp để nhầm hồ sơ hoặc đặt tên sai; chuyển tệp về đúng thư mục hoặc đổi tên."),
+        "TL-TEN-LECH-MUC-LUC" => ("Mục lục số trong tên tệp khác mã hồ sơ", "Thống nhất mục lục số giữa tên tệp và mã hồ sơ."),
+        "TL-TEN-KHONG-CO-STT" => ("Tên tệp không có số thứ tự 7 chữ số", "Nên đặt tên kết thúc bằng .0000001, .0000002…; không có thì chương trình đánh số theo thứ tự dòng."),
+        "TL-TRUNG-STT" => ("Hai tệp cùng số thứ tự", "Đổi tên để mỗi tệp trong hồ sơ có số thứ tự riêng."),
+        "TL-STT-KHONG-LIEN-TUC" => ("Số thứ tự tệp bị nhảy", "Kiểm tra có tệp bị thiếu không; nếu đúng là thiếu thì bổ sung, không thì bỏ qua."),
+        "TL-THBQ-KHAC-HO-SO" => ("Thời hạn lưu trữ của tài liệu khác hồ sơ", "Thường chỉ cần ghi ở hồ sơ; xoá hoặc sửa ô của tài liệu cho khớp."),
+        "TL-NGAY-NGOAI-HO-SO" => ("Ngày văn bản ngoài khoảng thời gian hồ sơ", "Sửa ngày văn bản hoặc nới thời gian bắt đầu / kết thúc của hồ sơ."),
+        "TL-THIEU-NGAY" => ("Thiếu ngày văn bản", "Điền cột «Ngày ban hành»; không rõ thì để trống (chỉ cảnh báo)."),
+        "TL-THIEU-SO-TRANG" => ("Thiếu số trang", "Điền cột «Số lượng trang» của tài liệu; để trống thì lấy số trang thật của PDF."),
+        "TL-THIEU-TEN-LOAI" => ("Thiếu tên loại văn bản", "Điền «Tên loại tài liệu» (Quyết định, Công văn…); trống thì ghi «Khác»."),
+        "TL-THIEU-TRICH-YEU" => ("Thiếu trích yếu", "Điền «Trích yếu nội dung» của tài liệu."),
+        "TL-XEP-BAN-DO" => ("Tệp được xếp là bản đồ / bản vẽ (áp 300 dpi)", "Không phải bản đồ thì sửa «Tên loại tài liệu»."),
+        "TL-NGHI-BAN-DO" => ("Nghi là bản đồ / bản vẽ", "Nếu đúng là bản đồ thì ghi «Tên loại tài liệu» = Bản đồ / Bản vẽ để áp 300 dpi."),
+        "PDF-LECH-SO-TRANG" => ("Số trang Excel khác số trang PDF thật", "Sửa «Số lượng trang» theo PDF, hoặc kiểm tra tệp có bị gộp / thiếu trang."),
+        "PDF-KHONG-PHAI-PDFA" | "PDF-THIEU-LOP-CHU" | "PDF-DPI-THAP" | "PDF-KHONG-MAU-24BIT" | "PDF-CHUA-KY-SO" => ("Tệp chưa đạt Điều 8.2.a TT05", "Quét lại / chuyển PDF/A / ký số theo yêu cầu, hoặc dùng tab Đóng gói nhanh nếu chủ dự án chấp nhận bản hiện có."),
+        "PDF-KHONG-DAT-ISO" => ("Không đạt chuẩn ISO 19005 (veraPDF)", "Chuyển lại sang PDF/A bằng công cụ đạt chuẩn rồi ký lại; hoặc tắt yêu cầu ISO nếu dự án không đòi."),
+        "PDF-VERAPDF-KHONG-CHAY" => ("Không chạy được veraPDF", "Cài Docker và image verapdf/cli, hoặc tắt ô yêu cầu ISO."),
+        "BIA-MLVB" => ("Tệp bìa / mục lục nhận mã theo thư mục", "Không cần làm gì."),
+        _ => ("", "Xem nội dung để biết cần sửa gì."),
+    }
+}
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
@@ -604,7 +652,16 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
     }
     if let (Some(fc), Some(code)) = (&first.fond_code, &first.hs_code) {
         if !code.starts_with(&format!("{fc}.")) {
-            sink.error("HS-MA-LECH-PHONG", dir, &hs, Some(first.line), None, format!("mã hồ sơ «{code}» không bắt đầu bằng mã phông «{fc}»"));
+            // Gợi ý mã phông đúng: phần trước đoạn năm trong mã hồ sơ (quy tắc <mã cơ quan>.<phông>.<năm>…).
+            let goi_y = {
+                let parts: Vec<&str> = code.split('.').collect();
+                parts.iter().position(|p| p.len() == 4 && p.bytes().all(|b| b.is_ascii_digit())).filter(|&i| i > 0).map(|i| parts[..i].join("."))
+            };
+            let msg = match goi_y {
+                Some(g) => format!("cột «Mã phông» ghi «{fc}» nhưng mã hồ sơ là «{code}» — phần trước năm của mã hồ sơ là «{g}». Sửa «Mã phông» thành «{g}», hoặc nếu «{fc}» mới đúng thì mã hồ sơ / tên tệp phải bắt đầu bằng «{fc}.»"),
+                None => format!("cột «Mã phông» ghi «{fc}» nhưng mã hồ sơ «{code}» không bắt đầu bằng mã đó — sửa một trong hai cho khớp"),
+            };
+            sink.error("HS-MA-LECH-PHONG", dir, &hs, Some(first.line), None, msg);
         }
     }
     for (name, v) in [("Thời gian bắt đầu", &first.hs_start), ("Thời gian kết thúc", &first.hs_end)] {

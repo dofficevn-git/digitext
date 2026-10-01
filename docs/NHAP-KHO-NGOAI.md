@@ -65,6 +65,10 @@ Thư mục gốc: chọn thư mục **chứa** đoạn đầu của đường d�
 thì chọn thư mục có `UBND` bên trong, không chọn `…\UBND\DCXD`). Chọn lệch thì bước kiểm tự dò lên
 các cấp cha; không dò được sẽ báo `THU-MUC-GOC-KHONG-CO` kèm thư mục nên chọn.
 
+Báo cáo `kiem-tra-van-de.csv` và bảng tóm tắt trong ứng dụng ghi mỗi vấn đề bằng **tên dễ hiểu**,
+nội dung cụ thể và cột **Cách xử lý** (mã kỹ thuật để ở cột cuối). Ví dụ `HS-MA-LECH-PHONG` ghi rõ
+cột Mã phông đang là gì, phần trước năm của mã hồ sơ là gì và nên sửa bên nào.
+
 LỖI (chặn đóng gói):
 
 | Mã | Ý nghĩa |

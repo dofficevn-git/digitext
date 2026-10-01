@@ -22,6 +22,9 @@ export interface ExtIssue {
 export interface ExtCodeSummary {
   severity: ExtSeverity;
   code: string;
+  /** Tên dễ hiểu của vấn đề và cách xử lý. */
+  label: string;
+  fix: string;
   count: number;
   dossiers: number;
   example: string;
