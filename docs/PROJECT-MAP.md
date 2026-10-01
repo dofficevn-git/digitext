@@ -289,7 +289,9 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
 - `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
   Tổng quan (`home`) · Số hoá (`drive`, `scan`, `tree`, `dossier`, `upload`,
   `server`) · Xử lý (`dossier/OcrPane`, `work`, `sign`, `package`) · Chỉnh lý
-  (`chinhly/*`: bản sao đồng bộ, offline được) · Lưu trữ số (`submission`,
+  (`chinhly/*`: bản sao đồng bộ, offline được; nhập mục lục hồ sơ có dòng nhóm
+  I./1. ở `chinhly/mucLucImport.ts` + `thoiGianHoSo.ts` + `NhapMucLucDialog.tsx`,
+  xem `docs/CHINH-LY-SYNC.md`) · Lưu trữ số (`submission`,
   `access`, `infoops`, `records`, `disposal`) · Báo cáo (`report`,
   `chinhly/ThongKeView`) · Quản trị (`users`, `settings`). `editor` mở từ Kho/Quét.
   `khogia/` chỉ còn hub cũ; danh mục cục bộ (`catalog`) đã bỏ, thay bằng `tree`.

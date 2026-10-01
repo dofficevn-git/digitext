@@ -10,7 +10,7 @@ use crate::extract::Ts;
 use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::{Json, Router};
-use digitext_db::chinh_ly::{self as cl, OpKind, OpResult, Row, SyncOp};
+use digitext_db::chinh_ly::{self as cl, OpCtx, OpKind, OpResult, Row, SyncOp};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -29,6 +29,10 @@ struct HoSoImportReq {
     /// create: dòng trùng số tạm → lỗi · upsert: ghi đè theo số tạm.
     #[serde(default = "default_mode")]
     mode: String,
+    /// true: phòng ban / mảng ghi bằng tên (`ten_phong_ban`, `ten_mang`) chưa có trong phông → tự tạo
+    /// (mã lấy từ `ma_don_vi` / `ma_mang` nếu có). Nhập mục lục hồ sơ dùng; mẫu cũ để mặc định false.
+    #[serde(default)]
+    create_missing: bool,
     rows: Vec<Row>,
 }
 fn default_mode() -> String {
@@ -50,6 +54,9 @@ struct ImportResp {
     created: usize,
     updated: usize,
     skipped: usize,
+    /// Phòng ban / mảng tạo mới khi `create_missing`.
+    created_phong_ban: usize,
+    created_mang: usize,
     errors: Vec<RowError>,
 }
 
@@ -88,9 +95,29 @@ async fn lookup(st: &AppState, project: Uuid, phong: Uuid) -> Result<Lookup, Api
     Ok(Lookup { thbq, phong_ban, mang, ngon_ngu, loai_vb })
 }
 
-/// Đổi tên/mã danh mục trong dòng hồ sơ sang id: `thbq` (tên, hoặc số năm "10"), `ma_don_vi`/`ten_phong_ban`,
-/// `ma_mang`/`ten_mang`, `ngon_ngu` (tên → mã).
-fn resolve_ho_so(lk: &Lookup, row: &mut Row) -> Result<(), RowError> {
+/// Tạo một dòng danh mục (phòng ban / mảng) qua `apply_op` — cùng kiểm tra, quyền, lịch sử như mọi đường ghi.
+async fn tao_danh_muc(st: &AppState, ctx: &OpCtx<'_>, table: &str, new: Row, field: &str) -> Result<Result<Uuid, RowError>, ApiError> {
+    let id = Uuid::now_v7();
+    let op = SyncOp { op_id: None, table: table.into(), id, op: OpKind::Upsert, base: None, new, if_ver: None, edited_at: None };
+    let r = cl::apply_op(&st.pool, ctx, &op).await?;
+    Ok(match r {
+        OpResult::Applied { .. } | OpResult::Merged { .. } | OpResult::NoChange { .. } => Ok(id),
+        other => Err(op_err(0, &other).map(|mut e| {
+            e.field = Some(field.to_owned());
+            e
+        }).unwrap_or(RowError { row: 0, field: Some(field.to_owned()), message: "không tạo được dòng danh mục".into() })),
+    })
+}
+
+/// Số thứ tự từ mã "01"/"2" (để `so_tt` giữ đúng thứ tự trong tệp).
+fn so_tt_tu_ma(ma: Option<&str>) -> Option<i64> {
+    ma.and_then(|m| m.trim().parse::<i64>().ok()).filter(|n| *n > 0)
+}
+
+/// Đổi tên/mã danh mục trong dòng hồ sơ sang id: `thbq` (tên, hoặc số năm "10"), `ten_phong_ban`/`ma_don_vi`
+/// (tên khớp trước, mã sau), `ten_mang`/`ma_mang`, `ngon_ngu` (tên → mã). `create_missing` → phòng ban / mảng
+/// ghi bằng tên mà chưa có thì tạo trong phông rồi dùng luôn cho các dòng sau.
+async fn resolve_ho_so(st: &AppState, ctx: &OpCtx<'_>, phong: Uuid, lk: &mut Lookup, row: &mut Row, create_missing: bool, out: &mut ImportResp) -> Result<Result<(), RowError>, ApiError> {
     let v = Value::Object(row.clone());
     if row.get("thbq_id").map_or(true, Value::is_null) {
         if let Some(t) = s(&v, "thbq") {
@@ -103,35 +130,98 @@ fn resolve_ho_so(lk: &Lookup, row: &mut Row) -> Result<(), RowError> {
                 Some((id, _)) => {
                     row.insert("thbq_id".into(), json!(id));
                 }
-                None => return Err(RowError { row: 0, field: Some("thbq".into()), message: format!("Thời hạn bảo quản {t:?} không có trong danh mục") }),
+                None => return Ok(Err(RowError { row: 0, field: Some("thbq".into()), message: format!("Thời hạn bảo quản {t:?} không có trong danh mục") })),
             }
         }
     }
     row.remove("thbq");
     let mut pb_id = u(&v, "phong_ban_id");
     if pb_id.is_none() {
-        if let Some(t) = s(&v, "ma_don_vi").or(s(&v, "ten_phong_ban")) {
-            match lk.phong_ban.iter().find(|(_, ma, ten)| eq_ci(ma, t) || eq_ci(ten, t)) {
+        let ten = s(&v, "ten_phong_ban");
+        let ma = s(&v, "ma_don_vi");
+        if let Some(t) = ten.or(ma) {
+            let found = ten
+                .and_then(|tn| lk.phong_ban.iter().find(|(_, _, ten)| eq_ci(ten, tn)))
+                .or_else(|| ma.and_then(|m| lk.phong_ban.iter().find(|(_, mc, ten)| eq_ci(mc, m) || eq_ci(ten, m))))
+                .or_else(|| lk.phong_ban.iter().find(|(_, mc, ten)| eq_ci(mc, t) || eq_ci(ten, t)));
+            match found {
                 Some((id, _, _)) => {
                     pb_id = Some(*id);
                     row.insert("phong_ban_id".into(), json!(id));
                 }
-                None => return Err(RowError { row: 0, field: Some("ma_don_vi".into()), message: format!("Phòng ban {t:?} không có trong phông") }),
+                None if create_missing && ten.is_some() => {
+                    let tn = ten.unwrap_or_default();
+                    let mut nr = Row::new();
+                    nr.insert("phong_id".into(), json!(phong));
+                    nr.insert("ten".into(), json!(tn));
+                    if let Some(m) = ma {
+                        nr.insert("ma_don_vi".into(), json!(m));
+                    }
+                    if let Some(n) = so_tt_tu_ma(ma) {
+                        nr.insert("so_tt".into(), json!(n));
+                    }
+                    match tao_danh_muc(st, ctx, "cl_phong_ban", nr, "ma_don_vi").await? {
+                        Ok(id) => {
+                            lk.phong_ban.push((id, ma.unwrap_or("").to_owned(), tn.to_owned()));
+                            out.created_phong_ban += 1;
+                            pb_id = Some(id);
+                            row.insert("phong_ban_id".into(), json!(id));
+                        }
+                        Err(mut e) => {
+                            e.message = format!("Không tạo được phòng ban {tn:?}: {}", e.message);
+                            return Ok(Err(e));
+                        }
+                    }
+                }
+                None => return Ok(Err(RowError { row: 0, field: Some("ma_don_vi".into()), message: format!("Phòng ban {t:?} không có trong phông") })),
             }
         }
     }
     row.remove("ma_don_vi");
     row.remove("ten_phong_ban");
     if row.get("mang_id").map_or(true, Value::is_null) {
-        if let Some(t) = s(&v, "ma_mang").or(s(&v, "ten_mang")) {
-            match lk.mang.iter().find(|(_, pb, ma, ten)| pb_id.map_or(true, |p| *pb == p) && (eq_ci(ma, t) || eq_ci(ten, t))) {
+        let ten = s(&v, "ten_mang");
+        let ma = s(&v, "ma_mang");
+        if let Some(t) = ten.or(ma) {
+            let trong_pb = |pb: &Uuid| pb_id.map_or(true, |p| *pb == p);
+            let found = ten
+                .and_then(|tn| lk.mang.iter().find(|(_, pb, _, ten)| trong_pb(pb) && eq_ci(ten, tn)))
+                .or_else(|| ma.and_then(|m| lk.mang.iter().find(|(_, pb, mc, ten)| trong_pb(pb) && (eq_ci(mc, m) || eq_ci(ten, m)))))
+                .or_else(|| lk.mang.iter().find(|(_, pb, mc, ten)| trong_pb(pb) && (eq_ci(mc, t) || eq_ci(ten, t))));
+            match found {
                 Some((id, pb, _, _)) => {
                     row.insert("mang_id".into(), json!(id));
                     if pb_id.is_none() {
                         row.insert("phong_ban_id".into(), json!(pb));
                     }
                 }
-                None => return Err(RowError { row: 0, field: Some("ma_mang".into()), message: format!("Mảng công việc {t:?} không có trong phòng ban") }),
+                None if create_missing && ten.is_some() => {
+                    let Some(pb) = pb_id else {
+                        return Ok(Err(RowError { row: 0, field: Some("ma_mang".into()), message: format!("Mảng {t:?} cần có phòng ban để tạo") }));
+                    };
+                    let tn = ten.unwrap_or_default();
+                    let mut nr = Row::new();
+                    nr.insert("phong_ban_id".into(), json!(pb));
+                    nr.insert("ten".into(), json!(tn));
+                    if let Some(m) = ma {
+                        nr.insert("ma_mang".into(), json!(m));
+                    }
+                    if let Some(n) = so_tt_tu_ma(ma) {
+                        nr.insert("so_tt".into(), json!(n));
+                    }
+                    match tao_danh_muc(st, ctx, "cl_mang", nr, "ma_mang").await? {
+                        Ok(id) => {
+                            lk.mang.push((id, pb, ma.unwrap_or("00").to_owned(), tn.to_owned()));
+                            out.created_mang += 1;
+                            row.insert("mang_id".into(), json!(id));
+                        }
+                        Err(mut e) => {
+                            e.message = format!("Không tạo được mảng {tn:?}: {}", e.message);
+                            return Ok(Err(e));
+                        }
+                    }
+                }
+                None => return Ok(Err(RowError { row: 0, field: Some("ma_mang".into()), message: format!("Mảng công việc {t:?} không có trong phòng ban") })),
             }
         }
     }
@@ -142,7 +232,7 @@ fn resolve_ho_so(lk: &Lookup, row: &mut Row) -> Result<(), RowError> {
             row.insert("ngon_ngu".into(), json!(ma));
         }
     }
-    Ok(())
+    Ok(Ok(()))
 }
 
 fn resolve_van_ban(lk: &Lookup, row: &mut Row) {
@@ -173,14 +263,14 @@ async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImpo
     if b.rows.len() > IMPORT_MAX {
         return Err(ApiError::bad_request(format!("Tối đa {IMPORT_MAX} dòng mỗi lần — hãy chia nhỏ tệp")));
     }
-    let lk = lookup(&st, b.project_id, b.phong_id).await?;
+    let mut lk = lookup(&st, b.project_id, b.phong_id).await?;
     let parts = ctx_parts(&ts);
     let ctx = op_ctx(&ts, b.project_id, "import", &parts);
     let mut out = ImportResp::default();
     for (i, mut row) in b.rows.into_iter().enumerate() {
         let n = i + 1;
         row.insert("phong_id".into(), json!(b.phong_id));
-        if let Err(mut e) = resolve_ho_so(&lk, &mut row) {
+        if let Err(mut e) = resolve_ho_so(&st, &ctx, b.phong_id, &mut lk, &mut row, b.create_missing, &mut out).await? {
             e.row = n;
             out.errors.push(e);
             continue;
@@ -216,7 +306,7 @@ async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImpo
             }
         }
     }
-    digitext_db::audit::append(&st.pool, super::audit(&ts, "cl.import_ho_so", b.phong_id.to_string(), json!({"created": out.created, "updated": out.updated, "errors": out.errors.len()}))).await?;
+    digitext_db::audit::append(&st.pool, super::audit(&ts, "cl.import_ho_so", b.phong_id.to_string(), json!({"created": out.created, "updated": out.updated, "errors": out.errors.len(), "created_phong_ban": out.created_phong_ban, "created_mang": out.created_mang}))).await?;
     Ok(Json(out))
 }
 
