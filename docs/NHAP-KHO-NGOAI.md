@@ -140,7 +140,13 @@ Kết quả: `test/dienxa/vera-863/`.
     structMap `TYPE="NORMALIZED"` gồm Metadata / Data / MetadataLink), `data/`, `metadata/`.
   - `schemas/`: `METS.xsd`, `xlink.xsd`, `DILCISExtensionMETS.xsd` (+ `DILCISExtensionSIPMETS.xsd`
     với SIP), `EAD*.xsd`, `PREMIS.xsd` — gói tự đứng, kiểm được khi không có mạng.
-  - `documentation/UserManual.pdf` nếu đặt `DIGITEXT_PACKAGE_MANUAL`.
+  - `documentation/UserManual.pdf` **sinh cho từng gói** như mẫu Đầm Hà: thông tin tổ chức (đơn vị
+    tạo lập, cơ quan hình thành phông, cơ quan lưu trữ), phần mềm, ngày tạo gói, chuẩn áp dụng,
+    thông tin hồ sơ (mã yêu cầu nộp, STT, tên ZIP, OBJID, tiêu đề, thời gian, ngôn ngữ, THBQ…),
+    cấu trúc thư mục, danh sách văn bản. **Ngày giờ = đồng hồ và múi giờ của máy đang đóng gói**
+    (cùng giá trị với METS CREATEDATE, PREMIS) — chỉnh ngày máy là chỉnh được ngày tạo gói.
+    Cần font chữ Việt (`DIGITEXT_CERT_FONT` hoặc font hệ thống); đặt `DIGITEXT_PACKAGE_MANUAL`
+    trỏ tới một PDF có sẵn thì dùng tệp đó thay cho bản sinh tự động.
 - Tệp tài liệu phải mang dấu PDF/A (XMP `pdfaid` + OutputIntent); không có thì bộ dựng từ chối
   (`--allow-non-tt05` để bỏ qua khi chạy thử).
 - Tệp trong gói được **đổi tên** thành `<mã hồ sơ>[.<mục lục số>].<STT 7 số>.pdf` (quy tắc

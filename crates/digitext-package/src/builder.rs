@@ -521,7 +521,36 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
         files.insert(format!("schemas/{name}"), bytes);
     }
     let mut r_3vo = Vec::new();
-    if let Some(manual) = &r_3wb.user_manual_pdf {
+    // documentation/UserManual.pdf: sinh cho từng gói theo mẫu gói Đầm Hà (ngày giờ = created_at,
+    // đồng hồ máy đang đóng gói); tệp ngoài qua DIGITEXT_PACKAGE_MANUAL (nếu có) được ưu tiên.
+    let manual_bytes: Option<Vec<u8>> = match &r_3wb.user_manual_pdf {
+        Some(m) => Some(m.clone()),
+        None => {
+            let font = r_3wb
+                .cert_font_ttf
+                .clone()
+                .or_else(|| digitext_pdf::f_1cq().and_then(|p| std::fs::read(p).ok()));
+            match font {
+                Some(f) => crate::manual::user_manual(
+                    &crate::manual::ManualCtx {
+                        req: r_3wb,
+                        objid: &objid,
+                        zip_name: &ids::f_2sb(r_3wb.kind, &objid, r_3wb.zip_ordinal),
+                        fond: &fond,
+                        archive: &archive,
+                        software: &r_3wb.software,
+                        created_at: r_3wb.created_at,
+                        include_premis: r_3we,
+                    },
+                    &f,
+                )
+                .map_err(PackageError::Cert)?
+                .into(),
+                None => None,
+            }
+        }
+    };
+    if let Some(manual) = &manual_bytes {
         r_3vo.push(T84 {
             id: ids::file_id(r_3vx),
             href: "documentation/UserManual.pdf".into(),

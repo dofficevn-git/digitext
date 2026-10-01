@@ -1223,6 +1223,24 @@ pub fn f_ve(
     r_4eo: &[FormBlock],
     r_4ex: &[u8],
 ) -> Result<Vec<u8>, PdfError> {
+    render_form(r_4fc, r_4fa, r_4eo, r_4ex, true)
+}
+/// Như `f_ve` nhưng không in quốc hiệu (tài liệu kỹ thuật kèm gói tin, không phải biên bản).
+pub fn render_form_plain(
+    title: &str,
+    subtitle: Option<&str>,
+    blocks: &[FormBlock],
+    font: &[u8],
+) -> Result<Vec<u8>, PdfError> {
+    render_form(title, subtitle, blocks, font, false)
+}
+fn render_form(
+    r_4fc: &str,
+    r_4fa: Option<&str>,
+    r_4eo: &[FormBlock],
+    r_4ex: &[u8],
+    quoc_hieu: bool,
+) -> Result<Vec<u8>, PdfError> {
     let r_4eu = ttf_parser::Face::parse(r_4ex, 0).map_err(|e| PdfError::BadFont(e.to_string()))?;
     let r_4f1 = C_1 - C_7E * 2.0;
     let mut r_4f0: Vec<Tan> = Vec::new();
@@ -1235,21 +1253,23 @@ pub fn f_ve(
             leading,
         });
     };
-    r_4f6(
-        "CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(),
-        12.0,
-        true,
-        0.0,
-        C_7D,
-    );
-    r_4f6(
-        "Độc lập - Tự do - Hạnh phúc".into(),
-        11.5,
-        true,
-        0.0,
-        C_7D,
-    );
-    r_4f6(String::new(), C_7C, false, 0.0, C_7D);
+    if quoc_hieu {
+        r_4f6(
+            "CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(),
+            12.0,
+            true,
+            0.0,
+            C_7D,
+        );
+        r_4f6(
+            "Độc lập - Tự do - Hạnh phúc".into(),
+            11.5,
+            true,
+            0.0,
+            C_7D,
+        );
+        r_4f6(String::new(), C_7C, false, 0.0, C_7D);
+    }
     r_4f6(r_4fc.to_uppercase(), 14.0, true, 0.0, C_7D + 3.0);
     if let Some(r_4f9) = r_4fa {
         r_4f6(r_4f9.to_string(), 10.5, true, 0.0, C_7D);
