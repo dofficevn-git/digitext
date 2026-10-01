@@ -147,24 +147,31 @@ export async function docMucLucTam(file: File): Promise<DocMucLucTam> {
 // ------------------------------------------------------------------ mẫu lập hồ sơ (bản cũ: DownloadTemplateLapHS / InputTemp)
 
 export const MAU_HS_COLS = ["Mã phòng ban", "Mã mảng công việc", "Số tạm", "Tiêu đề hồ sơ", "Ngày bắt đầu", "Ngày kết thúc", "Mã THBQ", "Số tờ", "Ghi chú", "Tổng số VB", "Số lượng trang", "Chế độ sử dụng", "Ngôn ngữ", "TT Vật lý"];
-const MAU_HS_KEYS = ["ma_don_vi", "ma_mang", "so_tam", "tieu_de", "ngay_bat_dau", "ngay_ket_thuc", "thbq", "so_to", "ghi_chu", "tong_so_vb", "so_luong_trang", "che_do_su_dung", "ngon_ngu", "tinh_trang_vat_ly"];
+export const MAU_HS_KEYS = ["ma_don_vi", "ma_mang", "so_tam", "tieu_de", "ngay_bat_dau", "ngay_ket_thuc", "thbq", "so_to", "ghi_chu", "tong_so_vb", "so_luong_trang", "che_do_su_dung", "ngon_ngu", "tinh_trang_vat_ly"];
 
-/** A1 = mã phông; dòng 2 tên cột; dòng 3 số 1–14; dòng 4 kiểu dữ liệu; dữ liệu từ dòng 5. */
-export async function xuatMauLapHoSo(maPhong: string, thbqs: ClRow[]): Promise<void> {
-  const aoa: Cell[][] = [
-    [maPhong, "", "Mô tả hồ sơ"],
-    [...MAU_HS_COLS],
-    Array.from({ length: 14 }, (_, i) => i + 1),
-    ["Text", "Text", "String", "String", "Date (dd/mm/yyyy)", "Date (dd/mm/yyyy)", "String (tên hoặc số năm)", "Number", "String", "Number", "Number", "01/02/03", "01..11", "01/02/03"],
-  ];
-  const ds: Cell[][] = [["Mã THBQ / tên", "Loại"], ...thbqs.map((t) => [str(t, "ten"), str(t, "trang_thai") === "1" ? "Vĩnh viễn" : str(t, "trang_thai") === "2" ? `${str(t, "gia_tri")} năm` : "Đánh giá lại"])];
-  await writeXlsx(
-    [
-      { name: "Lập hồ sơ điện tử", aoa, cols: MAU_HS_COLS.map((c) => ({ wch: Math.max(12, c.length + 2) })), merges: ["A1:B1", "C1:N1"] },
-      { name: "Danh mục THBQ", aoa: ds },
+/** 4 dòng đầu của mẫu lập hồ sơ (A1 = mã phông; dòng 2 tên cột; dòng 3 số 1–14; dòng 4 kiểu dữ liệu). Dữ liệu từ dòng 5. */
+export function mauLapHoSoDauTrang(maPhong: string): { aoa: Cell[][]; cols: { wch: number }[]; merges: string[] } {
+  return {
+    aoa: [
+      [maPhong, "", "Mô tả hồ sơ"],
+      [...MAU_HS_COLS],
+      Array.from({ length: 14 }, (_, i) => i + 1),
+      ["Text", "Text", "String", "String", "Date (dd/mm/yyyy)", "Date (dd/mm/yyyy)", "String (tên hoặc số năm)", "Number", "String", "Number", "Number", "01/02/03", "01..11", "01/02/03"],
     ],
-    `mau-lap-ho-so-${maPhong}.xlsx`,
-  );
+    cols: MAU_HS_COLS.map((c) => ({ wch: Math.max(12, c.length + 2) })),
+    merges: ["A1:B1", "C1:N1"],
+  };
+}
+
+/** Sheet "Danh mục THBQ" kèm mẫu: tên và loại của từng thời hạn bảo quản. */
+export function sheetDanhMucThbq(thbqs: ClRow[]): Sheet {
+  const ds: Cell[][] = [["Mã THBQ / tên", "Loại"], ...thbqs.map((t) => [str(t, "ten"), str(t, "trang_thai") === "1" ? "Vĩnh viễn" : str(t, "trang_thai") === "2" ? `${str(t, "gia_tri")} năm` : "Đánh giá lại"])];
+  return { name: "Danh mục THBQ", aoa: ds };
+}
+
+export async function xuatMauLapHoSo(maPhong: string, thbqs: ClRow[]): Promise<void> {
+  const dau = mauLapHoSoDauTrang(maPhong);
+  await writeXlsx([{ name: "Lập hồ sơ điện tử", aoa: dau.aoa, cols: dau.cols, merges: dau.merges }, sheetDanhMucThbq(thbqs)], `mau-lap-ho-so-${maPhong}.xlsx`);
 }
 
 export interface DocMauHoSo {

@@ -43,7 +43,9 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 ## 6. Chỉnh lý và lập hồ sơ
 
 - Danh mục chỉnh lý (phông, phòng ban, mảng công việc, thời hạn bảo quản, loại văn bản, ngôn ngữ, khối phông) là **bản sao đồng bộ với máy chủ**: sửa được khi mất mạng, có mạng tự đẩy; xung đột cùng trường được hỏi và chọn theo từng trường.
-- Lập hồ sơ điện tử (bảng 50 dòng, lọc theo phông / phòng ban / mảng / THBQ, nhập Excel theo mẫu), văn bản của hồ sơ, hệ thống hoá 4 bước (xem trước → đánh số → xuất mục lục tạm → nhập tệp đã điền hộp / bó / tập), kho và giá, mượn trả hồ sơ giấy (in phiếu).
+- Lập hồ sơ điện tử (bảng 50 dòng, lọc theo phông / phòng ban / mảng / THBQ, nhập Excel theo mẫu; **nhập mục lục hồ sơ**
+  7 cột có dòng nhóm "I. …" / "1. …": tự nhận phòng ban / mảng và tạo trong Danh mục, kiểm + tự điền cột Thời gian BĐ - KT
+  theo quy tắc CheckThoiGian / DienThoiGian, số tạm `VV.001` / `20N.001`, tải tệp đã chuyển đúng mẫu 14 cột + sheet Kiểm tra), văn bản của hồ sơ, hệ thống hoá 4 bước (xem trước → đánh số → xuất mục lục tạm → nhập tệp đã điền hộp / bó / tập), kho và giá, mượn trả hồ sơ giấy (in phiếu).
 - Tra cứu và kết xuất: metadata TT05 / TT02, mục lục hồ sơ 6 kiểu (Excel và in), mục lục văn bản, nhãn hộp, sản phẩm có bìa, phụ lục tra tìm, lịch sử thay đổi.
 - Cây thư mục quét (Cơ quan › Hộp › Hồ sơ) lấy từ mục lục chỉnh lý hoặc Excel, phát cho máy nhân viên qua máy chủ hoặc mạng LAN (mã 6 số).
 

@@ -93,6 +93,29 @@ mẫu MLVB: dòng 1 "ID Hồ sơ: …", 16 cột), `excelXuat.ts` (mục lục h
 một sheet, phụ lục, TT02 32 cột, TT05 51 cột, lịch sử), `print.ts` (MLHS, MLVB, nhãn hộp A4 2×2, sản phẩm có 2 bìa +
 "Viết bằng chữ", phụ lục hướng dẫn tra tìm).
 
+## Nhập mục lục hồ sơ (1/10/2026)
+
+Màn Lập hồ sơ › "…" › **Nhập mục lục hồ sơ**: tệp mục lục 7 cột `Hộp số · Hồ sơ số · Tiêu đề hồ sơ · Thời gian BĐ - KT ·
+Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm nằm trong cột Tiêu đề. Phân tích chạy trên máy
+(`desktop/src/features/chinhly/mucLucImport.ts`, `thoiGianHoSo.ts`), hộp thoại 3 bước `NhapMucLucDialog.tsx`.
+
+- **Dòng nhóm**: `I.`/`II.`… = phòng ban, `1.`/`2.`… = mảng (thuộc phòng ban hiện tại). Dòng nhóm khác → lỗi chặn nhập
+  (sửa tệp). Mã phòng ban / mảng = số thứ tự 2 chữ số (`I.` → `01`, `1.` → `01`), tên = phần sau dấu chấm.
+- **Số tạm** = `<tiền tố THBQ>.<hồ sơ số đệm 3>` (`VV.001`, `20N.001`, `20DG.001`); tiền tố gợi ý theo THBQ nhiều nhất
+  trong tệp, sửa được ở bước Kiểm tra — vì mỗi tệp của phông đều đánh hồ sơ số lại từ 01.
+- **Thời gian** (chuyển từ hai công cụ CheckThoiGian / DienThoiGian): tách mốc theo gạch / xuống dòng; điền `2020` → cả năm,
+  `04/2020` → cả tháng, một ngày → lặp lại, mốc sai → giữ mốc đúng + suy từ năm trong ô, ô trống → năm trong tiêu đề
+  (cụm năm sau chữ "năm", không có thì cụm cuối; bỏ "nhiệm kỳ"); đầu > cuối → đảo. Kiểm: sai định dạng, năm ngoài dải năm
+  tiêu đề, tiêu đề không có năm → cảnh báo (vẫn nhập); không suy được năm → ngày để trống.
+- **Hộp số** không nhập (hệ thống cũ cũng gán hộp ở Hệ thống hoá), chỉ giữ ở sheet "Kiểm tra" của tệp đã chuyển.
+- **Nhập**: `POST /cl/ho-so/import` với `createMissing: true` (+ `ten_phong_ban`, `ten_mang`): máy chủ khớp phòng ban / mảng
+  theo **tên trước, mã sau**, chưa có thì tạo qua `apply_op` (`so_tt` = mã) rồi dùng cho các dòng sau; trả thêm
+  `createdPhongBan`, `createdMang`. Mẫu 14 cột cũ không đổi (`createMissing` mặc định false). Sau nhập desktop gọi
+  `cl_sync_now` để kéo danh mục / hồ sơ mới về bản sao.
+- **Tệp đã chuyển**: sheet 1 đúng mẫu lập hồ sơ (đọc lại được bằng "Nhập hồ sơ từ Excel"), sheet 2 "Kiểm tra" (dòng gốc,
+  hộp số, số tạm, thời gian gốc → mới, kết luận, ghi chú), sheet 3 danh mục THBQ. Có thêm CSV danh sách kiểm tra.
+- Tệp thử: `test/chinhly/` (gốc, báo lỗi dòng nhóm) và `test/chinhly/da-sua/` (đã thêm `I.`, xoá dòng con): 104 / 352 hồ sơ.
+
 ## Kiểm thử
 
 `cargo test -p digitext-core chinh_ly` (thuần), `DIGITEXT_TEST_DATABASE_URL=… cargo test -p digitext-db chinh_ly`
