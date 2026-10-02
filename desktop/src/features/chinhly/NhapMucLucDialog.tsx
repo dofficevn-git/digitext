@@ -9,7 +9,7 @@ import { useProject } from "@/state/project";
 import { Badge, Banner, Button, Checkbox, Dialog, Field, Help, Input, KpiTile, notifyError, Stepper, Table, toast, type Column } from "@/ui";
 import type { V3y0 } from "@/domain/types";
 import { n } from "./common";
-import { coLoiChan, docMucLucHoSo, dongMau, soTamCua, xuatKiemTraCsv, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
+import { coLoiChan, docMucLucHoSo, dongMau, soTamCua, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
 import { KET_LUAN_LABEL } from "./thoiGianHoSo";
 
 const BUOC = [
@@ -182,9 +182,6 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
           <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
             Tải tệp đã chuyển
           </Button>
-          <Button icon="xuatTep" disabled={busy} onClick={() => void xuatKiemTraCsv(pt, tienTo).catch((e) => notifyError(e, "xuất danh sách kiểm tra"))}>
-            Xuất danh sách kiểm tra
-          </Button>
         </>
       )}
       <span className="flex-1" />
@@ -350,9 +347,6 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
                   </Button>
                   <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
                     Tải tệp đã chuyển
-                  </Button>
-                  <Button icon="xuatTep" onClick={() => void xuatKiemTraCsv(pt, tienTo).catch((e) => notifyError(e, "xuất danh sách kiểm tra"))}>
-                    Xuất danh sách kiểm tra
                   </Button>
                 </div>
               )}

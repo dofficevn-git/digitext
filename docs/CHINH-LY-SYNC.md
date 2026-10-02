@@ -114,7 +114,8 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
   dùng → lấy mã số lớn nhất + 1 và trả ghi chú trong `notes`. Trả thêm `createdPhongBan`, `createdMang`. Mẫu 14 cột cũ không đổi (`createMissing` mặc định false). Sau nhập desktop gọi
   `cl_sync_now` để kéo danh mục / hồ sơ mới về bản sao.
 - **Tệp đã chuyển**: sheet 1 đúng mẫu lập hồ sơ (đọc lại được bằng "Nhập hồ sơ từ Excel"), sheet 2 "Kiểm tra" (dòng gốc,
-  hộp số, số tạm, thời gian gốc → mới, kết luận, ghi chú), sheet 3 danh mục THBQ. Có thêm CSV danh sách kiểm tra.
+  hộp số, số tạm, thời gian gốc → mới, kết luận, ghi chú), sheet 3 danh mục THBQ. "Tải tệp gốc đã đánh dấu" (`xuatTepDanhDau`, ExcelJS) trả lại chính tệp gốc
+  `<tên>_DADIEN.xlsx` đã điền thời gian, tô màu + ghi chú như DienThoiGian (thay cho CSV danh sách kiểm tra cũ).
 - Tệp thử: `test/chinhly/` (gốc, báo lỗi dòng nhóm) và `test/chinhly/da-sua/` (đã thêm `I.`, xoá dòng con): 104 / 352 hồ sơ.
 
 ## Kiểm thử
