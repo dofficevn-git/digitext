@@ -103,14 +103,20 @@ def fields(doc) -> dict[str, list[str]]:
     return out
 
 
+OPTIONAL_CODES = {"format", "riskRecoveryStatus", "colour", "feeObjectType"}
+
+
 def check_codes(name: str, f: dict[str, list[str]]) -> None:
     for k, mx in CODES.items():
         for v in f.get(k, []):
+            # Gói Đông Ngũ (DOffice 1.2.0) ghi mọi thẻ, trường tuỳ chọn không có giá trị thì để rỗng.
+            if v == "" and k in OPTIONAL_CODES:
+                continue
             if not (re.fullmatch(r"\d\d", v) and 1 <= int(v) <= mx):
                 err(f"{name}: {k}={v!r} ngoài bảng mã 01..{mx:02d}")
     for k in DATE_FIELDS:
         for v in f.get(k, []):
-            if not DATE_RE.match(v):
+            if v and not DATE_RE.match(v):
                 warn(f"{name}: {k}={v!r} không theo dd/mm/yyyy")
     for v in f.get("riskRecovery", []):
         if v not in ("0", "1"):
@@ -263,6 +269,10 @@ def main() -> int:
     for prem in ("metadata/preservation/PREMIS.xml", "representations/rep1/metadata/preservation/PREMIS_rep1.xml"):
         pp = os.path.join(root, prem)
         if not os.path.isfile(pp):
+            if pkg_type == "SIP":
+                # SIP nghiệm thu (Đông Ngũ, DOffice 1.2.0) không có PREMIS — PREMIS sinh ở bước lập AIP.
+                ok(f"SIP không kèm {prem} (không bắt buộc)")
+                continue
             (err if pkg_type == "AIP" else warn)(f"thiếu {prem}" + (" (AIP bắt buộc PREMIS)" if pkg_type == "AIP" else ""))
             continue
         d = parse(pp)

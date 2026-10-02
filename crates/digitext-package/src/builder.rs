@@ -222,6 +222,22 @@ fn f_w6(
     let r_3v7 = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .last_modified_time(f_2sa(r_3v6));
+    // Ghi cả mục thư mục (`uuid-…/`, `uuid-…/schemas/`…) như gói DOffice — có phần mềm nhận gói duyệt cây theo mục này.
+    let mut dirs = std::collections::BTreeSet::new();
+    dirs.insert(folder.to_string());
+    for path in files.keys() {
+        let mut cur = folder.to_string();
+        let parts: Vec<&str> = path.split('/').collect();
+        for part in &parts[..parts.len().saturating_sub(1)] {
+            cur = format!("{cur}/{part}");
+            dirs.insert(cur.clone());
+        }
+    }
+    for d in &dirs {
+        r_3v8
+            .add_directory(format!("{d}/"), r_3v7)
+            .map_err(|err| PackageError::Zip(err.to_string()))?;
+    }
     for (path, r_3v4) in files {
         r_3v8
             .start_file(format!("{folder}/{path}"), r_3v7)
@@ -484,7 +500,7 @@ pub fn f_vn(r_3wb: &Tga, r_3vx: &mut dyn T9n) -> Result<T1g, PackageError> {
     let r_3w8 = T84 {
         id: ids::file_id(r_3vx),
         href: "representations/rep1/METS.xml".into(),
-        mimetype: mime::XML.to_string(),
+        mimetype: "application/xml".to_string(),
         size: r_3wa.len() as u64,
         checksum_upper: f_2en(&r_3wa),
     };

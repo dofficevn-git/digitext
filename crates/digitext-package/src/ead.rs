@@ -125,14 +125,23 @@ impl DocEad {
         }
     }
 }
+// Trường TT05 luôn ghi ra kể cả khi rỗng (`<inforSign></inforSign>`), đúng như gói nghiệm thu Đông Ngũ
+// (DOffice builder 1.2.0): lược đồ EAD của bên nhận khai báo đủ thẻ theo thứ tự, thiếu thẻ là không hợp lệ.
 fn opt(r_3wn: &mut Xml, r_3wm: &str, v: &Option<String>) {
-    if let Some(v) = v {
-        r_3wn.text_elem(r_3wm, v);
-    }
+    r_3wn.text_elem(r_3wm, v.as_deref().unwrap_or(""));
 }
 fn f_1wi(r_3wp: &mut Xml, r_3wo: &str, v: &Option<u32>) {
-    if let Some(v) = v {
-        r_3wp.text_elem(r_3wo, &v.to_string());
+    match v {
+        Some(v) => r_3wp.text_elem(r_3wo, &v.to_string()),
+        None => r_3wp.text_elem(r_3wo, ""),
+    }
+}
+fn languages(x: &mut Xml, langs: &[String]) {
+    if langs.is_empty() {
+        x.text_elem("language", "");
+    }
+    for l in langs {
+        x.text_elem("language", l);
     }
 }
 fn bool_flag(r_3wq: bool) -> &'static str {
@@ -149,9 +158,7 @@ pub fn f_190(r_3ws: &T9a, r_3wr: &str) -> String {
     r_3wu.text_elem("title", &r_3ws.title);
     r_3wu.text_elem("maintenance", &r_3ws.maintenance);
     r_3wu.text_elem("mode", &r_3ws.mode);
-    for r_3wt in &r_3ws.language {
-        r_3wu.text_elem("language", r_3wt);
-    }
+    languages(&mut r_3wu, &r_3ws.language);
     opt(&mut r_3wu, "startDate", &r_3ws.start_date);
     opt(&mut r_3wu, "endDate", &r_3ws.end_date);
     opt(&mut r_3wu, "keyword", &r_3ws.keyword);
@@ -214,9 +221,7 @@ pub fn f_18x(r_3x4: &DocEad, r_3x2: &str) -> String {
             opt(&mut r_3x5, "issuedDate", &r_3x1.issued_date);
             opt(&mut r_3x5, "organName", &r_3x1.organ_name);
             opt(&mut r_3x5, "subject", &r_3x1.subject);
-            for l in &r_3x1.language {
-                r_3x5.text_elem("language", l);
-            }
+            languages(&mut r_3x5, &r_3x1.language);
             f_1wi(&mut r_3x5, "numberOfPage", &r_3x1.number_of_page);
             opt(&mut r_3x5, "inforSign", &r_3x1.infor_sign);
             opt(&mut r_3x5, "keyword", &r_3x1.keyword);
@@ -264,9 +269,7 @@ pub fn f_18x(r_3x4: &DocEad, r_3x2: &str) -> String {
             opt(&mut r_3x5, "recorder", &r_3x3.recorder);
             opt(&mut r_3x5, "recordPlace", &r_3x3.record_place);
             opt(&mut r_3x5, "recordDate", &r_3x3.record_date);
-            for l in &r_3x3.language {
-                r_3x5.text_elem("language", l);
-            }
+            languages(&mut r_3x5, &r_3x3.language);
             opt(&mut r_3x5, "playTime", &r_3x3.play_time);
             opt(&mut r_3x5, "docAttached", &r_3x3.doc_attached);
             r_3x5.text_elem("mode", &r_3x3.mode);
@@ -482,4 +485,35 @@ pub fn f_2oy(r_3xu: &DocEad, r_3xs: PackageKind) -> Vec<String> {
         }
     }
     r_3xq
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // Thứ tự + đủ thẻ như EAD.xml / EAD_doc của gói SIP nghiệm thu Đông Ngũ (DOffice 1.2.0).
+    fn tags(xml: &str) -> Vec<String> {
+        xml.lines()
+            .filter_map(|l| l.strip_prefix('<'))
+            .filter(|l| !l.starts_with('?') && !l.starts_with('/') && !l.starts_with("simpledc"))
+            .map(|l| l.split('>').next().unwrap().to_string())
+            .collect()
+    }
+    #[test]
+    fn ead_hoso_ghi_du_the_ke_ca_rong() {
+        let h = T9a { file_code: "H49.133.01.1993.204".into(), title: "T".into(), maintenance: "01".into(),
+            mode: "02".into(), language: vec!["01".into()], total_doc: 1, confidence_level: "02".into(), ..Default::default() };
+        let x = f_190(&h, "fileCode");
+        assert_eq!(tags(&x), ["fileCode", "title", "maintenance", "mode", "language", "startDate", "endDate", "keyword",
+            "totalDoc", "numberOfPaper", "numberOfPage", "format", "inforSign", "confidenceLevel", "paperFileCode",
+            "riskRecovery", "riskRecoveryStatus", "description"]);
+        assert!(x.contains("<inforSign></inforSign>"));
+    }
+    #[test]
+    fn ead_doc_ghi_du_the_ke_ca_rong() {
+        let d = DocEad::Doc(T4y { doc_code: "X.0000001".into(), maintenance: "01".into(), type_name: "32".into(),
+            mode: "02".into(), ..Default::default() });
+        assert_eq!(tags(&f_18x(&d, "docCode")), ["docId", "docCode", "maintenance", "typeName", "codeNumber",
+            "codeNotation", "issuedDate", "organName", "subject", "language", "numberOfPage", "inforSign", "keyword",
+            "mode", "confidenceLevel", "autograph", "format", "process", "riskRecovery", "riskRecoveryStatus",
+            "description"]);
+    }
 }
