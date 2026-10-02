@@ -257,7 +257,8 @@ pub fn f_1x0(r_3zv: &Tgb<'_>, r_3zr: &mut dyn T9n) -> String {
             ("TYPE", "PHYSICAL"),
         ],
     );
-    let outer_label = r_3zv.outer_div_label.unwrap_or(r_3zm.as_str());
+    // Gói Đông Ngũ (DOffice 1.2.0): div ngoài cùng mang LABEL = OBJID của gói, không phải ID dmdSec.
+    let outer_label = r_3zv.outer_div_label.unwrap_or(r_3zv.objid);
     r_403.open("div", &[("ID", r_3zu.as_str()), ("LABEL", outer_label)]);
     let r_3zt = f_2op(r_3zr);
     let mut r_3zs: Vec<(&str, &str)> = vec![
