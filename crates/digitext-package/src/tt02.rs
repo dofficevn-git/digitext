@@ -176,7 +176,7 @@ fn f_1qu(r_41z: &[String], notes: &mut Vec<String>) -> Vec<String> {
         .collect()
 }
 fn f_1r1(v: Option<&str>, notes: &mut Vec<String>) -> String {
-    const TABLE: [(&str, &str); 31] = [
+    const TABLE: [(&str, &str); 34] = [
         ("nghị quyết", "01"),
         ("quyết định", "02"),
         ("chỉ thị", "03"),
@@ -208,6 +208,9 @@ fn f_1r1(v: Option<&str>, notes: &mut Vec<String>) -> String {
         ("thư công", "29"),
         ("bản đồ", "30"),
         ("bản vẽ kỹ thuật", "31"),
+        ("khác", "32"),
+        ("loại khác", "32"),
+        ("văn bản khác", "32"),
     ];
     let Some(v) = v else {
         return "32".into();
