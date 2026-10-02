@@ -9,7 +9,7 @@ import { useProject } from "@/state/project";
 import { Badge, Banner, Button, Checkbox, Dialog, Field, Help, Input, KpiTile, notifyError, Stepper, Table, toast, type Column } from "@/ui";
 import type { V3y0 } from "@/domain/types";
 import { n } from "./common";
-import { coLoiChan, docMucLucHoSo, dongMau, soTamCua, xuatKiemTraCsv, xuatTepDaChuyen, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
+import { coLoiChan, docMucLucHoSo, dongMau, soTamCua, xuatKiemTraCsv, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
 import { KET_LUAN_LABEL } from "./thoiGianHoSo";
 
 const BUOC = [
@@ -129,6 +129,16 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     { key: "ghi", header: "Ghi chú kiểm tra", className: "max-w-[320px] whitespace-normal text-sm", cell: (r) => [...r.loi, ...r.tg.ghiChu].join("; ") },
   ];
 
+  const taiDanhDau = async () => {
+    if (!pt) return;
+    try {
+      const t = await xuatTepDanhDau(pt);
+      toast.success(`Đã xuất tệp đánh dấu: điền ${n(t.daDien)} ô, cần xem ${n(t.canhBao)}, không điền được ${n(t.khongDien)}, lỗi ${n(t.loi)}.`);
+    } catch (e) {
+      notifyError(e, "xuất tệp đánh dấu");
+    }
+  };
+
   const vanDeChan = pt ? pt.vanDe.filter((v) => v.muc === "loi") : [];
   const soDongLoi = pt ? pt.rows.filter((r) => r.loi.length > 0).length : 0;
 
@@ -136,6 +146,9 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     <>
       {buoc === 1 && pt && (
         <>
+          <Button icon="tepExcel" disabled={busy} onClick={() => void taiDanhDau()}>
+            Tải tệp gốc đã đánh dấu
+          </Button>
           <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
             Tải tệp đã chuyển
           </Button>
@@ -195,6 +208,10 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <li>Số tạm = tiền tố theo THBQ + hồ sơ số (VV.001, 20N.001…) để các tệp của cùng phông không trùng nhau.</li>
               <li>Hộp số không nhập (gán ở bước Hệ thống hoá), chỉ giữ ở sheet Kiểm tra của tệp đã chuyển.</li>
               <li>Dòng nhóm không bắt đầu bằng I. hoặc 1. sẽ báo lỗi — sửa tệp rồi chọn lại.</li>
+              <li>
+                "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) với cột thời gian đã điền và ô được tô màu + ghi chú: xanh = đã điền (Cũ → Mới), cam = cần xem lại, vàng =
+                không điền được, đỏ nhạt = lỗi phải sửa trước khi nhập.
+              </li>
             </ul>
           </Help>
         </div>
@@ -296,6 +313,9 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               )}
               {pt && (
                 <div className="flex flex-wrap gap-2">
+                  <Button icon="tepExcel" onClick={() => void taiDanhDau()}>
+                    Tải tệp gốc đã đánh dấu
+                  </Button>
                   <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
                     Tải tệp đã chuyển
                   </Button>
