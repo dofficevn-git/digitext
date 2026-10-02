@@ -38,6 +38,9 @@ services:
       - "--enforce-eager"
       - "--max-num-seqs"
       - "${VLLM_MAX_NUM_SEQS:-4}"
+      # 2/10/2026: KV swap ra RAM mặc định 4 GB; để 1 GB cho khỏi ngốn RAM máy 30 GB chạy chung OCR.
+      - "--swap-space"
+      - "${VLLM_SWAP_GB:-1}"
     ports:
       # Mặc định loopback. Worker DigiText ở máy khác thì đặt VLLM_BIND=0.0.0.0
       # trong .env cạnh file này. vLLM KHÔNG có xác thực — chỉ mở trong LAN tin cậy.
@@ -45,6 +48,10 @@ services:
     volumes:
       - hf_cache:/root/.cache/huggingface
     ipc: host
+    # 2/10/2026: sau 3 ngày chạy, EngineCore chiếm 21 GB RAM → máy 30 GB phải swap 12 GB, dịch vụ OCR (:5002) treo,
+    # hàng đợi 387k trang đứng từ 05:12. Chặn trần: vượt thì chỉ vLLM bị giết và tự chạy lại, OCR không bị kéo theo.
+    mem_limit: ${VLLM_MEM_LIMIT:-16g}
+    memswap_limit: ${VLLM_MEM_LIMIT:-16g}
     deploy:
       resources:
         reservations:
