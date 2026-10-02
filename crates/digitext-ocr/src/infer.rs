@@ -8,6 +8,9 @@ pub struct Tile {
     pub width: u32,
     pub height: u32,
     pub pixels: Vec<u8>,
+    /// Ảnh trang gốc đã mã hoá (JPEG) khi ô này phủ TRỌN trang — engine HTTP gửi thẳng
+    /// bản này thay vì nén lại `pixels` thành PNG. Ô con (chia đôi khi hết VRAM) không có.
+    pub encoded: Option<std::sync::Arc<Vec<u8>>>,
 }
 impl Tile {
     pub fn empty(x: u32, y: u32, width: u32, height: u32) -> Self {
@@ -17,6 +20,7 @@ impl Tile {
             width,
             height,
             pixels: Vec::new(),
+            encoded: None,
         }
     }
 }

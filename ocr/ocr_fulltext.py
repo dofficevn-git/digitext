@@ -26,6 +26,7 @@ phép xoay. Hộp nghiêng sẽ đặt chữ sai vị trí.
 """
 from __future__ import annotations
 
+import math
 import os
 import threading
 import time
@@ -317,17 +318,33 @@ def _detect(img_bgr: np.ndarray) -> list:
     return list(raw)
 
 
+class _GpuSlot:
+    """Giữ chỗ GPU (_INFER_SEM) CHỈ quanh lời gọi model — cắt dòng, PIL, tách dòng theo nét
+    mực là việc CPU, không được chiếm một trong OCR_GPU_CONCURRENCY chỗ. Cộng dồn thời gian chờ."""
+
+    def __init__(self) -> None:
+        self.wait_ms = 0.0
+
+    def __enter__(self):
+        t = time.perf_counter()
+        _INFER_SEM.acquire()
+        self.wait_ms += (time.perf_counter() - t) * 1000.0
+        return self
+
+    def __exit__(self, *exc) -> None:
+        _INFER_SEM.release()
+
+
 def recognize(image_bgr: np.ndarray) -> dict:
     """Nhận dạng một ảnh, trả về dict ba mảng CÙNG độ dài."""
     rec = RecognizerManager.get()
     if rec is None:
         raise OcrNotReady(RecognizerManager.error() or "VietOCR chưa sẵn sàng")
-    t_wait = time.perf_counter()
-    with _INFER_SEM:
-        waited_ms = (time.perf_counter() - t_wait) * 1000.0
-        t0 = time.perf_counter()
-        result, det_ms = _recognize_locked(image_bgr, rec)
-        total_ms = (time.perf_counter() - t0) * 1000.0
+    gpu = _GpuSlot()
+    t0 = time.perf_counter()
+    result, det_ms = _recognize_impl(image_bgr, rec, gpu)
+    total_ms = (time.perf_counter() - t0) * 1000.0 - gpu.wait_ms
+    waited_ms = gpu.wait_ms
     # Lớp dự phòng chữ viết tay chạy NGOÀI semaphore GPU: nó chỉ chờ mạng (VLM), không
     # được giữ chỗ GPU của VietOCR trong lúc chờ. Lớp này tự cắt crop từ ảnh trang + boxes.
     import handwriting
@@ -363,12 +380,13 @@ def recognize(image_bgr: np.ndarray) -> dict:
     return result
 
 
-def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
+def _recognize_impl(image_bgr: np.ndarray, rec, gpu: _GpuSlot) -> tuple[dict, float]:
     from PIL import Image
 
-    t_det = time.perf_counter()
-    quads = _detect(image_bgr)
-    det_ms = (time.perf_counter() - t_det) * 1000.0
+    with gpu:
+        t_det = time.perf_counter()
+        quads = _detect(image_bgr)
+        det_ms = (time.perf_counter() - t_det) * 1000.0
     crops, keep, dropped = [], [], 0
     for q in quads:
         patch = warp_crop(image_bgr, q)
@@ -401,7 +419,8 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
     # Số dòng mỗi trang là do TÀI LIỆU quyết định, không phải ta — nên không
     # được để nó điều khiển lượng bộ nhớ dùng. Mẻ cố định thì đỉnh bộ nhớ có
     # trần, bất kể trang dày bao nhiêu.
-    texts, probs = _rec_texts(rec, crops)
+    with gpu:
+        texts, probs = _rec_texts(rec, crops)
 
     def _conf(prob) -> float:
         # Chỉ rơi vào 0.9 khi bản VietOCR này không trả nổi xác suất — lúc đó
@@ -439,7 +458,10 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
                 continue
             new_crops.append(Image.fromarray(cv2.cvtColor(patch, cv2.COLOR_BGR2RGB)))
             new_boxes.append([x1, y1, x2, y2])
-        n_texts, n_probs = _rec_texts(rec, new_crops)
+        n_texts, n_probs = [], []
+        if new_crops:
+            with gpu:
+                n_texts, n_probs = _rec_texts(rec, new_crops)
         lines = [l for i, l in enumerate(lines) if i not in ink["drop"]]
         for b, text, prob in zip(new_boxes, n_texts, n_probs):
             text = " ".join(str(text).split())
@@ -466,13 +488,34 @@ def _recognize_locked(image_bgr: np.ndarray, rec) -> tuple[dict, float]:
     return result, det_ms
 
 
+def _rec_width(rec, crop) -> float:
+    """Chiều rộng VietOCR sẽ resize crop về (cao image_height, rộng làm tròn lên bội 10, kẹp
+    [min, max]) — đúng khoá mà predict_batch dùng để gom ảnh cùng cỡ vào một lượt GPU."""
+    w, h = crop.size
+    try:
+        ds = rec.config["dataset"]
+        nw = math.ceil(int(int(ds["image_height"]) * w / max(1, h)) / 10) * 10
+        return float(min(max(nw, int(ds["image_min_width"])), int(ds["image_max_width"])))
+    except Exception:  # noqa: BLE001 — cấu hình lạ: xếp theo tỉ lệ cạnh cũng gần đúng
+        return w / max(1, h)
+
+
 def _rec_texts(rec, crops: list) -> tuple[list, list]:
-    """VietOCR theo MẺ cố định (xem chú thích CHIA MẺ ở trên). Trả (texts, probs)."""
+    """VietOCR theo MẺ cố định (xem chú thích CHIA MẺ ở trên). Trả (texts, probs) đúng thứ tự
+    `crops`.
+
+    XẾP THEO CHIỀU RỘNG trước khi chia mẻ: predict_batch tách mỗi mẻ thành từng nhóm cùng
+    chiều rộng sau resize và chạy MỖI NHÓM một lượt GPU. Để nguyên thứ tự phát hiện thì dòng
+    dài, dòng ngắn xen kẽ → mẻ 64 dòng vỡ thành hàng chục lượt 1–2 ảnh, và lượt giải mã chạy
+    tới khi dòng dài nhất xong. Xếp lại không đổi cách xử lý từng dòng (mỗi ảnh vẫn được
+    resize, giải mã tham lam như cũ), chỉ gom cho đầy lượt; kết quả trả về theo thứ tự gốc."""
     batch = max(1, int(os.getenv("OCR_REC_BATCH", "8")))
+    order = sorted(range(len(crops)), key=lambda i: _rec_width(rec, crops[i]))
+    sorted_crops = [crops[i] for i in order]
     texts, probs = [], []
     try:
-        for i in range(0, len(crops), batch):
-            chunk = crops[i:i + batch]
+        for i in range(0, len(sorted_crops), batch):
+            chunk = sorted_crops[i:i + batch]
             done = False
             if hasattr(rec, "predict_batch"):
                 try:
@@ -495,4 +538,7 @@ def _rec_texts(rec, crops: list) -> tuple[list, list]:
             _release_cuda()
             raise OcrOutOfMemory(str(e)) from e
         raise
-    return texts, probs
+    out_t, out_p = [None] * len(crops), [None] * len(crops)
+    for k, i in enumerate(order):
+        out_t[i], out_p[i] = texts[k], probs[k]
+    return out_t, out_p
