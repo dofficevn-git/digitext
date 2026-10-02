@@ -64,7 +64,7 @@ curl -O http://<ip-windows>:8899/<file>
 | Cổng | Dịch vụ | Trạng thái (cập nhật chiều 17/9) |
 |---|---|---|
 | 5002 | OCR toàn văn (`serve_ocr.py`) | **chạy trên GPU** (`docker-compose.yml` + `docker-compose.gpu.yml`), health trả `gpu:true`, ~550 MB VRAM lúc rảnh. Ảnh CPU cũ giữ ở tag `digitext-ocr-fulltext-ocr:cpu-20260917` |
-| 8003 | vLLM Qwen2.5-VL — DigiText bóc 16 trường | **chạy**, dựng lại từ `bundle/infra/compose/vllm` (`.env`: `VLLM_BIND=0.0.0.0`, fraction 0.55), ~9 GB VRAM. Trước đó chỉ bind loopback nên từ Windows tưởng chết |
+| 8003 | vLLM Qwen2.5-VL — DigiText bóc 16 trường | **chạy**, dựng lại từ `bundle/infra/compose/vllm` (`.env`: `VLLM_BIND=0.0.0.0`, fraction 0.55) · **2/10/2026:** nay là Qwen3-VL-8B AWQ, còn là lớp dự phòng chữ viết tay của OCR :5002 (`OCR_HW_VLM_URL`). Sau 3 ngày EngineCore chiếm 21 GB RAM → máy swap 12 GB, OCR treo (05:12–08:25). Compose có `mem_limit 16g`; thiếu vLLM thì OCR vẫn chạy nhưng mỗi dòng chữ tay chờ hết 25 s (chậm 3–4 lần) — nếu OCR đứng mà :5002 không trả lời: `docker restart digitext-ocr-fulltext-ocr-1`, kiểm `free -m`, ~9 GB VRAM. Trước đó chỉ bind loopback nên từ Windows tưởng chết |
 | 5001 | Web + KIE (`app.py`) | chạy, `admin`/`admin123` |
 | 1433 | SQL Server | chạy (loopback) |
 | 3000 | vLLM `vnkie` (Vintern) | **đã nạp được** sau khi dời 14 file vào `ocr/models/plakie/` (trước đó giải nén nhầm ra `ocr/models/`); **đang stop** để nhường VRAM. Bật khi A/B: `docker compose --env-file .env up -d vllm-vnkie` |
