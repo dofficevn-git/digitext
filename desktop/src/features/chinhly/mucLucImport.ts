@@ -369,21 +369,6 @@ export async function xuatTepDaChuyen(pt: PhanTichMucLuc, tienTo: string, maPhon
   await writeXlsx([{ name: "Lập hồ sơ điện tử", aoa, cols: dau.cols, merges: dau.merges }, kt, sheetDanhMucThbq(thbqs)], `mau-lap-ho-so-${maPhong}-${goc}.xlsx`);
 }
 
-const BOM = String.fromCharCode(0xfeff);
-
-function csvEsc(v: string | number): string {
-  const s = String(v);
-  return /[",\n\r;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/** Danh sách kiểm tra dạng CSV (UTF-8 BOM, mở thẳng bằng Excel). */
-export async function xuatKiemTraCsv(pt: PhanTichMucLuc, tienTo: string): Promise<void> {
-  const soTam = soTamCua(pt, tienTo);
-  const lines = [COT_KIEM_TRA.join(","), ...dongKiemTra(pt, soTam).map((r) => r.map(csvEsc).join(","))];
-  const goc = pt.tenTep.replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}]+/gu, "-");
-  await V4dz(new TextEncoder().encode(`${BOM}${lines.join("\r\n")}\r\n`), `kiem-tra-muc-luc-${goc}.csv`, "csv");
-}
-
 // ------------------------------------------------------------------ tệp gốc đã điền + đánh dấu
 
 /** Màu như DienThoiGian / CheckThoiGian của anh Hiếu (openpyxl PatternFill). */
