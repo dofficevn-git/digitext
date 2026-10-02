@@ -436,21 +436,6 @@ export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8A
   const RE_NGAY = /(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/g;
   const pad = (d: string, m: string, y: string) => `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
 
-  // Lỗi dây chuyền (thiếu "I." → mọi hồ sơ phía dưới "chưa có dòng phòng ban"): chỉ đánh ở hồ sơ đầu của mỗi đoạn.
-  const denDong = new Map<number, number>(); // dòng đầu đoạn → dòng cuối đoạn
-  const boQua = new Set<number>(); // dòng giữa đoạn: không đánh
-  {
-    let truoc: DongHoSo | null = null;
-    let dau: DongHoSo | null = null;
-    for (const r of pt.rows) {
-      const k = r.loi.join("; ");
-      if (k && truoc && dau && truoc.loi.join("; ") === k) {
-        denDong.set(dau.dong, r.dong);
-        boQua.add(r.dong);
-      } else dau = r;
-      truoc = r;
-    }
-  }
 
   for (const r of pt.rows) {
     const { batDau, ketThuc, ketLuan, ghiChu } = r.tg;
@@ -483,13 +468,11 @@ export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8A
       tk.daDien++;
       danhDau(r.dong, cotTg, MAU_DANH_DAU.daDien, `Đã sửa\nCũ : ${goc || "(trống)"}\nMới: ${moi}${lyDo ? `\nLý do: ${lyDo}` : ""}`);
     }
-    if (r.loi.length && !boQua.has(r.dong)) {
-      const den = denDong.get(r.dong);
-      for (const loi of r.loi) {
-        tk.loi++;
-        const cot = /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : pt.cot.tieuDe;
-        danhDau(r.dong, cot, MAU_DANH_DAU.loi, `LỖI: ${loi}${den ? `\n(các hồ sơ tiếp theo đến dòng ${den} cũng vậy)` : ""}`);
-      }
+    // Mọi hồ sơ có lỗi đều tô đỏ — kể cả cả đoạn hồ sơ không thuộc mảng / phòng ban nào (anh Hiếu 2/10).
+    for (const loi of r.loi) {
+      tk.loi++;
+      const cot = /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : pt.cot.tieuDe;
+      danhDau(r.dong, cot, MAU_DANH_DAU.loi, `LỖI: ${loi}`);
     }
   }
   for (const v of pt.vanDe) {
