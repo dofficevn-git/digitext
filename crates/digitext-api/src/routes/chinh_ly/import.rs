@@ -57,6 +57,9 @@ struct ImportResp {
     /// Phòng ban / mảng tạo mới khi `create_missing`.
     created_phong_ban: usize,
     created_mang: usize,
+    /// Ghi chú cho người nhập (vd. mã trong tệp đã bị phòng ban khác dùng → đặt mã khác).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    notes: Vec<String>,
     errors: Vec<RowError>,
 }
 
@@ -114,6 +117,17 @@ fn so_tt_tu_ma(ma: Option<&str>) -> Option<i64> {
     ma.and_then(|m| m.trim().parse::<i64>().ok()).filter(|n| *n > 0)
 }
 
+/// Mã muốn dùng đã có trong `da_dung` → mã số kế tiếp sau mã số lớn nhất (đệm 2 chữ số). Trả (mã, có đổi không).
+/// Mỗi tệp mục lục đánh I, II… / 1, 2… riêng: hai tệp cùng phông có thể đều ghi "II." cho hai phòng ban khác nhau.
+fn ma_con_trong(muon: Option<&str>, da_dung: &[&str]) -> (Option<String>, bool) {
+    let Some(m) = muon else { return (None, false) };
+    if !da_dung.iter().any(|d| eq_ci(d, m)) {
+        return (Some(m.to_owned()), false);
+    }
+    let max = da_dung.iter().filter_map(|d| d.trim().parse::<i64>().ok()).max().unwrap_or(0);
+    (Some(format!("{:02}", max + 1)), true)
+}
+
 /// Đổi tên/mã danh mục trong dòng hồ sơ sang id: `thbq` (tên, hoặc số năm "10"), `ten_phong_ban`/`ma_don_vi`
 /// (tên khớp trước, mã sau), `ten_mang`/`ma_mang`, `ngon_ngu` (tên → mã). `create_missing` → phòng ban / mảng
 /// ghi bằng tên mà chưa có thì tạo trong phông rồi dùng luôn cho các dòng sau.
@@ -140,10 +154,13 @@ async fn resolve_ho_so(st: &AppState, ctx: &OpCtx<'_>, phong: Uuid, lk: &mut Loo
         let ten = s(&v, "ten_phong_ban");
         let ma = s(&v, "ma_don_vi");
         if let Some(t) = ten.or(ma) {
+            // Nhập mục lục (create_missing + có tên): chỉ khớp theo TÊN. Mã trong tệp là số thứ tự I, II… của riêng
+            // tệp đó — khớp theo mã sẽ gắn nhầm "II. Tư pháp" (tệp B) vào "II. Văn hoá" (tệp A) mà không báo gì.
+            let chi_theo_ten = create_missing && ten.is_some();
             let found = ten
                 .and_then(|tn| lk.phong_ban.iter().find(|(_, _, ten)| eq_ci(ten, tn)))
-                .or_else(|| ma.and_then(|m| lk.phong_ban.iter().find(|(_, mc, ten)| eq_ci(mc, m) || eq_ci(ten, m))))
-                .or_else(|| lk.phong_ban.iter().find(|(_, mc, ten)| eq_ci(mc, t) || eq_ci(ten, t)));
+                .or_else(|| if chi_theo_ten { None } else { ma.and_then(|m| lk.phong_ban.iter().find(|(_, mc, ten)| eq_ci(mc, m) || eq_ci(ten, m))) })
+                .or_else(|| if chi_theo_ten { None } else { lk.phong_ban.iter().find(|(_, mc, ten)| eq_ci(mc, t) || eq_ci(ten, t)) });
             match found {
                 Some((id, _, _)) => {
                     pb_id = Some(*id);
@@ -151,6 +168,17 @@ async fn resolve_ho_so(st: &AppState, ctx: &OpCtx<'_>, phong: Uuid, lk: &mut Loo
                 }
                 None if create_missing && ten.is_some() => {
                     let tn = ten.unwrap_or_default();
+                    let da_dung: Vec<&str> = lk.phong_ban.iter().map(|(_, mc, _)| mc.as_str()).filter(|m| !m.is_empty()).collect();
+                    let (ma_moi, doi) = ma_con_trong(ma, &da_dung);
+                    if doi {
+                        let cu = lk.phong_ban.iter().find(|(_, mc, _)| ma.is_some_and(|m| eq_ci(mc, m))).map(|(_, _, t)| t.as_str()).unwrap_or("");
+                        out.notes.push(format!(
+                            "Phòng ban {tn:?}: mã {} đã dùng cho {cu:?} → đặt mã {}",
+                            ma.unwrap_or(""),
+                            ma_moi.as_deref().unwrap_or("")
+                        ));
+                    }
+                    let ma = ma_moi.as_deref();
                     let mut nr = Row::new();
                     nr.insert("phong_id".into(), json!(phong));
                     nr.insert("ten".into(), json!(tn));
@@ -184,10 +212,11 @@ async fn resolve_ho_so(st: &AppState, ctx: &OpCtx<'_>, phong: Uuid, lk: &mut Loo
         let ma = s(&v, "ma_mang");
         if let Some(t) = ten.or(ma) {
             let trong_pb = |pb: &Uuid| pb_id.map_or(true, |p| *pb == p);
+            let chi_theo_ten = create_missing && ten.is_some();
             let found = ten
                 .and_then(|tn| lk.mang.iter().find(|(_, pb, _, ten)| trong_pb(pb) && eq_ci(ten, tn)))
-                .or_else(|| ma.and_then(|m| lk.mang.iter().find(|(_, pb, mc, ten)| trong_pb(pb) && (eq_ci(mc, m) || eq_ci(ten, m)))))
-                .or_else(|| lk.mang.iter().find(|(_, pb, mc, ten)| trong_pb(pb) && (eq_ci(mc, t) || eq_ci(ten, t))));
+                .or_else(|| if chi_theo_ten { None } else { ma.and_then(|m| lk.mang.iter().find(|(_, pb, mc, ten)| trong_pb(pb) && (eq_ci(mc, m) || eq_ci(ten, m)))) })
+                .or_else(|| if chi_theo_ten { None } else { lk.mang.iter().find(|(_, pb, mc, ten)| trong_pb(pb) && (eq_ci(mc, t) || eq_ci(ten, t))) });
             match found {
                 Some((id, pb, _, _)) => {
                     row.insert("mang_id".into(), json!(id));
@@ -200,6 +229,17 @@ async fn resolve_ho_so(st: &AppState, ctx: &OpCtx<'_>, phong: Uuid, lk: &mut Loo
                         return Ok(Err(RowError { row: 0, field: Some("ma_mang".into()), message: format!("Mảng {t:?} cần có phòng ban để tạo") }));
                     };
                     let tn = ten.unwrap_or_default();
+                    let da_dung: Vec<&str> = lk.mang.iter().filter(|(_, p, _, _)| *p == pb).map(|(_, _, mc, _)| mc.as_str()).collect();
+                    let (ma_moi, doi) = ma_con_trong(ma, &da_dung);
+                    if doi {
+                        let cu = lk.mang.iter().find(|(_, p, mc, _)| *p == pb && ma.is_some_and(|m| eq_ci(mc, m))).map(|(_, _, _, t)| t.as_str()).unwrap_or("");
+                        out.notes.push(format!(
+                            "Mảng {tn:?}: mã {} đã dùng cho {cu:?} trong cùng phòng ban → đặt mã {}",
+                            ma.unwrap_or(""),
+                            ma_moi.as_deref().unwrap_or("")
+                        ));
+                    }
+                    let ma = ma_moi.as_deref();
                     let mut nr = Row::new();
                     nr.insert("phong_ban_id".into(), json!(pb));
                     nr.insert("ten".into(), json!(tn));
@@ -378,4 +418,16 @@ async fn import_van_ban(State(st): State<AppState>, ts: Ts, Path(ho_so_id): Path
     }
     digitext_db::audit::append(&st.pool, super::audit(&ts, "cl.import_van_ban", ho_so_id.to_string(), json!({"created": out.created, "updated": out.updated, "errors": out.errors.len()}))).await?;
     Ok(Json(out))
+}
+
+#[cfg(test)]
+mod ma_tests {
+    use super::ma_con_trong;
+    #[test]
+    fn ma_trung_lay_ma_ke_tiep() {
+        assert_eq!(ma_con_trong(Some("02"), &["01", "03"]), (Some("02".into()), false));
+        assert_eq!(ma_con_trong(Some("02"), &["01", "02"]), (Some("03".into()), true));
+        assert_eq!(ma_con_trong(Some("01"), &["01", "02", "05"]), (Some("06".into()), true));
+        assert_eq!(ma_con_trong(None, &["01"]), (None, false));
+    }
 }

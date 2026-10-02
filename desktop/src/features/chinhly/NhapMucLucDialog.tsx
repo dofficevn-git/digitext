@@ -26,6 +26,7 @@ interface KetQuaNhap {
   skipped: number;
   createdPhongBan: number;
   createdMang: number;
+  notes?: string[];
   errors: { row: number; field?: string; message: string }[];
 }
 
@@ -74,7 +75,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     setKq(null);
     try {
       const rows = pt.rows.map((r) => dongMau(r, soTam.get(r.dong) ?? ""));
-      const tong: KetQuaNhap = { created: 0, updated: 0, skipped: 0, createdPhongBan: 0, createdMang: 0, errors: [] };
+      const tong: KetQuaNhap = { created: 0, updated: 0, skipped: 0, createdPhongBan: 0, createdMang: 0, notes: [], errors: [] };
       for (let i = 0; i < rows.length; i += LO) {
         setTienDo(`Đang gửi dòng ${n(i + 1)}–${n(Math.min(i + LO, rows.length))} / ${n(rows.length)}…`);
         const r = await clRemote<KetQuaNhap>("POST", "/cl/ho-so/import", { projectId, phongId: phong.id, mode: "upsert", createMissing: true, rows: rows.slice(i, i + LO) });
@@ -83,6 +84,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
         tong.skipped += r.skipped;
         tong.createdPhongBan += r.createdPhongBan ?? 0;
         tong.createdMang += r.createdMang ?? 0;
+        tong.notes?.push(...(r.notes ?? []));
         for (const e of r.errors) tong.errors.push({ ...e, row: pt.rows[i + e.row - 1]?.dong ?? e.row });
       }
       setTienDo("Đang đồng bộ về máy…");
@@ -287,6 +289,11 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
                 {kq.createdPhongBan || kq.createdMang ? ` · tạo mới ${n(kq.createdPhongBan)} phòng ban, ${n(kq.createdMang)} mảng` : ""}
                 {kq.errors.length ? ` · ${n(kq.errors.length)} dòng lỗi (xem chi tiết)` : "."}
               </Banner>
+              {!!kq.notes?.length && (
+                <Banner tone="info" detail={kq.notes.join("\n")}>
+                  {n(kq.notes.length)} phòng ban / mảng trùng số thứ tự với mục đã có trong phông nên được đặt mã khác (xem chi tiết).
+                </Banner>
+              )}
               {pt && (
                 <div className="flex flex-wrap gap-2">
                   <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>

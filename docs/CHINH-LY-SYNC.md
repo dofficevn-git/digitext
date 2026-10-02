@@ -109,8 +109,9 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
   tiêu đề, tiêu đề không có năm → cảnh báo (vẫn nhập); không suy được năm → ngày để trống.
 - **Hộp số** không nhập (hệ thống cũ cũng gán hộp ở Hệ thống hoá), chỉ giữ ở sheet "Kiểm tra" của tệp đã chuyển.
 - **Nhập**: `POST /cl/ho-so/import` với `createMissing: true` (+ `ten_phong_ban`, `ten_mang`): máy chủ khớp phòng ban / mảng
-  theo **tên trước, mã sau**, chưa có thì tạo qua `apply_op` (`so_tt` = mã) rồi dùng cho các dòng sau; trả thêm
-  `createdPhongBan`, `createdMang`. Mẫu 14 cột cũ không đổi (`createMissing` mặc định false). Sau nhập desktop gọi
+  **chỉ theo tên** (mã I/II…, 1/2… là số thứ tự riêng của từng tệp — hai tệp cùng phông có thể cùng ghi "II." cho hai
+  phòng ban khác nhau), chưa có thì tạo qua `apply_op` (`so_tt` = mã) rồi dùng cho các dòng sau; mã đã bị mục khác
+  dùng → lấy mã số lớn nhất + 1 và trả ghi chú trong `notes`. Trả thêm `createdPhongBan`, `createdMang`. Mẫu 14 cột cũ không đổi (`createMissing` mặc định false). Sau nhập desktop gọi
   `cl_sync_now` để kéo danh mục / hồ sơ mới về bản sao.
 - **Tệp đã chuyển**: sheet 1 đúng mẫu lập hồ sơ (đọc lại được bằng "Nhập hồ sơ từ Excel"), sheet 2 "Kiểm tra" (dòng gốc,
   hộp số, số tạm, thời gian gốc → mới, kết luận, ghi chú), sheet 3 danh mục THBQ. Có thêm CSV danh sách kiểm tra.
