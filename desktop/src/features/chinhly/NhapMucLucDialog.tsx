@@ -140,6 +140,36 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   };
 
   const vanDeChan = pt ? pt.vanDe.filter((v) => v.muc === "loi") : [];
+  // Mọi lỗi chặn nhập trong một bảng: lỗi dòng nhóm (không phải dòng hồ sơ nên không có trong bảng dưới) + lỗi dòng hồ sơ.
+  const dsLoi = useMemo(() => {
+    if (!pt) return [] as { dong: number; loai: string; tieuDe: string; noiDung: string }[];
+    const tieuDeDong = new Map(pt.rows.map((r) => [r.dong, r.tieuDe]));
+    const tat = [
+      ...pt.vanDe.filter((v) => v.muc === "loi").map((v) => ({ dong: v.dong, den: v.dong, so: 1, laHoSo: false, loai: v.dong ? "Dòng nhóm" : "Cả tệp", tieuDe: tieuDeDong.get(v.dong) ?? "", noiDung: v.noiDung })),
+      ...pt.rows.filter((r) => r.loi.length > 0).map((r) => ({ dong: r.dong, den: r.dong, so: 1, laHoSo: true, loai: `Hồ sơ số ${r.hoSoSo}`, tieuDe: r.tieuDe, noiDung: r.loi.join("; ") })),
+    ].sort((a, b) => a.dong - b.dong);
+    // Gộp các dòng hồ sơ liền nhau cùng một lỗi (vd. thiếu "I." ở dòng phòng ban → cả trăm hồ sơ phía dưới
+    // báo "chưa có dòng phòng ban") để lỗi gốc ở dòng nhóm không bị chìm.
+    const out: typeof tat = [];
+    for (const x of tat) {
+      const t = out[out.length - 1];
+      if (t && t.laHoSo && x.laHoSo && t.noiDung === x.noiDung) {
+        t.den = x.dong;
+        t.so++;
+        t.loai = `${n(t.so)} hồ sơ`;
+        t.tieuDe = "";
+        continue;
+      }
+      out.push({ ...x });
+    }
+    return out;
+  }, [pt]);
+  const colsLoi: Column<(typeof dsLoi)[number]>[] = [
+    { key: "dong", header: "Dòng Excel", width: 90, align: "right", cell: (r) => (!r.dong ? "—" : r.den > r.dong ? `${r.dong}–${r.den}` : r.dong) },
+    { key: "loai", header: "Loại", width: 110, className: "text-sm", cell: (r) => r.loai },
+    { key: "tieu_de", header: "Tiêu đề", className: "max-w-[300px] whitespace-normal text-sm", cell: (r) => r.tieuDe },
+    { key: "loi", header: "Lỗi phải sửa", className: "whitespace-normal text-sm text-danger-700", cell: (r) => r.noiDung },
+  ];
   const soDongLoi = pt ? pt.rows.filter((r) => r.loi.length > 0).length : 0;
 
   const footer = (
@@ -228,12 +258,14 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
             <KpiTile label="Lỗi chặn nhập" value={pt.soLoi} tone={pt.soLoi ? "err" : "ok"} />
           </div>
 
-          {vanDeChan.length > 0 && (
-            <Banner tone="danger" title={`Tệp có ${n(vanDeChan.length)} chỗ phải sửa trước khi nhập`} detail={vanDeChan.map((v) => `Dòng ${v.dong || "?"}: ${v.noiDung}`).join("\n")}>
-              Sửa tệp Excel theo chi tiết rồi bấm "Chọn tệp khác". Vẫn tải được tệp đã chuyển và danh sách kiểm tra.
-            </Banner>
+          {dsLoi.length > 0 && (
+            <div className="space-y-2">
+              <Banner tone="danger" title={`Lỗi phải sửa trước khi nhập: ${n(vanDeChan.length)} ở dòng nhóm, ${n(soDongLoi)} dòng hồ sơ`}>
+                Sửa trong Excel theo bảng dưới, hoặc bấm "Tải tệp gốc đã đánh dấu" — các ô lỗi được tô đỏ kèm ghi chú. Sửa xong lưu, đóng Excel rồi bấm "Chọn tệp khác".
+              </Banner>
+              <Table columns={colsLoi} rows={dsLoi} getRowId={(r) => `${r.dong}-${r.loai}-${r.noiDung}`} dense maxHeight={240} rowClassName={() => "bg-danger-50"} />
+            </div>
           )}
-          {vanDeChan.length === 0 && soDongLoi > 0 && <Banner tone="danger">{n(soDongLoi)} dòng hồ sơ có lỗi (xem cột Kết luận, lọc "Chỉ dòng có vấn đề"). Sửa tệp rồi chọn lại.</Banner>}
           {tenPhongLech && (
             <Banner tone="warning">
               Tệp ghi phông "{pt.tenPhongTrongTep}", phông đang chọn là "{str(phong, "ten")}". Kiểm tra lại trước khi nhập.
