@@ -236,8 +236,8 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <li>Hộp số không nhập (gán ở bước Hệ thống hoá), chỉ giữ ở sheet Kiểm tra của tệp đã chuyển.</li>
               <li>Dòng nhóm không bắt đầu bằng I. hoặc 1. sẽ báo lỗi — sửa tệp rồi chọn lại.</li>
               <li>
-                "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) với cột thời gian đã điền và ô được tô màu + ghi chú: xanh = đã điền (Cũ → Mới), cam = cần xem lại, vàng =
-                không điền được, đỏ nhạt = lỗi phải sửa trước khi nhập.
+                "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) chỉ đánh dấu ô cần chú ý, kèm ghi chú: xanh nhạt = đã sửa (Cũ → Mới), vàng = cần xem lại, ĐỎ chữ trắng = lỗi
+                phải sửa trước khi nhập. Ô đã đúng để nguyên.
               </li>
             </ul>
           </Help>

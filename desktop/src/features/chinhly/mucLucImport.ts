@@ -371,12 +371,15 @@ export async function xuatTepDaChuyen(pt: PhanTichMucLuc, tienTo: string, maPhon
 
 // ------------------------------------------------------------------ tệp gốc đã điền + đánh dấu
 
-/** Màu như DienThoiGian / CheckThoiGian của anh Hiếu (openpyxl PatternFill). */
+/**
+ * Chỉ 3 kiểu đánh dấu (anh Hiếu 2/10: "đánh dấu cái cần đánh dấu thôi, lỗi nổi bật khác hẳn"):
+ * xanh nhạt = ô đã sửa nội dung (DienThoiGian C6EFCE), vàng = cần xem lại, ĐỎ ĐẬM chữ trắng đậm = lỗi phải sửa.
+ * Ô đúng sẵn (chỉ khác cách viết 7/6 ↔ 07/06, xuống dòng ↔ dấu cách) để nguyên, không tô, không ghi đè.
+ */
 export const MAU_DANH_DAU = {
-  daDien: "FFC6EFCE", // xanh nhạt — đã điền / chuẩn hoá, ghi chú Cũ → Mới
-  khongDien: "FFFFFF00", // vàng — không điền được, người dùng tự sửa
-  canhBao: "FFFFCC99", // cam — đã có ngày nhưng còn điều cần xem (năm ngoài dải tiêu đề…)
-  loi: "FFFFC7CE", // đỏ nhạt — lỗi chặn nhập (dòng nhóm sai, thiếu THBQ, trùng hồ sơ số…)
+  daDien: "FFC6EFCE",
+  canhBao: "FFFFFF00",
+  loi: "FFFF0000",
 } as const;
 
 export interface ThongKeDanhDau {
@@ -412,20 +415,52 @@ export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8A
     const c = ws.getCell(dong, cot0 + 1);
     return c.master ?? c; // ô trong vùng gộp → ghi vào ô gốc (trên-trái)
   };
+  const daGhi = new Map<string, string>();
   const danhDau = (dong: number, cot0: number | undefined, mau: string, ghiChu: string) => {
     const c = o(dong, cot0);
     if (!c) return;
-    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: mau } };
-    const cu = typeof c.note === "string" ? c.note : "";
-    c.note = { texts: [{ text: cu ? `${cu}\n${ghiChu}` : ghiChu }], margins: { insetmode: "auto" } } as never;
+    const laLoi = mau === MAU_DANH_DAU.loi;
+    // ExcelJS cho các ô cùng định dạng DÙNG CHUNG một đối tượng style: gán c.fill sẽ tô cả loạt ô khác
+    // (cả cột Tiêu đề đỏ, cột Số tờ xanh). Phải thay style bằng bản sao riêng cho đúng ô này.
+    c.style = {
+      ...c.style,
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: mau } },
+      ...(laLoi ? { font: { ...(c.style.font ?? {}), bold: true, color: { argb: "FFFFFFFF" } } } : {}),
+    };
+    const cu = daGhi.get(c.address);
+    const text = cu ? `${cu}\n\n${ghiChu}` : ghiChu;
+    daGhi.set(c.address, text);
+    c.note = { texts: [{ text }], margins: { insetmode: "auto" } } as never;
   };
   const cotTg = pt.cot.thoiGian ?? pt.cot.ngayBatDau;
+  const RE_NGAY = /(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/g;
+  const pad = (d: string, m: string, y: string) => `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
+
+  // Lỗi dây chuyền (thiếu "I." → mọi hồ sơ phía dưới "chưa có dòng phòng ban"): chỉ đánh ở hồ sơ đầu của mỗi đoạn.
+  const denDong = new Map<number, number>(); // dòng đầu đoạn → dòng cuối đoạn
+  const boQua = new Set<number>(); // dòng giữa đoạn: không đánh
+  {
+    let truoc: DongHoSo | null = null;
+    let dau: DongHoSo | null = null;
+    for (const r of pt.rows) {
+      const k = r.loi.join("; ");
+      if (k && truoc && dau && truoc.loi.join("; ") === k) {
+        denDong.set(dau.dong, r.dong);
+        boQua.add(r.dong);
+      } else dau = r;
+      truoc = r;
+    }
+  }
 
   for (const r of pt.rows) {
     const { batDau, ketThuc, ketLuan, ghiChu } = r.tg;
     const goc = r.thoiGianGoc.replace(/\s*\n\s*/g, " ").trim();
     const moi = batDau && ketThuc ? `${batDau} ${ketThuc}` : "";
-    const doi = !!moi && moi !== goc.replace(/\s*[-–—]\s*/g, " ");
+    // Ô đã ghi đủ 2 ngày đúng thứ tự (chỉ khác cách viết) → giữ nguyên, không ghi đè, không tô.
+    const ngays = [...goc.matchAll(RE_NGAY)].map((m) => pad(m[1], m[2], m[3]));
+    const conLai = goc.replace(RE_NGAY, "").replace(/['\s\-–—;,]/g, "");
+    const giuNguyen = ngays.length === 2 && !conLai && ngays[0] === batDau && ngays[1] === ketThuc;
+    const doi = !!moi && !giuNguyen;
     if (doi) {
       if (pt.cot.thoiGian !== undefined) {
         const c = o(r.dong, pt.cot.thoiGian);
@@ -440,24 +475,27 @@ export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8A
     const lyDo = ghiChu.join("\n");
     if (ketLuan === "loi" || !moi) {
       tk.khongDien++;
-      danhDau(r.dong, cotTg, MAU_DANH_DAU.khongDien, `DigiText — không điền được\nGiá trị: ${goc || "(trống)"}\nLý do: ${lyDo || "không đọc được năm"}`);
+      danhDau(r.dong, cotTg, MAU_DANH_DAU.loi, `LỖI — không điền được thời gian\nGiá trị: ${goc || "(trống)"}\nLý do: ${lyDo || "không đọc được năm"}`);
     } else if (ketLuan === "canh_bao") {
       tk.canhBao++;
-      danhDau(r.dong, cotTg, MAU_DANH_DAU.canhBao, `DigiText — cần xem lại\n${doi ? `Cũ : ${goc || "(trống)"}\nMới: ${moi}\n` : ""}Lý do: ${lyDo}`);
-    } else if (doi || ketLuan === "da_dien") {
+      danhDau(r.dong, cotTg, MAU_DANH_DAU.canhBao, `Cần xem lại\n${doi ? `Cũ : ${goc || "(trống)"}\nMới: ${moi}\n` : ""}Lý do: ${lyDo}`);
+    } else if (doi) {
       tk.daDien++;
-      danhDau(r.dong, cotTg, MAU_DANH_DAU.daDien, `DigiText — đã điền\nCũ : ${goc || "(trống)"}\nMới: ${moi}${lyDo ? `\nLý do: ${lyDo}` : ""}`);
+      danhDau(r.dong, cotTg, MAU_DANH_DAU.daDien, `Đã sửa\nCũ : ${goc || "(trống)"}\nMới: ${moi}${lyDo ? `\nLý do: ${lyDo}` : ""}`);
     }
-    for (const loi of r.loi) {
-      tk.loi++;
-      const cot = /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : pt.cot.tieuDe;
-      danhDau(r.dong, cot, MAU_DANH_DAU.loi, `DigiText — lỗi: ${loi}`);
+    if (r.loi.length && !boQua.has(r.dong)) {
+      const den = denDong.get(r.dong);
+      for (const loi of r.loi) {
+        tk.loi++;
+        const cot = /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : pt.cot.tieuDe;
+        danhDau(r.dong, cot, MAU_DANH_DAU.loi, `LỖI: ${loi}${den ? `\n(các hồ sơ tiếp theo đến dòng ${den} cũng vậy)` : ""}`);
+      }
     }
   }
   for (const v of pt.vanDe) {
     if (v.muc !== "loi" || !v.dong) continue;
     tk.loi++;
-    danhDau(v.dong, pt.cot.tieuDe, MAU_DANH_DAU.loi, `DigiText — lỗi: ${v.noiDung}`);
+    danhDau(v.dong, pt.cot.tieuDe, MAU_DANH_DAU.loi, `LỖI: ${v.noiDung}`);
   }
 
   return { bytes: new Uint8Array(await wb.xlsx.writeBuffer()), tk };
