@@ -85,6 +85,9 @@ pub async fn f_va<S: Tgj>(
             spans: r_30a,
         });
     }
-    let r_2zz = f_vz(&r_303).map_err(|e| AssembleError::Data(format!("dựng PDF: {e}")))?;
+    let r_2zz = tokio::task::spawn_blocking(move || f_vz(&r_303))
+        .await
+        .map_err(|e| AssembleError::Data(format!("dựng PDF: {e}")))?
+        .map_err(|e| AssembleError::Data(format!("dựng PDF: {e}")))?;
     Ok(Some(r_2zz))
 }

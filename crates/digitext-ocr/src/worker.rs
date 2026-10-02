@@ -45,6 +45,7 @@ fn f_12t(tile: &Tile, r_3l4: u32, r_3l5: u32, r_3l8: u32, r_3l3: u32) -> Tile {
         width: r_3l8,
         height: r_3l3,
         pixels: r_3l6,
+        encoded: None,
     }
 }
 fn f_2gw(tile: &Tile) -> Vec<Tile> {
@@ -929,7 +930,16 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
             ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?;
             return Ok(RunOutcome::Done(job.id));
         };
-        let r_3n1 = digitext_pdf::f_2p9(&r_3n4, r_3n2.page_count);
+        // Kiểm PDF/A + đọc dấu PDF/A-2b: hai lượt đọc lại cả tệp — chạy ở luồng blocking, một
+        // lần, không chặn các làn OCR đang chạy chung tác vụ.
+        let r_3n5 = r_3n2.page_count;
+        let (r_3n4, r_3n1, r_3n6) = tokio::task::spawn_blocking(move || {
+            let v = digitext_pdf::f_2p9(&r_3n4, r_3n5);
+            let a = digitext_pdf::pdfa::f_1rh(&r_3n4).is_pdfa2b();
+            (r_3n4, v, a)
+        })
+        .await
+        .map_err(|e| sqlx::Error::Protocol(format!("kiểm PDF 2 lớp: {e}")))?;
         // Ngoại lệ dự án: chỉ vướng độ phân giải (dưới 200 dpi) và dự án nằm trong danh sách
         // DIGITEXT_PDF2_ALLOW_LOW_DPI_PROJECTS → vẫn ghép, nhưng ghi lý do vào job để báo cáo.
         let low_dpi_note: Option<String> = if !r_3n1.ok {
@@ -974,7 +984,7 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     documents::Tgy {
                         key: &r_3n3,
                         pages: r_3n1.pages as i32,
-                        pdfa_2b: digitext_pdf::pdfa::f_1rh(&r_3n4).is_pdfa2b(),
+                        pdfa_2b: r_3n6,
                     },
                 )
                 .await?;

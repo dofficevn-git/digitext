@@ -141,8 +141,19 @@ impl Tok for HttpOcrInfer {
         HttpOcrInfer::probe(self).await
     }
     async fn infer_tile(&self, tile: &Tile, _batch: usize) -> Result<To6, WorkerError> {
-        let png = encode_png(tile)?;
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&png);
+        // Ô phủ trọn trang mang sẵn JPEG gốc: gửi thẳng (nhỏ hơn PNG 5–10 lần, khỏi nén lại;
+        // dịch vụ giải mã bằng cv2.imdecode như PNG). Còn lại nén PNG ở luồng blocking.
+        let b64 = match &tile.encoded {
+            Some(jpeg) => base64::engine::general_purpose::STANDARD.encode(jpeg.as_slice()),
+            None => {
+                let t = tile.clone();
+                tokio::task::spawn_blocking(move || {
+                    encode_png(&t).map(|png| base64::engine::general_purpose::STANDARD.encode(&png))
+                })
+                .await
+                .map_err(|e| WorkerError::CorruptInput(format!("nén PNG: {e}")))??
+            }
+        };
 
         let mut req = self
             .client

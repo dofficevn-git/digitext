@@ -175,8 +175,20 @@ fn f_17h(width_px: u32, page_w_pt: f32) -> Option<u32> {
     (C_4F..=C_4E).contains(&dpi).then_some(dpi)
 }
 pub fn f_1b5(pdf: &[u8], page_no: i32) -> Result<(Vec<u8>, Option<u32>), PdfError> {
-    let r_49p =
-        Document::load_mem(pdf).map_err(|e| PdfError::NoPageImage(format!("load PDF: {e}")))?;
+    page_jpeg(&ParsedPdf::parse(pdf)?, page_no)
+}
+/// PDF nguồn đã đọc một lần — lấy JPEG nhiều trang mà không phải đọc lại cả tệp mỗi trang.
+pub struct ParsedPdf(Document);
+impl ParsedPdf {
+    pub fn parse(pdf: &[u8]) -> Result<Self, PdfError> {
+        Document::load_mem(pdf)
+            .map(ParsedPdf)
+            .map_err(|e| PdfError::NoPageImage(format!("load PDF: {e}")))
+    }
+}
+/// Như `f_1b5` nhưng trên PDF đã đọc sẵn.
+pub fn page_jpeg(parsed: &ParsedPdf, page_no: i32) -> Result<(Vec<u8>, Option<u32>), PdfError> {
+    let r_49p = &parsed.0;
     let r_49t = u32::try_from(page_no)
         .map_err(|_| PdfError::NoPageImage(format!("page_no {page_no} không hợp lệ")))?;
     let pages = r_49p.get_pages();
