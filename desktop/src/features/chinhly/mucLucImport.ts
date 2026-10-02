@@ -65,6 +65,8 @@ export interface PhanTichMucLuc {
   soLoi: number;
   soCanhBao: number;
   soDaDien: number;
+  /** Nội dung tệp gốc — để xuất lại chính tệp đó đã điền + tô màu + ghi chú (như DienThoiGian / CheckThoiGian). */
+  buf?: ArrayBuffer;
 }
 
 // ------------------------------------------------------------------ tiện ích
@@ -282,7 +284,9 @@ export async function docMucLucTuBuffer(buf: ArrayBuffer, tenTep: string, thbqDa
   const ref = ws["!ref"] ? X.utils.decode_range(ws["!ref"]) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
   const range = { s: { r: 0, c: 0 }, e: ref.e };
   const rows = X.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: "", blankrows: true, range });
-  return phanTichMucLuc(rows, { tenTep, sheet: name, thbqDanhMuc });
+  const pt = phanTichMucLuc(rows, { tenTep, sheet: name, thbqDanhMuc });
+  pt.buf = buf;
+  return pt;
 }
 
 export async function docMucLucHoSo(file: File, thbq: ClRow[]): Promise<PhanTichMucLuc> {
@@ -378,6 +382,100 @@ export async function xuatKiemTraCsv(pt: PhanTichMucLuc, tienTo: string): Promis
   const lines = [COT_KIEM_TRA.join(","), ...dongKiemTra(pt, soTam).map((r) => r.map(csvEsc).join(","))];
   const goc = pt.tenTep.replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}]+/gu, "-");
   await V4dz(new TextEncoder().encode(`${BOM}${lines.join("\r\n")}\r\n`), `kiem-tra-muc-luc-${goc}.csv`, "csv");
+}
+
+// ------------------------------------------------------------------ tệp gốc đã điền + đánh dấu
+
+/** Màu như DienThoiGian / CheckThoiGian của anh Hiếu (openpyxl PatternFill). */
+export const MAU_DANH_DAU = {
+  daDien: "FFC6EFCE", // xanh nhạt — đã điền / chuẩn hoá, ghi chú Cũ → Mới
+  khongDien: "FFFFFF00", // vàng — không điền được, người dùng tự sửa
+  canhBao: "FFFFCC99", // cam — đã có ngày nhưng còn điều cần xem (năm ngoài dải tiêu đề…)
+  loi: "FFFFC7CE", // đỏ nhạt — lỗi chặn nhập (dòng nhóm sai, thiếu THBQ, trùng hồ sơ số…)
+} as const;
+
+export interface ThongKeDanhDau {
+  daDien: number;
+  khongDien: number;
+  canhBao: number;
+  loi: number;
+}
+
+/**
+ * Xuất lại CHÍNH tệp gốc (giữ nguyên bố cục, định dạng) với cột thời gian đã điền "dd/mm/yyyy dd/mm/yyyy",
+ * ô được sửa tô màu + ghi chú (comment) — như `<tên>_DADIEN.xlsx` của DienThoiGian. Ô lỗi chặn nhập
+ * (cột Tiêu đề / THBQ / Hồ sơ số) cũng tô + ghi chú để sửa thẳng trên tệp rồi chọn lại.
+ */
+export async function xuatTepDanhDau(pt: PhanTichMucLuc): Promise<ThongKeDanhDau> {
+  const { bytes, tk } = await danhDauTepGoc(pt);
+  await V4dz(bytes, `${pt.tenTep.replace(/\.[^.]+$/, "")}_DADIEN.xlsx`, "xlsx");
+  return tk;
+}
+
+export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8Array; tk: ThongKeDanhDau }> {
+  if (!pt.buf) throw new Error("Không còn nội dung tệp gốc — chọn lại tệp.");
+  if (!/\.xlsx$|\.xlsm$/i.test(pt.tenTep)) throw new Error("Chỉ đánh dấu được tệp .xlsx. Mở tệp .xls bằng Excel, lưu lại dạng .xlsx rồi chọn lại.");
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(pt.buf.slice(0));
+  const ws = wb.getWorksheet(pt.sheet) ?? wb.worksheets[0];
+  if (!ws) throw new Error("Tệp không có sheet nào.");
+  const tk: ThongKeDanhDau = { daDien: 0, khongDien: 0, canhBao: 0, loi: 0 };
+
+  const o = (dong: number, cot0: number | undefined) => {
+    if (cot0 === undefined) return null;
+    const c = ws.getCell(dong, cot0 + 1);
+    return c.master ?? c; // ô trong vùng gộp → ghi vào ô gốc (trên-trái)
+  };
+  const danhDau = (dong: number, cot0: number | undefined, mau: string, ghiChu: string) => {
+    const c = o(dong, cot0);
+    if (!c) return;
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: mau } };
+    const cu = typeof c.note === "string" ? c.note : "";
+    c.note = { texts: [{ text: cu ? `${cu}\n${ghiChu}` : ghiChu }], margins: { insetmode: "auto" } } as never;
+  };
+  const cotTg = pt.cot.thoiGian ?? pt.cot.ngayBatDau;
+
+  for (const r of pt.rows) {
+    const { batDau, ketThuc, ketLuan, ghiChu } = r.tg;
+    const goc = r.thoiGianGoc.replace(/\s*\n\s*/g, " ").trim();
+    const moi = batDau && ketThuc ? `${batDau} ${ketThuc}` : "";
+    const doi = !!moi && moi !== goc.replace(/\s*[-–—]\s*/g, " ");
+    if (doi) {
+      if (pt.cot.thoiGian !== undefined) {
+        const c = o(r.dong, pt.cot.thoiGian);
+        if (c) c.value = moi;
+      } else {
+        const a = o(r.dong, pt.cot.ngayBatDau);
+        const b = o(r.dong, pt.cot.ngayKetThuc);
+        if (a) a.value = batDau;
+        if (b) b.value = ketThuc;
+      }
+    }
+    const lyDo = ghiChu.join("\n");
+    if (ketLuan === "loi" || !moi) {
+      tk.khongDien++;
+      danhDau(r.dong, cotTg, MAU_DANH_DAU.khongDien, `DigiText — không điền được\nGiá trị: ${goc || "(trống)"}\nLý do: ${lyDo || "không đọc được năm"}`);
+    } else if (ketLuan === "canh_bao") {
+      tk.canhBao++;
+      danhDau(r.dong, cotTg, MAU_DANH_DAU.canhBao, `DigiText — cần xem lại\n${doi ? `Cũ : ${goc || "(trống)"}\nMới: ${moi}\n` : ""}Lý do: ${lyDo}`);
+    } else if (doi || ketLuan === "da_dien") {
+      tk.daDien++;
+      danhDau(r.dong, cotTg, MAU_DANH_DAU.daDien, `DigiText — đã điền\nCũ : ${goc || "(trống)"}\nMới: ${moi}${lyDo ? `\nLý do: ${lyDo}` : ""}`);
+    }
+    for (const loi of r.loi) {
+      tk.loi++;
+      const cot = /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : pt.cot.tieuDe;
+      danhDau(r.dong, cot, MAU_DANH_DAU.loi, `DigiText — lỗi: ${loi}`);
+    }
+  }
+  for (const v of pt.vanDe) {
+    if (v.muc !== "loi" || !v.dong) continue;
+    tk.loi++;
+    danhDau(v.dong, pt.cot.tieuDe, MAU_DANH_DAU.loi, `DigiText — lỗi: ${v.noiDung}`);
+  }
+
+  return { bytes: new Uint8Array(await wb.xlsx.writeBuffer()), tk };
 }
 
 export { MAU_HS_COLS };
