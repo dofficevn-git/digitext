@@ -50,7 +50,7 @@ pub fn huong_dan(code: &str) -> (&'static str, &'static str) {
         "TEP-RONG" => ("Tệp 0 byte", "Quét lại hoặc chép lại tệp từ nguồn."),
         "PDF-HONG" => ("PDF không mở được", "Mở thử bằng Acrobat; hỏng thì quét lại hoặc chép lại từ nguồn."),
         "TEP-KHONG-DOC-DUOC" => ("Không đọc được tệp", "Kiểm tra quyền truy cập, ổ đĩa hoặc tệp đang bị chương trình khác khoá."),
-        "HS-TRUNG-MA" => ("Một mã hồ sơ dùng cho nhiều thư mục", "Mỗi thư mục hồ sơ phải có mã riêng; sửa cột «Mã hồ sơ» của các dòng bị trùng."),
+        "HS-TRUNG-MA" => ("Hồ sơ trùng phông, phòng ban, hộp và mã hồ sơ", "Trong cùng một hộp, mỗi thư mục hồ sơ phải có mã riêng; sửa cột «Mã hồ sơ» của các dòng bị trùng."),
         "HS-NHIEU-MA" => ("Một thư mục hồ sơ có nhiều mã hồ sơ / mã phông", "Các dòng cùng thư mục phải cùng mã hồ sơ và mã phông; sửa dòng ghi khác."),
         "HS-MA-LECH-PHONG" => ("Mã phông không khớp mã hồ sơ", "Mã hồ sơ phải bắt đầu bằng mã phông. Sửa cột «Mã phông» theo phần trước năm trong mã hồ sơ, hoặc đổi tên tệp nếu mã phông đúng."),
         "HS-KHONG-THONG-NHAT" => ("Các dòng cùng hồ sơ ghi thông tin hồ sơ khác nhau", "Thống nhất tiêu đề, thời hạn, ngày… của hồ sơ trên mọi dòng (lấy theo dòng đầu)."),
@@ -869,6 +869,17 @@ fn check_dossier(d: &Dossier, root: &Path, disk: &HashMap<String, (String, u64)>
     (bytes_total, deep.then_some(deep_acc))
 }
 
+/// Khoá nhận diện hồ sơ trùng: (mã phông, thư mục cha, mã hồ sơ). Thư mục cha là các cấp
+/// phông \ phòng ban \ hộp của `phông\phòng ban\hộp\hồ sơ`; so không phân biệt hoa thường.
+fn dossier_key(d: &Dossier) -> Option<(String, String, String)> {
+    let code = d.hs_code();
+    if code.is_empty() {
+        return None;
+    }
+    let fond = d.first().fond_code.as_deref().map(str::trim).unwrap_or("").to_lowercase();
+    Some((fond, dir_of(&d.dir).to_lowercase(), code))
+}
+
 /// Chạy toàn bộ bước kiểm. `progress(đã xong, tổng)` được gọi sau mỗi hồ sơ.
 pub fn run(
     sheet: &Sheet,
@@ -928,19 +939,20 @@ pub fn run(
         let hs = dir_codes.get(&dir.to_lowercase()).cloned().unwrap_or_default();
         sink.error("TEP-KHONG-CO-TRONG-EXCEL", &dir, &hs, None, Some(base_of(rel)), format!("tệp có trên đĩa nhưng Excel không khai: {rel}"));
     }
-    // ---- mã hồ sơ trùng giữa các thư mục
-    let mut by_code: BTreeMap<String, Vec<&Dossier>> = BTreeMap::new();
+    // ---- hồ sơ trùng: cùng phông, cùng thư mục cha (phòng ban \ hộp …) VÀ cùng mã hồ sơ.
+    // Mã hồ sơ không mang xã / phòng ban / hộp, nên hai thư mục khác cấp trên được phép trùng mã.
+    let mut by_code: BTreeMap<(String, String, String), Vec<&Dossier>> = BTreeMap::new();
     for d in &plan.dossiers {
-        let c = d.hs_code();
-        if !c.is_empty() {
-            by_code.entry(c).or_default().push(d);
+        if let Some(k) = dossier_key(d) {
+            by_code.entry(k).or_default().push(d);
         }
     }
-    for (code, ds) in &by_code {
+    for ((_, parent, code), ds) in &by_code {
         if ds.len() > 1 {
             let dirs = ds.iter().map(|d| d.dir.as_str()).collect::<Vec<_>>().join(" | ");
+            let noi = if parent.is_empty() { String::new() } else { format!(" trong cùng «{}»", dir_of(&ds[0].dir)) };
             for d in ds {
-                sink.error("HS-TRUNG-MA", &d.dir, code, Some(d.first().line), None, format!("mã hồ sơ «{code}» dùng cho {} thư mục hồ sơ khác nhau: {dirs}", ds.len()));
+                sink.error("HS-TRUNG-MA", &d.dir, code, Some(d.first().line), None, format!("mã hồ sơ «{code}» dùng cho {} thư mục hồ sơ{noi} (cùng phông, phòng ban, hộp): {dirs}", ds.len()));
             }
         }
     }
@@ -1030,6 +1042,19 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn trung_ma_chi_khi_cung_phong_phong_ban_hop() {
+        let hs = |dir: &str, fond: &str| Dossier {
+            dir: dir.into(),
+            rows: vec![Row { hs_code: Some("H49.145.01.2017.143".into()), fond_code: Some(fond.into()), ..Default::default() }],
+        };
+        let k = |d: &Dossier| dossier_key(d).unwrap();
+        // Khác xã / hộp: không trùng.
+        assert_ne!(k(&hs("DU LIEU XA DONG TAM\\TU PHAP HO TICH\\22\\143", "H49.145")), k(&hs("DU LIEU XA LUC HON\\TU PHAP HO TICH\\34\\143", "H49.145")));
+        assert_ne!(k(&hs("XA A\\TU PHAP\\22\\143", "H49.145")), k(&hs("XA A\\TU PHAP\\23\\143", "H49.145")));
+        // Cùng phông, phòng ban, hộp, mã: trùng (không phân biệt hoa thường).
+        assert_eq!(k(&hs("XA A\\TU PHAP\\22\\143", "H49.145")), k(&hs("xa a\\Tu Phap\\22\\143b", "H49.145")));
+    }
     #[test]
     fn chuan_hoa_ngay() {
         assert_eq!(norm_date("9/7/2012"), ("09/07/2012".into(), true));

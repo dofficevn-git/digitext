@@ -75,7 +75,7 @@ LỖI (chặn đóng gói):
 |---|---|
 | `TEP-KHONG-CO-TREN-DIA` / `TEP-KHONG-CO-TRONG-EXCEL` | Excel khai mà không có tệp / tệp có mà Excel không khai |
 | `EXCEL-TRUNG-TEP`, `TEP-RONG`, `PDF-HONG` | cùng tệp khai hai dòng; tệp 0 byte; PDF không mở được |
-| `HS-TRUNG-MA` | một mã hồ sơ dùng cho nhiều thư mục hồ sơ |
+| `HS-TRUNG-MA` | hai thư mục hồ sơ trùng cả mã phông, thư mục cha (phòng ban \ hộp) và mã hồ sơ. Cùng mã nhưng khác xã / phòng ban / hộp thì **không** phải lỗi |
 | `HS-NHIEU-MA` | một thư mục hồ sơ mà Excel ghi nhiều mã hồ sơ / mã phông. Tệp `BIA.pdf` (bìa hồ sơ) và `MLVB.pdf` (mục lục văn bản) không mang mã trong tên: nhận mã phông, mã hồ sơ theo các tệp cùng thư mục, không kiểm tên, **vẫn đóng gói** với STT đánh tiếp sau số lớn nhất của hồ sơ (thông tin `BIA-MLVB`). Ô «Mã hồ sơ» ghi mã văn bản (có đuôi STT 7 số, có cả mục lục số) được tự cắt về mã hồ sơ |
 | `HS-MA-LECH-PHONG` | mã hồ sơ không bắt đầu bằng mã phông |
 | `TM-LECH-SO-HO-SO` | số hồ sơ của thư mục khác số hồ sơ trong mã |
