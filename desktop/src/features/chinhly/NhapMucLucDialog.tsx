@@ -142,7 +142,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   const vanDeChan = pt ? pt.vanDe.filter((v) => v.muc === "loi") : [];
   // Mọi lỗi chặn nhập trong một bảng: lỗi dòng nhóm (không phải dòng hồ sơ nên không có trong bảng dưới) + lỗi dòng hồ sơ.
   const dsLoi = useMemo(() => {
-    if (!pt) return [] as { dong: number; loai: string; tieuDe: string; noiDung: string }[];
+    if (!pt) return [] as { dong: number; den: number; so: number; laHoSo: boolean; loai: string; tieuDe: string; noiDung: string }[];
     const tieuDeDong = new Map(pt.rows.map((r) => [r.dong, r.tieuDe]));
     const tat = [
       ...pt.vanDe.filter((v) => v.muc === "loi").map((v) => ({ dong: v.dong, den: v.dong, so: 1, laHoSo: false, loai: v.dong ? "Dòng nhóm" : "Cả tệp", tieuDe: tieuDeDong.get(v.dong) ?? "", noiDung: v.noiDung })),
