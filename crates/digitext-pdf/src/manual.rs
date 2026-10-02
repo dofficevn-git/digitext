@@ -146,8 +146,57 @@ impl<'a> Layout<'a> {
     }
 }
 
+/// Chuẩn hoá chữ trước khi dàn trang. Ô Excel xuống dòng (Alt+Enter) mang CR LF, có khi lẫn tab, ký tự điều
+/// khiển, ký tự độ rộng 0 hoặc ký tự font không có; tờ hướng dẫn chỉ là tài liệu đọc kèm nên những thứ đó
+/// không được làm hỏng cả gói (2/10/2026: 289 gói "dựng hỏng" vì CR trong trích yếu).
+/// CR LF / CR → xuống dòng; tab → dấu cách; điều khiển / độ rộng 0 → bỏ; thiếu glyph → '?'.
+fn clean(face: &ttf_parser::Face<'_>, s: &str, one_line: bool) -> String {
+    let has = |c: char| face.glyph_index(c).is_some_and(|g| g.0 != 0);
+    let mut out = String::with_capacity(s.len());
+    let mut prev_cr = false;
+    for c in s.chars() {
+        let was_cr = std::mem::replace(&mut prev_cr, c == '\r');
+        match c {
+            '\r' => out.push(if one_line { ' ' } else { '\n' }),
+            '\n' => {
+                if !was_cr {
+                    out.push(if one_line { ' ' } else { '\n' });
+                }
+            }
+            '\t' | '\u{000B}' | '\u{000C}' => out.push(' '),
+            '\u{200B}'..='\u{200F}' | '\u{2060}' | '\u{FEFF}' | '\u{00AD}' => {}
+            c if c.is_control() => {}
+            '\u{00A0}' => out.push(c),
+            c if has(c) => out.push(c),
+            c if c.is_whitespace() => out.push(' '),
+            _ => out.push(if has('?') { '?' } else { ' ' }),
+        }
+    }
+    out
+}
+
+fn clean_block(face: &ttf_parser::Face<'_>, b: &ManualBlock) -> ManualBlock {
+    let c = |s: &String| clean(face, s, false);
+    match b {
+        ManualBlock::Title(t) => ManualBlock::Title(c(t)),
+        ManualBlock::Subtitle(t) => ManualBlock::Subtitle(c(t)),
+        ManualBlock::SectionBar(t) => ManualBlock::SectionBar(clean(face, t, true)),
+        ManualBlock::KeyValue(rows) => ManualBlock::KeyValue(rows.iter().map(|(k, v)| (c(k), c(v))).collect()),
+        ManualBlock::PathTable(rows) => ManualBlock::PathTable(rows.iter().map(|(d, p, desc)| (*d, clean(face, p, true), c(desc))).collect()),
+        ManualBlock::Table { headers, widths, rows } => ManualBlock::Table {
+            headers: headers.iter().map(c).collect(),
+            widths: widths.clone(),
+            rows: rows.iter().map(|r| r.iter().map(c).collect()).collect(),
+        },
+        ManualBlock::Gap(g) => ManualBlock::Gap(*g),
+        ManualBlock::Footer(t) => ManualBlock::Footer(c(t)),
+    }
+}
+
 pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, PdfError> {
     let face = ttf_parser::Face::parse(font, 0).map_err(|e| PdfError::BadFont(e.to_string()))?;
+    let cleaned: Vec<ManualBlock> = blocks.iter().map(|b| clean_block(&face, b)).collect();
+    let blocks = &cleaned;
     let cw = C_1 - MARGIN * 2.0;
     let mut lay = Layout { face, pages: Vec::new(), y: 0.0 };
     lay.new_page();
@@ -229,6 +278,9 @@ pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, Pdf
     let mut seen = std::collections::BTreeSet::new();
     for t in &all_text {
         for c in t.chars() {
+            if c == '\n' {
+                continue; // xuống dòng do `wrap` xử lý, không phải glyph
+            }
             if seen.insert(c) {
                 let run = f_2eo(&lay.face, &c.to_string())?;
                 let (gid, adv) = run.glyphs[0];
@@ -264,4 +316,28 @@ pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, Pdf
     let mut out = Vec::new();
     doc.save_to(&mut out).map_err(|e| PdfError::Save(e.to_string()))?;
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Chữ từ Excel có xuống dòng CR LF, tab, ký tự độ rộng 0 và ký tự font không có vẫn phải ra PDF.
+    #[test]
+    fn manual_survives_dirty_excel_text() {
+        let Some(font) = crate::sans_font().and_then(|p| std::fs::read(p).ok()) else {
+            return; // máy không có font hệ thống: bỏ qua
+        };
+        let dirty = format!("Báo cáo tổng kết{}năm 2014{}(bản chính){} {} cuối{}dòng", "\r\n", '\t', '\u{200B}', '\u{1F600}', '\r');
+        let blocks = vec![
+            ManualBlock::Title(dirty.clone()),
+            ManualBlock::SectionBar(dirty.clone()),
+            ManualBlock::KeyValue(vec![(format!("Tiêu đề{}hồ sơ", "\r\n"), dirty.clone())]),
+            ManualBlock::PathTable(vec![(1, format!("data/{}", '\r'), dirty.clone())]),
+            ManualBlock::Table { headers: vec!["#".into(), "Trích yếu".into()], widths: vec![1.0, 9.0], rows: vec![vec!["1".into(), dirty.clone()]] },
+            ManualBlock::Footer(dirty),
+        ];
+        let pdf = render_manual(&blocks, &font).expect("tờ hướng dẫn phải dựng được với chữ bẩn");
+        assert!(pdf.starts_with(b"%PDF-"));
+    }
 }
