@@ -79,17 +79,11 @@ html, body, #root {
   text-align: center;
 }
 .login-logo {
-  width: 40px;
-  height: 40px;
+  display: block;
+  width: 64px;
+  height: 64px;
   margin: 0 auto var(--do-sp-4);
-  border-radius: var(--radius-md);
-  background: var(--color-brand-500);
-  display: grid;
-  place-items: center;
-  color: var(--color-fg-onbrand);
-  font-weight: 600;
-  font-size: var(--text-md);
-  letter-spacing: -0.02em;
+  object-fit: contain;
 }
 .login-card h1 {
   font-size: var(--text-xl);

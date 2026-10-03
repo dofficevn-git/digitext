@@ -8,6 +8,7 @@ import { Icon } from "@/components/Icon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { V462 as cn } from "@/lib/utils";
 import { IconButton, Kbd, Tip } from "@/ui";
+import BrandLogo from "./BrandLogo";
 import CommandPalette from "./CommandPalette";
 import ProjectSwitch from "./ProjectSwitch";
 import { navPath } from "./navTree";
@@ -46,7 +47,7 @@ export default function Topbar() {
   return (
     <header className="topbar">
       <div className="flex flex-none items-center gap-2">
-        <span className="grid size-6 place-items-center rounded bg-brand-500 text-xs font-bold text-white">DT</span>
+        <BrandLogo className="size-6" />
         <span className="text-base font-semibold tracking-tight text-fg-strong">DigiText</span>
       </div>
 
