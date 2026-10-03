@@ -15,6 +15,21 @@ import { TOGGLE_SIDEBAR_EVENT } from "./Topbar";
 import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
 
+// Mỗi nhóm menu một màu (icon trên ô nền nhạt cùng màu) cho dễ nhận, bớt đơn điệu. Nền dùng độ trong suốt
+// nên chạy được cả giao diện sáng lẫn tối.
+const MAU_NHOM: Record<string, string> = {
+  home: "bg-sky-500/15 text-sky-600",
+  sohoa: "bg-emerald-500/15 text-emerald-600",
+  xuly: "bg-violet-500/15 text-violet-600",
+  chinhly: "bg-amber-500/15 text-amber-600",
+  luutruso: "bg-indigo-500/15 text-indigo-600",
+  baocao: "bg-rose-500/15 text-rose-600",
+  quantri: "bg-slate-500/15 text-slate-600",
+};
+function mauNhom(id: string): string {
+  return MAU_NHOM[id] ?? "bg-gray-500/15 text-fg-muted";
+}
+
 export default function Sidebar() {
   const nav = V460();
   const { session } = nav;
@@ -127,7 +142,11 @@ export default function Sidebar() {
                   aria-current={g.leaf && active ? "page" : undefined}
                   onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
                 >
-                  {g.icon && <Icon name={g.icon} size={18} />}
+                  {g.icon && (
+                    <span className={cn("grid size-7 place-items-center rounded-md", mauNhom(g.id))}>
+                      <Icon name={g.icon} size={17} />
+                    </span>
+                  )}
                   {cnt > 0 && <span className="absolute right-0.5 top-0.5 size-2 rounded-full bg-danger-600" aria-hidden />}
                 </button>
               );
@@ -173,7 +192,11 @@ export default function Sidebar() {
                     aria-expanded={g.leaf ? undefined : isOpen}
                     aria-current={g.leaf && active ? "page" : undefined}
                   >
-                    {g.icon && <Icon name={g.icon} className={cn("flex-none", active ? "text-brand-600" : "text-fg-subtle group-hover:text-fg-muted")} />}
+                    {g.icon && (
+                      <span className={cn("grid size-6 flex-none place-items-center rounded-md", mauNhom(g.id))}>
+                        <Icon name={g.icon} size={15} />
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1 truncate">{g.label}</span>
                     {g.leaf ? <Badge n={badgeOf(g.badge)} /> : <Icon name="moNhanh" size={14} className={cn("flex-none text-fg-subtle transition-transform", isOpen && "rotate-90")} />}
                   </button>
