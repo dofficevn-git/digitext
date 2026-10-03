@@ -203,9 +203,14 @@ class RecognizerManager:
                         )
                 cfg["predictor"]["beamsearch"] = False  # nhanh hơn nhiều, sai lệch không đáng kể
                 cls._predictor = Predictor(cfg)
+                decode = "gốc"
+                if _env_flag("OCR_REC_FAST_DECODE"):
+                    # Giải mã có KV cache — cùng kết quả, nhanh hơn nhiều. Xem vietocr_fast.py.
+                    import vietocr_fast
+                    decode = "KV cache" if vietocr_fast.install(cls._predictor) else                         "gốc (kiến trúc lạ, không bật KV cache)"
                 cls._error = None
                 print(f"✅ Đã nạp VietOCR ({os.path.basename(cfg_path)}, {cfg['device']}, "
-                      f"trọng số {os.path.basename(weights)})", flush=True)
+                      f"trọng số {os.path.basename(weights)}, giải mã {decode})", flush=True)
             except Exception as e:  # noqa: BLE001
                 cls._error = str(e)
                 print(f"❌ Không nạp được VietOCR: {e}")

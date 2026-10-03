@@ -37,6 +37,9 @@ services:
       OCR_DET_LANG: "${OCR_DET_LANG:-en}"
       OCR_USE_GPU: "${OCR_USE_GPU:-false}"
       OCR_REC_BATCH: "${OCR_REC_BATCH:-8}"
+      # Giải mã VietOCR có KV cache (ocr/vietocr_fast.py): cùng chữ, cùng độ tin cậy với bản gốc,
+      # nhanh ~3 lần. Tắt (false) để quay về vòng giải mã gốc của thư viện.
+      OCR_REC_FAST_DECODE: "${OCR_REC_FAST_DECODE:-true}"
       # Trọng số VietOCR đang phục vụ. Đổi sang bản fine-tune = đổi biến này +
       # up -d, không chép đè file gốc (giữ được đường rollback).
       OCR_REC_WEIGHTS: "${OCR_REC_WEIGHTS:-/models/vietocr/vgg_transformer.pth}"
