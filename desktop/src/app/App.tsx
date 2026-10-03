@@ -6,6 +6,7 @@ import V4x7 from "@/features/shell/UpdateOverlay";
 import { V460 } from "@/state";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConfirmHost, Toaster } from "@/ui";
+import BrandLogo from "@/features/shell/BrandLogo";
 
 export default function V4x8() {
   const { status, update: V3aa, dismissUpdate: V3ab } = V460();
@@ -15,7 +16,7 @@ export default function V4x8() {
       {status === "loading" && (
         <div className="login-screen">
           <div className="login-card">
-            <div className="login-logo">DT</div>
+            <BrandLogo className="login-logo" />
             <h1>DigiText</h1>
             <div className="sub">Đang khởi động…</div>
           </div>

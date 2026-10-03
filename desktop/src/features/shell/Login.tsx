@@ -8,6 +8,7 @@ import { V3zm, V3zn } from "@/api/auth";
 import { isTauri, V3xq } from "@/api/ipc";
 import { V3zt, V3zs } from "@/state/sessionCore";
 import { V3za } from "@/domain/permissions";
+import BrandLogo from "./BrandLogo";
 import V4x3 from "./CaptchaField";
 import { V4x2 } from "./useCaptcha";
 import { Banner, Button, Field, Input, notifyError, toast } from "@/ui";
@@ -59,9 +60,7 @@ export default function V4x4() {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <div className="login-logo" aria-hidden>
-          DT
-        </div>
+        <BrandLogo className="login-logo" />
         <h1>DigiText</h1>
         <div className="sub">Số hoá và ký số tài liệu</div>
 
