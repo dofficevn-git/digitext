@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { clHoSoList, clRemote, clRemoteSave, qs, str, type ClRow } from "@/api/chinhly";
 import { CanMayChu, ChuaChonDuAn, fmtNgay, fmtTime, useClSync } from "./common";
 import { esc, inHtml } from "./print";
@@ -23,7 +24,7 @@ function inPhieu(r: ClRow, duAn: string): void {
 
 export default function MuonTraView() {
   const { session } = V460();
-  const projectId = session?.projectId ?? "";
+  const projectId = useProject().projectId ?? ""; // dự án đang chọn (super admin không gắn dự án trong phiên)
   const canManage = (session?.permissions ?? []).includes("loan.manage");
   const sync = useClSync();
   const online = sync?.phase !== "offline";

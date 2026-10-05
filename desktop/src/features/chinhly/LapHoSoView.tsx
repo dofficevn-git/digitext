@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { clDelete, clHoSoList, clRemote, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
 import { CanMayChu, Chip, ChuaChonDuAn, n, Select, SyncBadge, SyncBadgeRow, tenPhong, THBQ_BADGE, useClCatalog, useClSync } from "./common";
 import HoSoForm from "./HoSoForm";
@@ -20,6 +21,7 @@ const AN_MAC_DINH = ["ma_ho_so", "so_to"];
 
 export default function LapHoSoView() {
   const { session } = V460();
+  const duAnDangChon = useProject().projectId; // không dùng session.projectId: super admin không gắn dự án
   const perms = session?.permissions ?? [];
   const canCreate = perms.includes("dossier.create");
   const canEdit = perms.includes("dossier.update");
@@ -122,7 +124,7 @@ export default function LapHoSoView() {
         toast.warning(d.errors[0]?.message ?? "Tệp không có dòng dữ liệu, dữ liệu bắt đầu từ dòng 5.");
         return;
       }
-      const r = await clRemote<{ created: number; updated: number; skipped: number; errors: { row: number; field?: string; message: string }[] }>("POST", "/cl/ho-so/import", { projectId: session?.projectId, phongId, mode: "upsert", rows: d.rows });
+      const r = await clRemote<{ created: number; updated: number; skipped: number; errors: { row: number; field?: string; message: string }[] }>("POST", "/cl/ho-so/import", { projectId: duAnDangChon, phongId, mode: "upsert", rows: d.rows });
       const errs = [...d.errors, ...r.errors.map((e) => ({ row: e.row + 4, message: `${e.field ? e.field + ": " : ""}${e.message}` }))];
       setNhapKq({ text: `Đã thêm ${n(r.created)}, cập nhật ${n(r.updated)}, bỏ qua ${n(r.skipped)}${errs.length ? `, ${errs.length} dòng lỗi` : ""}.`, errors: errs.map((e) => `Dòng ${e.row}: ${e.message}`) });
       reload();
