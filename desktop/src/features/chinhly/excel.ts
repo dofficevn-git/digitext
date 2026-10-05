@@ -200,6 +200,13 @@ export async function docMauLapHoSo(file: File): Promise<DocMauHoSo> {
       out.errors.push({ row: i + 1, message: "Thiếu số tạm (cột C)" });
       continue;
     }
+    // Số tờ chỉ nhận số tự nhiên > 0 (5/10/2026) — "01 quyển" bị từ chối, dòng không nhập.
+    const soTo = String(o.so_to ?? "");
+    if (soTo && (!/^\d+$/.test(soTo) || +soTo === 0)) {
+      const cot = String.fromCharCode(65 + MAU_HS_KEYS.indexOf("so_to"));
+      out.errors.push({ row: i + 1, message: `Số tờ "${soTo}" không hợp lệ (cột ${cot}) — chỉ ghi số tự nhiên, bỏ chữ như "quyển", "tờ"` });
+      continue;
+    }
     out.rows.push(o);
   }
   return out;

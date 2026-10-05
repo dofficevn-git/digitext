@@ -262,7 +262,11 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     const tg = kiemVaDienThoiGian(thoiGianGoc, tieuDe);
     if (pbHienTai) pbHienTai.soHoSo++;
     if (mangHienTai) mangHienTai.soHoSo++;
-    out.rows.push({ dong, hopSo: hopHienTai, hoSoSo, tieuDe, thoiGianGoc, soTo: lay(r, "soTo"), thbqGoc, thbq, vinhVien, ghiChu: lay(r, "ghiChu"), phongBan: pbHienTai, mang: mangHienTai, tg, loi });
+    // Số tờ chỉ nhận số tự nhiên (anh Hiếu 5/10/2026): "01 quyển", "3,5", "12 tờ"… là lỗi chặn nhập, tô đỏ ở tệp đánh dấu.
+    const soTo = lay(r, "soTo").trim();
+    if (soTo && !/^\d+$/.test(soTo)) loi.push(`Số tờ "${soTo}" không hợp lệ — chỉ ghi số tự nhiên (vd. 12), bỏ chữ như "quyển", "tờ"`);
+    else if (soTo && +soTo === 0) loi.push("Số tờ phải lớn hơn 0");
+    out.rows.push({ dong, hopSo: hopHienTai, hoSoSo, tieuDe, thoiGianGoc, soTo, thbqGoc, thbq, vinhVien, ghiChu: lay(r, "ghiChu"), phongBan: pbHienTai, mang: mangHienTai, tg, loi });
   }
 
   // Hộp thuộc đúng một loại: hộp có cả hồ sơ vĩnh viễn lẫn có thời hạn → lỗi ở mọi dòng của hộp đó.
@@ -483,7 +487,7 @@ export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8A
     // Mọi hồ sơ có lỗi đều tô đỏ — kể cả cả đoạn hồ sơ không thuộc mảng / phòng ban nào (anh Hiếu 2/10).
     for (const loi of r.loi) {
       tk.loi++;
-      const cot = /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : pt.cot.tieuDe;
+      const cot = /^Số tờ/.test(loi) ? pt.cot.soTo : /THBQ|bảo quản/i.test(loi) ? pt.cot.thbq : /Hồ sơ số/i.test(loi) ? pt.cot.hoSoSo : /Hộp/.test(loi) ? (pt.cot.hopSo ?? pt.cot.tieuDe) : pt.cot.tieuDe;
       danhDau(r.dong, cot, MAU_DANH_DAU.loi, `LỖI: ${loi}`);
     }
   }
