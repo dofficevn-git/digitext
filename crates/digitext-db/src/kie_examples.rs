@@ -17,16 +17,34 @@ pub fn head(text: &str) -> String {
     text.chars().take(HEAD_CHARS).collect()
 }
 
-/// `k` ví dụ có chữ OCR giống nhất (độ giống trigram), bỏ chính tài liệu đang bóc.
+/// Ví dụ CÙNG DỰ ÁN với tài liệu đang bóc được cộng điểm này vào độ giống (khoảng cách trigram
+/// 0..1 nhỏ = giống): ví dụ cùng dự án giống vừa phải vẫn thắng ví dụ chung (plakie) giống hơn
+/// một chút, nhưng không thắng ví dụ chung giống hẳn khi dự án chưa có mẫu nào tương tự.
+pub const SAME_PROJECT_BONUS: f32 = 0.2;
+
+/// `k` ví dụ có chữ OCR giống nhất (độ giống trigram), bỏ chính tài liệu đang bóc, ưu tiên ví dụ
+/// cùng dự án với `exclude_doc`. Ghi nhận lượt dùng (used_count) cho các ví dụ được chọn.
 pub async fn similar(pool: &PgPool, text: &str, k: i64, exclude_doc: Option<Uuid>) -> sqlx::Result<Vec<Example>> {
     sqlx::query_as::<_, Example>(
-        "SELECT ocr_text, fields FROM kie_examples \
-         WHERE active AND ($3::uuid IS NULL OR document_id IS DISTINCT FROM $3) \
-         ORDER BY ocr_text <-> $1 LIMIT $2",
+        "WITH cur AS (SELECT project_id FROM documents WHERE id = $3), \
+         pick AS ( \
+           SELECT e.id, e.ocr_text, e.fields, \
+             (e.ocr_text <-> $1) \
+             - CASE WHEN d.project_id IS NOT NULL AND d.project_id = (SELECT project_id FROM cur) \
+                    THEN $4::real ELSE 0 END AS score \
+           FROM kie_examples e \
+           LEFT JOIN documents d ON d.id = e.document_id \
+           WHERE e.active AND ($3::uuid IS NULL OR e.document_id IS DISTINCT FROM $3) \
+           ORDER BY score LIMIT $2), \
+         used AS ( \
+           UPDATE kie_examples SET used_count = used_count + 1, last_used_at = now() \
+           WHERE id IN (SELECT id FROM pick)) \
+         SELECT ocr_text, fields FROM pick ORDER BY score",
     )
     .bind(head(text))
     .bind(k)
     .bind(exclude_doc)
+    .bind(SAME_PROJECT_BONUS)
     .fetch_all(pool)
     .await
 }
