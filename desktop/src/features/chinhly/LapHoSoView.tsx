@@ -142,6 +142,7 @@ export default function LapHoSoView() {
     { key: "ma_ho_so", header: "Mã hồ sơ", className: "text-xs text-fg-subtle", cell: (r) => str(r, "ma_ho_so") },
     { key: "so_tam", header: "Số tạm", sortable: true, cell: (r) => str(r, "so_tam") },
     { key: "ho_so_so", header: "Hồ sơ số", sortable: true, align: "right", width: 90, cell: (r) => str(r, "ho_so_so") },
+    { key: "hop_so", header: "Hộp", align: "right", width: 64, cell: (r) => str(r, "hop_so") },
     {
       key: "tieu_de",
       header: "Tiêu đề",
@@ -174,7 +175,7 @@ export default function LapHoSoView() {
     { key: "so_van_ban", header: "Văn bản", align: "right", width: 80, cell: (r) => str(r, "so_van_ban") },
   ];
   const colsHien = cols.filter((c) => !anCot.has(c.key));
-  const TEN_COT: Record<string, string> = { ma_ho_so: "Mã hồ sơ", so_to: "Số tờ", ngay_bat_dau: "Bắt đầu", so_van_ban: "Văn bản", ten_mang: "Mảng" };
+  const TEN_COT: Record<string, string> = { hop_so: "Hộp", ma_ho_so: "Mã hồ sơ", so_to: "Số tờ", ngay_bat_dau: "Bắt đầu", so_van_ban: "Văn bản", ten_mang: "Mảng" };
 
   return (
     <section className="view active">

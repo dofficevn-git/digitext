@@ -42,6 +42,8 @@ export async function readFirstSheet(file: File): Promise<string[][]> {
 
 export interface PreviewRow {
   stt: number;
+  /** Loại bảo quản — mỗi loại đánh số riêng (0015). */
+  vinhVien?: boolean;
   hoSoId: string;
   soTam: string;
   tieuDe: string;

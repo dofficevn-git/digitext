@@ -76,8 +76,14 @@ Các màn Số hoá (Tạo lập CSDL, Đóng gói, lọc OCR theo phòng ban / 
 
 ## Quy tắc nghiệp vụ (đã sửa lỗi bản cũ)
 
-- Số tạm duy nhất trong phông (không phân biệt hoa/thường) ở cả 3 đường; (hồ sơ, STT văn bản) duy nhất; số hộp
-  duy nhất trong phòng ban; bó/tập là số nguyên dương.
+- **Hai loại bảo quản** (migration 0015, 5/10/2026): vĩnh viễn (`cl_thbq.trang_thai = 1`) và có thời hạn (còn lại) đánh
+  số riêng — mục lục thật mỗi loại đánh lại hộp 01 / hồ sơ 1. `cl_ho_so.vinh_vien` do trigger `cl_ho_so_loai` đặt theo
+  THBQ (bản đẩy lên có cột này thì bỏ qua — `spec::is_derived`); `cl_hop.vinh_vien` là danh tính của hộp.
+- Số tạm duy nhất trong (phông, loại) (không phân biệt hoa/thường) ở cả 3 đường; (hồ sơ, STT văn bản) duy nhất; số hộp
+  duy nhất trong (phòng ban, loại); hồ sơ không được nằm trong hộp khác loại (trigger báo `ck_cl_ho_so_hop_loai`);
+  bó/tập là số nguyên dương. Mã hồ sơ đuôi mục lục theo loại: `cl_phong.muc_luc_so` (vĩnh viễn) /
+  `muc_luc_so_cth` (có thời hạn, trống thì dùng `muc_luc_so`). Giá theo dải hộp có `cl_gia.vinh_vien` (NULL = cả hai).
+  Hệ thống hoá đánh số riêng từng loại, mỗi loại từ "Bắt đầu từ số".
 - Ngày nhận `d/M/yyyy`, `dd-MM-yyyy`, `d.M.yyyy`, `M/yyyy`, `yyyy`, ISO, serial Excel → chuẩn `dd/MM/yyyy | MM/yyyy | yyyy`;
   kiểm ngày thật (31/02 lỗi), năm 1800..2100, bắt đầu ≤ kết thúc.
 - Trạng thái THBQ tính động: loại 1 → VV; loại 2: `(nămNay − nămKT + 1) > giá trị` → HET, không thì GL; 3, 4 → GL.
@@ -102,8 +108,10 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
 - **Dòng nhóm**: `I.`/`II.`… = phòng ban, `1.`/`2.`… = mảng (thuộc phòng ban hiện tại). Dòng nhóm khác (không có
   `I.`/`1.`, vd. "Sổ chứng thực") = mục nhỏ trong mảng: bỏ qua, không báo lỗi, hồ sơ dưới nó vẫn thuộc mảng hiện tại
   (5/10/2026; trước đó là lỗi chặn nhập). Mã phòng ban / mảng = số thứ tự 2 chữ số (`I.` → `01`, `1.` → `01`), tên = phần sau dấu chấm.
-- **Số tạm** = `<tiền tố THBQ>.<hồ sơ số đệm 3>` (`VV.001`, `20N.001`, `20DG.001`); tiền tố gợi ý theo THBQ nhiều nhất
-  trong tệp, sửa được ở bước Kiểm tra — vì mỗi tệp của phông đều đánh hồ sơ số lại từ 01.
+- **Số tạm = Hồ sơ số** trong tệp (như DigiText 2025, 5/10/2026 — thay cho tiền tố `VV.001` cũ); **Hồ sơ số** và **Hộp số**
+  ghi luôn vào hồ sơ (Hộp số chỉ ghi ở dòng đầu hộp → mang xuống). Máy chủ upsert theo (phông, loại, số tạm) rồi xếp hộp
+  bằng `he_thong_hoa::boxing` (cần quyền Hệ thống hoá; thiếu quyền thì bỏ qua Hồ sơ số / Hộp và ghi `notes`). Lỗi chặn:
+  hồ sơ số trùng trong cùng loại, hộp lẫn cả hai loại, thiếu Hộp số khi tệp có cột Hộp số.
 - **Thời gian** (chuyển từ hai công cụ CheckThoiGian / DienThoiGian): tách mốc theo gạch / xuống dòng; điền `2020` → cả năm,
   `04/2020` → cả tháng, một ngày → lặp lại, mốc sai → giữ mốc đúng + suy từ năm trong ô, ô trống → năm trong tiêu đề
   (cụm năm sau chữ "năm", không có thì cụm cuối; bỏ "nhiệm kỳ"); đầu > cuối → đảo. Kiểm: sai định dạng, năm ngoài dải năm

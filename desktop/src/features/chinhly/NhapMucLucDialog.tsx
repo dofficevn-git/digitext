@@ -6,10 +6,10 @@
 import { useMemo, useRef, useState } from "react";
 import { clRemote, clSyncNow, str, type ClCatalog, type ClRow } from "@/api/chinhly";
 import { useProject } from "@/state/project";
-import { Badge, Banner, Button, Checkbox, Dialog, Field, Help, Input, KpiTile, notifyError, Stepper, Table, toast, type Column } from "@/ui";
+import { Badge, Banner, Button, Checkbox, Dialog, Help, KpiTile, notifyError, Stepper, Table, toast, type Column } from "@/ui";
 import type { V3y0 } from "@/domain/types";
 import { n } from "./common";
-import { coLoiChan, docMucLucHoSo, dongMau, soTamCua, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
+import { coLoiChan, docMucLucHoSo, dongMau, soChuan, soTamCua, TEN_LOAI, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
 import { KET_LUAN_LABEL } from "./thoiGianHoSo";
 
 const BUOC = [
@@ -26,6 +26,8 @@ interface KetQuaNhap {
   skipped: number;
   createdPhongBan: number;
   createdMang: number;
+  ganHop?: number;
+  hopTaoMoi?: number;
   notes?: string[];
   errors: { row: number; field?: string; message: string }[];
 }
@@ -36,7 +38,6 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   const { projectId } = useProject();
   const [buoc, setBuoc] = useState(0);
   const [pt, setPt] = useState<PhanTichMucLuc | null>(null);
-  const [tienTo, setTienTo] = useState("");
   const [chiVanDe, setChiVanDe] = useState(false);
   const [trang, setTrang] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -46,7 +47,20 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   const fileRef = useRef<HTMLInputElement>(null);
 
   const maPhong = str(phong, "ma_du_an");
-  const soTam = useMemo(() => (pt ? soTamCua(pt, tienTo) : new Map<number, string>()), [pt, tienTo]);
+  const soTam = useMemo(() => (pt ? soTamCua(pt) : new Map<number, string>()), [pt]);
+  // Tóm tắt theo loại: số hồ sơ, dải hồ sơ số, dải hộp (mỗi loại đánh riêng từ 1 / 01).
+  const theoLoai = useMemo(() => {
+    if (!pt) return [];
+    const nat = (a: string, b: string) => a.localeCompare(b, "vi", { numeric: true });
+    return [true, false]
+      .map((vv) => {
+        const rs = pt.rows.filter((r) => r.vinhVien === vv);
+        const hs = rs.map((r) => soChuan(r.hoSoSo)).sort(nat);
+        const hop = [...new Set(rs.map((r) => r.hopSo).filter(Boolean))].sort(nat);
+        return { vv, n: rs.length, hs: hs.length ? `${hs[0]}–${hs[hs.length - 1]}` : "", hop: hop.length ? `${hop[0]}–${hop[hop.length - 1]} (${hop.length} hộp)` : "" };
+      })
+      .filter((x) => x.n > 0);
+  }, [pt]);
   const chan = pt ? coLoiChan(pt) : true;
   const tenPhongLech = !!pt?.tenPhongTrongTep && pt.tenPhongTrongTep.toLowerCase().replace(/\s+/g, " ") !== str(phong, "ten").toLowerCase().replace(/\s+/g, " ");
 
@@ -57,7 +71,6 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     try {
       const r = await docMucLucHoSo(f, cat.thbq);
       setPt(r);
-      setTienTo(r.tienToGoiY);
       setTrang(1);
       setChiVanDe(false);
       setBuoc(1);
@@ -75,7 +88,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     setKq(null);
     try {
       const rows = pt.rows.map((r) => dongMau(r, soTam.get(r.dong) ?? ""));
-      const tong: KetQuaNhap = { created: 0, updated: 0, skipped: 0, createdPhongBan: 0, createdMang: 0, notes: [], errors: [] };
+      const tong: KetQuaNhap = { created: 0, updated: 0, skipped: 0, createdPhongBan: 0, createdMang: 0, ganHop: 0, hopTaoMoi: 0, notes: [], errors: [] };
       for (let i = 0; i < rows.length; i += LO) {
         setTienDo(`Đang gửi dòng ${n(i + 1)}–${n(Math.min(i + LO, rows.length))} / ${n(rows.length)}…`);
         const r = await clRemote<KetQuaNhap>("POST", "/cl/ho-so/import", { projectId, phongId: phong.id, mode: "upsert", createMissing: true, rows: rows.slice(i, i + LO) });
@@ -84,6 +97,8 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
         tong.skipped += r.skipped;
         tong.createdPhongBan += r.createdPhongBan ?? 0;
         tong.createdMang += r.createdMang ?? 0;
+        tong.ganHop = (tong.ganHop ?? 0) + (r.ganHop ?? 0);
+        tong.hopTaoMoi = (tong.hopTaoMoi ?? 0) + (r.hopTaoMoi ?? 0);
         tong.notes?.push(...(r.notes ?? []));
         for (const e of r.errors) tong.errors.push({ ...e, row: pt.rows[i + e.row - 1]?.dong ?? e.row });
       }
@@ -113,7 +128,9 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
 
   const cols: Column<DongHoSo>[] = [
     { key: "dong", header: "Dòng", width: 60, align: "right", cell: (r) => r.dong },
-    { key: "so_tam", header: "Số tạm", width: 90, cell: (r) => soTam.get(r.dong) },
+    { key: "hop", header: "Hộp", width: 60, cell: (r) => r.hopSo },
+    { key: "so_tam", header: "Hồ sơ số / số tạm", width: 90, cell: (r) => soTam.get(r.dong) },
+    { key: "loai", header: "Loại", width: 90, className: "text-sm", cell: (r) => TEN_LOAI(r.vinhVien) },
     { key: "tieu_de", header: "Tiêu đề", className: "max-w-[360px] whitespace-normal", cell: (r) => r.tieuDe },
     { key: "mang", header: "Mảng", className: "text-sm", cell: (r) => (r.mang ? `${r.mang.ma} · ${r.mang.ten}` : "") },
     { key: "goc", header: "Thời gian gốc", className: "text-sm whitespace-pre-line", cell: (r) => r.thoiGianGoc || <span className="text-fg-subtle">trống</span> },
@@ -179,7 +196,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
           <Button icon="tepExcel" disabled={busy} onClick={() => void taiDanhDau()}>
             Tải tệp gốc đã đánh dấu
           </Button>
-          <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
+          <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
             Tải tệp đã chuyển
           </Button>
         </>
@@ -246,10 +263,11 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
 
       {buoc === 1 && pt && (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
             <KpiTile label="Phòng ban" value={pt.phongBans.length} />
             <KpiTile label="Mảng" value={pt.phongBans.reduce((a, p) => a + p.mangs.length, 0)} />
             <KpiTile label="Hồ sơ" value={pt.rows.length} tone="info" />
+            <KpiTile label="Hộp" value={pt.soHop} />
             <KpiTile label="Thời gian đã điền" value={pt.soDaDien} tone="info" />
             <KpiTile label="Cảnh báo" value={pt.soCanhBao} tone={pt.soCanhBao ? "warn" : undefined} />
             <KpiTile label="Lỗi chặn nhập" value={pt.soLoi} tone={pt.soLoi ? "err" : "ok"} />
@@ -298,9 +316,16 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               )}
             </div>
             <div className="space-y-3">
-              <Field label="Tiền tố số tạm" hint={`Gợi ý theo THBQ nhiều nhất trong tệp (${pt.thbqTep || "—"}). Số tạm: ${soTam.get(pt.rows[0]?.dong ?? 0) ?? "—"}`}>
-                <Input value={tienTo} onChange={(e) => setTienTo(e.target.value.toUpperCase())} placeholder="VV" />
-              </Field>
+              <div className="rounded-md border border-border-subtle p-3 text-sm">
+                <div className="mb-1 font-medium text-fg-muted">Số tạm = Hồ sơ số trong tệp</div>
+                {theoLoai.map((x) => (
+                  <div key={String(x.vv)}>
+                    <b>{x.vv ? "Vĩnh viễn" : "Có thời hạn"}</b>: {n(x.n)} hồ sơ · số {x.hs}
+                    {x.hop && ` · hộp ${x.hop}`}
+                  </div>
+                ))}
+                <div className="mt-1 text-xs text-fg-subtle">Mỗi loại đánh số riêng: hộp 01 vĩnh viễn khác hộp 01 có thời hạn.</div>
+              </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm">
                 <Checkbox
                   checked={chiVanDe}
@@ -336,6 +361,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <Banner tone={kq.errors.length ? "warning" : "success"} detail={kq.errors.length ? kq.errors.map((e) => `Dòng ${e.row}: ${e.field ? e.field + ": " : ""}${e.message}`).join("\n") : undefined}>
                 Đã thêm {n(kq.created)}, cập nhật {n(kq.updated)}, bỏ qua {n(kq.skipped)} hồ sơ
                 {kq.createdPhongBan || kq.createdMang ? ` · tạo mới ${n(kq.createdPhongBan)} phòng ban, ${n(kq.createdMang)} mảng` : ""}
+                {kq.ganHop ? ` · xếp ${n(kq.ganHop)} hồ sơ vào hộp (tạo mới ${n(kq.hopTaoMoi ?? 0)} hộp)` : ""}
                 {kq.errors.length ? ` · ${n(kq.errors.length)} dòng lỗi (xem chi tiết)` : "."}
               </Banner>
               {!!kq.notes?.length && (
@@ -348,7 +374,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
                   <Button icon="tepExcel" onClick={() => void taiDanhDau()}>
                     Tải tệp gốc đã đánh dấu
                   </Button>
-                  <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, tienTo, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
+                  <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
                     Tải tệp đã chuyển
                   </Button>
                 </div>

@@ -172,6 +172,7 @@ export default function HeThongHoaView() {
 
   const cols: Column<PreviewRow>[] = [
     { key: "stt", header: applied ? "Hồ sơ số" : "Hồ sơ số dự kiến", align: "right", width: 100, cell: (r) => <b>{r.stt}</b> },
+    { key: "loai", header: "Loại", width: 100, className: "text-sm", cell: (r) => (r.vinhVien ? "Vĩnh viễn" : "Có thời hạn") },
     { key: "hoSoSoCu", header: "Số cũ", align: "right", width: 70, className: "text-fg-subtle", cell: (r) => r.hoSoSoCu ?? "" },
     { key: "hop", header: fileType === 1 ? "Hộp" : "Bó / tập", width: 90, cell: (r) => (fileType === 1 ? (r.hopSo ?? "") : [r.boSo, r.tapSo].filter((x) => x != null).join(" / ")) },
     { key: "maHoSoMoi", header: "Mã hồ sơ mới", className: "text-xs", cell: (r) => r.maHoSoMoi ?? <span className="text-fg-subtle">—</span> },

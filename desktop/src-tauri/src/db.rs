@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 24;
+const C_P1: i64 = 25;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -239,6 +239,20 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
         // Tra sổ theo đường dẫn khi chạy lại "Chọn thư mục" trên ổ lớn (bỏ qua tệp cũ không băm).
         r_1d3.execute_batch(
             "CREATE INDEX IF NOT EXISTS ix_collected_path ON collected_docs (project_id, storage_path);",
+        )?;
+    }
+    if r_1d2 < 25 {
+        // Đánh số riêng 2 loại bảo quản (migration máy chủ 0015, 5/10/2026): cột ảo vinh_vien cho lọc / kiểm trùng,
+        // số tạm bảng dossier cũ duy nhất theo (phông, THBQ, số tạm) — vĩnh viễn và có thời hạn đều có số tạm "1".
+        for (t, c) in [("cl_ho_so", "vinh_vien"), ("cl_hop", "vinh_vien"), ("cl_gia", "vinh_vien")] {
+            let co: bool = r_1d3.query_row(&format!("SELECT count(*) FROM pragma_table_xinfo('{t}') WHERE name = '{c}'"), [], |r| r.get::<_, i64>(0)).map(|n| n > 0).unwrap_or(true);
+            if !co {
+                r_1d3.execute_batch(&format!("ALTER TABLE {t} ADD COLUMN {c} GENERATED ALWAYS AS (json_extract(row_json, '$.{c}')) VIRTUAL; CREATE INDEX IF NOT EXISTS ix_{t}_{c} ON {t} ({c});"))?;
+            }
+        }
+        r_1d3.execute_batch(
+            "DROP INDEX IF EXISTS ux_dossier_sotam;
+             CREATE UNIQUE INDEX IF NOT EXISTS ux_dossier_sotam ON dossier (ma_da, COALESCE(thbq, 0), so_tam);",
         )?;
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;

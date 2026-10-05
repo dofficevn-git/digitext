@@ -142,24 +142,28 @@ export function inMucLucVanBan(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, te
 
 /** Nhãn hộp A4 2×2: gom hồ sơ liên tiếp cùng số hộp (theo phòng ban). */
 export function inNhanHop(rows: ClRow[], tenPhong: string): string {
-  const rs = sapXepHoSo(rows).filter((r) => str(r, "hop_so"));
-  type Nhan = { pb: string; hop: string; nam: string; tu: string; den: string; thbq: string; n: number };
+  // Hộp 01 vĩnh viễn khác hộp 01 có thời hạn (0015): gom theo loại trước (sort ổn định giữ thứ tự hộp trong loại).
+  const vv = (r: ClRow) => r.vinh_vien === true || r.vinh_vien === 1;
+  const rs = sapXepHoSo(rows)
+    .filter((r) => str(r, "hop_so"))
+    .sort((a, b) => Number(vv(b)) - Number(vv(a)));
+  type Nhan = { pb: string; vv: boolean; hop: string; nam: string; tu: string; den: string; thbq: string; n: number };
   const nhans: Nhan[] = [];
   for (const r of rs) {
-    const key = `${str(r, "phong_ban_id")}|${str(r, "hop_so")}`;
+    const key = `${str(r, "phong_ban_id")}|${vv(r)}|${str(r, "hop_so")}`;
     const last = nhans[nhans.length - 1];
-    if (last && `${last.pb}|${last.hop}` === key) {
+    if (last && `${last.pb}|${last.vv}|${last.hop}` === key) {
       last.den = str(r, "ho_so_so") || str(r, "so_tam");
       last.n += 1;
     } else {
-      nhans.push({ pb: str(r, "phong_ban_id"), hop: str(r, "hop_so"), nam: String(num(r, "nam_ket_thuc") ?? ""), tu: str(r, "ho_so_so") || str(r, "so_tam"), den: str(r, "ho_so_so") || str(r, "so_tam"), thbq: str(r, "ten_thbq"), n: 1 });
+      nhans.push({ pb: str(r, "phong_ban_id"), vv: vv(r), hop: str(r, "hop_so"), nam: String(num(r, "nam_ket_thuc") ?? ""), tu: str(r, "ho_so_so") || str(r, "so_tam"), den: str(r, "ho_so_so") || str(r, "so_tam"), thbq: str(r, "ten_thbq"), n: 1 });
     }
   }
   const ten = new Map(rs.map((r) => [str(r, "phong_ban_id"), str(r, "ten_phong_ban")]));
   const pages: string[] = [];
   for (let i = 0; i < nhans.length; i += 4) {
     const page = nhans.slice(i, i + 4);
-    while (page.length < 4) page.push({ pb: "", hop: "", nam: "", tu: "", den: "", thbq: "", n: 0 });
+    while (page.length < 4) page.push({ pb: "", vv: false, hop: "", nam: "", tu: "", den: "", thbq: "", n: 0 });
     pages.push(
       `<div class="nhan-trang">${page
         .map((x) =>
@@ -176,11 +180,15 @@ export function inNhanHop(rows: ClRow[], tenPhong: string): string {
 /** Phụ lục "Hướng dẫn tra tìm mục lục": nhóm phòng ban → mỗi mảng một dòng (từ/đến hồ sơ, từ/đến hộp). */
 export function inPhuLuc(rows: ClRow[], tenPhong: string): string {
   const rs = rows.filter((r) => str(r, "hop_so"));
-  type G = { pb: string; mang: string; hs: string[]; hop: string[] };
+  // Hộp / hồ sơ số đánh riêng cho vĩnh viễn và có thời hạn (0015): tách khoảng theo loại khi phông có cả hai.
+  const laVv = (r: ClRow) => r.vinh_vien === true || r.vinh_vien === 1;
+  const haiLoai = new Set(rs.map(laVv)).size > 1;
+  type G = { pb: string; vv: boolean; mang: string; hs: string[]; hop: string[] };
   const gs = new Map<string, G>();
   for (const r of rs) {
-    const k = `${str(r, "ten_phong_ban")}|${str(r, "ten_mang")}`;
-    if (!gs.has(k)) gs.set(k, { pb: str(r, "ten_phong_ban"), mang: str(r, "ten_mang"), hs: [], hop: [] });
+    const k = `${str(r, "ten_phong_ban")}|${laVv(r)}|${str(r, "ten_mang")}`;
+    const mang = haiLoai ? `${str(r, "ten_mang")} (${laVv(r) ? "vĩnh viễn" : "có thời hạn"})` : str(r, "ten_mang");
+    if (!gs.has(k)) gs.set(k, { pb: str(r, "ten_phong_ban"), vv: laVv(r), mang, hs: [], hop: [] });
     const g = gs.get(k)!;
     if (str(r, "ho_so_so")) g.hs.push(str(r, "ho_so_so"));
     g.hop.push(str(r, "hop_so"));
@@ -189,7 +197,7 @@ export function inPhuLuc(rows: ClRow[], tenPhong: string): string {
   let body = "";
   let pb = "\u0000";
   let stt = 0;
-  for (const g of [...gs.values()].sort((a, b) => collator.compare(a.pb, b.pb) || collator.compare(a.mang, b.mang))) {
+  for (const g of [...gs.values()].sort((a, b) => collator.compare(a.pb, b.pb) || Number(b.vv) - Number(a.vv) || collator.compare(a.mang, b.mang))) {
     if (g.pb !== pb) {
       pb = g.pb;
       body += `<tr class="nhom"><td colspan="7">${esc(pb || "(Chưa xếp phòng ban)")}</td></tr>`;

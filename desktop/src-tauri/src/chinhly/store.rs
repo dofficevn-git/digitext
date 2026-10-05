@@ -22,13 +22,13 @@ pub fn indexed_cols(table: &str) -> &'static [&'static str] {
         "cl_mang" => &["phong_ban_id", "ma_mang", "so_tt"],
         "cl_thbq" => &["ten", "trang_thai", "gia_tri", "so_tt"],
         "cl_ngon_ngu" | "cl_loai_van_ban" => &["ma", "so_tt"],
-        "cl_hop" => &["phong_ban_id", "hop_so"],
+        "cl_hop" => &["phong_ban_id", "hop_so", "vinh_vien"],
         "cl_bo_tap" => &["phong_ban_id", "loai", "so"],
         "cl_kho" => &["ten", "so_tt"],
-        "cl_gia" => &["kho_id", "phong_ban_id", "tu_hop", "den_hop", "so_tt"],
+        "cl_gia" => &["kho_id", "phong_ban_id", "tu_hop", "den_hop", "vinh_vien", "so_tt"],
         "cl_ho_so" => &[
             "phong_id", "phong_ban_id", "mang_id", "thbq_id", "hop_id", "bo_id", "tap_id", "gia_id", "so_tam", "ho_so_so", "tieu_de", "ngay_ket_thuc",
-            "trung_thua", "thu_tu_sap_xep",
+            "trung_thua", "thu_tu_sap_xep", "vinh_vien",
         ],
         "cl_van_ban" => &["ho_so_id", "so_thu_tu", "trich_yeu"],
         "cl_van_ban_file" => &["van_ban_id", "document_id"],
@@ -344,15 +344,20 @@ pub fn validate_local(conn: &Connection, table: &str, id: &str, row: &mut Row) -
                 errs.push(LocalErr { field: "phong_id".into(), message: "Thiếu phông".into() });
             }
             if let (Some(p), Some(st)) = (str_of(row, "phong_id"), str_of(row, "so_tam")) {
+                // Số tạm duy nhất theo (phông, loại vĩnh viễn / có thời hạn) như máy chủ (0015). Loại của dòng đang ghi
+                // suy từ THBQ trong bản sao; dòng khác dùng loại máy chủ đã tính (vinh_vien), thiếu thì suy từ THBQ.
+                let vv: bool = str_of(row, "thbq_id")
+                    .and_then(|t| conn.query_row("SELECT trang_thai FROM cl_thbq WHERE id = ?1", params![t], |r| r.get::<_, Option<i64>>(0)).ok().flatten())
+                    == Some(1);
                 let dup: i64 = conn
                     .query_row(
-                        "SELECT count(*) FROM cl_ho_so WHERE phong_id = ?1 AND lower(trim(so_tam)) = lower(?2) AND id <> ?3 AND deleted_at IS NULL",
-                        params![p, st, id],
+                        "SELECT count(*) FROM cl_ho_so h WHERE h.phong_id = ?1 AND lower(trim(h.so_tam)) = lower(?2) AND h.id <> ?3 AND h.deleted_at IS NULL                          AND COALESCE(h.vinh_vien = 1 OR h.vinh_vien = 'true', (SELECT t.trang_thai = 1 FROM cl_thbq t WHERE t.id = h.thbq_id), 0) = ?4",
+                        params![p, st, id, vv],
                         |r| r.get(0),
                     )
                     .unwrap_or(0);
                 if dup > 0 {
-                    errs.push(LocalErr { field: "so_tam".into(), message: format!("Số tạm {st:?} đã có trong phông") });
+                    errs.push(LocalErr { field: "so_tam".into(), message: format!("Số tạm {st:?} đã có trong phông (cùng loại {})", if vv { "vĩnh viễn" } else { "có thời hạn" }) });
                 }
             }
         }
@@ -813,6 +818,10 @@ pub fn enrich_ho_so(row: &mut Row, lk: &Lookups, nam_now: i32, so_van_ban: i64, 
     row.insert("thbq_so_tt".into(), json!(thbq.as_ref().and_then(|p| i(p, "so_tt"))));
     row.insert("thbq_ma_tt05".into(), json!(thbq.as_ref().and_then(|p| s(p, "ma_tt05"))));
     row.insert("thbq_status".into(), json!(digitext_core::chinh_ly::thbq_status(tt.map(|v| v as i16), gt.map(|v| v as i32), nam_kt, nam_now)));
+    // Loại bảo quản (0015): máy chủ tính sẵn; dòng sửa ngoại tuyến chưa đẩy thì suy từ THBQ.
+    let vinh_vien = if s(row, "thbq_id").is_some() && thbq.is_some() { tt == Some(1) } else { row.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false) };
+    row.insert("vinh_vien".into(), json!(vinh_vien));
+    row.insert("muc_luc_so_cth".into(), json!(phong.as_ref().and_then(|p| s(p, "muc_luc_so_cth"))));
     let hop_so = hop.as_ref().and_then(|h| s(h, "hop_so"));
     let hop_int: Option<i64> = hop_so.as_deref().and_then(|h| h.trim().parse().ok());
     row.insert("hop_so".into(), json!(hop_so));
@@ -824,7 +833,15 @@ pub fn enrich_ho_so(row: &mut Row, lk: &Lookups, nam_now: i32, so_van_ban: i64, 
     let gia = s(row, "gia_id").and_then(|gid| lk.gia.iter().find(|g| s(g, "id").as_deref() == Some(&gid)).cloned()).or_else(|| {
         let h = hop_int?;
         let pbid = pb_id.clone()?;
-        lk.gia.iter().find(|g| s(g, "phong_ban_id").as_deref() == Some(&pbid) && i(g, "tu_hop").map_or(false, |a| a <= h) && i(g, "den_hop").map_or(false, |b| h <= b)).cloned()
+        lk.gia
+            .iter()
+            .find(|g| {
+                s(g, "phong_ban_id").as_deref() == Some(&pbid)
+                    && g.get("vinh_vien").and_then(Value::as_bool).map_or(true, |v| v == vinh_vien)
+                    && i(g, "tu_hop").map_or(false, |a| a <= h)
+                    && i(g, "den_hop").map_or(false, |b| h <= b)
+            })
+            .cloned()
     });
     let kho = gia.as_ref().and_then(|g| s(g, "kho_id")).and_then(|k| lk.kho.get(&k).cloned());
     row.insert("gia_eff_id".into(), json!(gia.as_ref().and_then(|g| s(g, "id"))));
@@ -838,7 +855,12 @@ pub fn enrich_ho_so(row: &mut Row, lk: &Lookups, nam_now: i32, so_van_ban: i64, 
             phong.as_ref().and_then(|p| s(p, "phong_so")).as_deref(),
             nam_kt,
             s(row, "ho_so_so").as_deref(),
-            phong.as_ref().and_then(|p| s(p, "muc_luc_so")).as_deref(),
+            if vinh_vien {
+                phong.as_ref().and_then(|p| s(p, "muc_luc_so"))
+            } else {
+                phong.as_ref().and_then(|p| s(p, "muc_luc_so_cth").or_else(|| s(p, "muc_luc_so")))
+            }
+            .as_deref(),
         )),
     );
     row.insert("so_van_ban".into(), json!(so_van_ban));

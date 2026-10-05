@@ -10,7 +10,10 @@ use crate::extract::Ts;
 use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::{Json, Router};
+use digitext_core::Permission;
+use digitext_db::chinh_ly::he_thong_hoa as hth;
 use digitext_db::chinh_ly::{self as cl, OpCtx, OpKind, OpResult, Row, SyncOp};
+use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -57,6 +60,9 @@ struct ImportResp {
     /// Phòng ban / mảng tạo mới khi `create_missing`.
     created_phong_ban: usize,
     created_mang: usize,
+    /// Nhập mục lục: số hồ sơ được xếp hộp theo cột Hộp số, số hộp tạo mới.
+    gan_hop: usize,
+    hop_tao_moi: usize,
     /// Ghi chú cho người nhập (vd. mã trong tệp đã bị phòng ban khác dùng → đặt mã khác).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     notes: Vec<String>,
@@ -66,6 +72,8 @@ struct ImportResp {
 /// Bảng tra danh mục của dự án: (bảng → [(id, mã, tên, cha)]).
 struct Lookup {
     thbq: Vec<(Uuid, String)>,
+    /// THBQ vĩnh viễn (trang_thai = 1) — để biết loại của dòng (số tạm / hộp duy nhất theo loại, migration 0015).
+    thbq_vv: HashSet<Uuid>,
     phong_ban: Vec<(Uuid, String, String)>,          // id, ma_don_vi, ten
     mang: Vec<(Uuid, Uuid, String, String)>,         // id, phong_ban_id, ma_mang, ten
     ngon_ngu: Vec<(String, String)>,                 // ma, ten
@@ -87,6 +95,7 @@ async fn lookup(st: &AppState, project: Uuid, phong: Uuid) -> Result<Lookup, Api
     let c = cl::danh_muc::catalog(&st.pool, project).await?;
     let arr = |k: &str| c.get(k).and_then(Value::as_array).cloned().unwrap_or_default();
     let thbq = arr("thbq").iter().filter_map(|v| Some((u(v, "id")?, s(v, "ten")?.to_owned()))).collect();
+    let thbq_vv = arr("thbq").iter().filter(|v| v.get("trang_thai").and_then(Value::as_i64) == Some(1)).filter_map(|v| u(v, "id")).collect();
     let phong_ban = arr("phong_ban")
         .iter()
         .filter(|v| u(v, "phong_id") == Some(phong))
@@ -95,7 +104,7 @@ async fn lookup(st: &AppState, project: Uuid, phong: Uuid) -> Result<Lookup, Api
     let mang = arr("mang").iter().filter_map(|v| Some((u(v, "id")?, u(v, "phong_ban_id")?, s(v, "ma_mang").unwrap_or("00").to_owned(), s(v, "ten")?.to_owned()))).collect();
     let ngon_ngu = arr("ngon_ngu").iter().filter_map(|v| Some((s(v, "ma")?.to_owned(), s(v, "ten")?.to_owned()))).collect();
     let loai_vb = arr("loai_van_ban").iter().filter_map(|v| Some((s(v, "ma")?.to_owned(), s(v, "ten")?.to_owned()))).collect();
-    Ok(Lookup { thbq, phong_ban, mang, ngon_ngu, loai_vb })
+    Ok(Lookup { thbq, thbq_vv, phong_ban, mang, ngon_ngu, loai_vb })
 }
 
 /// Tạo một dòng danh mục (phòng ban / mảng) qua `apply_op` — cùng kiểm tra, quyền, lịch sử như mọi đường ghi.
@@ -307,9 +316,18 @@ async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImpo
     let parts = ctx_parts(&ts);
     let ctx = op_ctx(&ts, b.project_id, "import", &parts);
     let mut out = ImportResp::default();
+    // Nhập mục lục ghi luôn Hồ sơ số và xếp hộp theo cột Hộp số — việc của Hệ thống hoá nên cần quyền đó.
+    let duoc_xep = ts.has_perm(Permission::DossierSystematize);
+    let mut can_xep: Vec<(usize, hth::BoxRow)> = Vec::new();
+    let mut bo_so_hop = false;
     for (i, mut row) in b.rows.into_iter().enumerate() {
         let n = i + 1;
         row.insert("phong_id".into(), json!(b.phong_id));
+        let hop_so = row.remove("hop_so").and_then(|v| v.as_str().map(|x| x.trim().to_owned())).filter(|x| !x.is_empty());
+        if !duoc_xep && (hop_so.is_some() || row.contains_key("ho_so_so")) {
+            row.remove("ho_so_so");
+            bo_so_hop = true;
+        }
         if let Err(mut e) = resolve_ho_so(&st, &ctx, b.phong_id, &mut lk, &mut row, b.create_missing, &mut out).await? {
             e.row = n;
             out.errors.push(e);
@@ -320,14 +338,17 @@ async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImpo
             out.errors.push(RowError { row: n, field: Some("so_tam".into()), message: "Thiếu số tạm".into() });
             continue;
         }
-        let existing: Option<Uuid> = sqlx::query_scalar("SELECT id FROM cl_ho_so WHERE phong_id = $1 AND lower(btrim(so_tam)) = lower(btrim($2)) AND deleted_at IS NULL")
+        // Số tạm duy nhất trong (phông, loại vĩnh viễn / có thời hạn): mục lục mỗi loại đánh lại từ 1.
+        let vinh_vien = u(&Value::Object(row.clone()), "thbq_id").is_some_and(|t| lk.thbq_vv.contains(&t));
+        let existing: Option<Uuid> = sqlx::query_scalar("SELECT id FROM cl_ho_so WHERE phong_id = $1 AND vinh_vien = $3 AND lower(btrim(so_tam)) = lower(btrim($2)) AND deleted_at IS NULL")
             .bind(b.phong_id)
             .bind(&so_tam)
+            .bind(vinh_vien)
             .fetch_optional(&st.pool)
             .await?;
         let id = match (existing, b.mode.as_str()) {
             (Some(_), "create") => {
-                out.errors.push(RowError { row: n, field: Some("so_tam".into()), message: format!("Số tạm {so_tam:?} đã có trong phông") });
+                out.errors.push(RowError { row: n, field: Some("so_tam".into()), message: format!("Số tạm {so_tam:?} đã có trong phông (cùng loại {})", if vinh_vien { "vĩnh viễn" } else { "có thời hạn" }) });
                 continue;
             }
             (Some(id), _) => id,
@@ -335,6 +356,11 @@ async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImpo
         };
         let op = SyncOp { op_id: None, table: "cl_ho_so".into(), id, op: OpKind::Upsert, base: None, new: row, if_ver: None, edited_at: None };
         let r = cl::apply_op(&st.pool, &ctx, &op).await?;
+        if matches!(r, OpResult::Applied { .. } | OpResult::Merged { .. } | OpResult::NoChange { .. }) && duoc_xep {
+            if let Some(hs) = hop_so {
+                can_xep.push((n, hth::BoxRow { ho_so_id: id, hop_so: Some(hs), bo_so: None, tap_so: None, clear: false }));
+            }
+        }
         match (&r, existing) {
             (OpResult::Applied { .. }, None) => out.created += 1,
             (OpResult::Applied { .. } | OpResult::Merged { .. }, Some(_)) => out.updated += 1,
@@ -346,7 +372,20 @@ async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImpo
             }
         }
     }
-    digitext_db::audit::append(&st.pool, super::audit(&ts, "cl.import_ho_so", b.phong_id.to_string(), json!({"created": out.created, "updated": out.updated, "errors": out.errors.len(), "created_phong_ban": out.created_phong_ban, "created_mang": out.created_mang}))).await?;
+    if !can_xep.is_empty() {
+        let rows: Vec<hth::BoxRow> = can_xep.iter().map(|(_, r)| r.clone()).collect();
+        let br = hth::boxing(&st.pool, &ctx, 1, &rows).await?;
+        out.gan_hop = br.applied;
+        out.hop_tao_moi = br.hops_created;
+        for e in br.errors {
+            let n = can_xep.get(e.row.saturating_sub(1)).map_or(0, |(n, _)| *n);
+            out.errors.push(RowError { row: n, field: Some("hop_so".into()), message: format!("Xếp hộp: {}", e.message) });
+        }
+    }
+    if bo_so_hop {
+        out.notes.push("Tài khoản chưa có quyền Hệ thống hoá — đã nhập hồ sơ nhưng bỏ qua Hồ sơ số và Hộp số".into());
+    }
+    digitext_db::audit::append(&st.pool, super::audit(&ts, "cl.import_ho_so", b.phong_id.to_string(), json!({"created": out.created, "updated": out.updated, "errors": out.errors.len(), "created_phong_ban": out.created_phong_ban, "created_mang": out.created_mang, "gan_hop": out.gan_hop, "hop_tao_moi": out.hop_tao_moi}))).await?;
     Ok(Json(out))
 }
 
