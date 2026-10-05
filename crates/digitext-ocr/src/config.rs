@@ -135,7 +135,7 @@ pub struct WorkerConfig {
     pub purge_source_after_pdfa: bool,
 }
 impl WorkerConfig {
-    pub const ENV_KEYS: [&'static str; 42] = [
+    pub const ENV_KEYS: [&'static str; 43] = [
         C_5G,
         C_6D,
         C_6E,
@@ -172,6 +172,7 @@ impl WorkerConfig {
         C_67,
         C_66,
         C_5E,
+        PURGE_SOURCE_AFTER_PDFA,
         C_5W,
         C_5V,
         C_5U,
