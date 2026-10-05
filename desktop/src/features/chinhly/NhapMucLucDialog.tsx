@@ -234,7 +234,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <li>Kiểm cột thời gian: ô trống, sai định dạng, ngày đầu sau ngày cuối, năm không khớp năm ghi ở tiêu đề. Tự điền: chỉ năm → cả năm, chỉ tháng → cả tháng, một ngày → lặp lại, mốc sai → suy từ năm trong ô hoặc tiêu đề.</li>
               <li>Số tạm = tiền tố theo THBQ + hồ sơ số (VV.001, 20N.001…) để các tệp của cùng phông không trùng nhau.</li>
               <li>Hộp số không nhập (gán ở bước Hệ thống hoá), chỉ giữ ở sheet Kiểm tra của tệp đã chuyển.</li>
-              <li>Dòng nhóm không bắt đầu bằng I. hoặc 1. sẽ báo lỗi — sửa tệp rồi chọn lại.</li>
+              <li>Dòng nhóm không có I. hoặc 1. ở đầu (vd. "Sổ chứng thực") là mục nhỏ trong mảng — bỏ qua khi nhập, hồ sơ bên dưới vẫn thuộc mảng đang có.</li>
               <li>
                 "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) chỉ đánh dấu ô cần chú ý, kèm ghi chú: xanh nhạt = đã sửa (Cũ → Mới), vàng = cần xem lại, ĐỎ chữ trắng = lỗi
                 phải sửa trước khi nhập. Ô đã đúng để nguyên.
@@ -301,14 +301,17 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <Field label="Tiền tố số tạm" hint={`Gợi ý theo THBQ nhiều nhất trong tệp (${pt.thbqTep || "—"}). Số tạm: ${soTam.get(pt.rows[0]?.dong ?? 0) ?? "—"}`}>
                 <Input value={tienTo} onChange={(e) => setTienTo(e.target.value.toUpperCase())} placeholder="VV" />
               </Field>
-              <Checkbox
-                checked={chiVanDe}
-                onChange={(v) => {
-                  setChiVanDe(v);
-                  setTrang(1);
-                }}
-                label="Chỉ dòng có vấn đề"
-              />
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox
+                  checked={chiVanDe}
+                  onChange={(v) => {
+                    setChiVanDe(v);
+                    setTrang(1);
+                  }}
+                  label="Chỉ dòng có vấn đề"
+                />
+                Chỉ xem dòng có vấn đề
+              </label>
             </div>
           </div>
 

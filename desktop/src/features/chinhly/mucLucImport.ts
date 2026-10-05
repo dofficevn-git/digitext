@@ -2,7 +2,7 @@
 // Nhập mục lục hồ sơ (Excel 7 cột: Hộp số · Hồ sơ số · Tiêu đề · Thời gian BĐ - KT · Số tờ · THBQ · Ghi chú) có
 // dòng nhóm trong cột Tiêu đề: "I. …" = phòng ban, "1. …" = mảng công việc. Phân tích thuần trên máy → dựng dòng
 // theo mẫu lập hồ sơ 14 cột (nhập qua /cl/ho-so/import, tải về được) + sheet "Kiểm tra".
-// Quyết định 1/10/2026: chỉ nhận I./1. (dòng nhóm khác → lỗi); số tạm = <tiền tố THBQ>.<hồ sơ số đệm 3>;
+// Quyết định 1/10/2026: chỉ nhận I./1. làm phòng ban / mảng (5/10: dòng nhóm khác = mục nhỏ trong mảng, bỏ qua); số tạm = <tiền tố THBQ>.<hồ sơ số đệm 3>;
 // mã phòng ban / mảng = số thứ tự 2 chữ số; Hộp số không nhập (gán ở Hệ thống hoá), chỉ giữ ở sheet Kiểm tra.
 
 import { V4dz } from "@/api/exportFile";
@@ -234,7 +234,8 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
         pbHienTai.mangs.push(mangHienTai);
         continue;
       }
-      vanDe.push({ dong, muc: "loi", noiDung: `Dòng nhóm "${tieuDe}" không bắt đầu bằng I. (phòng ban) hoặc 1. (mảng) — thêm ký hiệu hoặc xoá dòng` });
+      // Dòng nhóm không có I./1. = mục nhỏ trong mảng công việc (vd. "Sổ chứng thực"). Anh Hiếu 5/10/2026: tạm
+      // thời bỏ qua khi nhập — không báo lỗi, hồ sơ phía dưới vẫn thuộc mảng hiện tại.
       continue;
     }
 
