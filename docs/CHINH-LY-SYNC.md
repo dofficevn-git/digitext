@@ -99,8 +99,9 @@ Màn Lập hồ sơ › "…" › **Nhập mục lục hồ sơ**: tệp mục l
 Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm nằm trong cột Tiêu đề. Phân tích chạy trên máy
 (`desktop/src/features/chinhly/mucLucImport.ts`, `thoiGianHoSo.ts`), hộp thoại 3 bước `NhapMucLucDialog.tsx`.
 
-- **Dòng nhóm**: `I.`/`II.`… = phòng ban, `1.`/`2.`… = mảng (thuộc phòng ban hiện tại). Dòng nhóm khác → lỗi chặn nhập
-  (sửa tệp). Mã phòng ban / mảng = số thứ tự 2 chữ số (`I.` → `01`, `1.` → `01`), tên = phần sau dấu chấm.
+- **Dòng nhóm**: `I.`/`II.`… = phòng ban, `1.`/`2.`… = mảng (thuộc phòng ban hiện tại). Dòng nhóm khác (không có
+  `I.`/`1.`, vd. "Sổ chứng thực") = mục nhỏ trong mảng: bỏ qua, không báo lỗi, hồ sơ dưới nó vẫn thuộc mảng hiện tại
+  (5/10/2026; trước đó là lỗi chặn nhập). Mã phòng ban / mảng = số thứ tự 2 chữ số (`I.` → `01`, `1.` → `01`), tên = phần sau dấu chấm.
 - **Số tạm** = `<tiền tố THBQ>.<hồ sơ số đệm 3>` (`VV.001`, `20N.001`, `20DG.001`); tiền tố gợi ý theo THBQ nhiều nhất
   trong tệp, sửa được ở bước Kiểm tra — vì mỗi tệp của phông đều đánh hồ sơ số lại từ 01.
 - **Thời gian** (chuyển từ hai công cụ CheckThoiGian / DienThoiGian): tách mốc theo gạch / xuống dòng; điền `2020` → cả năm,
