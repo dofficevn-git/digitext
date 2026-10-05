@@ -18,6 +18,7 @@ mod error;
 mod forward_progress;
 mod infoops;
 mod khaithac;
+mod kie;
 mod lan;
 mod lan_identity;
 mod lan_session;
@@ -207,6 +208,8 @@ fn main() {
             chinhly::commands::cl_migrate_run,
             chinhly::commands::cl_project_get,
             chinhly::commands::cl_project_set,
+            kie::kie_examples_list,
+            kie::kie_example_set_active,
             work::work_list_packages,
             work::work_create_package,
             work::work_get_package,

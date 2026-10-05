@@ -15,11 +15,12 @@ import { V4ak, type V4a9 } from "@/api/users";
 import V4i7, { type V4i6 } from "../upload/OcrFieldsView";
 import V4k5 from "../server/ServerJobs";
 import ReviewHoSoTable from "./ReviewHoSoTable";
+import KieExamplesPanel from "./KieExamplesPanel";
 import { V4hg, pdfaSummary, V4hi, V4hj, V4hh, type V4he } from "./ocrReport";
 import { Badge, Button, Card, Field, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, toast, Toolbar, type Column } from "@/ui";
 
 const fmtN = (n: number) => n.toLocaleString("vi-VN");
-type Tab = "tiendo" | "chay" | "soat";
+type Tab = "tiendo" | "chay" | "soat" | "vidu";
 
 function BocTachCell({ c }: { c: V4f0 }) {
   return (
@@ -254,6 +255,7 @@ export default function OcrPane() {
           { value: "tiendo", label: "Tiến độ", icon: "thongke" },
           { value: "chay", label: "Chạy xử lý", icon: "chay" },
           { value: "soat", label: "Soát & duyệt", icon: "duyet" },
+          ...(coQuyenDuyet ? [{ value: "vidu" as const, label: "Ví dụ dạy máy", icon: "danhSach" as const }] : []),
         ]}
       />
       <div className="mt-3 space-y-4">
@@ -305,6 +307,7 @@ export default function OcrPane() {
           </>
         )}
         {tab === "chay" && <V4k5 />}
+        {tab === "vidu" && coQuyenDuyet && <KieExamplesPanel projectId={duAnHieuLuc} projects={projects} />}
         {tab === "soat" && <ReviewHoSoTable canReview={coQuyenDuyet} onlyProject={duAnTaiKhoan ? undefined : chonDuAn} onOpenDoc={(f) => setDocMo({ ...f, reviewStatus: f.review })} onDone={() => void napBaoCao()} actions={chonDuAnUI} />}
       </div>
     </section>
