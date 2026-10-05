@@ -37,6 +37,12 @@ pub struct TableSpec {
 /// Cột hệ thống mọi bảng sync đều có, do máy chủ quản.
 pub const SYSTEM_COLS: &[&str] = &["id", "project_id", "ver", "created_at", "created_by", "updated_at", "updated_by", "deleted_at"];
 
+/// Cột máy chủ tự tính (trigger / generated): bản đẩy lên có thì bỏ qua, không ghi, không từ chối.
+/// `cl_ho_so.vinh_vien` = loại bảo quản suy từ THBQ (migration 0015).
+pub fn is_derived(table: &str, col: &str) -> bool {
+    matches!((table, col), ("cl_ho_so", "vinh_vien"))
+}
+
 const DM: &[&str] = &["ma", "ten", "so_tt"];
 
 pub const TABLES: &[TableSpec] = &[
@@ -44,7 +50,7 @@ pub const TABLES: &[TableSpec] = &[
     TableSpec {
         name: "cl_phong",
         rank: 20,
-        cols: &["khoi_id", "ma_du_an", "ten", "phong_so", "muc_luc_so", "logo_key", "ghi_chu", "so_tt"],
+        cols: &["khoi_id", "ma_du_an", "ten", "phong_so", "muc_luc_so", "muc_luc_so_cth", "logo_key", "ghi_chu", "so_tt"],
         online_only: &[],
         parent: Some(("khoi_id", "cl_khoi_phong")),
         shared: false,
@@ -123,7 +129,7 @@ pub const TABLES: &[TableSpec] = &[
     TableSpec {
         name: "cl_gia",
         rank: 70,
-        cols: &["kho_id", "phong_ban_id", "ten", "tu_hop", "den_hop", "ghi_chu", "so_tt"],
+        cols: &["kho_id", "phong_ban_id", "ten", "tu_hop", "den_hop", "vinh_vien", "ghi_chu", "so_tt"],
         online_only: &[],
         parent: Some(("kho_id", "cl_kho")),
         shared: false,

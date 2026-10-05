@@ -92,11 +92,15 @@ export async function xuatMucLucVanBan(hoSos: ClRow[], vanBans: Map<string, ClRo
 /** Phụ lục hướng dẫn tra tìm (Excel). */
 export async function xuatPhuLuc(rows: ClRow[], maPhong: string): Promise<void> {
   const rs = rows.filter((r) => str(r, "hop_so"));
-  type G = { pb: string; mang: string; hs: string[]; hop: string[] };
+  // Hộp / hồ sơ số đánh riêng cho vĩnh viễn và có thời hạn (0015): tách khoảng theo loại khi phông có cả hai.
+  const laVv = (r: ClRow) => r.vinh_vien === true || r.vinh_vien === 1;
+  const haiLoai = new Set(rs.map(laVv)).size > 1;
+  type G = { pb: string; vv: boolean; mang: string; hs: string[]; hop: string[] };
   const gs = new Map<string, G>();
   for (const r of rs) {
-    const k = `${str(r, "ten_phong_ban")}|${str(r, "ten_mang")}`;
-    if (!gs.has(k)) gs.set(k, { pb: str(r, "ten_phong_ban"), mang: str(r, "ten_mang"), hs: [], hop: [] });
+    const k = `${str(r, "ten_phong_ban")}|${laVv(r)}|${str(r, "ten_mang")}`;
+    const mang = haiLoai ? `${str(r, "ten_mang")} (${laVv(r) ? "vĩnh viễn" : "có thời hạn"})` : str(r, "ten_mang");
+    if (!gs.has(k)) gs.set(k, { pb: str(r, "ten_phong_ban"), vv: laVv(r), mang, hs: [], hop: [] });
     const g = gs.get(k)!;
     if (str(r, "ho_so_so")) g.hs.push(str(r, "ho_so_so"));
     g.hop.push(str(r, "hop_so"));
@@ -105,7 +109,7 @@ export async function xuatPhuLuc(rows: ClRow[], maPhong: string): Promise<void> 
   const merges = ["A1:H1"];
   let pb = "\u0000";
   let stt = 0;
-  for (const g of [...gs.values()].sort((a, b) => collator.compare(a.pb, b.pb) || collator.compare(a.mang, b.mang))) {
+  for (const g of [...gs.values()].sort((a, b) => collator.compare(a.pb, b.pb) || Number(b.vv) - Number(a.vv) || collator.compare(a.mang, b.mang))) {
     if (g.pb !== pb) {
       pb = g.pb;
       aoa.push([pb || "(Chưa xếp phòng ban)"]);

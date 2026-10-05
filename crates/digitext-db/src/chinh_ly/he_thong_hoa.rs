@@ -40,6 +40,8 @@ pub struct Filter {
 #[serde(rename_all = "camelCase")]
 pub struct PreviewRow {
     pub stt: i64,
+    /// Loại bảo quản: true vĩnh viễn · false có thời hạn — mỗi loại đánh số riêng từ `start_at`.
+    pub vinh_vien: bool,
     pub ho_so_id: Uuid,
     pub so_tam: String,
     pub tieu_de: String,
@@ -110,7 +112,7 @@ async fn candidates(conn: &mut PgConnection, project: Uuid, phong: Uuid, f: &Fil
     Ok(rows.into_iter().filter_map(|r| r.try_get::<Value, _>("row").ok()).collect())
 }
 
-fn build(conn_rows: Vec<Value>, order: SortOrder, file_type: i32, start_at: i64, taken: &HashMap<String, Uuid>) -> Preview {
+fn build(conn_rows: Vec<Value>, order: SortOrder, file_type: i32, start_at: i64, taken: &HashMap<(bool, String), Uuid>) -> Preview {
     let mut items: Vec<SortItem<Value>> = conn_rows
         .into_iter()
         .map(|v| SortItem {
@@ -123,11 +125,17 @@ fn build(conn_rows: Vec<Value>, order: SortOrder, file_type: i32, start_at: i64,
         })
         .collect();
     sort_items(&mut items, order);
+    // Vĩnh viễn trước, có thời hạn sau (sort ổn định giữ thứ tự đã chọn trong mỗi loại); mỗi loại đánh từ start_at.
+    items.sort_by_key(|it| !it.key.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false));
     let mut snapshot_ver = 0i64;
     let mut rows = Vec::with_capacity(items.len());
-    for (idx, it) in items.into_iter().enumerate() {
+    let (mut n_vv, mut n_cth) = (0i64, 0i64);
+    for it in items.into_iter() {
         let v = it.key;
-        let stt = start_at + idx as i64;
+        let vinh_vien = v.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false);
+        let dem = if vinh_vien { &mut n_vv } else { &mut n_cth };
+        let stt = start_at + *dem;
+        *dem += 1;
         let id = u(&v, "id").unwrap_or_default();
         let ver = i(&v, "ver").unwrap_or(0);
         snapshot_ver = snapshot_ver.max(ver);
@@ -138,14 +146,16 @@ fn build(conn_rows: Vec<Value>, order: SortOrder, file_type: i32, start_at: i64,
         if s(&v, "phong_ban_id").is_none() {
             warnings.push("Chưa gán phòng ban — không gán được hộp".into());
         }
-        if let Some(other) = taken.get(&stt.to_string()) {
+        if let Some(other) = taken.get(&(vinh_vien, stt.to_string())) {
             if *other != id {
                 warnings.push(format!("Số hồ sơ {stt} đang thuộc hồ sơ khác ngoài tập"));
             }
         }
         let nam_kt = i(&v, "nam_ket_thuc").map(|n| n as i32);
+        let mls = if vinh_vien { s(&v, "muc_luc_so") } else { s(&v, "muc_luc_so_cth").or_else(|| s(&v, "muc_luc_so")) };
         rows.push(PreviewRow {
             stt,
+            vinh_vien,
             ho_so_id: id,
             so_tam: s(&v, "so_tam").unwrap_or_default(),
             tieu_de: s(&v, "tieu_de").unwrap_or_default(),
@@ -166,7 +176,7 @@ fn build(conn_rows: Vec<Value>, order: SortOrder, file_type: i32, start_at: i64,
             hop_so: s(&v, "hop_so"),
             bo_so: i(&v, "bo_so"),
             tap_so: i(&v, "tap_so"),
-            ma_ho_so_moi: digitext_core::chinh_ly::ma_ho_so(s(&v, "ma_du_an").as_deref(), s(&v, "phong_so").as_deref(), nam_kt, Some(&stt.to_string()), s(&v, "muc_luc_so").as_deref()),
+            ma_ho_so_moi: digitext_core::chinh_ly::ma_ho_so(s(&v, "ma_du_an").as_deref(), s(&v, "phong_so").as_deref(), nam_kt, Some(&stt.to_string()), mls.as_deref()),
             ver,
             warnings,
         });
@@ -174,13 +184,13 @@ fn build(conn_rows: Vec<Value>, order: SortOrder, file_type: i32, start_at: i64,
     Preview { snapshot_ver, order: order as i32, file_type, rows }
 }
 
-/// Số hồ sơ đã dùng trong phông (ngoài tập) → id, để cảnh báo trùng.
-async fn taken_numbers(conn: &mut PgConnection, phong: Uuid) -> sqlx::Result<HashMap<String, Uuid>> {
-    let rows = sqlx::query("SELECT id, btrim(ho_so_so) AS so FROM cl_ho_so WHERE phong_id = $1 AND deleted_at IS NULL AND ho_so_so IS NOT NULL AND btrim(ho_so_so) <> ''")
+/// Số hồ sơ đã dùng trong phông (ngoài tập) theo loại → id, để cảnh báo trùng.
+async fn taken_numbers(conn: &mut PgConnection, phong: Uuid) -> sqlx::Result<HashMap<(bool, String), Uuid>> {
+    let rows = sqlx::query("SELECT id, vinh_vien, btrim(ho_so_so) AS so FROM cl_ho_so WHERE phong_id = $1 AND deleted_at IS NULL AND ho_so_so IS NOT NULL AND btrim(ho_so_so) <> ''")
         .bind(phong)
         .fetch_all(&mut *conn)
         .await?;
-    Ok(rows.into_iter().filter_map(|r| Some((r.try_get::<String, _>("so").ok()?, r.try_get::<Uuid, _>("id").ok()?))).collect())
+    Ok(rows.into_iter().filter_map(|r| Some(((r.try_get::<bool, _>("vinh_vien").ok()?, r.try_get::<String, _>("so").ok()?), r.try_get::<Uuid, _>("id").ok()?))).collect())
 }
 
 pub async fn preview(pool: &PgPool, project: Uuid, phong: Uuid, f: &Filter, order: SortOrder, file_type: i32, start_at: i64) -> sqlx::Result<Preview> {
@@ -284,22 +294,25 @@ pub struct BoxResult {
     pub errors: Vec<RowError>,
 }
 
-async fn find_or_create_hop(tx: &mut PgConnection, project: Uuid, phong_ban: Uuid, hop_so: &str, by: Uuid, created: &mut usize) -> sqlx::Result<Uuid> {
-    let found: Option<Uuid> = sqlx::query_scalar("SELECT id FROM cl_hop WHERE phong_ban_id = $1 AND lower(btrim(hop_so)) = lower(btrim($2)) AND deleted_at IS NULL")
+/// Hộp xác định bởi (phòng ban, loại vĩnh viễn / có thời hạn, số hộp) — migration 0015: mỗi loại đánh hộp từ 01.
+pub async fn find_or_create_hop(tx: &mut PgConnection, project: Uuid, phong_ban: Uuid, vinh_vien: bool, hop_so: &str, by: Uuid, created: &mut usize) -> sqlx::Result<Uuid> {
+    let found: Option<Uuid> = sqlx::query_scalar("SELECT id FROM cl_hop WHERE phong_ban_id = $1 AND vinh_vien = $3 AND lower(btrim(hop_so)) = lower(btrim($2)) AND deleted_at IS NULL")
         .bind(phong_ban)
         .bind(hop_so)
+        .bind(vinh_vien)
         .fetch_optional(&mut *tx)
         .await?;
     if let Some(id) = found {
         return Ok(id);
     }
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO cl_hop (id, project_id, phong_ban_id, hop_so, created_by, updated_by) VALUES ($1, $2, $3, btrim($4), $5, $5)")
+    sqlx::query("INSERT INTO cl_hop (id, project_id, phong_ban_id, hop_so, vinh_vien, created_by, updated_by) VALUES ($1, $2, $3, btrim($4), $6, $5, $5)")
         .bind(id)
         .bind(project)
         .bind(phong_ban)
         .bind(hop_so)
         .bind(by)
+        .bind(vinh_vien)
         .execute(&mut *tx)
         .await?;
     *created += 1;
@@ -330,21 +343,19 @@ async fn find_or_create_bo_tap(tx: &mut PgConnection, project: Uuid, phong_ban: 
     Ok(id)
 }
 
-/// Tính lại từ hồ sơ / đến hồ sơ / vĩnh viễn của các hộp.
-async fn refresh_hops(tx: &mut PgConnection, hop_ids: &[Uuid]) -> sqlx::Result<()> {
+/// Tính lại từ hồ sơ / đến hồ sơ của các hộp. Loại (vinh_vien) là danh tính của hộp — không suy lại từ hồ sơ.
+pub async fn refresh_hops(tx: &mut PgConnection, hop_ids: &[Uuid]) -> sqlx::Result<()> {
     for h in hop_ids {
-        let rs = sqlx::query("SELECT h.ho_so_so, t.trang_thai FROM cl_ho_so h LEFT JOIN cl_thbq t ON t.id = h.thbq_id WHERE h.hop_id = $1 AND h.deleted_at IS NULL")
+        let rs = sqlx::query("SELECT h.ho_so_so FROM cl_ho_so h WHERE h.hop_id = $1 AND h.deleted_at IS NULL")
             .bind(h)
             .fetch_all(&mut *tx)
             .await?;
         let mut sos: Vec<String> = rs.iter().filter_map(|r| r.try_get::<Option<String>, _>("ho_so_so").ok().flatten()).map(|x| x.trim().to_owned()).filter(|x| !x.is_empty()).collect();
         sos.sort_by(|a, b| natural_cmp(a, b));
-        let vv = !rs.is_empty() && rs.iter().all(|r| r.try_get::<Option<i16>, _>("trang_thai").ok().flatten() == Some(1));
-        sqlx::query("UPDATE cl_hop SET tu_ho_so = $2, den_ho_so = $3, vinh_vien = $4 WHERE id = $1")
+        sqlx::query("UPDATE cl_hop SET tu_ho_so = $2, den_ho_so = $3 WHERE id = $1")
             .bind(h)
             .bind(sos.first())
             .bind(sos.last())
-            .bind(vv)
             .execute(&mut *tx)
             .await?;
     }
@@ -384,7 +395,8 @@ pub async fn boxing(pool: &PgPool, ctx: &OpCtx<'_>, file_type: i32, rows_in: &[B
                 out.errors.push(RowError { row: n, ho_so_id: r.ho_so_id, message: "Thiếu số hộp".into() });
                 continue;
             };
-            let hid = find_or_create_hop(&mut tx, ctx.project_id, pb, hs, ctx.user_id, &mut out.hops_created).await?;
+            let vv = before.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false);
+            let hid = find_or_create_hop(&mut tx, ctx.project_id, pb, vv, hs, ctx.user_id, &mut out.hops_created).await?;
             touched.insert(hid, ());
             patch.insert("hop_id".into(), json!(hid));
         } else {

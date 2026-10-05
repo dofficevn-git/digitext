@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS dossier (
     created_at        TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at        TEXT
 );
-CREATE UNIQUE INDEX IF NOT EXISTS ux_dossier_sotam ON dossier (ma_da, so_tam);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_dossier_sotam ON dossier (ma_da, COALESCE(thbq, 0), so_tam);
 CREATE INDEX IF NOT EXISTS ix_dossier_phong ON dossier (ma_da);
 
 CREATE TABLE IF NOT EXISTS van_ban (

@@ -350,7 +350,12 @@ fn project_ho_so(conn: &Connection, r: &Row) -> rusqlite::Result<()> {
         None => {
             // tránh trùng số tạm với dòng cũ chưa gắn cl_id: gắn luôn vào dòng đó
             let orphan: Option<i64> = conn
-                .query_row("SELECT id FROM dossier WHERE cl_id IS NULL AND ma_da IS ?1 AND lower(trim(so_tam)) = lower(trim(?2))", params![ma_da, s(r, "so_tam").unwrap_or_default()], |r| r.get(0))
+                // khớp cả THBQ: số tạm chỉ duy nhất trong loại vĩnh viễn / có thời hạn (0015)
+                .query_row(
+                    "SELECT id FROM dossier WHERE cl_id IS NULL AND ma_da IS ?1 AND lower(trim(so_tam)) = lower(trim(?2)) AND COALESCE(thbq, 0) = COALESCE(?3, 0)",
+                    params![ma_da, s(r, "so_tam").unwrap_or_default(), thbq],
+                    |r| r.get(0),
+                )
                 .optional()?;
             match orphan {
                 Some(lid) => {

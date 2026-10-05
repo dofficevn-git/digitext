@@ -2,8 +2,10 @@
 // Nhập mục lục hồ sơ (Excel 7 cột: Hộp số · Hồ sơ số · Tiêu đề · Thời gian BĐ - KT · Số tờ · THBQ · Ghi chú) có
 // dòng nhóm trong cột Tiêu đề: "I. …" = phòng ban, "1. …" = mảng công việc. Phân tích thuần trên máy → dựng dòng
 // theo mẫu lập hồ sơ 14 cột (nhập qua /cl/ho-so/import, tải về được) + sheet "Kiểm tra".
-// Quyết định 1/10/2026: chỉ nhận I./1. làm phòng ban / mảng (5/10: dòng nhóm khác = mục nhỏ trong mảng, bỏ qua); số tạm = <tiền tố THBQ>.<hồ sơ số đệm 3>;
-// mã phòng ban / mảng = số thứ tự 2 chữ số; Hộp số không nhập (gán ở Hệ thống hoá), chỉ giữ ở sheet Kiểm tra.
+// Quyết định 1/10/2026: chỉ nhận I./1. làm phòng ban / mảng (5/10: dòng nhóm khác = mục nhỏ trong mảng, bỏ qua);
+// mã phòng ban / mảng = số thứ tự 2 chữ số. 5/10/2026 (theo DigiText 2025): số tạm = Hồ sơ số trong tệp; Hồ sơ số và
+// Hộp số ghi luôn vào hồ sơ (Hộp số chỉ ghi ở dòng đầu hộp → mang xuống). Đánh số riêng cho 2 loại: vĩnh viễn / có
+// thời hạn (migration 0015) — số tạm, hộp duy nhất trong từng loại.
 
 import { V4dz } from "@/api/exportFile";
 import { str, type ClRow } from "@/api/chinhly";
@@ -40,6 +42,8 @@ export interface DongHoSo {
   thbqGoc: string;
   /** Tên THBQ đúng như Danh mục (null = không khớp). */
   thbq: string | null;
+  /** Loại bảo quản: true vĩnh viễn · false có thời hạn · null chưa biết (THBQ không khớp). */
+  vinhVien: boolean | null;
   ghiChu: string;
   phongBan: NhomPhongBan | null;
   mang: NhomMang | null;
@@ -59,9 +63,10 @@ export interface PhanTichMucLuc {
   rows: DongHoSo[];
   /** Lỗi + cảnh báo cấu trúc (dòng nhóm, thiếu cột…), không gồm ghi chú thời gian từng dòng. */
   vanDe: VanDe[];
-  /** THBQ phổ biến nhất trong tệp và tiền tố số tạm gợi ý từ đó. */
+  /** THBQ phổ biến nhất trong tệp. */
   thbqTep: string;
-  tienToGoiY: string;
+  /** Số hộp khác nhau (theo loại). */
+  soHop: number;
   soLoi: number;
   soCanhBao: number;
   soDaDien: number;
@@ -108,21 +113,13 @@ export function khopThbq(ten: string, danhMuc: string[]): string | null {
   return null;
 }
 
-/** Tiền tố số tạm theo THBQ: Vĩnh viễn → VV · "20 năm" → 20N · "20 năm đánh giá" → 20DG · Theo tuổi thọ công trình → TTCT. */
-export function tienToThbq(ten: string): string {
-  const k = boDau(ten);
-  if (!k) return "HS";
-  if (k.startsWith("vinh vien") || k === "vv") return "VV";
-  const m = /^(\d+)\s*nam/.exec(k);
-  if (m) return `${+m[1]}${k.includes("danh gia") ? "DG" : "N"}`;
-  if (k.includes("tuoi tho")) return "TTCT";
-  return k
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .toUpperCase()
-    .slice(0, 4);
+/** Số chuẩn: "001" → "1" (số thuần); "12A" giữ nguyên. Dùng cho Hồ sơ số / số tạm. */
+export function soChuan(s: string): string {
+  const t = s.trim();
+  return /^\d+$/.test(t) ? String(+t) : t;
 }
+
+export const TEN_LOAI = (vv: boolean | null) => (vv === null ? "chưa rõ loại" : vv ? "vĩnh viễn" : "có thời hạn");
 
 const NHAN_COT: [keyof CotMap, string[]][] = [
   ["hopSo", ["hop so", "so hop"]],
@@ -161,7 +158,7 @@ const RE_DONG_DANH_SO = /^\(?\s*-?\d{1,2}\s*\)?$/;
 // ------------------------------------------------------------------ phân tích (thuần)
 
 /** `rows[i]` = dòng Excel i+1 (giữ cả dòng trống để số dòng khớp tệp). */
-export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet: string; thbqDanhMuc: string[] }): PhanTichMucLuc {
+export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet: string; thbqDanhMuc: string[]; thbqVinhVien?: string[] }): PhanTichMucLuc {
   const vanDe: VanDe[] = [];
   const out: PhanTichMucLuc = {
     tenTep: opts.tenTep,
@@ -173,7 +170,7 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     rows: [],
     vanDe,
     thbqTep: "",
-    tienToGoiY: "HS",
+    soHop: 0,
     soLoi: 0,
     soCanhBao: 0,
     soDaDien: 0,
@@ -199,8 +196,10 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
 
   let pbHienTai: NhomPhongBan | null = null;
   let mangHienTai: NhomMang | null = null;
-  const daCoHoSoSo = new Map<string, number>();
+  let hopHienTai = "";
+  const daCoHoSoSo = new Map<string, number>(); // `${loại}|${hồ sơ số}` → dòng
   const demThbq = new Map<string, number>();
+  const tenVv = new Set((opts.thbqVinhVien ?? ["Vĩnh viễn"]).map((t) => t.toLowerCase()));
 
   for (let i = hd.dong; i < rows.length; i++) {
     const r = rows[i] ?? [];
@@ -208,8 +207,11 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     const nonEmpty = r.map((c) => cellText(c)).filter(Boolean);
     if (nonEmpty.length === 0) continue;
     if (i < hd.dong + 2 && nonEmpty.every((c) => RE_DONG_DANH_SO.test(c))) continue; // dòng (1) (2) (3)…
-    const hoSoSo = lay(r, "hoSoSo");
+    const hoSoSo = soChuan(lay(r, "hoSoSo"));
     const tieuDe = lay(r, "tieuDe").replace(/\s+/g, " ").trim();
+    // Hộp số chỉ ghi ở dòng đầu hộp → mang xuống các dòng sau tới khi gặp số hộp mới.
+    const hopO = lay(r, "hopSo").trim();
+    if (hopO) hopHienTai = hopO;
 
     if (!hoSoSo) {
       if (!tieuDe) continue; // chỉ có hộp số / ghi chú lẻ → bỏ
@@ -243,21 +245,33 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     if (!tieuDe) loi.push("Thiếu tiêu đề hồ sơ");
     if (!pbHienTai) loi.push("Chưa có dòng phòng ban (I. …) phía trên");
     else if (!mangHienTai) loi.push("Chưa có dòng mảng công việc (1. …) phía trên");
-    const truoc = daCoHoSoSo.get(hoSoSo.toLowerCase());
-    if (truoc !== undefined) loi.push(`Hồ sơ số ${hoSoSo} trùng với dòng ${truoc}`);
-    else daCoHoSoSo.set(hoSoSo.toLowerCase(), dong);
     const thbqGoc = lay(r, "thbq");
     const thbq = khopThbq(thbqGoc, opts.thbqDanhMuc);
     if (!thbqGoc) loi.push("Thiếu thời hạn bảo quản");
     else if (!thbq) loi.push(`Thời hạn bảo quản "${thbqGoc}" không có trong Danh mục`);
     if (thbq) demThbq.set(thbq, (demThbq.get(thbq) ?? 0) + 1);
+    const vinhVien = thbq ? tenVv.has(thbq.toLowerCase()) : null;
+    // Hồ sơ số (= số tạm) duy nhất trong từng loại: mục lục vĩnh viễn và có thời hạn đều đánh từ 1.
+    const khoa = `${vinhVien}|${hoSoSo.toLowerCase()}`;
+    const truoc = daCoHoSoSo.get(khoa);
+    if (truoc !== undefined) loi.push(`Hồ sơ số ${hoSoSo} trùng với dòng ${truoc} (cùng loại ${TEN_LOAI(vinhVien)})`);
+    else daCoHoSoSo.set(khoa, dong);
+    if (hd.cot.hopSo !== undefined && !hopHienTai) loi.push("Chưa có Hộp số (dòng đầu mỗi hộp phải ghi số hộp)");
 
     const thoiGianGoc = hd.cot.thoiGian !== undefined ? lay(r, "thoiGian", true) : [lay(r, "ngayBatDau", true), lay(r, "ngayKetThuc", true)].filter(Boolean).join(" - ");
     const tg = kiemVaDienThoiGian(thoiGianGoc, tieuDe);
     if (pbHienTai) pbHienTai.soHoSo++;
     if (mangHienTai) mangHienTai.soHoSo++;
-    out.rows.push({ dong, hopSo: lay(r, "hopSo"), hoSoSo, tieuDe, thoiGianGoc, soTo: lay(r, "soTo"), thbqGoc, thbq, ghiChu: lay(r, "ghiChu"), phongBan: pbHienTai, mang: mangHienTai, tg, loi });
+    out.rows.push({ dong, hopSo: hopHienTai, hoSoSo, tieuDe, thoiGianGoc, soTo: lay(r, "soTo"), thbqGoc, thbq, vinhVien, ghiChu: lay(r, "ghiChu"), phongBan: pbHienTai, mang: mangHienTai, tg, loi });
   }
+
+  // Hộp thuộc đúng một loại: hộp có cả hồ sơ vĩnh viễn lẫn có thời hạn → lỗi ở mọi dòng của hộp đó.
+  const loaiHop = new Map<string, Set<boolean>>();
+  for (const r of out.rows) if (r.hopSo && r.vinhVien !== null) (loaiHop.get(r.hopSo) ?? loaiHop.set(r.hopSo, new Set()).get(r.hopSo)!).add(r.vinhVien);
+  for (const r of out.rows) {
+    if (r.hopSo && (loaiHop.get(r.hopSo)?.size ?? 0) > 1) r.loi.push(`Hộp ${r.hopSo} có cả hồ sơ vĩnh viễn lẫn có thời hạn — mỗi hộp chỉ một loại`);
+  }
+  out.soHop = new Set(out.rows.filter((r) => r.hopSo).map((r) => `${r.vinhVien}|${r.hopSo}`)).size;
 
   if (out.rows.length === 0 && !vanDe.some((v) => v.muc === "loi")) vanDe.push({ dong: 0, muc: "loi", noiDung: "Tệp không có dòng hồ sơ nào (cột Hồ sơ số trống cả)" });
   let max = 0;
@@ -267,7 +281,6 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
       out.thbqTep = k;
     }
   }
-  out.tienToGoiY = tienToThbq(out.thbqTep);
   out.soLoi = vanDe.filter((v) => v.muc === "loi").length + out.rows.filter((r) => r.loi.length > 0).length;
   out.soCanhBao = out.rows.filter((r) => r.tg.ketLuan === "canh_bao" || r.tg.ketLuan === "loi").length;
   out.soDaDien = out.rows.filter((r) => r.tg.ketLuan === "da_dien").length;
@@ -276,36 +289,31 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
 
 // ------------------------------------------------------------------ đọc tệp
 
-export async function docMucLucTuBuffer(buf: ArrayBuffer, tenTep: string, thbqDanhMuc: string[]): Promise<PhanTichMucLuc> {
+export async function docMucLucTuBuffer(buf: ArrayBuffer, tenTep: string, thbqDanhMuc: string[], thbqVinhVien?: string[]): Promise<PhanTichMucLuc> {
   const X = await import("xlsx");
   const wb = X.read(buf, { type: "array", cellDates: true });
   const name = wb.SheetNames[0] ?? "";
   const ws = wb.Sheets[name];
-  if (!ws) return phanTichMucLuc([], { tenTep, sheet: name, thbqDanhMuc });
+  if (!ws) return phanTichMucLuc([], { tenTep, sheet: name, thbqDanhMuc, thbqVinhVien });
   const ref = ws["!ref"] ? X.utils.decode_range(ws["!ref"]) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
   const range = { s: { r: 0, c: 0 }, e: ref.e };
   const rows = X.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: "", blankrows: true, range });
-  const pt = phanTichMucLuc(rows, { tenTep, sheet: name, thbqDanhMuc });
+  const pt = phanTichMucLuc(rows, { tenTep, sheet: name, thbqDanhMuc, thbqVinhVien });
   pt.buf = buf;
   return pt;
 }
 
 export async function docMucLucHoSo(file: File, thbq: ClRow[]): Promise<PhanTichMucLuc> {
-  return docMucLucTuBuffer(await file.arrayBuffer(), file.name, thbq.map((t) => str(t, "ten")));
+  // Loại vĩnh viễn = THBQ trang_thai 1 trong Danh mục.
+  const vv = thbq.filter((t) => Number(t.trang_thai) === 1).map((t) => str(t, "ten"));
+  return docMucLucTuBuffer(await file.arrayBuffer(), file.name, thbq.map((t) => str(t, "ten")), vv.length ? vv : undefined);
 }
 
 // ------------------------------------------------------------------ số tạm + dòng mẫu
 
-/** Số tạm của từng dòng theo tiền tố: `VV.001` (đệm 3, hoặc rộng hơn khi hồ sơ số dài hơn). */
-export function soTamCua(pt: PhanTichMucLuc, tienTo: string): Map<number, string> {
-  const t = tienTo.trim().replace(/[.\s]+$/, "");
-  const rong = Math.max(3, ...pt.rows.map((r) => (/^\d+$/.test(r.hoSoSo) ? String(+r.hoSoSo).length : 0)));
-  const m = new Map<number, string>();
-  for (const r of pt.rows) {
-    const so = /^\d+$/.test(r.hoSoSo) ? String(+r.hoSoSo).padStart(rong, "0") : r.hoSoSo;
-    m.set(r.dong, t ? `${t}.${so}` : so);
-  }
-  return m;
+/** Số tạm của từng dòng = Hồ sơ số trong tệp (như DigiText 2025: số tạm là số người lập ghi; mục lục đã có số thì dùng luôn). */
+export function soTamCua(pt: PhanTichMucLuc): Map<number, string> {
+  return new Map(pt.rows.map((r) => [r.dong, r.hoSoSo]));
 }
 
 /** Dòng gửi máy chủ / ghi vào mẫu, đúng khoá MAU_HS_KEYS + tên phòng ban / mảng để máy chủ tự tạo khi thiếu. */
@@ -316,6 +324,8 @@ export function dongMau(r: DongHoSo, soTam: string): Record<string, unknown> {
     ten_phong_ban: r.phongBan?.ten ?? "",
     ten_mang: r.mang?.ten ?? "",
     so_tam: soTam,
+    ho_so_so: r.hoSoSo,
+    hop_so: r.hopSo,
     tieu_de: r.tieuDe,
     ngay_bat_dau: r.tg.batDau,
     ngay_ket_thuc: r.tg.ketThuc,
@@ -334,11 +344,12 @@ export function coLoiChan(pt: PhanTichMucLuc): boolean {
   return pt.vanDe.some((v) => v.muc === "loi") || pt.rows.some((r) => r.loi.length > 0);
 }
 
-const COT_KIEM_TRA = ["Dòng gốc", "Hộp số", "Hồ sơ số", "Số tạm", "Phòng ban", "Mảng", "Tiêu đề", "Thời gian gốc", "Bắt đầu", "Kết thúc", "THBQ", "Kết luận", "Ghi chú kiểm tra"];
+const COT_KIEM_TRA = ["Dòng gốc", "Loại", "Hộp số", "Hồ sơ số", "Số tạm", "Phòng ban", "Mảng", "Tiêu đề", "Thời gian gốc", "Bắt đầu", "Kết thúc", "THBQ", "Kết luận", "Ghi chú kiểm tra"];
 
 function dongKiemTra(pt: PhanTichMucLuc, soTam: Map<number, string>): (string | number)[][] {
   const out: (string | number)[][] = pt.rows.map((r) => [
     r.dong,
+    TEN_LOAI(r.vinhVien),
     r.hopSo,
     r.hoSoSo,
     soTam.get(r.dong) ?? "",
@@ -352,20 +363,20 @@ function dongKiemTra(pt: PhanTichMucLuc, soTam: Map<number, string>): (string | 
     r.loi.length ? "Lỗi" : KET_LUAN_LABEL[r.tg.ketLuan],
     [...r.loi, ...r.tg.ghiChu].join("; "),
   ]);
-  for (const v of pt.vanDe) out.push([v.dong || "", "", "", "", "", "", "", "", "", "", "", v.muc === "loi" ? "Lỗi" : "Cảnh báo", v.noiDung]);
+  for (const v of pt.vanDe) out.push([v.dong || "", "", "", "", "", "", "", "", "", "", "", "", v.muc === "loi" ? "Lỗi" : "Cảnh báo", v.noiDung]);
   return out.sort((a, b) => Number(a[0] || 0) - Number(b[0] || 0));
 }
 
 /** Tệp đã chuyển: sheet 1 đúng mẫu lập hồ sơ 14 cột (đọc lại được bằng "Nhập hồ sơ từ Excel"), sheet 2 "Kiểm tra", sheet 3 danh mục THBQ. */
-export async function xuatTepDaChuyen(pt: PhanTichMucLuc, tienTo: string, maPhong: string, thbqs: ClRow[]): Promise<void> {
-  const soTam = soTamCua(pt, tienTo);
+export async function xuatTepDaChuyen(pt: PhanTichMucLuc, maPhong: string, thbqs: ClRow[]): Promise<void> {
+  const soTam = soTamCua(pt);
   const dau = mauLapHoSoDauTrang(maPhong);
   const aoa = [...dau.aoa];
   for (const r of pt.rows) {
     const o = dongMau(r, soTam.get(r.dong) ?? "");
     aoa.push(MAU_HS_KEYS.map((k) => (o[k] === undefined ? "" : String(o[k]))));
   }
-  const kt: Sheet = { name: "Kiểm tra", aoa: [COT_KIEM_TRA, ...dongKiemTra(pt, soTam)], cols: [{ wch: 8 }, { wch: 7 }, { wch: 8 }, { wch: 10 }, { wch: 22 }, { wch: 22 }, { wch: 50 }, { wch: 22 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 10 }, { wch: 60 }] };
+  const kt: Sheet = { name: "Kiểm tra", aoa: [COT_KIEM_TRA, ...dongKiemTra(pt, soTam)], cols: [{ wch: 8 }, { wch: 12 }, { wch: 7 }, { wch: 8 }, { wch: 10 }, { wch: 22 }, { wch: 22 }, { wch: 50 }, { wch: 22 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 10 }, { wch: 60 }] };
   const goc = pt.tenTep.replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}]+/gu, "-");
   await writeXlsx([{ name: "Lập hồ sơ điện tử", aoa, cols: dau.cols, merges: dau.merges }, kt, sheetDanhMucThbq(thbqs)], `mau-lap-ho-so-${maPhong}-${goc}.xlsx`);
 }

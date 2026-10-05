@@ -64,10 +64,20 @@ pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: Se
 
     let (rows, _) = store::ho_so_list(&g, &project, &HoSoFilter { phong_id: Some(phong_id), ..Default::default() })?;
     let mut items: Vec<T97> = Vec::new();
+    // Cây số hoá khoá theo (hộp, hồ sơ số) trong phông; vĩnh viễn và có thời hạn đều đánh từ hộp 01 / hồ sơ 1 (0015)
+    // nên có thể trùng: ưu tiên vĩnh viễn, hồ sơ trùng khoá bỏ qua (ghi log) thay vì làm hỏng cả lần tạo cây.
+    let mut seen = existing.clone();
+    let mut trung = 0usize;
+    let mut rows = rows;
+    rows.sort_by_key(|r| !r.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false));
     for r in &rows {
         let Some(ho_so_so) = text(r.get("ho_so_so")).or_else(|| text(r.get("so_tam"))) else { continue };
         let hop_so = text(r.get("hop_so")).unwrap_or_default();
         if existing.contains(&(hop_so.clone(), ho_so_so.clone())) {
+            continue;
+        }
+        if !seen.insert((hop_so.clone(), ho_so_so.clone())) {
+            trung += 1;
             continue;
         }
         items.push(T97 {
@@ -83,6 +93,9 @@ pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: Se
             ngay_bat_dau: text(r.get("ngay_bat_dau")),
             ngay_ket_thuc: text(r.get("ngay_ket_thuc")),
         });
+    }
+    if trung > 0 {
+        tracing::warn!(phong = %ma, trung, "tree_seed_from_cl: bỏ qua hồ sơ trùng (hộp, hồ sơ số) giữa vĩnh viễn và có thời hạn");
     }
     if items.is_empty() {
         return Ok(T9p { ho_so: 0, dossier: 0 });

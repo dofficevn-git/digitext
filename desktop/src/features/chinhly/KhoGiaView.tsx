@@ -7,7 +7,7 @@ import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { clHoSoList, clRemoteDelete, clRemoteSave, str, num, type ClRow } from "@/api/chinhly";
 import { CanMayChu, ChuaChonDuAn, n, Select, tenPhong, useClCatalog, useClSync } from "./common";
-import { Button, Card, confirm, Dialog, ErrorBanner, Field, FormGrid, Input, Menu, notifyError, PageHeader, Table, Tabs, type Column } from "@/ui";
+import { Button, Card, confirm, Dialog, ErrorBanner, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, Tabs, type Column } from "@/ui";
 
 type Tab = "kho" | "gia";
 
@@ -56,6 +56,8 @@ export default function KhoGiaView() {
       const keys = tab === "kho" ? ["ten", "ghi_chu", "so_tt"] : ["kho_id", "phong_ban_id", "ten", "tu_hop", "den_hop", "ghi_chu", "so_tt"];
       const body: Record<string, unknown> = {};
       for (const k of keys) body[k] = d[k] === "" ? null : d[k];
+      // Giá áp cho loại nào (0015): hộp 01 vĩnh viễn và hộp 01 có thời hạn là hai hộp khác nhau.
+      if (tab === "gia") body.vinh_vien = d.vinh_vien === true || d.vinh_vien === "1" ? true : d.vinh_vien === false || d.vinh_vien === "0" ? false : null;
       await clRemoteSave(tab, projectId, form?.row?.id ?? null, body, form?.row?._sync?.ver);
       setForm(null);
       reload();
@@ -87,6 +89,7 @@ export default function KhoGiaView() {
     { key: "ten", header: "Tên giá", sortable: true, cell: (r) => str(r, "ten") },
     { key: "tu_hop", header: "Từ hộp", align: "right", width: 90, cell: (r) => num(r, "tu_hop") ?? "" },
     { key: "den_hop", header: "Đến hộp", align: "right", width: 90, cell: (r) => num(r, "den_hop") ?? "" },
+    { key: "loai", header: "Áp cho", width: 110, className: "text-sm", cell: (r) => (r.vinh_vien === true ? "Vĩnh viễn" : r.vinh_vien === false ? "Có thời hạn" : "Cả hai loại") },
     { key: "so_hs", header: "Hồ sơ", align: "right", width: 90, cell: (r) => { const v = soHoSo.get(r.id); return v == null ? "…" : v < 0 ? "—" : n(v); } },
     { key: "ghi_chu", header: "Ghi chú", className: "text-fg-subtle", cell: (r) => str(r, "ghi_chu") },
   ];
@@ -156,6 +159,16 @@ export default function KhoGiaView() {
                   <Input type="number" value={g("den_hop")} onChange={(e) => set("den_hop", e.target.value)} />
                 </Field>
               </FormGrid>
+            )}
+            {tab === "gia" && (
+              <Field label="Áp cho" hint="Hộp vĩnh viễn và có thời hạn đánh số riêng — chọn loại nếu giá chỉ chứa một loại">
+                <UiSelect
+                  value={d.vinh_vien === true || d.vinh_vien === "1" ? "1" : d.vinh_vien === false || d.vinh_vien === "0" ? "0" : ""}
+                  onChange={(v) => set("vinh_vien", v)}
+                  placeholder="Cả hai loại"
+                  options={[{ value: "1", label: "Vĩnh viễn" }, { value: "0", label: "Có thời hạn" }]}
+                />
+              </Field>
             )}
             <Field label="Ghi chú">
               <Input value={g("ghi_chu")} onChange={(e) => set("ghi_chu", e.target.value)} />

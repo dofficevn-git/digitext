@@ -80,9 +80,9 @@ fn ver_of(row: &Row) -> Option<i64> {
 /// Thông điệp tiếng Việt theo tên ràng buộc duy nhất.
 pub fn unique_message(constraint: &str) -> String {
     match constraint {
-        "ux_cl_ho_so_so_tam" => "Số tạm đã có trong phông".into(),
+        "ux_cl_ho_so_so_tam" => "Số tạm đã có trong phông (cùng loại vĩnh viễn / có thời hạn)".into(),
         "ux_cl_van_ban_stt" => "Số thứ tự văn bản đã có trong hồ sơ".into(),
-        "ux_cl_hop_so" => "Số hộp đã có trong phòng ban".into(),
+        "ux_cl_hop_so" => "Số hộp đã có trong phòng ban (cùng loại vĩnh viễn / có thời hạn)".into(),
         "ux_cl_bo_tap_so" => "Số bó / tập đã có trong phòng ban".into(),
         "ux_cl_phong_ma" => "Mã phông đã tồn tại trong dự án".into(),
         "ux_cl_phong_ban_ma" => "Mã đơn vị đã có trong phông".into(),
@@ -104,6 +104,8 @@ fn map_db_err(e: sqlx::Error) -> Result<OpResult, sqlx::Error> {
         match db.code().as_deref() {
             Some("23505") => return Ok(OpResult::rejected(&format!("unique:{c}"), unique_message(&c))),
             Some("23503") => return Ok(OpResult::rejected(&format!("fk:{c}"), "Tham chiếu tới bản ghi không tồn tại")),
+            // Trigger ck_cl_ho_so_hop_loai (0015) mang câu tiếng Việt riêng.
+            Some("23514") if c == "ck_cl_ho_so_hop_loai" => return Ok(OpResult::rejected(&format!("check:{c}"), db.message().to_owned())),
             Some("23514") => return Ok(OpResult::rejected(&format!("check:{c}"), "Giá trị không hợp lệ")),
             _ => {}
         }
@@ -288,7 +290,7 @@ async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op:
             // Lọc cột: bỏ cột hệ thống; cột lạ → từ chối; cột chỉ online → từ chối khi offline và có đổi.
             let mut new = Row::new();
             for (k, v) in &op.new {
-                if SYSTEM_COLS.contains(&k.as_str()) {
+                if SYSTEM_COLS.contains(&k.as_str()) || spec::is_derived(sp.name, k) {
                     continue;
                 }
                 if !sp.is_writable(k) {
@@ -536,7 +538,7 @@ mod tests {
 
     #[test]
     fn thong_diep_khoa_duy_nhat() {
-        assert_eq!(unique_message("ux_cl_ho_so_so_tam"), "Số tạm đã có trong phông");
+        assert_eq!(unique_message("ux_cl_ho_so_so_tam"), "Số tạm đã có trong phông (cùng loại vĩnh viễn / có thời hạn)");
         assert!(unique_message("abc").contains("abc"));
     }
 }
