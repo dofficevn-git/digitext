@@ -5,7 +5,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
-import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { clRemote, qs, str, num, type ClRow } from "@/api/chinhly";
 import { CanMayChu, ChuaChonDuAn, fmtTime, n, Select, tenPhong, useClCatalog, useClSync } from "./common";
 import { writeXlsx } from "./excel";
@@ -65,8 +65,7 @@ const TEN: Record<Kind, string> = { "chinh-ly": "Tổng kết chỉnh lý", "nha
 const MO_TA: Record<Kind, string> = { "chinh-ly": "Số hộp, hồ sơ, văn bản theo từng phòng ban của phông.", "nhan-vien": "Tính từ lịch sử sửa từng trường trên máy chủ.", "phan-mem": "Khối lượng đã lập trên phần mềm theo từng phông.", "muon-tra": "Phiếu mượn, quá hạn, đã trả trong kỳ." };
 
 export default function ThongKeView({ kind, embedded }: { kind: Kind; embedded?: boolean }) {
-  const { session } = V460();
-  const projectId = session?.projectId ?? "";
+  const projectId = useProject().projectId ?? ""; // dự án đang chọn (super admin không gắn dự án trong phiên)
   const { cat } = useClCatalog();
   const sync = useClSync();
   const online = sync?.phase !== "offline";

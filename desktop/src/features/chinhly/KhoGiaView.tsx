@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { clHoSoList, clRemoteDelete, clRemoteSave, str, num, type ClRow } from "@/api/chinhly";
 import { CanMayChu, ChuaChonDuAn, n, Select, tenPhong, useClCatalog, useClSync } from "./common";
 import { Button, Card, confirm, Dialog, ErrorBanner, Field, FormGrid, Input, Menu, notifyError, PageHeader, Table, Tabs, type Column } from "@/ui";
@@ -12,7 +13,7 @@ type Tab = "kho" | "gia";
 
 export default function KhoGiaView() {
   const { session } = V460();
-  const projectId = session?.projectId ?? "";
+  const projectId = useProject().projectId ?? ""; // dự án đang chọn (super admin không gắn dự án trong phiên)
   const can = (session?.permissions ?? []).includes("khogia.manage");
   const { cat, reload } = useClCatalog();
   const sync = useClSync();

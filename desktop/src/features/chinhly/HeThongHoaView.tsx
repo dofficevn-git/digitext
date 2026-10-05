@@ -4,6 +4,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { clRemote, str, THBQ_STATUS_LABEL } from "@/api/chinhly";
 import { CanMayChu, Chip, ChuaChonDuAn, n, Select, tenPhong, THBQ_BADGE, useClCatalog, useClSync } from "./common";
 import { docMucLucTam, xuatMucLucTam, type PreviewRow } from "./excel";
@@ -33,7 +34,7 @@ interface ImportRes {
 
 export default function HeThongHoaView() {
   const { session } = V460();
-  const projectId = session?.projectId ?? "";
+  const projectId = useProject().projectId ?? ""; // dự án đang chọn (super admin không gắn dự án trong phiên)
   const canDo = (session?.permissions ?? []).includes("dossier.systematize");
   const { cat } = useClCatalog();
   const sync = useClSync();

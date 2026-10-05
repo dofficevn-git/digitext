@@ -5,7 +5,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { clDelete, clNextStt, clRemote, clSave, clVanBanList, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
-import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { errText, n, SyncBadgeRow } from "./common";
 import { docMauMlvb, xuatMauMlvb } from "./excel";
 import { Badge, Banner, Button, Card, confirm, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, Menu, notifyError, Select, Table, Textarea, toast, type Column } from "@/ui";
@@ -132,7 +132,7 @@ export default function VanBanPanel({ cat, hoSo, canEdit, onClose }: { cat: ClCa
   }, [hoSoId]);
   const { reload } = V41p(load, { topics: ["chinhLy"], enabled: isTauri() });
   const tenLoai = useMemo(() => new Map(cat.loai_van_ban.map((l) => [str(l, "ma"), str(l, "ten")])), [cat.loai_van_ban]);
-  const { session } = V460();
+  const duAnDangChon = useProject().projectId; // không dùng session.projectId: super admin không gắn dự án
   const fileRef = useRef<HTMLInputElement>(null);
 
   const nhapMlvb = async (f: File) => {
@@ -147,7 +147,7 @@ export default function VanBanPanel({ cat, hoSo, canEdit, onClose }: { cat: ClCa
         toast.warning(d.errors[0]?.message ?? "Tệp không có dòng dữ liệu, dữ liệu bắt đầu từ dòng 5.");
         return;
       }
-      const r = await clRemote<{ created: number; updated: number; skipped: number; errors: { row: number; field?: string; message: string }[] }>("POST", `/cl/ho-so/${hoSoId}/van-ban/import`, { projectId: session?.projectId, mode: "upsert", rows: d.rows });
+      const r = await clRemote<{ created: number; updated: number; skipped: number; errors: { row: number; field?: string; message: string }[] }>("POST", `/cl/ho-so/${hoSoId}/van-ban/import`, { projectId: duAnDangChon, mode: "upsert", rows: d.rows });
       const errs = [...d.errors, ...r.errors.map((e) => ({ row: e.row + 4, message: `${e.field ? e.field + ": " : ""}${e.message}` }))];
       setNhapKq({ text: `Đã thêm ${n(r.created)}, cập nhật ${n(r.updated)}${errs.length ? `, ${errs.length} dòng lỗi` : ""}.`, errors: errs.map((e) => `Dòng ${e.row}: ${e.message}`) });
       reload();
