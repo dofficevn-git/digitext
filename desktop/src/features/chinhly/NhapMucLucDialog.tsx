@@ -251,6 +251,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <li>Kiểm cột thời gian: ô trống, sai định dạng, ngày đầu sau ngày cuối, năm không khớp năm ghi ở tiêu đề. Tự điền: chỉ năm → cả năm, chỉ tháng → cả tháng, một ngày → lặp lại, mốc sai → suy từ năm trong ô hoặc tiêu đề.</li>
               <li>Số tạm = tiền tố theo THBQ + hồ sơ số (VV.001, 20N.001…) để các tệp của cùng phông không trùng nhau.</li>
               <li>Hộp số không nhập (gán ở bước Hệ thống hoá), chỉ giữ ở sheet Kiểm tra của tệp đã chuyển.</li>
+              <li>Số tờ chỉ nhận số tự nhiên (vd. 12). Ghi kèm chữ như &quot;01 quyển&quot; là lỗi phải sửa — ô đó tô đỏ trong tệp đánh dấu.</li>
               <li>Dòng nhóm không có I. hoặc 1. ở đầu (vd. "Sổ chứng thực") là mục nhỏ trong mảng — bỏ qua khi nhập, hồ sơ bên dưới vẫn thuộc mảng đang có.</li>
               <li>
                 "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) chỉ đánh dấu ô cần chú ý, kèm ghi chú: xanh nhạt = đã sửa (Cũ → Mới), vàng = cần xem lại, ĐỎ chữ trắng = lỗi
