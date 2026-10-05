@@ -132,6 +132,7 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::work::router())
         .merge(crate::routes::documents::router())
         .merge(crate::routes::ocr_fields::router())
+        .merge(crate::routes::kie_examples::router())
         .merge(crate::routes::packages::router())
         .merge(crate::routes::submissions::router())
         .merge(crate::routes::notifications::router())
