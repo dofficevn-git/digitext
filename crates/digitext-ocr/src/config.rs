@@ -50,6 +50,8 @@ pub const C_63: &str = "DIGITEXT_PDFTOPPM_BIN";
 pub const C_67: &str = "DIGITEXT_PDF_STORE_DIR";
 pub const C_66: &str = "DIGITEXT_PDF_STORE_BUCKET";
 pub const C_5E: &str = "DIGITEXT_AUTO_MAKE_PDF2";
+/// Xoá PDF gốc khỏi kho sau khi bản PDF/A-2b đã lưu (5/10/2026) — PDF/A nhúng nguyên ảnh JPEG gốc.
+pub const PURGE_SOURCE_AFTER_PDFA: &str = "DIGITEXT_PURGE_SOURCE_AFTER_PDFA";
 pub const C_5W: &str = "DIGITEXT_MINIO_ENDPOINT";
 pub const C_5V: &str = "DIGITEXT_MINIO_BUCKET";
 pub const C_5U: &str = "DIGITEXT_MINIO_ACCESS_KEY";
@@ -130,6 +132,7 @@ pub struct WorkerConfig {
     pub minio: Option<digitext_storage::Tde>,
     pub page_mode: PageMode,
     pub auto_make_pdf2: bool,
+    pub purge_source_after_pdfa: bool,
 }
 impl WorkerConfig {
     pub const ENV_KEYS: [&'static str; 42] = [
@@ -357,6 +360,7 @@ impl WorkerConfig {
             .unwrap_or("pdftoppm")
             .to_owned();
         let auto_make_pdf2 = f_1ee(r_30y, C_5E, false)?;
+        let purge_source_after_pdfa = f_1ee(r_30y, PURGE_SOURCE_AFTER_PDFA, false)?;
         let pdf_store_dir = r_30y.get(C_67).filter(|s| !s.is_empty()).cloned();
         let pdf_store_bucket = r_30y.get(C_66).filter(|s| !s.is_empty()).cloned();
         let r_30v = |r_30w: &'static str| {
@@ -441,6 +445,7 @@ impl WorkerConfig {
             minio,
             page_mode,
             auto_make_pdf2,
+            purge_source_after_pdfa,
         })
     }
 }

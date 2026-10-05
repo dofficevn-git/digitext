@@ -597,3 +597,11 @@ pub async fn f_1ol(r_251: &PgPool, projects: Option<&[Uuid]>) -> sqlx::Result<Ve
         .fetch_all(r_251)
         .await
 }
+/// Ghi nhận PDF gốc đã bị xoá khỏi kho (đã có bản PDF/A-2b thay thế) — migration 0016.
+pub async fn mark_source_purged(pool: &PgPool, id: Uuid) -> sqlx::Result<()> {
+    sqlx::query("UPDATE documents SET source_purged_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}

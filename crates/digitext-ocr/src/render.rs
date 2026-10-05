@@ -373,21 +373,31 @@ pub async fn f_25k(pdf: &[u8], page_no: i32, r_3dt: &Tid) -> Result<Vec<u8>, Wor
     Ok(r_3dw.stdout)
 }
 impl PdfMinioPageBytes {
-    async fn source(&self, key: &str, tag: &str) -> Result<Arc<SourcePdf>, WorkerError> {
+    /// `keys`: PDF gốc, rồi các bản thay thế khi PDF gốc đã bị xoá sau PDF/A (migration 0016) — lấy
+    /// bản đầu tiên còn trong kho. Bản PDF/A nhúng nguyên ảnh JPEG gốc nên ảnh trang y như cũ.
+    async fn source(&self, keys: &[String], tag: &str) -> Result<Arc<SourcePdf>, WorkerError> {
+        let key = keys.first().map(String::as_str).unwrap_or_default();
         let cache_key = format!("{key}#{tag}");
         let load = || async {
-            let pdf = match self.store.get(key).await {
-                Ok(Some(bytes)) => bytes,
-                Ok(None) => {
-                    return Err(WorkerError::StorageUnavailable(format!(
-                        "chưa thấy PDF '{key}' trong kho"
-                    )));
+            let mut found = None;
+            for k in keys {
+                match self.store.get(k).await {
+                    Ok(Some(bytes)) => {
+                        found = Some(bytes);
+                        break;
+                    }
+                    Ok(None) => continue,
+                    Err(e) => {
+                        return Err(WorkerError::StorageUnavailable(format!(
+                            "fetch PDF '{k}': {e}"
+                        )));
+                    }
                 }
-                Err(e) => {
-                    return Err(WorkerError::StorageUnavailable(format!(
-                        "fetch PDF '{key}': {e}"
-                    )));
-                }
+            }
+            let Some(pdf) = found else {
+                return Err(WorkerError::StorageUnavailable(format!(
+                    "chưa thấy PDF '{key}' trong kho (cả bản PDF/A thay thế)"
+                )));
             };
             tokio::task::spawn_blocking(move || {
                 let parsed = digitext_pdf::ParsedPdf::parse(&pdf).map_err(|e| e.to_string());
@@ -418,7 +428,14 @@ impl Tgd for PdfMinioPageBytes {
                 WorkerError::CorruptInput(format!("không thấy document {document_id}"))
             })?;
         let key = r_3dz.storage_path.clone();
-        let src = self.source(&key, &r_3dz.blake3).await?;
+        // PDF/A trước bản đã ký: bản ký có thể thêm ảnh con dấu chữ ký vào trang, làm sai "ảnh JPEG
+        // đầu tiên của trang".
+        let keys = [
+            key.clone(),
+            digitext_storage::f_2qs(r_3dz.project_id, document_id),
+            digitext_storage::f_2fc(r_3dz.project_id, document_id),
+        ];
+        let src = self.source(&keys, &r_3dz.blake3).await?;
         let r_3e0 = src.clone();
         let jpeg = tokio::task::spawn_blocking(move || match &r_3e0.parsed {
             Ok(parsed) => digitext_pdf::page_jpeg(parsed, page_no),

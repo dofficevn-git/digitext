@@ -452,6 +452,11 @@ async fn complete(
     let r_r0 = digitext_storage::f_2fc(r_qr.project_id, id);
     store.put(&r_r0, &signed_pdf).await.map_err(storage_err)?;
     sign_sessions::complete(&r_r1.pool, r_qy.id, &r_r0).await?;
+    // Kết quả cuối chỉ giữ bản PDF/A + bản đã ký (5/10/2026): bỏ bản trung gian chuẩn bị ký.
+    let prepared = digitext_storage::f_23q(r_qr.project_id, id);
+    if let Err(e) = store.delete(&prepared).await {
+        tracing::warn!(document = %id, key = prepared, error = %e, "không xoá được bản chuẩn bị ký");
+    }
     Ok(Json(CompleteResp {
         status: "signed".into(),
     }))

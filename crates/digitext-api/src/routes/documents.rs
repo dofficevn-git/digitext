@@ -751,14 +751,27 @@ async fn f_173(
                 let Some(store) = state.source_store.as_ref().or(state.store.as_ref()) else {
                     return Err(ApiError::not_found());
                 };
-                let bytes = store
+                let mut found = store
                     .get(&r_ev.storage_path)
                     .await
                     .map_err(|e| {
                         tracing::error!(error = % e, key = % r_ev.storage_path, "lỗi đọc PDF gốc từ kho object");
                         ApiError::service_unavailable("kho lưu trữ không sẵn sàng")
-                    })?
-                    .ok_or_else(ApiError::not_found)?;
+                    })?;
+                // PDF gốc đã xoá sau khi có PDF/A-2b (migration 0016): trả bản PDF/A, không còn thì bản đã ký.
+                if found.is_none() {
+                    if let Some(main) = state.store.as_ref() {
+                        let mut alt: Vec<String> = documents::pdfa_key(&state.pool, id).await?.into_iter().collect();
+                        alt.push(digitext_storage::f_2fc(r_ev.project_id, id));
+                        for k in alt {
+                            if let Ok(Some(b)) = main.get(&k).await {
+                                found = Some(b);
+                                break;
+                            }
+                        }
+                    }
+                }
+                let bytes = found.ok_or_else(ApiError::not_found)?;
                 let n = bytes.len() as u64;
                 return Ok((f_177(&r_ev.filename, Some(n)), Body::from(bytes)).into_response());
             }

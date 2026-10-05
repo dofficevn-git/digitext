@@ -999,6 +999,9 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     Some(note) => ocr_jobs::done_with_note(self.pool, job.id, self.worker_id, note).await?,
                     None => ocr_jobs::f_1ra(self.pool, job.id, self.worker_id).await?,
                 };
+                if self.cfg.purge_source_after_pdfa && r_3n6 {
+                    self.purge_source(store, job.document_id, &r_3n2.storage_path, &r_3n3).await?;
+                }
                 Ok(RunOutcome::Done(job.id))
             }
             Err(e) => {
@@ -1006,6 +1009,36 @@ impl<'a, S: Tgj, I: Tok, C: crate::corrector::Tb4> Worker<'a, S, I, C> {
                     .await
             }
         }
+    }
+    /// DIGITEXT_PURGE_SOURCE_AFTER_PDFA: xoá PDF gốc sau khi bản PDF/A-2b đã nằm trong kho. Chỉ xoá khi
+    /// bản PDF/A đọc lại được từ kho và PDF gốc ở CÙNG kho; lỗi xoá chỉ ghi log (PDF gốc còn lại vô hại).
+    async fn purge_source(
+        &self,
+        store: &dyn digitext_storage::ObjectStore,
+        document_id: uuid::Uuid,
+        source_key: &str,
+        pdfa_key: &str,
+    ) -> sqlx::Result<()> {
+        if source_key.is_empty() || source_key == pdfa_key {
+            return Ok(());
+        }
+        match (store.exists(pdfa_key).await, store.exists(source_key).await) {
+            (Ok(true), Ok(true)) => {}
+            (Ok(true), Ok(false)) => return Ok(()),
+            (a, b) => {
+                tracing::warn!(document = %document_id, pdfa = ?a.ok(), source = ?b.ok(),
+                    "không xác nhận được bản PDF/A / PDF gốc trong kho — GIỮ PDF gốc");
+                return Ok(());
+            }
+        }
+        match store.delete(source_key).await {
+            Ok(()) => {
+                documents::mark_source_purged(self.pool, document_id).await?;
+                tracing::info!(document = %document_id, key = source_key, "đã xoá PDF gốc — giữ bản PDF/A-2b");
+            }
+            Err(e) => tracing::warn!(document = %document_id, key = source_key, error = %e, "xoá PDF gốc lỗi — giữ lại"),
+        }
+        Ok(())
     }
     /// Dự án có trong DIGITEXT_PDF2_ALLOW_LOW_DPI_PROJECTS (so theo id hoặc mã, không phân biệt hoa thường)?
     async fn low_dpi_allowed(&self, project_id: uuid::Uuid) -> sqlx::Result<bool> {
