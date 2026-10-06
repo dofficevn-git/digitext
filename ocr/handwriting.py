@@ -151,7 +151,12 @@ class HandwritingFallback:
     # Số ký tự tối đa một khung chứa nổi: n ≤ K·(cạnh dài / cạnh ngắn) + C. Đo 6/10/2026 trên 2.030
     # dòng VietOCR tin cậy ≥ 0,9: p99,9 = 5,2·tỉ lệ, lớn nhất 5,6 → K=5, C=10 không chặn nhầm dòng
     # thật nào, chặn 67/364 dòng VLM (phần lớn là chữ bịa / đọc gộp cả hàng bảng vào một ô).
-    _FIT_K = _env_f("OCR_HW_FIT_K", 5.0)
+    # 6/10/2026 chiều: K 5 → 6 (bớt chặn oan tiêu đề bảng xuống dòng); lặp chữ đã có luật _REPEAT.
+    _FIT_K = _env_f("OCR_HW_FIT_K", 6.0)
+    # Cùng một từ/số (≥3 ký tự có chữ hoặc số, hoặc một chữ cái) lặp liền ≥4 lần trong MỘT khung:
+    # "4.405,07 4.405,07 4.405,07 4.405,07", "x x x x x x" — VLM lặp, không phải chữ trên giấy.
+    # Hàng chấm "… … … …" không có chữ/số nên không bị bắt.
+    _REPEAT = re.compile(r"(?<!\S)((?=\S*[^\W_])\S{3,}|[^\W\d_])(?:\s+\1){3,}(?!\S)")
     _FIT_C = _env_f("OCR_HW_FIT_C", 10.0)
 
     _LOG_REJECTED = os.getenv("OCR_HW_LOG_REJECTED", "true").lower() in ("1", "true", "yes")
@@ -160,6 +165,7 @@ class HandwritingFallback:
     def rejected(cls, t: str, box) -> bool:
         """Bịa hoặc tràn khung? Ghi log từng dòng bị chặn (OCR_HW_LOG_REJECTED) để soi tỉ lệ chặn oan."""
         why = ("so-gia" if cls._FAKE.search(t) else "mo-ta" if cls._DESCRIBE.search(t)
+               else "lap" if cls._REPEAT.search(t)
                else None if cls.fits(t, box) else "tran-khung")
         if why and cls._LOG_REJECTED:
             w, h = box[2] - box[0], box[3] - box[1]
@@ -168,7 +174,7 @@ class HandwritingFallback:
 
     @classmethod
     def made_up(cls, t: str) -> bool:
-        return bool(cls._FAKE.search(t) or cls._DESCRIBE.search(t))
+        return bool(cls._FAKE.search(t) or cls._DESCRIBE.search(t) or cls._REPEAT.search(t))
 
     @classmethod
     def fits(cls, t: str, box) -> bool:
