@@ -154,6 +154,18 @@ class HandwritingFallback:
     _FIT_K = _env_f("OCR_HW_FIT_K", 5.0)
     _FIT_C = _env_f("OCR_HW_FIT_C", 10.0)
 
+    _LOG_REJECTED = os.getenv("OCR_HW_LOG_REJECTED", "true").lower() in ("1", "true", "yes")
+
+    @classmethod
+    def rejected(cls, t: str, box) -> bool:
+        """Bịa hoặc tràn khung? Ghi log từng dòng bị chặn (OCR_HW_LOG_REJECTED) để soi tỉ lệ chặn oan."""
+        why = ("so-gia" if cls._FAKE.search(t) else "mo-ta" if cls._DESCRIBE.search(t)
+               else None if cls.fits(t, box) else "tran-khung")
+        if why and cls._LOG_REJECTED:
+            w, h = box[2] - box[0], box[3] - box[1]
+            print(f"🚫 chặn [{why}] khung {w:.0f}x{h:.0f} n={len(t)}: {t[:120]}", flush=True)
+        return why is not None
+
     @classmethod
     def made_up(cls, t: str) -> bool:
         return bool(cls._FAKE.search(t) or cls._DESCRIBE.search(t))
@@ -199,7 +211,9 @@ class HandwritingFallback:
                 return None
         elif not (0.4 * n <= len(t) <= 3.0 * n + 12):
             return None
-        if HandwritingFallback.made_up(t) or not HandwritingFallback.fits(t, box):
+        if box is not None and HandwritingFallback.rejected(t, box):
+            return None
+        if box is None and HandwritingFallback.made_up(t):
             return None
         return t
 
@@ -366,7 +380,7 @@ class HandwritingFallback:
         for i, t in pairs.items():
             if confs[i] < self.conf:            # chỉ thay dòng TAY; dòng in giữ chữ VietOCR
                 # Bịa / tràn khung → không nhận; dòng rơi xuống bước đọc từng dòng.
-                if self.made_up(t) or not self.fits(t, boxes[i]):
+                if self.rejected(t, boxes[i]):
                     rejected += 1
                     continue
                 out[i] = t
@@ -381,7 +395,7 @@ class HandwritingFallback:
             cand = [i for i in span[: pos + 1] if confs[i] < self.conf] or low_in_span[:1]
             tgt = cand[-1]
             merged = (out.get(tgt, "") + " " + t).strip()
-            if self.made_up(t) or not self.fits(merged, boxes[tgt]):
+            if self.made_up(t) or self.rejected(merged, boxes[tgt]):
                 rejected += 1
                 continue
             out[tgt] = merged
