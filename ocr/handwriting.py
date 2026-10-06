@@ -72,6 +72,13 @@ class HandwritingFallback:
         self.block_gap = _env_f("OCR_HW_BLOCK_GAP", 2.5)  # tính theo chiều cao dòng trung vị
         self.max_blocks = _env_i("OCR_HW_MAX_BLOCKS", 3)
         self.block_timeout = _env_f("OCR_HW_BLOCK_TIMEOUT_S", 90.0)
+        # Trần token trả lời. Dòng tiếng Việt thật ~25–40 token; trần cao chỉ để vòng lặp đốt GPU
+        # (6/10/2026: 4% yêu cầu chạm trần 160 / 90×dòng ≈ 1/4–1/3 tổng token sinh). Đo lại tỉ lệ
+        # finished_reason="length" của vLLM sau khi đổi — tăng vọt nghĩa là đang cắt cụt dòng thật.
+        # Bị cắt ở trần thì phần cụt KHÔNG được nhận (giữ chữ VietOCR) — trần thấp chỉ làm mất
+        # công đọc lại, không làm thiếu chữ.
+        self.line_max_tokens = max(32, _env_i("OCR_HW_LINE_MAX_TOKENS", 96))
+        self.block_tokens_per_line = max(20, _env_i("OCR_HW_BLOCK_TOKENS_PER_LINE", 65))
         # Cạnh dài tối đa của ảnh gửi VLM. Qwen2.5-VL tính theo mảnh 28×28 px nên ảnh nhỏ hơn
         # = ít token hơn = nhanh hơn (GPU máy OCR đã chạy 98% — 26/9/2026). Đổi thì phải đo
         # lại độ phủ + nội dung trên trang tay thật (dev/thu-hw-max-side).
@@ -97,9 +104,13 @@ class HandwritingFallback:
         w, h = crop.size
         if h < self.min_height:
             crop = crop.resize((max(1, int(w * self.min_height / h)), self.min_height))
-        return self._ask(crop, PROMPT, 160, self.timeout)
+        text, cut = self._ask(crop, PROMPT, self.line_max_tokens, self.timeout)
+        # Trả lời bị cắt ở trần token = dòng cụt đuôi. Không nhận: giữ chữ VietOCR đủ cả dòng,
+        # để lớp chữ không bao giờ thiếu phần chữ có trên ảnh (6/10/2026, yêu cầu Ctrl+A).
+        return None if cut else text
 
-    def _ask(self, crop, prompt: str, max_tokens: int, timeout: float) -> str | None:
+    def _ask(self, crop, prompt: str, max_tokens: int, timeout: float) -> tuple[str | None, bool]:
+        """Trả (nội dung, bị_cắt_ở_trần_token)."""
         if max(crop.size) > self.max_side:
             k = self.max_side / max(crop.size)
             crop = crop.resize((max(1, int(crop.width * k)), max(1, int(crop.height * k))))
@@ -122,7 +133,8 @@ class HandwritingFallback:
             self.url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             out = json.load(r)
-        return out["choices"][0]["message"]["content"]
+        ch = out["choices"][0]
+        return ch["message"]["content"], ch.get("finish_reason") == "length"
 
     # ---- kiểm hợp lệ --------------------------------------------------------
     @staticmethod
@@ -303,10 +315,15 @@ class HandwritingFallback:
         mx, my = 0.02 * page.width, 0.006 * page.height
         crop = page.crop((max(0, int(x1 - mx)), max(0, int(y1 - my)),
                           min(page.width, int(x2 + mx)), min(page.height, int(y2 + my))))
-        # Trần token theo số dòng của khối (~90 token/dòng dư cho một dòng tiếng Việt dài):
-        # câu trả lời bình thường không chạm trần, vòng lặp thì bị cắt sớm thay vì chạy 1200.
-        raw = self._ask(crop, BLOCK_PROMPT, min(1200, 90 * len(span) + 80), self.block_timeout)
+        # Trần token theo số dòng của khối: câu trả lời bình thường không chạm trần, vòng lặp
+        # thì bị cắt sớm thay vì chạy 1200.
+        raw, cut = self._ask(crop, BLOCK_PROMPT, min(1200, self.block_tokens_per_line * len(span) + 80),
+                             self.block_timeout)
         lines = [self._unloop(ln) for ln in self._clean_lines(raw)]
+        # Bị cắt ở trần token: dòng cuối có thể cụt nửa chừng → bỏ; các dòng khối không nhận
+        # được bản VLM giữ nguyên chữ VietOCR (không dòng nào bị thiếu chữ).
+        if cut and lines:
+            lines = lines[:-1]
         if not lines or len(lines) > 3 * len(span) + 5:
             return {}
         pairs, extra = self._align(span, texts, confs, lines)

@@ -23,15 +23,18 @@ FROM ocr_jobs
 "@
 
 while ($true) {
-  $gpu = ssh -o BatchMode=yes -o ConnectTimeout=5 $GpuHost "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits; docker ps --format '{{.Names}}|{{.Status}}'; echo '@@LOG'; docker logs --tail 8 $OcrContainer 2>&1" 2>&1
+  # 6/10/2026: Alienware đi Wi-Fi (ping 11–470 ms) — 5 s hay hụt ở bước bắt tay SSH, báo lỗi giả.
+  $gpu = ssh -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 $GpuHost "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits; docker ps --format '{{.Names}}|{{.Status}}'; echo '@@LOG'; docker logs --tail 8 $OcrContainer 2>&1" 2>&1
+  $sshOk = ($LASTEXITCODE -eq 0)
   $q = $sql | docker exec -i $PgContainer sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -At -F,' 2>&1
 
   Clear-Host
   Write-Host ("DigiText - theo dõi OCR   " + (Get-Date -Format "dd/MM/yyyy HH:mm:ss") + "   (Ctrl+C để thoát)") -ForegroundColor Cyan
   Write-Host ""
 
-  if ($LASTEXITCODE -ne 0 -and -not $gpu) {
-    Write-Host "Không SSH được tới $GpuHost" -ForegroundColor Red
+  if (-not $sshOk) {
+    Write-Host "Lần này không SSH được tới $GpuHost (mạng chập chờn?) — thử lại sau $Seconds giây. OCR vẫn chạy, xem hàng đợi bên dưới." -ForegroundColor DarkYellow
+    Write-Host "  $(@($gpu) | Select-Object -First 1)" -ForegroundColor DarkGray
   } else {
     $lines = @($gpu)
     $i = [Array]::IndexOf($lines, '@@LOG')
