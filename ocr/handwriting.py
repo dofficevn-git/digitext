@@ -33,10 +33,14 @@ BLOCK_PROMPT = (
     "Tiếng Việt có dấu. Không giải thích, không đánh số, không thêm chữ không có trong ảnh."
 )
 
+# 6/10/2026: câu cũ ("Ảnh là MỘT dòng chữ… Chép lại chính xác") ÉP mô hình phải có chữ → khung rơi vào
+# giấy trắng / vết ố / lỗ thủng thì nó bịa ("được cấp giấy chứng nhận … số 123456789", "Số: 01/2023/UBND-VP",
+# thậm chí chép lại chính câu hỏi). A/B trên 76 dòng thật: câu mới trả ∅ cho 15/16 dòng bộ lọc đã chặn và
+# cho phần lớn câu bịa lọt bộ lọc; chữ thật đọc như cũ (mất 2–3 dòng chữ rất mờ — giữ chữ VietOCR).
 PROMPT = (
-    "Ảnh là MỘT dòng chữ cắt từ văn bản hành chính Việt Nam, có phần chữ in và phần chữ "
-    "VIẾT TAY điền vào chỗ trống. Chép lại chính xác đúng một dòng này (không thêm dòng "
-    "khác, không suy đoán thêm chữ). Tiếng Việt có dấu. Chỉ trả về dòng chữ."
+    "Ảnh được cắt từ một văn bản hành chính Việt Nam cũ, có thể có chữ in và chữ VIẾT TAY. "
+    "Chép lại chính xác chữ có trong ảnh, đúng một dòng, tiếng Việt có dấu, không thêm chữ, không suy đoán. "
+    "Nếu ảnh KHÔNG có chữ đọc được (giấy trắng, vết bẩn, lỗ thủng, nét gạch, dấu chấm lẻ) thì chỉ trả về đúng ký tự ∅."
 )
 
 
@@ -186,9 +190,11 @@ class HandwritingFallback:
         # Khung nằm cao hơn hẳn dòng trung vị của trang = chứa nhiều dòng (chữ tay khung lưới nét
         # mực): sức chứa nhân theo số dòng. Đo 6/10/2026: khung 1335x88, 1624x149 VLM đọc đúng
         # 2–3 dòng bị chặn oan khi tính như một dòng.
-        if line_h and w >= h and h > 1.5 * line_h:
-            return len(t) <= cls._FIT_K * w * h / (line_h * line_h) + cls._FIT_C
-        return len(t) <= cls._FIT_K * max(w, h) / min(w, h) + cls._FIT_C
+        # Cả khung đứng: cột số xếp dọc "9- 10- 11- … 17-" (114x340) là nhiều dòng ngắn chồng nhau.
+        cap = cls._FIT_K * max(w, h) / min(w, h) + cls._FIT_C
+        if line_h and h > 1.5 * line_h:
+            cap = max(cap, cls._FIT_K * w * h / (line_h * line_h) + cls._FIT_C)
+        return len(t) <= cap
 
     # ---- kiểm hợp lệ --------------------------------------------------------
     @staticmethod
@@ -286,7 +292,7 @@ class HandwritingFallback:
         out = []
         for ln in raw.replace("\r", "").split("\n"):
             ln = re.sub(r"\s+", " ", ln).strip().strip("`").strip()
-            if not ln or re.fullmatch(r"[-–—_.·•\s]+", ln):
+            if not ln or re.fullmatch(r"[-–—_.·•\s∅Ø]+", ln):   # ∅ = "không có chữ" (xem PROMPT)
                 continue
             if re.search(r"[　-鿿]", ln):
                 continue
