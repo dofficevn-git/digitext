@@ -136,9 +136,40 @@ class HandwritingFallback:
         ch = out["choices"][0]
         return ch["message"]["content"], ch.get("finish_reason") == "length"
 
+    # ---- chữ bịa ------------------------------------------------------------
+    # VLM bịa nội dung không có trên giấy (đo 6/10/2026 trên phông Sở NN Hà Bắc thập niên 70):
+    # "giấy chứng nhận … số 123456789 dated 01/01/2020", "tại xã X, huyện Y, tỉnh Z",
+    # "Dấu mộc đỏ: CÔNG TY …", "Chữ viết tay bên trái: Xuan". Bị chặn thì giữ chữ VietOCR của
+    # chính khung đó — khung không bao giờ mất chữ, chỉ không lấy bản VLM.
+    _FAKE = re.compile(
+        r"0?123456789|987654321|([1-9])\1{5,}"   # "1000000 đồng" là thật — không bắt chuỗi số 0
+        r"|\b(dated|signed|signature|issued|certificate|stamp)\b"
+        r"|\b(xã|huyện|tỉnh|phường|quận|ông|bà) [XYZ]\b",
+        re.IGNORECASE)
+    _DESCRIBE = re.compile(r"^\s*(chữ (viết tay|in|ký)|dấu (mộc|đỏ|tròn)|con dấu|chữ ký)[^:]{0,30}:",
+                           re.IGNORECASE)
+    # Số ký tự tối đa một khung chứa nổi: n ≤ K·(cạnh dài / cạnh ngắn) + C. Đo 6/10/2026 trên 2.030
+    # dòng VietOCR tin cậy ≥ 0,9: p99,9 = 5,2·tỉ lệ, lớn nhất 5,6 → K=5, C=10 không chặn nhầm dòng
+    # thật nào, chặn 67/364 dòng VLM (phần lớn là chữ bịa / đọc gộp cả hàng bảng vào một ô).
+    _FIT_K = _env_f("OCR_HW_FIT_K", 5.0)
+    _FIT_C = _env_f("OCR_HW_FIT_C", 10.0)
+
+    @classmethod
+    def made_up(cls, t: str) -> bool:
+        return bool(cls._FAKE.search(t) or cls._DESCRIBE.search(t))
+
+    @classmethod
+    def fits(cls, t: str, box) -> bool:
+        if box is None or cls._FIT_K <= 0:
+            return True
+        w, h = box[2] - box[0], box[3] - box[1]
+        if min(w, h) < 4:
+            return True
+        return len(t) <= cls._FIT_K * max(w, h) / min(w, h) + cls._FIT_C
+
     # ---- kiểm hợp lệ --------------------------------------------------------
     @staticmethod
-    def accept(ocr_text: str, vlm_text: str | None, loose: bool = False) -> str | None:
+    def accept(ocr_text: str, vlm_text: str | None, loose: bool = False, box=None) -> str | None:
         """Trả về dòng đã làm sạch nếu đáng tin, None nếu giữ kết quả VietOCR."""
         if not vlm_text:
             return None
@@ -167,6 +198,8 @@ class HandwritingFallback:
             if len(t) > 200:
                 return None
         elif not (0.4 * n <= len(t) <= 3.0 * n + 12):
+            return None
+        if HandwritingFallback.made_up(t) or not HandwritingFallback.fits(t, box):
             return None
         return t
 
@@ -307,7 +340,8 @@ class HandwritingFallback:
         extra.reverse()
         return pairs, [(span[k - 1] if k > 0 else span[0], t) for k, t in extra]
 
-    def _refine_block(self, page, boxes, texts, confs, span) -> dict[int, str]:
+    def _refine_block(self, page, boxes, texts, confs, span) -> tuple[dict[int, str], int]:
+        """Trả ({chỉ số dòng: chữ VLM nhận}, số dòng VLM bị chặn vì bịa / tràn khung)."""
         x1 = min(boxes[i][0] for i in span)
         y1 = min(boxes[i][1] for i in span)
         x2 = max(boxes[i][2] for i in span)
@@ -325,14 +359,20 @@ class HandwritingFallback:
         if cut and lines:
             lines = lines[:-1]
         if not lines or len(lines) > 3 * len(span) + 5:
-            return {}
+            return {}, 0
         pairs, extra = self._align(span, texts, confs, lines)
         out: dict[int, str] = {}
+        rejected = 0
         for i, t in pairs.items():
             if confs[i] < self.conf:            # chỉ thay dòng TAY; dòng in giữ chữ VietOCR
+                # Bịa / tràn khung → không nhận; dòng rơi xuống bước đọc từng dòng.
+                if self.made_up(t) or not self.fits(t, boxes[i]):
+                    rejected += 1
+                    continue
                 out[i] = t
         # Dòng VLM không có khung (bộ phát hiện bỏ sót chữ tay trên hàng chấm): nối vào dòng
-        # tay liền trước để nội dung vẫn nằm trong lớp chữ và tìm kiếm được.
+        # tay liền trước để nội dung vẫn nằm trong lớp chữ và tìm kiếm được — trừ khi bịa hoặc
+        # làm dòng đích tràn khung (đo 6/10/2026: chữ bịa hay vào lớp chữ đúng qua lối này).
         low_in_span = [i for i in span if confs[i] < self.conf]
         for anchor, t in extra:
             if not low_in_span:
@@ -340,8 +380,12 @@ class HandwritingFallback:
             pos = span.index(anchor)
             cand = [i for i in span[: pos + 1] if confs[i] < self.conf] or low_in_span[:1]
             tgt = cand[-1]
-            out[tgt] = (out.get(tgt, "") + " " + t).strip()
-        return out
+            merged = (out.get(tgt, "") + " " + t).strip()
+            if self.made_up(t) or not self.fits(merged, boxes[tgt]):
+                rejected += 1
+                continue
+            out[tgt] = merged
+        return out, rejected
 
     # ---- áp vào kết quả một trang ----------------------------------------
     def refine(self, page, boxes, texts: list[str], confs: list[float],
@@ -371,15 +415,17 @@ class HandwritingFallback:
         # 1) KHỐI — vùng nhiều dòng tay liền nhau, đọc có ngữ cảnh.
         blocks = self._blocks(boxes, set(low))
         n_block_lines = 0
+        n_made_up = 0
         if blocks:
             def work_block(span):
                 try:
-                    return span, self._refine_block(page, boxes, texts, orig_confs, span)
+                    return span, *self._refine_block(page, boxes, texts, orig_confs, span)
                 except Exception as e:  # noqa: BLE001
                     warn(e)
-                    return span, {}
+                    return span, {}, 0
 
-            for span, repl in list(self._pool.map(work_block, blocks)):
+            for span, repl, rej in list(self._pool.map(work_block, blocks)):
+                n_made_up += rej
                 for i, t in repl.items():
                     t = re.sub(r"\s+", " ", t).strip()
                     if len(t) >= 2 and t != texts[i]:
@@ -401,14 +447,16 @@ class HandwritingFallback:
                 return i, None
 
         for i, raw in self._pool.map(work, rest):
-            t = self.accept(texts[i], raw, loose=i in force)
+            t = self.accept(texts[i], raw, loose=i in force, box=boxes[i])
+            if t is None and raw and (self.made_up(raw) or not self.fits(raw.strip(), boxes[i])):
+                n_made_up += 1
             if t is None or t == texts[i]:
                 continue
             texts[i], confs[i], sources[i] = t, self.accept_conf, "hw"
             changed += 1
         ms = (time.perf_counter() - t0) * 1000.0
         print(f"✍  chữ viết tay: {len(low)} dòng <{self.conf:.2f} · khối {len(blocks)} (đổi {n_block_lines}) · "
-              f"lẻ {len(rest)} · tổng đổi {changed} · {ms:.0f}ms", flush=True)
+              f"lẻ {len(rest)} · tổng đổi {changed} · chặn bịa {n_made_up} · {ms:.0f}ms", flush=True)
         return texts, confs, sources, changed
 
 
