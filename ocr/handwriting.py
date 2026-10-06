@@ -162,11 +162,11 @@ class HandwritingFallback:
     _LOG_REJECTED = os.getenv("OCR_HW_LOG_REJECTED", "true").lower() in ("1", "true", "yes")
 
     @classmethod
-    def rejected(cls, t: str, box) -> bool:
+    def rejected(cls, t: str, box, line_h: float | None = None) -> bool:
         """Bịa hoặc tràn khung? Ghi log từng dòng bị chặn (OCR_HW_LOG_REJECTED) để soi tỉ lệ chặn oan."""
         why = ("so-gia" if cls._FAKE.search(t) else "mo-ta" if cls._DESCRIBE.search(t)
                else "lap" if cls._REPEAT.search(t)
-               else None if cls.fits(t, box) else "tran-khung")
+               else None if cls.fits(t, box, line_h) else "tran-khung")
         if why and cls._LOG_REJECTED:
             w, h = box[2] - box[0], box[3] - box[1]
             print(f"🚫 chặn [{why}] khung {w:.0f}x{h:.0f} n={len(t)}: {t[:120]}", flush=True)
@@ -177,17 +177,23 @@ class HandwritingFallback:
         return bool(cls._FAKE.search(t) or cls._DESCRIBE.search(t) or cls._REPEAT.search(t))
 
     @classmethod
-    def fits(cls, t: str, box) -> bool:
+    def fits(cls, t: str, box, line_h: float | None = None) -> bool:
         if box is None or cls._FIT_K <= 0:
             return True
         w, h = box[2] - box[0], box[3] - box[1]
         if min(w, h) < 4:
             return True
+        # Khung nằm cao hơn hẳn dòng trung vị của trang = chứa nhiều dòng (chữ tay khung lưới nét
+        # mực): sức chứa nhân theo số dòng. Đo 6/10/2026: khung 1335x88, 1624x149 VLM đọc đúng
+        # 2–3 dòng bị chặn oan khi tính như một dòng.
+        if line_h and w >= h and h > 1.5 * line_h:
+            return len(t) <= cls._FIT_K * w * h / (line_h * line_h) + cls._FIT_C
         return len(t) <= cls._FIT_K * max(w, h) / min(w, h) + cls._FIT_C
 
     # ---- kiểm hợp lệ --------------------------------------------------------
     @staticmethod
-    def accept(ocr_text: str, vlm_text: str | None, loose: bool = False, box=None) -> str | None:
+    def accept(ocr_text: str, vlm_text: str | None, loose: bool = False, box=None,
+               line_h: float | None = None) -> str | None:
         """Trả về dòng đã làm sạch nếu đáng tin, None nếu giữ kết quả VietOCR."""
         if not vlm_text:
             return None
@@ -217,7 +223,7 @@ class HandwritingFallback:
                 return None
         elif not (0.4 * n <= len(t) <= 3.0 * n + 12):
             return None
-        if box is not None and HandwritingFallback.rejected(t, box):
+        if box is not None and HandwritingFallback.rejected(t, box, line_h):
             return None
         if box is None and HandwritingFallback.made_up(t):
             return None
@@ -360,7 +366,8 @@ class HandwritingFallback:
         extra.reverse()
         return pairs, [(span[k - 1] if k > 0 else span[0], t) for k, t in extra]
 
-    def _refine_block(self, page, boxes, texts, confs, span) -> tuple[dict[int, str], int]:
+    def _refine_block(self, page, boxes, texts, confs, span,
+                      line_h: float | None = None) -> tuple[dict[int, str], int]:
         """Trả ({chỉ số dòng: chữ VLM nhận}, số dòng VLM bị chặn vì bịa / tràn khung)."""
         x1 = min(boxes[i][0] for i in span)
         y1 = min(boxes[i][1] for i in span)
@@ -386,7 +393,7 @@ class HandwritingFallback:
         for i, t in pairs.items():
             if confs[i] < self.conf:            # chỉ thay dòng TAY; dòng in giữ chữ VietOCR
                 # Bịa / tràn khung → không nhận; dòng rơi xuống bước đọc từng dòng.
-                if self.rejected(t, boxes[i]):
+                if self.rejected(t, boxes[i], line_h):
                     rejected += 1
                     continue
                 out[i] = t
@@ -401,7 +408,7 @@ class HandwritingFallback:
             cand = [i for i in span[: pos + 1] if confs[i] < self.conf] or low_in_span[:1]
             tgt = cand[-1]
             merged = (out.get(tgt, "") + " " + t).strip()
-            if self.made_up(t) or self.rejected(merged, boxes[tgt]):
+            if self.made_up(t) or self.rejected(merged, boxes[tgt], line_h):
                 rejected += 1
                 continue
             out[tgt] = merged
@@ -425,6 +432,9 @@ class HandwritingFallback:
         t0 = time.perf_counter()
         texts, confs = list(texts), list(confs)
         orig_confs = list(confs)
+        # Chiều cao dòng trung vị của trang (khung nằm ngang) — thước đo "khung chứa mấy dòng".
+        hs = sorted(b[3] - b[1] for b in boxes if b[2] - b[0] >= b[3] - b[1])
+        line_h = hs[len(hs) // 2] if hs else None
         changed, done = 0, set()
 
         def warn(e):
@@ -439,7 +449,7 @@ class HandwritingFallback:
         if blocks:
             def work_block(span):
                 try:
-                    return span, *self._refine_block(page, boxes, texts, orig_confs, span)
+                    return span, *self._refine_block(page, boxes, texts, orig_confs, span, line_h)
                 except Exception as e:  # noqa: BLE001
                     warn(e)
                     return span, {}, 0
@@ -467,8 +477,8 @@ class HandwritingFallback:
                 return i, None
 
         for i, raw in self._pool.map(work, rest):
-            t = self.accept(texts[i], raw, loose=i in force, box=boxes[i])
-            if t is None and raw and (self.made_up(raw) or not self.fits(raw.strip(), boxes[i])):
+            t = self.accept(texts[i], raw, loose=i in force, box=boxes[i], line_h=line_h)
+            if t is None and raw and (self.made_up(raw) or not self.fits(raw.strip(), boxes[i], line_h)):
                 n_made_up += 1
             if t is None or t == texts[i]:
                 continue
