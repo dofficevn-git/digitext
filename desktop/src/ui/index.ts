@@ -4,6 +4,7 @@
 export { default as Button, buttonStyles, type ButtonProps } from "./Button";
 export { default as IconButton } from "./IconButton";
 export { default as Spinner } from "./Spinner";
+export { default as Pipeline, type PipelineStep } from "./Pipeline";
 export { default as Tip } from "./Tooltip";
 export { default as Field, FormGrid, useFieldProps } from "./Field";
 export { default as Input, Textarea, Select, Checkbox, Switch, type SelectOption } from "./Input";

@@ -304,7 +304,7 @@ export default function HeThongHoaView() {
           description={canhBao > 0 ? `${n(canhBao)} hồ sơ có cảnh báo, xem cột cuối.` : undefined}
           actions={
             <>
-              {canhBao > 0 && <Checkbox checked={chiCanhBao} onChange={setChiCanhBao} label="Chỉ dòng có cảnh báo" />}
+              {canhBao > 0 && <Checkbox checked={chiCanhBao} onChange={setChiCanhBao} text="Chỉ dòng có cảnh báo" />}
               <Button size="sm" disabled={khoa || busy || sel.size === 0} onClick={() => void ganLe()}>
                 Gán {tenDonVi} cho {n(sel.size)} dòng chọn
               </Button>

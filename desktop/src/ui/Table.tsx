@@ -69,7 +69,7 @@ function Root({
     <SortContext.Provider value={{ sort, onSort }}>
       <div className="relative w-full overflow-auto rounded-lg border border-border-subtle bg-surface" style={maxHeight ? { maxHeight } : undefined}>
         <table
-          className={cn("w-full border-collapse text-base", dense ? "[&_td]:py-1 [&_td]:text-sm" : "[&_td]:py-2", stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10", className)}
+          className={cn("w-full border-collapse text-base [&>thead]:bg-gray-50 [&>thead_th]:h-9 [&>thead_th]:px-3 [&>thead_th]:text-sm [&>thead_th]:text-fg-subtle [&>thead_th]:border-b [&>thead_th]:border-border-subtle", dense ? "[&_td]:py-1 [&_td]:text-sm" : "[&_td]:py-2", stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10", className)}
           {...rest}
         >
           {children}
@@ -142,10 +142,11 @@ function HeadCell({
       {sortKey && onSort ? (
         <button
           type="button"
-          className={cn("inline-flex h-7 max-w-full items-center gap-1 rounded px-1 -mx-1 hover:bg-gray-100 hover:text-fg outline-none focus-visible:ring-2 focus-visible:ring-ring/40", align === "right" && "flex-row-reverse", active && "text-fg-strong")}
+          className={cn("inline-flex h-7 items-center gap-1 rounded px-1 -mx-1 hover:bg-gray-100 hover:text-fg outline-none focus-visible:ring-2 focus-visible:ring-ring/40", align === "right" && "flex-row-reverse", active && "text-fg-strong")}
           onClick={() => onSort(sortKey)}
         >
-          <span className="truncate">{children}</span>
+          {/* Không cắt cụt tiêu đề: cột hẹp tự nới cho vừa chữ ("Đã duyệt" từng thành "Đã…"). */}
+          <span>{children}</span>
           <Icon name={active === "asc" ? "tangDan" : active === "desc" ? "giamDan" : "sapXep"} size={12} className={cn("flex-none", !active && "opacity-40")} />
         </button>
       ) : (

@@ -48,7 +48,7 @@ function PdfaCell({ c }: { c: V4f0 }) {
 export default function OcrPane() {
   const { session } = V460();
   const duAnTopbar = useProject();
-  const [tab, setTab] = useState<Tab>("tiendo");
+  const [tab, setTab] = useState<Tab>(() => (import.meta.env.DEV ? (new URLSearchParams(window.location.search).get("tab") as Tab | null) : null) ?? "tiendo");
   const [dangTaiLen, setDangTaiLen] = useState(false);
   const [dangXepHang, setDangXepHang] = useState(false);
   const [xuatBan, setXuatBan] = useState(false);

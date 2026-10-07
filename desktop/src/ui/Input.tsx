@@ -27,7 +27,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input({ cl
   const el = (
     <input
       ref={ref}
-      className={cn(base, h, "px-2.5", prefix && "pl-8", suffix && "pr-8", className)}
+      // Có biểu tượng: className (độ rộng, lề) áp cho khối bọc — trước đây khối bọc luôn w-full nên "w-64"
+      // không có tác dụng, ô tìm kiếm chiếm cả hàng, đẩy các ô lọc xuống dòng.
+      className={cn(base, h, "px-2.5", prefix && "pl-8", suffix && "pr-8", !prefix && !suffix && className)}
       {...fp}
       {...rest}
     />
@@ -39,7 +41,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input({ cl
     </span>
   );
   return (
-    <span className="relative block w-full">
+    <span className={cn("relative block w-full", className)}>
       {prefix && aff(prefix, "l")}
       {el}
       {suffix && aff(suffix, "r")}
@@ -99,18 +101,26 @@ export interface CheckboxProps {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   className?: string;
-  /** Tên cho đọc màn hình khi không nằm trong Field inline. */
+  /** Tên cho đọc màn hình khi không nằm trong Field inline (không hiện ra). */
   label?: string;
+  /** Chữ hiện cạnh ô, bấm vào chữ cũng tích được. Dùng khi ô đứng một mình (thanh công cụ, đầu bảng). */
+  text?: string;
 }
 
 /** Hộp kiểm; vùng bấm 28px dù ô 16px. */
-export function Checkbox({ checked, onChange, disabled, className, label }: CheckboxProps) {
+export function Checkbox({ checked, onChange, disabled, className, label, text }: CheckboxProps) {
   const fp = useFieldProps();
-  return (
-    <span className={cn("inline-grid size-7 place-items-center -m-1.5", className)}>
-      <CheckboxPrimitive checked={checked} onCheckedChange={(v) => onChange(v === true)} disabled={disabled} aria-label={label} {...fp} />
-    </span>
-  );
+  const box = <CheckboxPrimitive checked={checked} onCheckedChange={(v) => onChange(v === true)} disabled={disabled} aria-label={text ? undefined : label} {...fp} />;
+  if (text) {
+    // 0.18: trước đây `label` của ô đứng một mình chỉ là aria-label → ô hiện trơ trọi, người dùng không biết tích để làm gì.
+    return (
+      <label className={cn("inline-flex min-h-7 cursor-pointer items-center gap-2 text-sm text-fg select-none", disabled && "cursor-not-allowed opacity-60", className)}>
+        {box}
+        {text}
+      </label>
+    );
+  }
+  return <span className={cn("inline-grid size-7 place-items-center -m-1.5", className)}>{box}</span>;
 }
 
 export function Switch({ checked, onChange, disabled, className, label }: CheckboxProps) {

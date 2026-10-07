@@ -289,6 +289,13 @@
     margin: 0;
   }
 
+  /* Ô tiêu đề bảng viết tay (<th> thẳng, không qua Table.HeadCell): căn trái, nét vừa — trình duyệt mặc
+     định căn giữa + đậm. Lớp riêng (.num, text-right…) vẫn thắng vì cùng tầng base. */
+  th {
+    text-align: start;
+    font-weight: 500;
+  }
+
    
   button,
   input,

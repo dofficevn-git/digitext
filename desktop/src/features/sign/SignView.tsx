@@ -502,7 +502,7 @@ export default function V4qy() {
                 </div>
               </Field>
             )}
-            <Checkbox checked={timestamp} onChange={setTimestamp} disabled={running} label="Gắn dấu thời gian (TSA)" />
+            <Checkbox checked={timestamp} onChange={setTimestamp} disabled={running} text="Gắn dấu thời gian (TSA)" />
             <Field label="Vị trí chữ ký">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span>{placement ? `${placement.lastPage ? "Trang cuối" : "Trang đầu"}, trái ${Math.round(placement.x * 100)}%, trên ${Math.round(placement.y * 100)}%` : "Góc trên-phải trang đầu"}</span>
