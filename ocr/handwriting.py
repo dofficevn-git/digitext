@@ -145,9 +145,11 @@ class HandwritingFallback:
     # "giấy chứng nhận … số 123456789 dated 01/01/2020", "tại xã X, huyện Y, tỉnh Z",
     # "Dấu mộc đỏ: CÔNG TY …", "Chữ viết tay bên trái: Xuan". Bị chặn thì giữ chữ VietOCR của
     # chính khung đó — khung không bao giờ mất chữ, chỉ không lấy bản VLM.
+    # 7/10/2026: BỎ luật từ tiếng Anh (dated/signed/signature/issued/certificate/stamp) — hồ sơ con nuôi
+    # nước ngoài có hộ chiếu, giấy tờ Anh/Pháp/Đức thật ("Holder's signature", "légalisation de la
+    # signature"): chặn oan 199 dòng/giờ. Câu hỏi dòng cho phép trả ∅ đã chặn chữ bịa từ gốc.
     _FAKE = re.compile(
         r"0?123456789|987654321|([1-9])\1{5,}"   # "1000000 đồng" là thật — không bắt chuỗi số 0
-        r"|\b(dated|signed|signature|issued|certificate|stamp)\b"
         r"|\b(xã|huyện|tỉnh|phường|quận|ông|bà) [XYZ]\b",
         re.IGNORECASE)
     _DESCRIBE = re.compile(r"^\s*(chữ (viết tay|in|ký)|dấu (mộc|đỏ|tròn)|con dấu|chữ ký)[^:]{0,30}:",
