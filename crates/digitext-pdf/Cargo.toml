@@ -10,3 +10,6 @@ thiserror = { workspace = true }
 blake3 = { workspace = true }
 ttf-parser = "0.25"
 
+[dev-dependencies]
+image = { version = "0.25.10", default-features = false, features = ["jpeg"] }
+
