@@ -269,8 +269,9 @@ async fn f_2gu(
     let r_34v = shutdown.clone();
     let r_34t = cfg.max_retries as i32;
     let r_34z = r_34y.clone();
+    let r_34w = cfg.auto_make_pdf2;
     let r_34s = tokio::spawn(async move {
-        let _ = worker::f_2b8(&r_34u, Duration::from_secs(30), r_34t, &r_34v, Some(r_34z)).await;
+        let _ = worker::f_2b8(&r_34u, Duration::from_secs(30), r_34t, &r_34v, Some(r_34z), r_34w).await;
     });
     let r_34p = r_34m.clone();
     let r_34q = shutdown.clone();
