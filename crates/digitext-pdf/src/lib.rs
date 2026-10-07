@@ -235,12 +235,17 @@ pub fn page_jpeg(parsed: &ParsedPdf, page_no: i32) -> Result<(Vec<u8>, Option<u3
             _ => false,
         };
         if r_49q && r_49r {
-            let width_px = r_49v
-                .dict
-                .get(b"Width")
-                .ok()
-                .and_then(|o| o.as_i64().ok())
-                .and_then(|w| u32::try_from(w).ok());
+            // Width/Height có thể là tham chiếu gián tiếp ("/Height 135 0 R" — máy quét khổ rộng ghi
+            // chiều cao SAU khi quét xong, 7/10/2026).
+            let num = |key: &[u8]| -> Option<u32> {
+                let o = r_49v.dict.get(key).ok()?;
+                let o = match o {
+                    Object::Reference(id) => r_49p.get_object(*id).ok()?,
+                    o => o,
+                };
+                u32::try_from(o.as_i64().ok()?).ok()
+            };
+            let width_px = num(b"Width");
             let page_w_pt = page
                 .get(b"MediaBox")
                 .ok()
@@ -260,10 +265,100 @@ pub fn page_jpeg(parsed: &ParsedPdf, page_no: i32) -> Result<(Vec<u8>, Option<u3
                 (Some(w), Some(pt)) => f_17h(w, pt),
                 _ => None,
             };
-            return Ok((r_49v.content.clone(), dpi));
+            let height_px = num(b"Height");
+            let mut jpeg = r_49v.content.clone();
+            if let (Some(w), Some(h)) = (width_px, height_px) {
+                fix_jpeg_sof_dims(&mut jpeg, w, h);
+            }
+            return Ok((jpeg, dpi));
         }
     }
     Err(PdfError::PageNotJpeg { page: page_no })
+}
+/// Máy quét khổ rộng ghi chiều cao TẠM vào khung SOF của JPEG (đo 7/10/2026: 65000, dữ liệu ảnh thật
+/// chỉ 3504 dòng; từ điển ảnh của PDF ghi đúng 3504). Bộ giải mã đọc theo SOF → đòi ~1,7 GB, vượt trần
+/// bộ nhớ → trang bị "page_failed", cả tài liệu không ghép được PDF/A. Khi SOF lớn hơn (hoặc bằng 0 —
+/// chiều cao để ở dấu DNL) so với Width/Height của PDF thì ghi lại cho khớp; dữ liệu ảnh không đụng tới.
+/// Trả `true` nếu đã sửa.
+pub fn fix_jpeg_sof_dims(b: &mut [u8], width: u32, height: u32) -> bool {
+    if b.len() < 4 || b[0] != 0xFF || b[1] != 0xD8 || width == 0 || height == 0 {
+        return false;
+    }
+    let (Ok(w16), Ok(h16)) = (u16::try_from(width), u16::try_from(height)) else {
+        return false;
+    };
+    let mut i = 2;
+    while i + 4 <= b.len() {
+        if b[i] != 0xFF {
+            return false;
+        }
+        let m = b[i + 1];
+        if m == 0xFF {
+            i += 1;
+            continue;
+        }
+        if m == 0x01 || (0xD0..=0xD7).contains(&m) {
+            i += 2;
+            continue;
+        }
+        let len = u16::from_be_bytes([b[i + 2], b[i + 3]]) as usize;
+        let is_sof = (0xC0..=0xCF).contains(&m) && !matches!(m, 0xC4 | 0xC8 | 0xCC);
+        if is_sof {
+            if i + 9 > b.len() {
+                return false;
+            }
+            let sof_h = u16::from_be_bytes([b[i + 5], b[i + 6]]);
+            let sof_w = u16::from_be_bytes([b[i + 7], b[i + 8]]);
+            let mut changed = false;
+            if sof_h != h16 && (sof_h == 0 || sof_h > h16) {
+                b[i + 5..i + 7].copy_from_slice(&h16.to_be_bytes());
+                changed = true;
+            }
+            if sof_w != w16 && (sof_w == 0 || sof_w > w16) {
+                b[i + 7..i + 9].copy_from_slice(&w16.to_be_bytes());
+                changed = true;
+            }
+            return changed;
+        }
+        if m == 0xDA || m == 0xD9 {
+            return false;
+        }
+        i += 2 + len;
+    }
+    false
+}
+#[cfg(test)]
+mod sof_tests {
+    use super::fix_jpeg_sof_dims;
+    fn sof_dims(b: &[u8]) -> (u16, u16) {
+        let i = b.windows(2).position(|w| w == [0xFF, 0xC0]).unwrap();
+        (u16::from_be_bytes([b[i + 7], b[i + 8]]), u16::from_be_bytes([b[i + 5], b[i + 6]]))
+    }
+    fn jpeg(w: u32, h: u32) -> Vec<u8> {
+        let img = image::RgbImage::from_pixel(w, h, image::Rgb([120, 30, 30]));
+        let mut out = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new(&mut out).encode_image(&img).unwrap();
+        out
+    }
+    #[test]
+    fn chieu_cao_tam_65000_duoc_sua_theo_pdf() {
+        let mut j = jpeg(40, 24);
+        let i = j.windows(2).position(|w| w == [0xFF, 0xC0]).unwrap();
+        j[i + 5..i + 7].copy_from_slice(&65000u16.to_be_bytes());
+        assert!(image::load_from_memory(&j).map(|d| d.height()).unwrap_or(0) != 24);
+        assert!(fix_jpeg_sof_dims(&mut j, 40, 24));
+        assert_eq!(sof_dims(&j), (40, 24));
+        let d = image::load_from_memory(&j).expect("giải mã được sau khi sửa");
+        assert_eq!((d.width(), d.height()), (40, 24));
+    }
+    #[test]
+    fn jpeg_dung_kich_thuoc_khong_doi() {
+        let mut j = jpeg(40, 24);
+        let goc = j.clone();
+        assert!(!fix_jpeg_sof_dims(&mut j, 40, 24));
+        assert!(!fix_jpeg_sof_dims(&mut j, 80, 48)); // PDF ghi lớn hơn → không đoán, giữ nguyên
+        assert_eq!(j, goc);
+    }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tgz {
