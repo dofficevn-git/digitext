@@ -39,7 +39,7 @@ export default function Pipeline({ steps, doneText = "Đã xong", className, ext
     : st === "err"
       ? s.error!
       : s.done > 0
-        ? `${s.label} ${fmt(s.done)}/${fmt(s.total)}${s.unit ? ` ${s.unit}` : ""}`
+        ? `${s.label} ${fmt(s.done)}/${fmt(s.total)}${s.unit ? ` ${s.unit}` : ""} · ${Math.min(99, Math.floor((s.done / s.total) * 100))}%`
         : `Chờ ${/^[A-ZĐ][a-zà-ỹ]/.test(s.label) ? s.label[0].toLowerCase() + s.label.slice(1) : s.label}`;
   const label = steps.map((x, i) => `${x.label}: ${states[i] === "done" ? "xong" : states[i] === "err" ? "lỗi" : `${fmt(x.done)}/${fmt(x.total)}`}`).join("; ");
 
