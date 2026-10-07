@@ -1150,26 +1150,41 @@ async fn f_1u9<F: Future>(r_3nm: F, r_3nn: &CancellationToken) -> Option<F::Outp
         biased; r = r_3nm => Some(r), _ = r_3nn.cancelled() => None,
     }
 }
+/// Vòng bảo trì: trả việc hết hạn lease, cập nhật độ sâu hàng đợi, và (mỗi 10 lượt) gỡ tài liệu kẹt sau OCR.
+/// Lỗi CSDL chỉ ghi log rồi chạy tiếp lượt sau — trước 7/10/2026 dùng `?`, một lần CSDL chập chờn là vòng
+/// này thoát hẳn (bên gọi bỏ qua kết quả) và không còn ai trả việc hết hạn.
 pub async fn f_2b8(
     pool: &PgPool,
     r_3no: Duration,
     r_3np: i32,
     r_3nq: &CancellationToken,
     metrics: Option<Arc<crate::metrics::Metrics>>,
+    enqueue_pdf2: bool,
 ) -> sqlx::Result<()> {
+    let mut tick: u64 = 0;
     while !r_3nq.is_cancelled() {
         tokio::select! {
-            _ = r_3nq.cancelled() => break, _ = tokio::time::sleep(r_3no) => { let n =
-            ocr_jobs::requeue_expired(pool, r_3np). await ?; if n > 0 {
-            tracing::warn!(requeued = n, "requeue job hết hạn lease"); }
-            if let Some(m) = metrics.as_ref() {
-                let queued = ocr_jobs::count_by_status(pool).await?
-                    .into_iter()
-                    .filter(|(s, _)| s == "queued")
-                    .map(|(_, n)| n)
-                    .sum::<i64>();
-                m.queue_depth.set(queued);
-            } }
+            _ = r_3nq.cancelled() => break,
+            _ = tokio::time::sleep(r_3no) => {
+                tick += 1;
+                match ocr_jobs::requeue_expired(pool, r_3np).await {
+                    Ok(n) if n > 0 => tracing::warn!(requeued = n, "requeue job hết hạn lease"),
+                    Ok(_) => {}
+                    Err(e) => tracing::warn!(error = %e, "bảo trì: trả việc hết hạn lỗi — thử lại lượt sau"),
+                }
+                if tick % 10 == 0 {
+                    match ocr_jobs::sweep_stuck_after_ocr(pool, enqueue_pdf2).await {
+                        Ok((d, q)) if d + q > 0 => tracing::warn!(ocr_done = d, make_pdf2 = q, "gỡ tài liệu kẹt sau OCR"),
+                        Ok(_) => {}
+                        Err(e) => tracing::warn!(error = %e, "bảo trì: gỡ tài liệu kẹt lỗi — thử lại lượt sau"),
+                    }
+                }
+                if let Some(m) = metrics.as_ref() {
+                    if let Ok(rows) = ocr_jobs::count_by_status(pool).await {
+                        m.queue_depth.set(rows.into_iter().filter(|(s, _)| s == "queued").map(|(_, n)| n).sum::<i64>());
+                    }
+                }
+            }
         }
     }
     Ok(())

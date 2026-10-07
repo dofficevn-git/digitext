@@ -499,6 +499,45 @@ pub async fn requeue_expired(r_27y: &PgPool, r_27x: i32) -> sqlx::Result<u64> {
         .await?;
     Ok(r_27z.rows_affected())
 }
+/// Gỡ tài liệu kẹt sau OCR: mọi trang đã xong (không còn trang chờ / đang chạy / lỗi tạm thời) mà tài liệu vẫn
+/// `ocr_pending`, hoặc đã `ocr_done` mà chưa từng có việc ghép PDF/A. Bước "trang cuối xong → ocr_done +
+/// make_pdf2" của worker chạy một lần, CSDL chập chờn đúng lúc đó thì lỡ mãi (7/10/2026: 13 tài liệu kẹt từ
+/// 2–4/10). Trả (số chuyển ocr_done, số xếp make_pdf2). Chỉ ghi khi có tài liệu kẹt — UPDATE 0 dòng vẫn làm
+/// trigger phát sự kiện.
+pub async fn sweep_stuck_after_ocr(pool: &PgPool, enqueue_pdf2: bool) -> sqlx::Result<(u64, u64)> {
+    let pending: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT d.id FROM documents d \
+          WHERE d.status = 'ocr_pending' AND d.pdfa_key IS NULL \
+            AND EXISTS (SELECT 1 FROM ocr_jobs j WHERE j.document_id = d.id AND j.kind = 'ocr') \
+            AND NOT EXISTS (SELECT 1 FROM ocr_jobs j WHERE j.document_id = d.id AND j.kind = 'ocr' \
+                              AND j.status IN ('queued', 'running', 'failed_transient')) \
+          LIMIT 500",
+    )
+    .fetch_all(pool)
+    .await?;
+    let mut done = 0;
+    for id in &pending {
+        if crate::documents::transition(pool, *id, digitext_core::DocStatus::OcrDone).await? {
+            done += 1;
+        }
+    }
+    let mut queued = 0;
+    if enqueue_pdf2 {
+        let no_pdf2: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT d.id FROM documents d \
+              WHERE d.status = 'ocr_done' AND d.pdfa_key IS NULL \
+                AND NOT EXISTS (SELECT 1 FROM ocr_jobs j WHERE j.document_id = d.id AND j.kind = 'make_pdf2') \
+              LIMIT 500",
+        )
+        .fetch_all(pool)
+        .await?;
+        for id in &no_pdf2 {
+            f_19r(pool, *id).await?;
+            queued += 1;
+        }
+    }
+    Ok((done, queued))
+}
 pub async fn f_1ra(r_281: &PgPool, r_280: Uuid, r_283: &str) -> sqlx::Result<bool> {
     let r_282 = sqlx::query(
         "UPDATE ocr_jobs SET status = 'done', locked_by = NULL, lease_until = NULL, \
