@@ -8,7 +8,6 @@ import { Icon } from "@/components/Icon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { V462 as cn } from "@/lib/utils";
 import { IconButton, Kbd, Tip } from "@/ui";
-import BrandLogo from "./BrandLogo";
 import CommandPalette from "./CommandPalette";
 import ProjectSwitch from "./ProjectSwitch";
 import { navPath } from "./navTree";
@@ -46,12 +45,7 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
-      <div className="flex flex-none items-center gap-2">
-        <BrandLogo className="size-6" />
-        <span className="text-base font-semibold tracking-tight text-fg-strong">DigiText</span>
-      </div>
-
-      <nav aria-label="Vị trí" className="hidden min-w-0 items-center gap-1 text-sm text-fg-subtle md:flex">
+      <nav aria-label="Vị trí" className="flex min-w-0 items-center gap-1 text-sm text-fg-subtle">
         {path.map((n, i) => (
           <span key={n.id} className="flex min-w-0 items-center gap-1">
             {i > 0 && <Icon name="moNhanh" size={12} className="flex-none" />}

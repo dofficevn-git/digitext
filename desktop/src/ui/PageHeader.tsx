@@ -26,10 +26,10 @@ export default function PageHeader({
       {onBack && <IconButton label="Quay lại" icon="truoc" variant="secondary" onClick={onBack} className="mt-0.5" />}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold text-fg-strong">{title}</h2>
+          <h2 className="text-2xl font-semibold text-fg-strong">{title}</h2>
           {meta}
         </div>
-        {description && <p className="mt-0.5 text-sm text-fg-subtle">{description}</p>}
+        {description && <p className="mt-1 max-w-[80ch] text-base text-fg-subtle">{description}</p>}
       </div>
       {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}
     </header>

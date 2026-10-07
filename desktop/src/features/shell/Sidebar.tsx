@@ -14,20 +14,21 @@ import { getOpenGroups, setOpenGroups, V46v, V46w } from "./sidebarPrefs";
 import { TOGGLE_SIDEBAR_EVENT } from "./Topbar";
 import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
+import BrandLogo from "./BrandLogo";
 
-// Mỗi nhóm menu một màu (icon trên ô nền nhạt cùng màu) cho dễ nhận, bớt đơn điệu. Nền dùng độ trong suốt
-// nên chạy được cả giao diện sáng lẫn tối.
+// Mỗi nhóm menu một màu (icon trên ô nền cùng màu) cho dễ nhận, bớt đơn điệu. Từ 0.18 thanh menu nền mực:
+// màu icon sáng (300), nền ô trong suốt để hợp nền tối.
 const MAU_NHOM: Record<string, string> = {
-  home: "bg-sky-500/15 text-sky-600",
-  sohoa: "bg-emerald-500/15 text-emerald-600",
-  xuly: "bg-violet-500/15 text-violet-600",
-  chinhly: "bg-amber-500/15 text-amber-600",
-  luutruso: "bg-indigo-500/15 text-indigo-600",
-  baocao: "bg-rose-500/15 text-rose-600",
-  quantri: "bg-slate-500/15 text-slate-600",
+  home: "bg-sky-400/15 text-sky-300",
+  sohoa: "bg-emerald-400/15 text-emerald-300",
+  xuly: "bg-violet-400/15 text-violet-300",
+  chinhly: "bg-amber-400/15 text-amber-300",
+  luutruso: "bg-indigo-400/20 text-indigo-300",
+  baocao: "bg-rose-400/15 text-rose-300",
+  quantri: "bg-slate-400/20 text-slate-300",
 };
 function mauNhom(id: string): string {
-  return MAU_NHOM[id] ?? "bg-gray-500/15 text-fg-muted";
+  return MAU_NHOM[id] ?? "bg-white/10 text-[var(--side-text)]";
 }
 
 export default function Sidebar() {
@@ -117,14 +118,22 @@ export default function Sidebar() {
     }
   };
 
-  const btn = "group flex w-full items-center gap-2 rounded text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50";
-  const tone = (active: boolean) => (active ? "bg-brand-50 text-brand-700 font-semibold" : "text-fg-muted font-medium hover:bg-gray-100 hover:text-fg");
+  const btn = "group flex w-full items-center gap-2 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-300";
+  // Mục đang mở: nền sáng hơn một bậc + vạch hổ phách bên trái (màu "đang làm" của cả hệ thống).
+  const tone = (active: boolean) =>
+    active
+      ? "bg-[var(--side-bg-2)] text-[var(--side-strong)] font-semibold shadow-[inset_3px_0_0_var(--side-active)]"
+      : "text-[var(--side-text)] font-medium hover:bg-[var(--side-bg-2)] hover:text-[var(--side-strong)]";
 
   const Badge = ({ n }: { n: number }) =>
     n > 0 ? <span className="ml-auto min-w-5 rounded-full bg-danger-600 px-1.5 text-center text-xs font-semibold leading-5 text-white tabular-nums">{n > 99 ? "99+" : n}</span> : null;
 
   return (
     <aside className={cn("sidebar", rail && "collapsed")}>
+      <div className="side-brand">
+        <BrandLogo className="size-7 flex-none" />
+        {!rail && <span className="text-md font-semibold tracking-wide">DIGITEXT</span>}
+      </div>
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- roving tabindex: nav bắt mũi tên, các mục bên trong là nút thật */}
       <nav ref={navRef} className="nav-scroll" aria-label="Điều hướng chính" onKeyDown={onKeyDown}>
         {rail ? (
@@ -137,7 +146,7 @@ export default function Sidebar() {
                 <button
                   type="button"
                   data-nav
-                  className={cn("relative grid size-9 place-items-center rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50", active ? "bg-brand-50 text-brand-600" : "text-fg-subtle hover:bg-gray-100 hover:text-fg")}
+                  className={cn("relative grid size-9 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-300", active ? "bg-[var(--side-bg-2)] shadow-[inset_3px_0_0_var(--side-active)]" : "hover:bg-[var(--side-bg-2)]")}
                   aria-label={g.label}
                   aria-current={g.leaf && active ? "page" : undefined}
                   onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
@@ -187,7 +196,7 @@ export default function Sidebar() {
                     type="button"
                     data-nav
                     data-group={g.leaf ? undefined : g.id}
-                    className={cn(btn, tone(active && !!g.leaf), "h-8 px-2 text-base", !g.leaf && active && "text-fg-strong")}
+                    className={cn(btn, tone(active && !!g.leaf), "h-8 px-2 text-base", !g.leaf && active && "text-[var(--side-strong)]")}
                     onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
                     aria-expanded={g.leaf ? undefined : isOpen}
                     aria-current={g.leaf && active ? "page" : undefined}
@@ -198,10 +207,10 @@ export default function Sidebar() {
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate">{g.label}</span>
-                    {g.leaf ? <Badge n={badgeOf(g.badge)} /> : <Icon name="moNhanh" size={14} className={cn("flex-none text-fg-subtle transition-transform", isOpen && "rotate-90")} />}
+                    {g.leaf ? <Badge n={badgeOf(g.badge)} /> : <Icon name="moNhanh" size={14} className={cn("flex-none text-[var(--side-faint)] transition-transform", isOpen && "rotate-90")} />}
                   </button>
                   {!g.leaf && isOpen && (
-                    <ul className="my-0.5 ml-4 border-l border-border-subtle pl-2">
+                    <ul className="my-0.5 ml-[19px] border-l border-[var(--side-line)] pl-2">
                       {kids.map((c) => {
                         const a = !!c.leaf && leafActive(c.leaf, nav);
                         return (
@@ -210,7 +219,7 @@ export default function Sidebar() {
                               type="button"
                               data-nav
                               data-parent={g.id}
-                              className={cn(btn, tone(a), "min-h-7 px-2 py-1 text-sm")}
+                              className={cn(btn, tone(a), !a && "font-normal", "min-h-7 px-2 py-1 text-sm")}
                               onClick={() => c.leaf && gotoLeaf(c.leaf, nav)}
                               aria-current={a ? "page" : undefined}
                             >
@@ -234,7 +243,7 @@ export default function Sidebar() {
           <Tip text={collapsed ? "Mở rộng thanh bên (Ctrl+B)" : "Thu gọn thanh bên (Ctrl+B)"} side="right">
             <button
               type="button"
-              className="grid size-8 place-items-center rounded text-fg-subtle transition-colors hover:bg-gray-100 hover:text-fg"
+              className="grid size-8 place-items-center rounded-md text-[var(--side-faint)] transition-colors hover:bg-[var(--side-bg-2)] hover:text-[var(--side-strong)]"
               onClick={() => setCollapsed((c) => !c)}
               aria-label={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
             >

@@ -36,7 +36,7 @@ export type V3xy = "root" | "folder" | "doc";
 
 export type V3xz = "signed" | "uploading" | "editing" | "flagged" | "scanned";
 
-export type V3y0 = "ok" | "info" | "warn" | "err" | "gray";
+export type V3y0 = "ok" | "info" | "warn" | "err" | "gray" | "run";
 
 export interface V3y1 {
   id: string;

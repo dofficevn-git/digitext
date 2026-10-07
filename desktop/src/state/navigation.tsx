@@ -53,9 +53,12 @@ interface V41c {
 
 const V41g = createContext<V41c | null>(null);
 
+// Bản dev chạy trong trình duyệt (xem trước giao diện, chụp màn): mở thẳng một màn bằng ?view=…&cl=….
+const V3c0 = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+
 export function V41h({ children: V2s }: { children: ReactNode }) {
-  const [view, V2t] = useState<V3xt>("home");
-  const [V2u, V2v] = useState<V3xu>("laphoso");
+  const [view, V2t] = useState<V3xt>(() => (V3c0?.get("view") as V3xt | null) ?? "home");
+  const [V2u, V2v] = useState<V3xu>(() => (V3c0?.get("cl") as V3xu | null) ?? "laphoso");
   const [V2y, V2z] = useState<V3xw>("khogia");
   const [V30, V31] = useState<V3xx>("sohoa");
   const [V32, V33] = useState<V41b | null>(null);

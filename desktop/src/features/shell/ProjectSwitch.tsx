@@ -14,8 +14,8 @@ export default function ProjectSwitch() {
     if (!p.projectLabel) return null;
     return (
       <Tip text="Dự án của tài khoản">
-        <span className="flex h-7 max-w-72 items-center gap-1.5 rounded border border-border-subtle bg-gray-50 px-2.5 text-sm text-fg-muted">
-          <Icon name="duAn" size={14} className="flex-none text-fg-subtle" />
+        <span className="flex h-8 max-w-72 items-center gap-2 rounded-md border border-border-subtle bg-surface px-2.5 text-sm font-medium text-fg">
+          <span className="size-2 flex-none rounded-full bg-run-solid" aria-hidden />
           <span className="truncate">{p.projectLabel}</span>
         </span>
       </Tip>
@@ -23,8 +23,9 @@ export default function ProjectSwitch() {
   }
   const none = !p.projectId;
   return (
-    <div className={cn("flex items-center gap-1.5", none && "rounded-md ring-2 ring-warning-300")}>
-      <Icon name="duAn" size={14} className={cn("ml-2 flex-none", none ? "text-warning-700" : "text-fg-subtle")} />
+    <div className={cn("flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface", none && "border-warning-300 ring-2 ring-warning-200")}>
+      {/* Chấm hổ phách = dự án đang làm (màu "đang chạy" của hệ thống); chưa chọn → biểu tượng cảnh báo. */}
+      {none ? <Icon name="duAn" size={14} className="ml-2 flex-none text-warning-700" /> : <span className="ml-2.5 size-2 flex-none rounded-full bg-run-solid" aria-hidden />}
       <Select
         size="sm"
         value={p.projectId ?? ""}

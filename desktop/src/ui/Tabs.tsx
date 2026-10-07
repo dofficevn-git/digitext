@@ -36,7 +36,7 @@ export default function Tabs<T extends string>({
           <TabsTrigger key={t.value} value={t.value} disabled={t.disabled} className={variant === "line" ? "flex-none px-3" : undefined}>
             {t.icon && <Icon name={t.icon} size={14} />}
             {t.label}
-            {t.count !== undefined && <span className="ml-1 rounded-sm bg-gray-100 px-1.5 text-xs text-fg-muted tabular-nums">{t.count.toLocaleString("vi-VN")}</span>}
+            {t.count !== undefined && <span className="ml-1 rounded-full bg-gray-100 px-1.5 text-xs text-fg-muted tabular-nums">{t.count.toLocaleString("vi-VN")}</span>}
           </TabsTrigger>
         ))}
       </TabsList>
