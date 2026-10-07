@@ -352,7 +352,7 @@ export default function V4k5() {
                   <Button size="sm" icon="lamMoi" loading={V1o0 === "ocrretry"} disabled={busy} onClick={() => void thuLaiOcr()}>
                     Thử lại {fmtN(view?.pagesOcrFailed ?? 0)} trang OCR lỗi
                   </Button>
-                  <Checkbox checked={keCaHong} onChange={setKeCaHong} disabled={busy} label="Kể cả trang hỏng vĩnh viễn" />
+                  <Checkbox checked={keCaHong} onChange={setKeCaHong} disabled={busy} text="Kể cả trang hỏng vĩnh viễn" />
                 </div>
               )}
             </div>

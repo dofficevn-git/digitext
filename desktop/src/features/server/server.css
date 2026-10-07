@@ -102,7 +102,9 @@
 }
 .srv-folder td {
   user-select: none;
-  font-weight: 600;
+}
+.srv-folder td:nth-child(2) {
+  font-weight: 500;
 }
  
 .srv-tree .srv-folder td:nth-child(2) {

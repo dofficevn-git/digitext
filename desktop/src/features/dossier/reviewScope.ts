@@ -30,6 +30,9 @@ export interface V4k7 {
   pdfaCu: number;
 
   ocrDenom: number;
+
+  /** Tài liệu đã ký số (signed / archived) — bước Ký số của dải dây chuyền. */
+  signedDocs: number;
 }
 
 export interface V4k8 {
@@ -137,6 +140,7 @@ const V4kk = (): V4k7 => ({
   pdfaPages: 0,
   pdfaCu: 0,
   ocrDenom: 0,
+  signedDocs: 0,
 });
 
 function V4kl(V1pg: V4k7, src: V4k7): void {
@@ -151,6 +155,7 @@ function V4kl(V1pg: V4k7, src: V4k7): void {
   V1pg.pdfaPages += src.pdfaPages;
   V1pg.pdfaCu += src.pdfaCu;
   V1pg.ocrDenom += src.ocrDenom;
+  V1pg.signedDocs += src.signedDocs;
 }
 
 function V4km(V1ph: V4k6, src: V4k6): void {
@@ -247,6 +252,7 @@ export function V4kq(docs: V4ej[]): V4kc[] {
       if (d.pdfa2b === false) row.tally.pdfaCu += 1;
     }
     row.tally.ocrDenom += d.pageCount ?? ocrPages;
+    if (d.status === "signed" || d.status === "archived") row.tally.signedDocs += 1;
     row.counts.docs += 1;
     row.counts[V4kh(d)] += 1;
   }
@@ -321,6 +327,7 @@ export function groupsFromSummary(rows: ReviewSummaryRow[], files: ReadonlyMap<s
       pdfaPages: r.pdfaPages,
       pdfaCu: r.pdfaCu,
       ocrDenom: r.ocrDenom,
+      signedDocs: r.signedDocs,
     };
     const counts: V4k6 = { docs: r.files, pending: Math.max(0, r.files - r.approved - r.rejected), approved: r.approved, rejected: r.rejected };
     const row: V4kb = { key, projectId: r.projectId, phong: r.phong, hopSo: r.hop, hoSoSo: r.hoSo, loaded: fs !== undefined, files: fs ?? [], ids: fs ? fs.map((f) => f.id) : [], tally, counts };

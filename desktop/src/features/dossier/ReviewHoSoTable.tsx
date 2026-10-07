@@ -7,11 +7,11 @@ import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
 import { V4f8, V4f7, docsReviewSummary, docsReviewGroupDocs, type V4eh, type ReviewSummaryRow } from "@/api/docs";
 import { V4hl } from "./ocrReport";
-import { bocTachState, V4kr, V4kv, V4kf, V4ke, V4kx, pdfaPercent, pdfaState, V4ks, docToFile, groupsFromSummary, reviewKeyOf, type V4kg, type V4k8, type V4kb, type V4k7 } from "./reviewScope";
+import { bocTachState, V4kr, V4kv, V4kf, V4ke, pdfaState, V4ks, docToFile, groupsFromSummary, reviewKeyOf, type V4kg, type V4k8, type V4kb, type V4k7 } from "./reviewScope";
 import "./ocrHoSo.css";
 import { Icon } from "@/components/Icon";
 import type { V41v } from "@/components/Icon";
-import { Badge, Button, Card, Checkbox, Dialog, EmptyState, ErrorBanner, Field, IconButton, Input, Pagination, Select, Skeleton, Table, Textarea, Tip, Toolbar, notifyError, pageSlice, toast, usePagination } from "@/ui";
+import { Badge, Button, Card, Checkbox, Pipeline, Dialog, EmptyState, ErrorBanner, Field, IconButton, Input, Pagination, Select, Skeleton, Table, Textarea, Toolbar, notifyError, pageSlice, toast, usePagination } from "@/ui";
 
 const fmtN = (n: number) => n.toLocaleString("vi-VN");
 const mb = (b: number) => (b / 1_048_576).toFixed(1);
@@ -33,50 +33,37 @@ function TriCheck({ state, onChange, label, disabled }: { state: V4kg; onChange:
 function TallyCell({ t }: { t: V4k7 }) {
   return (
     <>
-      <div>
-        {fmtN(t.pages)} trang · {mb(t.sizeBytes)} MB
-      </div>
+      <div className="whitespace-nowrap">{fmtN(t.pages)} trang</div>
+      <div className="whitespace-nowrap text-xs text-fg-subtle">{mb(t.sizeBytes)} MB</div>
       {t.unknownPages > 0 && <div className="text-xs text-fg-subtle">{fmtN(t.unknownPages)} tài liệu chưa rõ số trang</div>}
     </>
   );
 }
 
+// Dải dây chuyền của hồ sơ: Quét → OCR (trang) → PDF/A (tài liệu) → Ký số (tài liệu). Thay hai thanh OCR / PDF/A
+// rời nhau (0.18): một dòng cho biết hồ sơ đang ở bước nào.
 function OcrCell({ t }: { t: V4k7 }) {
-  const p = V4kx(t);
-  const pa = pdfaPercent(t);
   return (
-    <>
-      <div className="oh-bar">
-        <span className="oh-num">
-          {fmtN(t.ocrPages)}/{fmtN(t.ocrDenom)}
-        </span>
-        <Tip text="Trang đã có kết quả OCR">
-          <div className="progress">
-            <span style={{ width: `${p}%` }} />
-          </div>
-        </Tip>
-        <span className="oh-sub">{p}%</span>
-      </div>
-      {t.fieldDocs > 0 && (
-        <div className="text-xs text-fg-subtle">
-          {fmtN(t.fieldDocs)}/{fmtN(t.files)} tài liệu đã bóc 16 trường
-        </div>
-      )}
-      <div className="oh-bar oh-pdfa">
-        <span className="oh-sub">PDF/A</span>
-        <span className="oh-num oh-sub">
-          {fmtN(t.pdfaDocs)}/{fmtN(t.files)}
-        </span>
-        <Tip text="Văn bản đã có bản PDF/A, sinh ra ở việc PDF 2 lớp">
-          <div className="progress">
-            <span style={{ width: `${pa}%` }} />
-          </div>
-        </Tip>
-        <span className="oh-sub">{pa}%</span>
-      </div>
-      {t.pdfaCu > 0 && <div className="text-xs text-warning-700">{fmtN(t.pdfaCu)} tệp chưa đạt PDF/A-2b, cần ghép lại</div>}
-      {t.unknownOcr > 0 && <div className="text-xs text-fg-subtle">{fmtN(t.unknownOcr)} tài liệu máy chủ chưa báo</div>}
-    </>
+    <Pipeline
+      steps={[
+        { label: "Quét", done: t.files, total: t.files, unit: "tài liệu" },
+        { label: "OCR", done: t.ocrPages, total: t.ocrDenom, unit: "trang" },
+        { label: "PDF/A", done: t.pdfaDocs, total: t.files, unit: "tài liệu" },
+        { label: "Ký số", done: t.signedDocs, total: t.files, unit: "tài liệu" },
+      ]}
+      doneText="Đã ký số toàn bộ"
+      extra={
+        <>
+          {t.fieldDocs > 0 && (
+            <div className="text-xs text-fg-subtle">
+              {fmtN(t.fieldDocs)}/{fmtN(t.files)} tài liệu đã bóc 16 trường
+            </div>
+          )}
+          {t.pdfaCu > 0 && <div className="text-xs text-warning-700">{fmtN(t.pdfaCu)} tệp chưa đạt PDF/A-2b, cần ghép lại</div>}
+          {t.unknownOcr > 0 && <div className="text-xs text-fg-subtle">{fmtN(t.unknownOcr)} tài liệu máy chủ chưa báo</div>}
+        </>
+      }
+    />
   );
 }
 
@@ -154,8 +141,7 @@ function DongTep({ row, selected, busy, canReview, onToggle, onOpen }: { row: V4
         return (
           <Table.Row key={f.id} className="oh-filerow">
             <Table.Cell className="oh-check">{canReview && <TriCheck state={selected.has(f.id) ? "all" : "none"} disabled={busy} label={`Chọn ${f.filename}`} onChange={(v) => onToggle([f.id], v)} />}</Table.Cell>
-            <Table.Cell colSpan={4} />
-            <Table.Cell className="oh-fname oh-files">
+            <Table.Cell colSpan={4} className="oh-fname">
               {f.filename} <Badge tone={rv.tone}>{rv.label}</Badge>
             </Table.Cell>
             <Table.Cell>
@@ -188,7 +174,7 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
   }, [q]);
   const [chiChoXacNhan, setChiChoXacNhan] = useState(false);
   const loader = useCallback(
-    () => (isTauri() ? docsReviewSummary({ projectId: onlyProject || undefined, q: qTim || undefined, pendingOnly: chiChoXacNhan }) : Promise.resolve([] as ReviewSummaryRow[])),
+    () => (isTauri() || import.meta.env.DEV ? docsReviewSummary({ projectId: onlyProject || undefined, q: qTim || undefined, pendingOnly: chiChoXacNhan }) : Promise.resolve([] as ReviewSummaryRow[])),
     [onlyProject, qTim, chiChoXacNhan],
   );
   const { data, error, loading, reload } = V41t(loader, { topics: ["docs", "ocr"], errorText: () => "Không tải được danh sách hồ sơ trên máy chủ." });
@@ -315,7 +301,7 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
       <Toolbar className="px-4 py-3">
         <Input size="sm" prefix="tim" className="w-64" placeholder="Tìm tên tệp, hộp, hồ sơ" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Tìm tài liệu" />
         {dsPhong.length > 0 && <Select size="sm" className="w-56" value={phongLoc} onChange={setPhongLoc} placeholder={`Tất cả phông (${dsPhong.length})`} options={dsPhong.map((p) => ({ value: p, label: p }))} aria-label="Lọc theo phông" />}
-        <Checkbox checked={chiChoXacNhan} disabled={busy} onChange={setChiChoXacNhan} label="Chỉ phần chờ xác nhận" />
+        <Checkbox checked={chiChoXacNhan} disabled={busy} onChange={setChiChoXacNhan} text="Chỉ phần chờ xác nhận" />
         <Toolbar.Spacer />
         <span className="text-sm text-fg-subtle">{loading && summary.length === 0 ? "Đang tải…" : `${fmtN(soHoSo)} hồ sơ · ${fmtN(tongTep)} tài liệu`}</span>
         {actions}
@@ -343,13 +329,12 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
                 <Table.HeadCell className="oh-check">
                   {canReview && <TriCheck state={V4kr(idsTrang, selected)} disabled={busy || pageRows.length === 0} label="Chọn toàn bộ hồ sơ ở trang này" onChange={(v) => void chonHoSo(pageRows.map((x) => x.r), v)} />}
                 </Table.HeadCell>
-                <Table.HeadCell>Dự án</Table.HeadCell>
                 <Table.HeadCell>Phông</Table.HeadCell>
                 <Table.HeadCell>Hộp số</Table.HeadCell>
                 <Table.HeadCell>Hồ sơ số</Table.HeadCell>
-                <Table.HeadCell className="oh-files">Tổng số tệp</Table.HeadCell>
+                <Table.HeadCell className="oh-files" align="right">Tệp</Table.HeadCell>
                 <Table.HeadCell>Tài liệu</Table.HeadCell>
-                <Table.HeadCell>OCR · PDF/A</Table.HeadCell>
+                <Table.HeadCell>Quét, OCR, PDF/A, ký số</Table.HeadCell>
               </tr>
             </Table.Head>
             <Table.Body>
@@ -361,8 +346,10 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
                     {dauNhom && (
                       <Table.Row className="oh-grouprow">
                         <Table.Cell className="oh-check" />
-                        <th scope="row" className="oh-groupname px-3" colSpan={4}>
-                          <Icon name="thuMuc" /> Dự án: {g.label}
+                        <th scope="row" className="oh-groupname px-3" colSpan={3}>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Icon name="thuMuc" size={15} className="text-fg-subtle" /> {g.label}
+                          </span>
                         </th>
                         <Table.Cell className="oh-num oh-files">{fmtN(g.tally.files)}</Table.Cell>
                         <Table.Cell>
@@ -375,10 +362,9 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
                     )}
                     <Table.Row>
                       <Table.Cell className="oh-check">{canReview && <TriCheck state={r.loaded ? V4kr(r.ids, selected) : "none"} disabled={busy || dangNap.has(r.key)} label={`Chọn cả hồ sơ ${r.hoSoSo || "chưa gán"}`} onChange={(v) => void chonHoSo([r], v)} />}</Table.Cell>
-                      <th scope="row" className="oh-duan px-3 text-left font-normal">{g.label}</th>
                       <th scope="row" className="px-3 text-left font-normal">{r.phong || "—"}</th>
-                      <th scope="row" className="px-3 text-left font-normal">{r.hopSo || V4ke}</th>
-                      <th scope="row" className="px-3 text-left font-normal">
+                      <th scope="row" className="whitespace-nowrap px-3 text-left font-normal">{r.hopSo || V4ke}</th>
+                      <th scope="row" className="whitespace-nowrap px-3 text-left font-normal">
                         {r.hoSoSo || V4kf}
                         {r.counts.rejected > 0 && <div className="text-xs text-danger-700">{fmtN(r.counts.rejected)} tài liệu bị từ chối</div>}
                       </th>
@@ -400,7 +386,7 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
                     {mo && !r.loaded && (
                       <Table.Row className="oh-filerow">
                         <Table.Cell className="oh-check" />
-                        <Table.Cell colSpan={7} className="text-sm text-fg-subtle">
+                        <Table.Cell colSpan={6} className="text-sm text-fg-subtle">
                           Đang nạp tệp của hồ sơ…
                         </Table.Cell>
                       </Table.Row>

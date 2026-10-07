@@ -88,7 +88,7 @@ export default function V4wh() {
   const firstOpen = useRef(false);
 
   const load = useCallback(async () => {
-    if (!isTauri()) return;
+    if (!isTauri() && !import.meta.env.DEV) return;
     setLoading(true);
     try {
       // Số liệu gộp theo hồ sơ (vài nghìn dòng) thay cho cả cây 160.000 tài liệu; tệp nạp khi mở.
