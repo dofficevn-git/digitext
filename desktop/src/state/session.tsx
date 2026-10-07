@@ -40,7 +40,8 @@ export function V406({ children: V16 }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isTauri()) {
-      V18(V3zu());
+      // Bản dev trên trình duyệt: ?login=1 mở màn đăng nhập (xem trước giao diện), mặc định vào phiên dev.
+      V18(import.meta.env.DEV && new URLSearchParams(window.location.search).has("login") ? null : V3zu());
       V1a(false);
       return;
     }

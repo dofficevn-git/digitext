@@ -67,9 +67,9 @@ function Root({
 }: React.ComponentProps<"table"> & { maxHeight?: string | number; dense?: boolean; stickyHeader?: boolean; sort?: SortState | null; onSort?: (key: string) => void }) {
   return (
     <SortContext.Provider value={{ sort, onSort }}>
-      <div className="relative w-full overflow-auto rounded-md border border-border-subtle bg-surface" style={maxHeight ? { maxHeight } : undefined}>
+      <div className="relative w-full overflow-auto rounded-lg border border-border-subtle bg-surface" style={maxHeight ? { maxHeight } : undefined}>
         <table
-          className={cn("w-full border-collapse text-base", dense ? "[&_td]:py-1 [&_td]:text-sm" : "[&_td]:py-1.5", stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10", className)}
+          className={cn("w-full border-collapse text-base", dense ? "[&_td]:py-1 [&_td]:text-sm" : "[&_td]:py-2", stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10", className)}
           {...rest}
         >
           {children}
@@ -81,7 +81,7 @@ function Root({
 
 function Head({ children, className, ...rest }: React.ComponentProps<"thead">) {
   return (
-    <thead className={cn("bg-gray-50 text-sm text-fg-muted [&_th]:border-b [&_th]:border-border-subtle", className)} {...rest}>
+    <thead className={cn("bg-gray-50 text-sm text-fg-subtle [&_th]:border-b [&_th]:border-border-subtle", className)} {...rest}>
       {children}
     </thead>
   );
@@ -134,7 +134,7 @@ function HeadCell({
   return (
     <th
       scope="col"
-      className={cn("h-9 whitespace-nowrap px-3 font-semibold", alignCls, className)}
+      className={cn("h-9 whitespace-nowrap px-3 font-medium", alignCls, className)}
       style={width ? { width } : undefined}
       aria-sort={sortKey ? (active === "asc" ? "ascending" : active === "desc" ? "descending" : "none") : undefined}
       {...rest}

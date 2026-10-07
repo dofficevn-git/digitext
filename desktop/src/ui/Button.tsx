@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Nút chuẩn DigiText. Màn nghiệp vụ dùng cái này (không dùng thẳng components/ui/button hay class .btn).
-//   variant: secondary (mặc định, viền) · primary (tím) · ghost · danger (đỏ đặc) · dangerOutline (chữ đỏ) · link
+//   variant: secondary (mặc định, viền) · primary (xanh ngọc) · ghost · danger (đỏ đặc) · dangerOutline (chữ đỏ) · link
 //   size: md 32px · sm 28px. `icon` là tên trong components/Icon. `loading` khoá nút và thay icon bằng vòng xoay.
 
 import * as React from "react";

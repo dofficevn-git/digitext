@@ -270,7 +270,7 @@ export default function HomeView() {
           <nav aria-label="Lối tắt" className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
             {nhomLoiTat.map((g) => (
               <div key={g.nhom} className="flex items-center gap-1.5">
-                <span className="mr-0.5 text-xs font-medium uppercase tracking-wide text-fg-subtle">{g.nhom}</span>
+                <span className="mr-0.5 text-sm text-fg-subtle">{g.nhom}</span>
                 {g.items.map((i) => (
                   <Button key={i.label} size="sm" icon={i.icon} onClick={i.run}>
                     {i.label}

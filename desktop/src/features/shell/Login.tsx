@@ -58,11 +58,27 @@ export default function V4x4() {
   };
 
   return (
-    <div className="login-screen">
+    <div className="login-screen split">
+      <aside className="login-side" aria-hidden>
+        <div className="flex items-center gap-2.5 text-md font-semibold tracking-wide text-white">
+          <BrandLogo className="size-9 rounded-md bg-white p-0.5" />
+          DIGITEXT
+        </div>
+        <div>
+          <p className="login-side-title">Số hoá và lưu trữ tài liệu</p>
+          <ol className="login-steps">
+            {["Quét", "OCR", "PDF/A", "Ký số", "Nộp lưu"].map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ol>
+        </div>
+        <span className="text-sm text-[var(--side-faint)]">Phiên bản {appVersion || "…"}</span>
+      </aside>
+      <main className="login-main">
       <div className="login-card">
         <BrandLogo className="login-logo" />
-        <h1>DigiText</h1>
-        <div className="sub">Số hoá và ký số tài liệu</div>
+        <h1>Đăng nhập</h1>
+        <div className="sub">Dùng tài khoản được cấp cho dự án</div>
 
         {accounts.length > 0 && (
           <div className="acct-tiles" role="group" aria-label="Tài khoản đã dùng trên máy này">
@@ -142,6 +158,7 @@ export default function V4x4() {
           <span>v{appVersion || "…"}</span>
         </div>
       </div>
+      </main>
     </div>
   );
 }

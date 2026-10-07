@@ -27,7 +27,7 @@ export default function KpiTile({
       {sub && <span className="block text-xs text-fg-subtle">{sub}</span>}
     </>
   );
-  const cls = cn("rounded-md border border-border-subtle bg-surface px-3 py-2 text-left min-w-[7.5rem]", onClick && "hover:border-border-strong hover:bg-surface-hover transition-colors", className);
+  const cls = cn("rounded-lg border border-border-subtle bg-surface px-3.5 py-2.5 text-left min-w-[7.5rem]", onClick && "hover:border-border-strong hover:bg-surface-hover transition-colors", className);
   return onClick ? (
     <button type="button" className={cls} onClick={onClick}>
       {body}

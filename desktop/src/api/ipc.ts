@@ -27,6 +27,10 @@ function V3xr(V9: unknown): V3xq {
 
 export async function invoke<T>(Va: string, Vb?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) {
+    if (import.meta.env.DEV) {
+      const V3xp = (await import("./devMock")).devMock(Va);
+      if (V3xp !== undefined) return V3xp as T;
+    }
     throw new Error(
       `Tauri command "${Va}" is unavailable outside the desktop app (dev/browser mode).`,
     );
