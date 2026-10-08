@@ -4,9 +4,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { V41p } from "@/live/useLive";
-import { useNavigation, V460 } from "@/state";
+import { useDownloads, useNavigation, V460 } from "@/state";
 import { isTauri } from "@/api/ipc";
-import { docsForGroups, docsReviewSummary, V4el, V4fb, V4fc, type DownloadKind, type V4ej, type V4f9, type ReviewSummaryRow } from "@/api/docs";
+import { docsForGroups, docsReviewSummary, V4fb, V4fc, type DownloadKind, type V4ej, type V4f9, type ReviewSummaryRow } from "@/api/docs";
 import { isPdfaOnlyDoc, isSignedDoc, V4vi, V4vj, V4vt, V4vx, V4vy, V4vz, V4w2, filesUnder, findFolderByRelPath, groupKeyOf, leavesUnder, treeFromSummary, type FolderGroup, type V4vl, type V4vu } from "./serverTree";
 import { reviewKeyOf } from "@/features/dossier/reviewScope";
 import { V4w5, V4w9 } from "./pdfa";
@@ -82,8 +82,7 @@ export default function V4wh() {
   const [pdfa, setPdfa] = useState<V4f9[] | null>(null);
   const [pdfaBusy, setPdfaBusy] = useState(false);
   const [ghepLai, setGhepLai] = useState(false);
-  const [dl, setDl] = useState<{ done: number; total: number } | null>(null);
-  const stopRef = useRef(false);
+  const dlw = useDownloads();
   const [loaiTai, setLoaiTai] = useState<DownloadKind>("original");
   const firstOpen = useRef(false);
 
@@ -227,8 +226,13 @@ export default function V4wh() {
   const selected = useMemo(() => allFiles.filter((f) => sel.has(f.doc.id)), [allFiles, sel]);
   const selectedPages = selected.reduce((s, f) => s + (f.doc.pageCount ?? 0), 0);
 
+  // Chọn thư mục rồi giao cho bộ tải cấp ứng dụng (state/downloads): chuyển màn vẫn tải tiếp, tiến độ ở góc màn hình.
   const taiXuong = async (files: V4vu[], label: string) => {
     if (files.length === 0) return;
+    if (dlw.running) {
+      toast.warning("Đang có đợt tải chưa xong — đợi xong hoặc dừng đợt đó trước.");
+      return;
+    }
     let destDir: string;
     try {
       const r = await openDialog({ directory: true, multiple: false, defaultPath: nhoThuMuc(), title: `Chọn thư mục lưu tệp ${TEN_LOAI[loaiTai]} (giữ nguyên cây thư mục)` });
@@ -239,43 +243,16 @@ export default function V4wh() {
       return;
     }
     luuThuMuc(destDir);
-    stopRef.current = false;
-    setDl({ done: 0, total: files.length });
-    let ok = 0;
-    let last = "";
-    let firstErr: unknown = null;
-    let chuaPdfa = 0;
-    let khacLoai = 0;
-    for (const [i, f] of files.entries()) {
-      if (stopRef.current) break;
-      setDl({ done: i, total: files.length });
-      if (loaiTai === "pdfa" && !isPdfaOnlyDoc(f.doc)) {
-        if (isSignedDoc(f.doc)) khacLoai++;
-        else chuaPdfa++;
-        continue;
-      }
-      if (loaiTai === "signed" && !isSignedDoc(f.doc)) {
-        khacLoai++;
-        continue;
-      }
-      try {
-        last = await V4el(f.doc.id, f.doc.filename, f.folderPath, loaiTai === "pdfa", destDir, loaiTai);
-        ok++;
-      } catch (e) {
-        if (firstErr === null) firstErr = e;
-      }
-    }
-    setDl(null);
-    const fail = files.length - ok - chuaPdfa - khacLoai;
-    const parts = [
-      khacLoai > 0 ? (loaiTai === "signed" ? `bỏ qua ${n(khacLoai)} tệp chưa ký số` : `bỏ qua ${n(khacLoai)} tệp đã ký số (tải ở loại Đã ký số)`) : "",
-      chuaPdfa > 0 ? `${n(chuaPdfa)} tệp chưa có bản PDF/A (chạy PDF 2 lớp trước)` : "",
-      fail > 0 ? `${n(fail)} tệp lỗi` : "",
-      ok > 0 ? `Lưu tại ${last}` : "",
-    ].filter(Boolean);
-    const msg = `Đã tải ${n(ok)} tệp ${TEN_LOAI[loaiTai]} ${label}${stopRef.current ? " (đã dừng giữa chừng)" : ""}.`;
-    if (fail > 0) notifyError(firstErr, "tải một số tệp");
-    (fail > 0 || chuaPdfa > 0 ? toast.warning : toast.success)(msg, { description: parts.join(" · ") || undefined });
+    const loai = loaiTai;
+    dlw.start(files, loai, destDir, label, (d) =>
+      loai === "pdfa" && !isPdfaOnlyDoc(d)
+        ? isSignedDoc(d)
+          ? "tệp đã ký số (tải ở loại Đã ký số)"
+          : "tệp chưa có bản PDF/A"
+        : loai === "signed" && !isSignedDoc(d)
+          ? "tệp chưa ký số"
+          : null,
+    );
   };
 
   const soatPdfa = async () => {
@@ -332,7 +309,7 @@ export default function V4wh() {
           <td className="num">{d.pageCount ?? "—"}</td>
           <td className="srv-count">{isSignedDoc(d) ? "Đã ký" : isPdfaOnlyDoc(d) ? "PDF/A" : ""}</td>
           <td>
-            <IconButton label={`Tải ${TEN_LOAI[loaiTai]}`} icon="taiVe" size="sm" disabled={dl !== null} onClick={() => void taiXuong([{ doc: d, folderPath }], `"${d.filename}"`)} />
+            <IconButton label={`Tải ${TEN_LOAI[loaiTai]}`} icon="taiVe" size="sm" disabled={dlw.running} onClick={() => void taiXuong([{ doc: d, folderPath }], `"${d.filename}"`)} />
           </td>
         </tr>,
       );
@@ -362,7 +339,7 @@ export default function V4wh() {
               {sub.signedCount > 0 && <Badge tone="ok">{n(sub.signedCount)} đã ký</Badge>} {sub.pdfaOnlyCount > 0 && <Badge tone="gray">{n(sub.pdfaOnlyCount)} PDF/A</Badge>}
             </td>
             <td>
-              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dl !== null || sub.docCount === 0} onClick={() => void taiThuMuc(sub)} />
+              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dlw.running || sub.docCount === 0} onClick={() => void taiThuMuc(sub)} />
             </td>
           </tr>,
         );
@@ -392,19 +369,10 @@ export default function V4wh() {
         description="Tài liệu đã đẩy lên máy chủ theo dự án, hộp, hồ sơ. Tải về, soát PDF/A. Chạy OCR và bóc trường ở mục Xử lý."
         actions={
           tab === "cay" &&
-          (dl ? (
-            <>
-              <span className="text-sm text-fg-subtle">
-                Đang tải {n(dl.done + 1)}/{n(dl.total)}…
-              </span>
-              <Button icon="dungHan" onClick={() => (stopRef.current = true)}>
-                Dừng
-              </Button>
-            </>
-          ) : (
+          (
             <>
               <Select size="md" value={loaiTai} onChange={(v) => setLoaiTai(v as DownloadKind)} options={[{ value: "original", label: "Bản gốc" }, { value: "pdfa", label: "PDF/A chưa ký số" }, { value: "signed", label: "Đã ký số" }]} className="w-44" aria-label="Loại bản tải" />
-              <Button variant="primary" icon="taiVe" disabled={selected.length === 0} onClick={() => void taiXuong(selected, "đã chọn")}>
+              <Button variant="primary" icon="taiVe" disabled={selected.length === 0 || dlw.running} onClick={() => void taiXuong(selected, "đã chọn")}>
                 Tải xuống ({n(selected.length)})
               </Button>
               <Menu
@@ -416,7 +384,7 @@ export default function V4wh() {
                 ]}
               />
             </>
-          ))
+          )
         }
       />
 
