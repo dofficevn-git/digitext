@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import * as authApi from "@/api/auth";
 import type { V3zd, V3zc } from "@/api/auth";
-import { isTauri } from "@/api/ipc";
+import { isTauri, V3xq } from "@/api/ipc";
 import { V3zu, V3zq } from "./sessionCore";
 import type { V3zp } from "./sessionCore";
 
@@ -94,6 +94,38 @@ export function V406({ children: V16 }: { children: ReactNode }) {
   }, [V1d]);
 
   const V1s = useCallback((s: V3zc) => V18(s), []);
+
+  // Tự làm mới phiên với máy chủ: khi mở, 10 phút một lần, và khi quay lại cửa sổ (cách lần trước ≥ 1 phút).
+  // Trước 0.18.2 chỉ nút "Kiểm tra kết nối" ở Cài đặt mới làm việc này → tên / vai trò / dự án sửa trên máy
+  // chủ không về máy khác cho tới khi đăng nhập lại, và máy lỡ vào ngoại tuyến thì ngoại tuyến mãi dù có mạng.
+  // Mất mạng: im lặng giữ phiên ngoại tuyến. Tài khoản bị thu hồi: Rust đã xoá phiên → đăng xuất.
+  const V1u = V17 && !V17.locked ? V17.userId : null;
+  useEffect(() => {
+    if (!isTauri() || !V1u) return;
+    let busy = false;
+    let last = 0;
+    const lamMoi = async (force: boolean) => {
+      if (busy || (!force && Date.now() - last < 60_000)) return;
+      busy = true;
+      last = Date.now();
+      try {
+        const s = await authApi.V3zo();
+        V18((cur) => (cur && !cur.locked && cur.userId === s.userId ? s : cur));
+      } catch (e) {
+        if (e instanceof V3xq && e.code === "revoked") V18(null);
+      } finally {
+        busy = false;
+      }
+    };
+    void lamMoi(true);
+    const timer = window.setInterval(() => void lamMoi(true), 10 * 60_000);
+    const onFocus = () => void lamMoi(false);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [V1u]);
 
   const V1t = useMemo<V3zv>(
     () => ({
