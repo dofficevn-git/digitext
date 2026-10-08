@@ -9,6 +9,10 @@
   vertical-align: top;
   font-size: var(--do-text-base);
 }
+.oh-table thead th {
+  vertical-align: middle;
+  font-size: var(--text-sm);
+}
 
  
 .oh-table td,
