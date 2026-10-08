@@ -23,8 +23,13 @@ const SUMMARY: ReviewSummaryRow[] = [
   row("PHONG SKHCNMTBG MOI", "HOP 05", "HO SO 18", 22, 24.8, 0, false, false),
 ];
 
+let taiThu = 0;
+
 export function devMock(cmd: string): unknown {
   switch (cmd) {
+    case "docs_download":
+      // Tải giả: 0,8 giây mỗi tệp, cứ tệp thứ 7 thì lỗi — để xem khung tiến độ tải xuống.
+      return new Promise((ok, loi) => setTimeout(() => (++taiThu % 7 === 0 ? loi(new Error("Máy chủ trả 404: chưa có bản PDF/A")) : ok("D:/Tai ve/LTLSBN/tep.pdf")), 800));
     case "docs_review_summary":
       return SUMMARY;
     default:

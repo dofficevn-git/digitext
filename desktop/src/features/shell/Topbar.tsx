@@ -2,7 +2,7 @@
 // Thanh trên cùng: logo · đường dẫn "Nhóm › Mục" · dự án đang làm · tìm nhanh (Ctrl+K) · chuông · tài khoản.
 
 import { useEffect, useState } from "react";
-import { V460, useCollects, useUploads } from "@/state";
+import { V460, useCollects, useDownloads, useUploads } from "@/state";
 import { V3z8, V3za } from "@/domain/permissions";
 import { Icon } from "@/components/Icon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -23,6 +23,7 @@ export default function Topbar() {
   const notif = useNotifications();
   const up = useUploads();
   const col = useCollects();
+  const dlw = useDownloads();
   const path = navPath(nav);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Topbar() {
 
   const user = session?.displayName ?? "";
   const initial = user ? user[0].toUpperCase() : "?";
-  const transferring = up.running || col.running;
+  const transferring = up.running || col.running || dlw.running;
 
   return (
     <header className="topbar">
