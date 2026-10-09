@@ -118,69 +118,86 @@ fn page_scan(parsed: &ParsedPdf, page_no: u32) -> Result<(Raw, Option<f32>), Pdf
         res = pd.get(b"Resources").ok().and_then(dict_of);
         parent = pd.get(b"Parent").ok().and_then(|o| o.as_reference().ok());
     }
-    let no_img = || PdfError::NoPageImage(format!("trang {page_no} không có ảnh quét"));
-    let xobj = res.as_ref().and_then(|r| r.get(b"XObject").ok()).and_then(dict_of).ok_or_else(no_img)?;
+    let render = |reason: String| PdfError::NeedsRender { page: page_no, reason };
 
-    let mut best: Option<(u64, Raw)> = None;
-    for (_name, obj) in xobj.iter() {
-        let Ok(s) = deref(doc, obj).as_stream() else { continue };
-        let d = &s.dict;
-        if !matches!(d.get(b"Subtype").and_then(|o| o.as_name()), Ok(b"Image")) {
-            continue;
-        }
-        let (Some(w), Some(h)) = (num(doc, d, b"Width"), num(doc, d, b"Height")) else { continue };
-        let area = w as u64 * h as u64;
-        if best.as_ref().is_some_and(|(a, _)| *a >= area) {
-            continue;
-        }
-        let f = filters(doc, d);
-        let raw = if f.last().is_some_and(|x| x == b"DCTDecode") {
-            // Chỉ DCTDecode (hoặc Flate ngoài + DCT trong — hiếm): lấy luồng JPEG.
-            let mut jpeg = if f.len() == 1 {
-                s.content.clone()
-            } else {
-                match s.decompressed_content() {
-                    Ok(b) => b,
-                    Err(_) => continue,
-                }
-            };
-            fix_jpeg_sof_dims(&mut jpeg, w, h);
-            Raw::Jpeg(jpeg)
-        } else if f.iter().all(|x| x == b"FlateDecode") && num(doc, d, b"BitsPerComponent") == Some(8) {
-            let color = match components(doc, d) {
-                Some(1) => TiffColor::Gray8,
-                Some(3) => TiffColor::Rgb24,
-                _ => continue,
-            };
-            let data = if f.is_empty() {
-                s.content.clone()
-            } else {
-                match s.decompressed_content() {
-                    Ok(b) => b,
-                    Err(_) => continue,
-                }
-            };
-            let need = area as usize * if color == TiffColor::Gray8 { 1 } else { 3 };
-            if data.len() < need {
+    // Mọi ảnh của trang, kể cả ảnh lồng trong Form XObject (PDF nén nhiều lớp MRC hay để ảnh trong form).
+    let mut images: Vec<lopdf::ObjectId> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut stack: Vec<lopdf::Dictionary> = res.into_iter().collect();
+    while let Some(r) = stack.pop() {
+        let Some(xobj) = r.get(b"XObject").ok().and_then(dict_of) else { continue };
+        for (_name, obj) in xobj.iter() {
+            let Ok(id) = obj.as_reference() else { continue };
+            if !seen.insert(id) || seen.len() > 500 {
                 continue;
             }
-            Raw::Pixels { w, h, color, data }
-        } else {
-            continue;
-        };
-        best = Some((area, raw));
+            let Ok(s) = doc.get_object(id).and_then(|o| o.as_stream()) else { continue };
+            match s.dict.get(b"Subtype").and_then(|o| o.as_name()) {
+                Ok(b"Image") => images.push(id),
+                Ok(b"Form") => {
+                    if let Some(fr) = s.dict.get(b"Resources").ok().and_then(dict_of) {
+                        stack.push(fr);
+                    }
+                }
+                _ => {}
+            }
+        }
     }
-    let (_, raw) = best.ok_or_else(no_img)?;
-    let page_w_pt = page
+    let page_box = page
         .get(b"MediaBox")
         .ok()
         .map(|o| deref(doc, o))
         .and_then(|o| o.as_array().ok())
         .and_then(|a| {
             let f = |o: &Object| o.as_float().ok().or(o.as_i64().ok().map(|v| v as f32));
-            Some(f(deref(doc, a.get(2)?))? - f(deref(doc, a.first()?))?)
+            let g = |i: usize| a.get(i).map(|o| deref(doc, o)).and_then(f);
+            Some((g(2)? - g(0)?, g(3)? - g(1)?))
         });
-    Ok((raw, page_w_pt))
+    // Chỉ "rút ảnh gốc" khi trang đúng là MỘT ảnh quét phủ cả trang; còn lại (nhiều lớp, JPEG 2000, ảnh có
+    // mặt nạ, trang chữ không ảnh…) phải vẽ lại trang để không mất lớp nào.
+    let id = match images.as_slice() {
+        [] => return Err(render("trang không có ảnh quét".into())),
+        [one] => *one,
+        many => return Err(render(format!("trang ghép {} lớp ảnh", many.len()))),
+    };
+    let s = doc.get_object(id).and_then(|o| o.as_stream()).map_err(|e| PdfError::NoPageImage(e.to_string()))?;
+    let d = &s.dict;
+    if d.has(b"SMask") || d.has(b"Mask") {
+        return Err(render("ảnh có lớp mặt nạ".into()));
+    }
+    let (Some(w), Some(h)) = (num(doc, d, b"Width"), num(doc, d, b"Height")) else {
+        return Err(render("ảnh thiếu kích thước".into()));
+    };
+    if let Some((pw, ph)) = page_box {
+        let (ra, rp) = (w as f32 / h as f32, pw / ph);
+        // Ảnh không cùng tỉ lệ khổ trang (ảnh minh hoạ trong trang chữ, trang xoay…) → vẽ lại.
+        if !(rp > 0.0 && ((ra / rp) - 1.0).abs() <= 0.03) || (w as f32) < pw {
+            return Err(render("ảnh không phủ cả trang".into()));
+        }
+    }
+    let f = filters(doc, d);
+    let unpack = || if f.is_empty() || f.len() == 1 && f[0] == b"DCTDecode" { Ok(s.content.clone()) } else { s.decompressed_content() };
+    let raw = if f.last().is_some_and(|x| x == b"DCTDecode") && f[..f.len() - 1].iter().all(|x| x == b"FlateDecode") {
+        let mut jpeg = unpack().map_err(|e| render(format!("giải nén ảnh: {e}")))?;
+        fix_jpeg_sof_dims(&mut jpeg, w, h);
+        Raw::Jpeg(jpeg)
+    } else if f.iter().all(|x| x == b"FlateDecode") && num(doc, d, b"BitsPerComponent") == Some(8) && !d.has(b"DecodeParms") {
+        let color = match components(doc, d) {
+            Some(1) => TiffColor::Gray8,
+            Some(3) => TiffColor::Rgb24,
+            _ => return Err(render("không gian màu ảnh không hỗ trợ".into())),
+        };
+        let data = unpack().map_err(|e| render(format!("giải nén ảnh: {e}")))?;
+        let need = w as usize * h as usize * if color == TiffColor::Gray8 { 1 } else { 3 };
+        if data.len() < need {
+            return Err(render("dữ liệu ảnh thiếu".into()));
+        }
+        Raw::Pixels { w, h, color, data }
+    } else {
+        let names: Vec<String> = f.iter().map(|x| String::from_utf8_lossy(x).into_owned()).collect();
+        return Err(render(format!("ảnh nén {}", if names.is_empty() { "dạng khác".into() } else { names.join("+") })));
+    };
+    Ok((raw, page_box.map(|b| b.0)))
 }
 
 fn encode(w: u32, h: u32, color: TiffColor, data: &[u8], dpi: u32, opts: TiffOpts) -> Result<Vec<u8>, PdfError> {
@@ -247,6 +264,16 @@ pub fn page_tiff(parsed: &ParsedPdf, page_no: u32, opts: TiffOpts) -> Result<Pag
         color,
         sha256,
     })
+}
+
+/// TIFF từ ảnh RGB 24 bit đã có sẵn (trang vẽ lại bằng bộ vẽ PDF ở bên gọi — xem `PdfError::NeedsRender`).
+pub fn tiff_from_rgb(page_no: u32, w: u32, h: u32, rgb: &[u8], dpi: u32, opts: TiffOpts) -> Result<PageTiff, PdfError> {
+    if rgb.len() < w as usize * h as usize * 3 {
+        return Err(PdfError::Encode(format!("trang {page_no}: ảnh vẽ lại thiếu dữ liệu")));
+    }
+    let bytes = encode(w, h, TiffColor::Rgb24, rgb, dpi, opts)?;
+    let sha256 = format!("{:x}", Sha256::digest(&bytes));
+    Ok(PageTiff { page: page_no, bytes, width: w, height: h, dpi, dpi_guessed: false, color: TiffColor::Rgb24, sha256 })
 }
 
 /// Số trang của PDF.

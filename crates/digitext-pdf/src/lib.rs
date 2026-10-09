@@ -39,6 +39,9 @@ pub enum PdfError {
         "trang {page} không có ảnh JPEG nhúng (DCTDecode) — cần raster hoá"
     )]
     PageNotJpeg { page: i32 },
+    /// Trang không phải đúng một ảnh quét rút ra được (nhiều lớp, JPEG 2000, có mặt nạ…) — phải vẽ lại trang.
+    #[error("trang {page} cần vẽ lại ({reason})")]
+    NeedsRender { page: u32, reason: String },
     #[error("font TTF không đọc được: {0}")]
     BadFont(String),
     #[error("font thiếu glyph cho ký tự {0:?}")]
