@@ -857,6 +857,17 @@ async fn f_174_kind(
         .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     Ok(n)
 }
+/// Tải một bản của tài liệu ("original" | "pdfa" | "signed") về `dest` (ghi `.part` rồi đổi tên) —
+/// dùng cho các bước chạy hàng loạt ở mô-đun khác (Tách TIFF).
+pub(crate) async fn download_variant_to(
+    db: &State<'_, Db>,
+    auth: &State<'_, AuthState>,
+    id: &str,
+    dest: &Path,
+    kind: &str,
+) -> Result<u64, AppError> {
+    f_174_kind(db, auth, id, dest, &|_, _| {}, kind).await
+}
 const C_BN: usize = 8;
 fn f_179(r_1l3: &Path, rel_path: Option<&str>, filename: &str) -> PathBuf {
     f_179_in(r_1l3, "_nhan_ve", rel_path, filename)

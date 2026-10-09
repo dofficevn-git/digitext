@@ -403,6 +403,7 @@ const V3z7: Record<V3xt, V3yx> = {
   editor: "editor.view",
   upload: "upload.execute",
   sign: "sign.view",
+  tiff: "sign.view",
   users: "user.view",
   settings: "settings.view",
 

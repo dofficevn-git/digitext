@@ -12,6 +12,7 @@ export type V3xt =
   | "editor"
   | "upload"
   | "sign"
+  | "tiff"
   | "users"
   | "settings"
   | "package"

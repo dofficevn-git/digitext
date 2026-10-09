@@ -1070,6 +1070,7 @@ dependencies = [
  "der",
  "digitext-core",
  "digitext-extimport",
+ "digitext-pdf",
  "ed25519-dalek",
  "futures-util",
  "hkdf",
@@ -1138,8 +1139,11 @@ name = "digitext-pdf"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "image",
  "lopdf 0.43.0",
+ "sha2 0.10.9",
  "thiserror 2.0.18",
+ "tiff",
  "ttf-parser",
 ]
 

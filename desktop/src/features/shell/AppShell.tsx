@@ -14,6 +14,7 @@ import V4p9 from "@/features/scan/ScanView";
 import V4p4 from "@/features/editor/EditorView";
 import V4qm from "@/features/upload/UploadView";
 import V4qy from "@/features/sign/SignView";
+import TachTiffView from "@/features/tiff/TachTiffView";
 import V4ra from "@/features/users/UsersView";
 import V4rs from "@/features/settings/SettingsView";
 import DongGoiView from "@/features/package/DongGoiView";
@@ -57,6 +58,7 @@ export default function V4wx() {
         {V382 && view === "editor" && <V4p4 />}
         {V382 && view === "upload" && <V4qm />}
         {V382 && view === "sign" && <V4qy />}
+        {V382 && view === "tiff" && <TachTiffView />}
         {V382 && view === "users" && <V4ra />}
         {V382 && view === "settings" && <V4rs />}
         {V382 && view === "package" && <DongGoiView />}
