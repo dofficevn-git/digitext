@@ -9,7 +9,7 @@ lopdf = "0.43"
 thiserror = { workspace = true }
 blake3 = { workspace = true }
 ttf-parser = "0.25"
-
-[dev-dependencies]
 image = { version = "0.25.10", default-features = false, features = ["jpeg"] }
+tiff = { version = "0.11", default-features = false, features = ["lzw"] }
+sha2 = { workspace = true }
 
