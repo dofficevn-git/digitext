@@ -43,14 +43,16 @@ export default class ErrorBoundary extends Component<V4x9, State> {
           display: "grid",
           placeItems: "center",
           padding: 24,
-          background: "#1a1726",
+          background: "#1e2b2f",
           color: "#eee",
 
           fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
         }}
       >
         <div className="max-w-120 text-center">
-          <h1 className="text-xl mb-2">Đã xảy ra lỗi</h1>
+          <h1 className="text-xl mb-2" style={{ color: "#fff" }}>
+            Đã xảy ra lỗi
+          </h1>
           <p className="opacity-80 mb-4">
             Ứng dụng gặp sự cố không mong muốn. Bạn có thể tải lại để tiếp tục.
           </p>

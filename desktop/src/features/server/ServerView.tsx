@@ -142,7 +142,9 @@ export default function V4wh() {
     if (!tree) return m;
     const walk = (f: V4vl): string[] => {
       const ids: string[] = [];
-      for (const c of f.folders) ids.push(...walk(c));
+      // Không dùng push(...mảng): cả dự án ~160.000 mã → vượt giới hạn đối số, sập "Maximum call stack size
+      // exceeded" (9/10/2026, khi chọn / tải cả dự án).
+      for (const c of f.folders) for (const id of walk(c)) ids.push(id);
       for (const d of docsByPath.get(f.path) ?? []) ids.push(d.id);
       m.set(f.path, ids);
       return ids;
