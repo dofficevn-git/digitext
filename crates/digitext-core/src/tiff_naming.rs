@@ -70,13 +70,19 @@ impl TiffNaming {
     /// - văn bản Đảng `…-ĐU-QC-0001-2000` → 1 (dãy số đứng sau ký hiệu văn bản, trước năm);
     /// - mã cơ quan `H49.44-001-01-0042-003` / `….003` → 3 (STT cuối).
     pub fn doc_seq(&self, stem: &str) -> Option<u64> {
-        if self.has_doc_type(stem) {
-            let segs: Vec<&str> = stem.split('-').collect();
-            // Sau mã loại văn bản, đoạn số đầu tiên mà KHÔNG phải năm đứng cuối.
-            let n = segs.len();
-            if n >= 2 && all_digits(segs[n - 1]) && segs[n - 1].len() == 4 && all_digits(segs[n - 2]) {
-                return segs[n - 2].parse().ok();
+        // Quy tắc tên văn bản Đảng: <mã cơ quan>-<ký hiệu văn bản>-<số thứ tự văn bản>-<năm>
+        // (vd. A49.44-ĐU-QC-0001-2000; ký hiệu có thể nhiều đoạn) → lấy đoạn số đứng trước năm,
+        // không phụ thuộc danh sách mã loại.
+        let segs: Vec<&str> = stem.split('-').collect();
+        let n = segs.len();
+        if n >= 4 && segs[n - 1].len() == 4 && all_digits(segs[n - 1]) && all_digits(segs[n - 2]) && segs[1..n - 2].iter().any(|s| s.chars().any(char::is_alphabetic)) {
+            if let Ok(y) = segs[n - 1].parse::<u32>() {
+                if (1900..=2100).contains(&y) {
+                    return segs[n - 2].parse().ok();
+                }
             }
+        }
+        if self.has_doc_type(stem) {
             return segs.iter().rev().find(|s| all_digits(s)).and_then(|s| s.parse().ok());
         }
         let i = stem.rfind(['-', '.'])?;
@@ -468,6 +474,9 @@ mod tests {
         assert_eq!(n.doc_seq("H49.44-001-01-0042-003"), Some(3));
         assert_eq!(n.doc_seq("H49.44-001-01-0042.010"), Some(10));
         assert_eq!(n.doc_seq("Bien ban"), None);
+        // Ký hiệu không có trong danh sách mã (vd. Huyện uỷ "HU-TB") vẫn lấy đúng số trước năm.
+        assert_eq!(n.doc_seq("A49.44-HU-TB-0012-1998"), Some(12));
+        assert_eq!(n.doc_seq("A49.44-ĐU-CTr-0003-2001"), Some(3));
     }
 
     #[test]
