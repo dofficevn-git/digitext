@@ -66,6 +66,36 @@ impl TiffNaming {
         Ok(())
     }
 
+    /// Số thứ tự văn bản trong hồ sơ, đọc từ tên PDF:
+    /// - văn bản Đảng `…-ĐU-QC-0001-2000` → 1 (dãy số đứng sau ký hiệu văn bản, trước năm);
+    /// - mã cơ quan `H49.44-001-01-0042-003` / `….003` → 3 (STT cuối).
+    pub fn doc_seq(&self, stem: &str) -> Option<u64> {
+        if self.has_doc_type(stem) {
+            let segs: Vec<&str> = stem.split('-').collect();
+            // Sau mã loại văn bản, đoạn số đầu tiên mà KHÔNG phải năm đứng cuối.
+            let n = segs.len();
+            if n >= 2 && all_digits(segs[n - 1]) && segs[n - 1].len() == 4 && all_digits(segs[n - 2]) {
+                return segs[n - 2].parse().ok();
+            }
+            return segs.iter().rev().find(|s| all_digits(s)).and_then(|s| s.parse().ok());
+        }
+        let i = stem.rfind(['-', '.'])?;
+        let tail = &stem[i + 1..];
+        all_digits(tail).then(|| tail.parse().ok()).flatten()
+    }
+
+    /// Thứ tự PDF trong một hồ sơ: theo số thứ tự văn bản (`doc_seq`), cùng số (hoặc không đọc được số) thì
+    /// theo tên. Không xếp theo bảng chữ cái của tên — `ĐU-KHAC-0002` phải đứng sau `ĐU-QC-0001`.
+    pub fn cmp_files(&self, a: &str, b: &str) -> std::cmp::Ordering {
+        let (sa, sb) = (stem(a), stem(b));
+        match (self.doc_seq(sa), self.doc_seq(sb)) {
+            (Some(x), Some(y)) => x.cmp(&y).then_with(|| natural_cmp(a, b)),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => natural_cmp(a, b),
+        }
+    }
+
     fn has_doc_type(&self, stem: &str) -> bool {
         let up = stem.to_uppercase();
         let segs: Vec<&str> = up.split('-').collect();
@@ -234,7 +264,7 @@ pub fn group(naming: &TiffNaming, inputs: &[(Vec<String>, String)]) -> (Vec<Fold
     let mut owner: HashMap<String, &[String]> = HashMap::new();
     let mut collisions = Vec::new();
     for (dirs, mut idx) in groups {
-        idx.sort_by(|a, b| natural_cmp(&inputs[*a].1, &inputs[*b].1));
+        idx.sort_by(|a, b| naming.cmp_files(&inputs[*a].1, &inputs[*b].1));
         let output_dirs = naming.output_dirs(dirs, stem(&inputs[idx[0]].1));
         for &i in &idx {
             let key = format!("{}/{}", output_dirs.join("/"), stem(&inputs[i].1)).to_lowercase();
@@ -267,7 +297,7 @@ pub fn plan(naming: &TiffNaming, inputs: &[PlanInput]) -> Plan {
     let mut owner: HashMap<String, &[String]> = HashMap::new();
     let mut collisions = Vec::new();
     for (dirs, mut idx) in groups {
-        idx.sort_by(|a, b| natural_cmp(&inputs[*a].file_name, &inputs[*b].file_name));
+        idx.sort_by(|a, b| naming.cmp_files(&inputs[*a].file_name, &inputs[*b].file_name));
         let first = stem(&inputs[idx[0]].file_name);
         let out = naming.output_dirs(dirs, first);
         let mut seq = naming.start;
@@ -418,6 +448,26 @@ mod tests {
         assert!(group(&n, &g2).1.is_empty());
         // Cùng cha, khác thư mục hồ sơ nhưng ra cùng mã → vẫn trùng (phải báo).
         assert_eq!(group(&n, &g).1.len(), 1);
+    }
+
+    #[test]
+    fn xep_theo_so_thu_tu_van_ban_khong_theo_chu_cai() {
+        // Ví dụ thật Hộp 01 / Hồ sơ 02 (9/10/2026): KHAC-0002 phải sau QC-0001.
+        let n = TiffNaming::preset(TiffNamingRule::V1);
+        let ten = ["A49.44-ĐU-KHAC-0002-2000.pdf", "A49.44-ĐU-QC-0001-2000.pdf", "A49.44-ĐU-QC-0003-2000.pdf", "A49.44-ĐU-QC-0006-2005.pdf", "A49.44-ĐU-QC-0004-2003.pdf"];
+        let inp: Vec<PlanInput> = ten.iter().map(|t| PlanInput { source_dirs: v(&["R", "Hồ sơ 02"]), file_name: t.to_string(), pages: 2 }).collect();
+        let p = plan(&n, &inp);
+        let first = |i: usize| p.files[i].tiff_names[0].clone();
+        assert_eq!(first(1), "A49.44-ĐU-QC-0001-2000-001.tif");
+        assert_eq!(first(0), "A49.44-ĐU-KHAC-0002-2000-003.tif");
+        assert_eq!(first(2), "A49.44-ĐU-QC-0003-2000-005.tif");
+        assert_eq!(first(4), "A49.44-ĐU-QC-0004-2003-007.tif");
+        assert_eq!(first(3), "A49.44-ĐU-QC-0006-2005-009.tif");
+        // v1 đặt tên thư mục theo văn bản số 1.
+        assert_eq!(p.files[0].output_dirs, v(&["R", "A49.44-ĐU-QC-2000"]));
+        assert_eq!(n.doc_seq("H49.44-001-01-0042-003"), Some(3));
+        assert_eq!(n.doc_seq("H49.44-001-01-0042.010"), Some(10));
+        assert_eq!(n.doc_seq("Bien ban"), None);
     }
 
     #[test]
