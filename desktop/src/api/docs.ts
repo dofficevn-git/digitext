@@ -177,7 +177,7 @@ export async function docsForGroups(groups: { projectId: string; phong: string; 
   const out: V4ej[] = [];
   for (const [projectId, gs] of byProject) {
     for (let i = 0; i < gs.length; i += 500) {
-      out.push(...(await docsReviewGroupDocs({ projectId, groups: gs.slice(i, i + 500) })));
+      for (const d of await docsReviewGroupDocs({ projectId, groups: gs.slice(i, i + 500) })) out.push(d);
     }
   }
   return out;

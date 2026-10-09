@@ -271,7 +271,7 @@ export function V4kq(docs: V4ej[]): V4kc[] {
     for (const r of V1pq) {
       r.files.sort((a, b) => V4kn.compare(a.filename, b.filename));
       r.ids = r.files.map((f) => f.id);
-      g.ids.push(...r.ids);
+      for (const id of r.ids) g.ids.push(id);
       V4kl(g.tally, r.tally);
       V4km(g.counts, r.counts);
     }
@@ -332,7 +332,7 @@ export function groupsFromSummary(rows: ReviewSummaryRow[], files: ReadonlyMap<s
     const counts: V4k6 = { docs: r.files, pending: Math.max(0, r.files - r.approved - r.rejected), approved: r.approved, rejected: r.rejected };
     const row: V4kb = { key, projectId: r.projectId, phong: r.phong, hopSo: r.hop, hoSoSo: r.hoSo, loaded: fs !== undefined, files: fs ?? [], ids: fs ? fs.map((f) => f.id) : [], tally, counts };
     g.rows.push(row);
-    g.ids.push(...row.ids);
+    for (const id of row.ids) g.ids.push(id);
     V4kl(g.tally, tally);
     V4km(g.counts, counts);
   }
