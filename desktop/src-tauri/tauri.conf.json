@@ -39,7 +39,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "resources/pdfium/pdfium.dll": "pdfium.dll",
+      "resources/pdfium/LICENSE-pdfium.txt": "LICENSE-pdfium.txt"
+    }
   },
   "plugins": {
     "updater": {

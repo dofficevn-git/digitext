@@ -412,8 +412,12 @@ mod tests {
         let g: Vec<_> = inp.iter().map(|p| (p.source_dirs.clone(), p.file_name.clone())).collect();
         let (folders, coll) = group(&n, &g);
         assert_eq!((folders.len(), coll.len()), (2, 1));
+        // Giữ thư mục cha: hai thư mục cha khác nhau thì không còn trùng.
         n.mirror = true;
-        assert!(group(&n, &g).1.is_empty());
+        let g2: Vec<_> = vec![(v(&["R", "a", "x"]), "H49.44-ĐU-NQ-0001-2002.pdf".to_string()), (v(&["R", "b", "x"]), "H49.44-ĐU-NQ-0001-2002.pdf".to_string())];
+        assert!(group(&n, &g2).1.is_empty());
+        // Cùng cha, khác thư mục hồ sơ nhưng ra cùng mã → vẫn trùng (phải báo).
+        assert_eq!(group(&n, &g).1.len(), 1);
     }
 
     #[test]

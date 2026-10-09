@@ -222,6 +222,8 @@ struct Row {
     dpi: String,
     color: String,
     bytes: u64,
+    /// Số trang phải vẽ lại (nhiều lớp / JPEG 2000) thay vì rút ảnh gốc.
+    rendered: u32,
     error: String,
 }
 
@@ -336,6 +338,7 @@ async fn process_folder(
             dpi: String::new(),
             color: String::new(),
             bytes: 0,
+            rendered: 0,
             error: String::new(),
         };
         if !wait_pause().await {
@@ -356,8 +359,9 @@ async fn process_folder(
                     }
                 }
             }
-            let pdf = load_pdf(server, inp).await?;
-            let parsed = tauri::async_runtime::spawn_blocking(move || ParsedPdf::parse(&pdf).map_err(|e| e.to_string()))
+            let pdf = std::sync::Arc::new(load_pdf(server, inp).await?);
+            let pdf2 = pdf.clone();
+            let parsed = tauri::async_runtime::spawn_blocking(move || ParsedPdf::parse(&pdf2).map_err(|e| e.to_string()))
                 .await
                 .map_err(|e| e.to_string())??;
             let parsed = std::sync::Arc::new(parsed);
@@ -376,11 +380,19 @@ async fn process_folder(
                 if CANCEL.load(Ordering::SeqCst) {
                     return Err("người dùng dừng giữa tệp".into());
                 }
-                let p = parsed.clone();
+                let (p, raw) = (parsed.clone(), pdf.clone());
                 let page = k as u32 + 1;
-                let t = tauri::async_runtime::spawn_blocking(move || page_tiff(&p, page, opts).map_err(|e| e.to_string()))
-                    .await
-                    .map_err(|e| e.to_string())??;
+                let (t, ve) = tauri::async_runtime::spawn_blocking(move || match page_tiff(&p, page, opts) {
+                    Ok(t) => Ok((t, false)),
+                    // Trang nhiều lớp / JPEG 2000 / không có ảnh quét → vẽ lại 300 dpi bằng PDFium.
+                    Err(digitext_pdf::PdfError::NeedsRender { .. }) => render_page(&raw, page, opts).map(|t| (t, true)),
+                    Err(e) => Err(e.to_string()),
+                })
+                .await
+                .map_err(|e| e.to_string())??;
+                if ve {
+                    row.rendered += 1;
+                }
                 write_file(sh, &dir, name, &t.bytes, &inp.file_name).await?;
                 if k == 0 {
                     row.dpi = if t.dpi_guessed { format!("{}?", t.dpi) } else { t.dpi.to_string() };
@@ -403,8 +415,13 @@ async fn process_folder(
             }
             Err(e) => {
                 row.error = e.clone();
-                match inp.pages.filter(|n| *n > 0) {
-                    // Biết số trang (máy chủ) → các PDF sau vẫn đúng STT.
+                // TIFF đã ghi của tệp lỗi: xoá để không bàn giao bộ thiếu trang.
+                for (name, _) in row.tiffs.drain(..) {
+                    let _ = std::fs::remove_file(dir.join(name));
+                }
+                row.bytes = 0;
+                // Biết số trang (đọc được PDF, hoặc máy chủ báo) → các PDF sau vẫn đúng STT.
+                match Some(row.pages).filter(|n| *n > 0).or(inp.pages.filter(|n| *n > 0)) {
                     Some(n) => seq += n,
                     None if broken.is_none() => broken = Some(inp.file_name.clone()),
                     None => {}
@@ -420,6 +437,55 @@ async fn process_folder(
     }
 }
 
+/// Dpi khi phải vẽ lại trang (giống tool cũ).
+const RENDER_DPI: f32 = 300.0;
+
+/// PDFium (pdfium.dll đi kèm bộ cài, cạnh tệp chạy; bản dev lấy ở `src-tauri/resources/pdfium`). Nạp một lần.
+fn pdfium() -> Result<&'static pdfium_render::prelude::Pdfium, String> {
+    use pdfium_render::prelude::Pdfium;
+    static P: std::sync::OnceLock<Result<Pdfium, String>> = std::sync::OnceLock::new();
+    P.get_or_init(|| {
+        let mut dirs: Vec<PathBuf> = Vec::new();
+        if let Some(d) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
+            dirs.push(d.join("resources"));
+            dirs.push(d);
+        }
+        dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join("pdfium"));
+        let lib = dirs
+            .iter()
+            .map(Pdfium::pdfium_platform_library_name_at_path)
+            .find(|p| p.is_file())
+            .ok_or_else(|| "thiếu pdfium.dll (bộ vẽ trang PDF) — cài lại DigiText".to_string())?;
+        Pdfium::bind_to_library(&lib).map(Pdfium::new).map_err(|e| format!("nạp {}: {e}", lib.display()))
+    })
+    .as_ref()
+    .map_err(Clone::clone)
+}
+
+/// Vẽ lại một trang ở 300 dpi (không vẽ chú thích / ô chữ ký số) → TIFF RGB.
+fn render_page(pdf: &[u8], page_no: u32, opts: TiffOpts) -> Result<digitext_pdf::tach_tiff::PageTiff, String> {
+    use pdfium_render::prelude::PdfRenderConfig;
+    let p = pdfium()?;
+    let doc = p.load_pdf_from_byte_slice(pdf, None).map_err(|e| format!("PDFium mở PDF: {e}"))?;
+    let page = doc
+        .pages()
+        .get((page_no - 1) as _)
+        .map_err(|e| format!("PDFium trang {page_no}: {e}"))?;
+    let w = (page.width().value * RENDER_DPI / 72.0).round().max(1.0) as i32;
+    let cfg = PdfRenderConfig::new()
+        .set_target_width(w)
+        .set_maximum_height(20_000)
+        .render_form_data(false)
+        .render_annotations(false);
+    let img = page
+        .render_with_config(&cfg)
+        .and_then(|b| b.as_image())
+        .map_err(|e| format!("PDFium vẽ trang {page_no}: {e}"))?
+        .into_rgb8();
+    let (iw, ih) = img.dimensions();
+    digitext_pdf::tach_tiff::tiff_from_rgb(page_no, iw, ih, img.as_raw(), RENDER_DPI as u32, opts).map_err(|e| e.to_string())
+}
+
 fn csv(s: &str) -> String {
     if s.contains([',', '"', '\n']) {
         format!("\"{}\"", s.replace('"', "\"\""))
@@ -432,7 +498,7 @@ fn csv(s: &str) -> String {
 fn write_reports(root: &Path, rows: &[Row]) -> std::io::Result<PathBuf> {
     let ts = chrono::Local::now().format("%Y%m%d-%H%M%S");
     let report = root.join(format!("BIEN-BAN-TACH-TIFF-{ts}.csv"));
-    let mut s = String::from("\u{feff}Tệp PDF,Thư mục nguồn,Thư mục TIFF,Trạng thái,Số trang,Số TIFF,TIFF đầu,TIFF cuối,Dpi,Màu,Dung lượng (MB),Lỗi\n");
+    let mut s = String::from("\u{feff}Tệp PDF,Thư mục nguồn,Thư mục TIFF,Trạng thái,Số trang,Số TIFF,TIFF đầu,TIFF cuối,Dpi,Màu,Trang vẽ lại,Dung lượng (MB),Lỗi\n");
     let mut man = String::new();
     for r in rows {
         let st = match r.status {
@@ -452,6 +518,7 @@ fn write_reports(root: &Path, rows: &[Row]) -> std::io::Result<PathBuf> {
                 csv(r.tiffs.last().map_or("", |t| t.0.as_str())),
                 r.dpi.clone(),
                 r.color.clone(),
+                r.rendered.to_string(),
                 format!("{:.1}", r.bytes as f64 / 1e6),
                 csv(&r.error),
             ]
@@ -654,5 +721,36 @@ mod tests {
         std::thread::sleep(Duration::from_millis(1100));
         assert_eq!(run(&args, &out).ok, 3);
         let _ = std::fs::remove_dir_all(&tmp);
+    }
+}
+
+#[cfg(test)]
+mod thu_that {
+    use super::*;
+    use digitext_core::tiff_naming::{TiffNaming, TiffNamingRule};
+    /// `DIGITEXT_TIFF_SRC=<thư mục PDF> DIGITEXT_TIFF_OUT=<thư mục xuất> cargo test thu_thu_muc_that -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn thu_thu_muc_that() {
+        let src = PathBuf::from(std::env::var("DIGITEXT_TIFF_SRC").unwrap());
+        let out = PathBuf::from(std::env::var("DIGITEXT_TIFF_OUT").unwrap());
+        std::fs::create_dir_all(&out).unwrap();
+        let inputs: Vec<TiffInput> = scan_local(&src)
+            .into_iter()
+            .map(|f| TiffInput { source_dirs: f.source_dirs, file_name: f.file_name, path: Some(f.path), doc_id: None, pages: None })
+            .collect();
+        let args = RunArgs {
+            inputs,
+            naming: TiffNaming::preset(TiffNamingRule::V2),
+            out_dir: out.to_string_lossy().into_owned(),
+            on_exist: "overwrite".into(),
+            force_rgb: false,
+            uncompressed: false,
+            concurrency: Some(4),
+        };
+        let (folders, _) = plan_of(&args.naming, &args.inputs);
+        let t0 = std::time::Instant::now();
+        let r = tauri::async_runtime::block_on(run_batch(&args, &folders, &out, &|_| {}, None));
+        println!("ok={} skipped={} failed={} pages={} trong {:.0}s · {:?}", r.ok, r.skipped, r.failed, r.pages, t0.elapsed().as_secs_f32(), r.failures);
     }
 }
