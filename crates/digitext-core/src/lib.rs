@@ -8,6 +8,7 @@ pub mod permission;
 pub mod review_status;
 pub mod role;
 pub mod text;
+pub mod tiff_naming;
 pub use doc_status::{DocStatus, Tgl};
 pub use field::{Tgr, VanBanField};
 pub use job::{JobKind, JobStatus, Tgm, Tgn};

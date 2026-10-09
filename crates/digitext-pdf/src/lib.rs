@@ -4,6 +4,7 @@ mod glyphless;
 mod icc;
 pub mod pdfa;
 pub mod manual;
+pub mod tach_tiff;
 use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Dictionary, Document, Object, Stream, StringFormat};
 #[derive(Debug, Clone)]
