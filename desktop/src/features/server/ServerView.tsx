@@ -85,6 +85,8 @@ export default function V4wh() {
   const dlw = useDownloads();
   const [loaiTai, setLoaiTai] = useState<DownloadKind>("original");
   const firstOpen = useRef(false);
+  // Đang nạp danh sách tệp cho nhiều hồ sơ (chọn / tải cả dự án: 11 lô, ~nửa phút) — báo tiến độ, khoá nút.
+  const [nap, setNap] = useState<{ hoSo: number; done: number; total: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!isTauri() && !import.meta.env.DEV) return;
@@ -118,7 +120,13 @@ export default function V4wh() {
       const cur = docsRef.current;
       const can = leavesUnder(f, groupOf).filter((l) => !cur.has(l.path));
       if (can.length === 0) return cur;
-      const docs = await docsForGroups(can.map((l) => groupOf.get(l.path)!));
+      const lon = can.length > 20;
+      let docs: V4ej[];
+      try {
+        docs = await docsForGroups(can.map((l) => groupOf.get(l.path)!), lon ? (done, total) => setNap({ hoSo: can.length, done, total }) : undefined);
+      } finally {
+        if (lon) setNap(null);
+      }
       const moi = new Map(docsRef.current);
       for (const l of can) moi.set(l.path, []);
       const col = new Intl.Collator("vi", { numeric: true });
@@ -202,6 +210,7 @@ export default function V4wh() {
   };
   // Tích chọn cả thư mục: nạp tệp bên dưới trước (mỗi lượt tối đa 500 hồ sơ).
   const chonThuMuc = async (f: V4vl) => {
+    if (nap) return;
     try {
       const m = await napTep(f);
       const ids = filesUnder(f, m).map((x) => x.doc.id);
@@ -211,6 +220,7 @@ export default function V4wh() {
     }
   };
   const taiThuMuc = async (f: V4vl) => {
+    if (nap) return;
     try {
       const m = await napTep(f);
       await taiXuong(filesUnder(f, m), `trong "${f.name}"`);
@@ -341,7 +351,7 @@ export default function V4wh() {
               {sub.signedCount > 0 && <Badge tone="ok">{n(sub.signedCount)} đã ký</Badge>} {sub.pdfaOnlyCount > 0 && <Badge tone="gray">{n(sub.pdfaOnlyCount)} PDF/A</Badge>}
             </td>
             <td>
-              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dlw.running || sub.docCount === 0} onClick={() => void taiThuMuc(sub)} />
+              <IconButton label={`Tải cả ${n(sub.docCount)} tệp trong ${sub.name}`} icon="taiVe" size="sm" disabled={dlw.running || !!nap || sub.docCount === 0} onClick={() => void taiThuMuc(sub)} />
             </td>
           </tr>,
         );
@@ -374,7 +384,7 @@ export default function V4wh() {
           (
             <>
               <Select size="md" value={loaiTai} onChange={(v) => setLoaiTai(v as DownloadKind)} options={[{ value: "original", label: "Bản gốc" }, { value: "pdfa", label: "PDF/A chưa ký số" }, { value: "signed", label: "Đã ký số" }]} className="w-44" aria-label="Loại bản tải" />
-              <Button variant="primary" icon="taiVe" disabled={selected.length === 0 || dlw.running} onClick={() => void taiXuong(selected, "đã chọn")}>
+              <Button variant="primary" icon="taiVe" disabled={selected.length === 0 || dlw.running || !!nap} onClick={() => void taiXuong(selected, "đã chọn")}>
                 Tải xuống ({n(selected.length)})
               </Button>
               <Menu
@@ -442,6 +452,11 @@ export default function V4wh() {
               {selected.length > 0 && (
                 <span className="text-fg">
                   Đã chọn {n(selected.length)} tệp ({n(selectedPages)} trang)
+                </span>
+              )}
+              {nap && (
+                <span className="font-medium text-run" role="status">
+                  Đang nạp danh sách tệp của {n(nap.hoSo)} hồ sơ… lô {n(Math.min(nap.done + 1, nap.total))}/{n(nap.total)}
                 </span>
               )}
               {loading && tree && <span className="ml-auto text-xs">Đang cập nhật…</span>}

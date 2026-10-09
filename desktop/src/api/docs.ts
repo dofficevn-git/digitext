@@ -170,14 +170,28 @@ export interface ReviewSummaryRow {
   signedDocs: number;
   pdfaOnlyDocs: number;
 }
-/** Nạp tài liệu cho nhiều hồ sơ, tự chia lô ≤ 500 hồ sơ mỗi lượt và gộp theo dự án. */
-export async function docsForGroups(groups: { projectId: string; phong: string; hop: string; hoSo: string }[]): Promise<V4ej[]> {
+/** Nạp tài liệu cho nhiều hồ sơ, tự chia lô ≤ 500 hồ sơ mỗi lượt và gộp theo dự án. `onProgress(lô xong, tổng lô)`
+ *  để màn hình báo tiến độ — cả dự án LTLSBN là 11 lô, ~160.000 tệp, mất cỡ nửa phút. */
+export async function docsForGroups(
+  groups: { projectId: string; phong: string; hop: string; hoSo: string }[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<V4ej[]> {
   const byProject = new Map<string, { phong: string; hop: string; hoSo: string }[]>();
-  for (const g of groups) byProject.set(g.projectId, [...(byProject.get(g.projectId) ?? []), { phong: g.phong, hop: g.hop, hoSo: g.hoSo }]);
+  for (const g of groups) {
+    const ds = byProject.get(g.projectId);
+    const it = { phong: g.phong, hop: g.hop, hoSo: g.hoSo };
+    if (ds) ds.push(it);
+    else byProject.set(g.projectId, [it]);
+  }
+  let total = 0;
+  for (const gs of byProject.values()) total += Math.ceil(gs.length / 500);
+  let done = 0;
+  onProgress?.(0, total);
   const out: V4ej[] = [];
   for (const [projectId, gs] of byProject) {
     for (let i = 0; i < gs.length; i += 500) {
       for (const d of await docsReviewGroupDocs({ projectId, groups: gs.slice(i, i + 500) })) out.push(d);
+      onProgress?.(++done, total);
     }
   }
   return out;
