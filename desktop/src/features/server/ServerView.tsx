@@ -88,20 +88,27 @@ export default function V4wh() {
   // Đang nạp danh sách tệp cho nhiều hồ sơ (chọn / tải cả dự án: 11 lô, ~nửa phút) — báo tiến độ, khoá nút.
   const [nap, setNap] = useState<{ hoSo: number; done: number; total: number } | null>(null);
 
-  const load = useCallback(async () => {
+  // `xoaTep`: chỉ nút Làm mới xoá danh sách tệp đã nạp. Nạp lại tự động (máy chủ báo OCR / ký / đẩy tệp —
+  // vài chục giây một lần khi hệ thống đang chạy) GIỮ tệp đã nạp: trước 9/10/2026 lần nào cũng xoá, nên chọn /
+  // tải cả dự án (nạp ~160.000 tệp, nửa phút) bị xoá trước khi kịp xong — ô chọn không tích được, Tải xuống (0).
+  const load = useCallback(async (xoaTep = false) => {
     if (!isTauri() && !import.meta.env.DEV) return;
     setLoading(true);
     try {
       // Số liệu gộp theo hồ sơ (vài nghìn dòng) thay cho cả cây 160.000 tài liệu; tệp nạp khi mở.
       setSummary(await docsReviewSummary({}));
-      setDocsByPath(new Map());
+      if (xoaTep) {
+        docsRef.current = new Map();
+        setDocsByPath(docsRef.current);
+      }
     } catch (e) {
       notifyError(e, "tải kho máy chủ");
     } finally {
       setLoading(false);
     }
   }, []);
-  V41p(load, { topics: ["docs", "ocr", "sign", "uploadBatches"] });
+  const napLai = useCallback(() => load(false), [load]);
+  V41p(napLai, { topics: ["docs", "ocr", "sign", "uploadBatches"] });
 
   const built = useMemo(() => (summary ? treeFromSummary(summary) : null), [summary]);
   const tree = built?.root ?? null;
@@ -392,7 +399,7 @@ export default function V4wh() {
                   { label: "Soát PDF/A lỗi", icon: "kiemTraPdfa", onSelect: () => void soatPdfa(), disabled: pdfaBusy },
                   { label: "Ghép lại PDF/A (bản cũ chưa đạt 2b)", icon: "ghepLai", onSelect: () => void ghepLaiPdfa(), disabled: ghepLai },
                   "-",
-                  { label: "Làm mới", icon: "lamMoi", onSelect: () => void load(), disabled: loading },
+                  { label: "Làm mới", icon: "lamMoi", onSelect: () => void load(true), disabled: loading || !!nap },
                 ]}
               />
             </>
@@ -465,7 +472,7 @@ export default function V4wh() {
               loading ? (
                 <Skeleton.Rows rows={6} cols={4} />
               ) : (
-                <EmptyState compact title="Chưa nạp được kho máy chủ" action={<Button onClick={() => void load()}>Thử lại</Button>} />
+                <EmptyState compact title="Chưa nạp được kho máy chủ" action={<Button onClick={() => void load(true)}>Thử lại</Button>} />
               )
             ) : tree.docCount === 0 ? (
               <EmptyState compact icon="mayChu" title="Chưa có tài liệu trên máy chủ" description="Máy quản trị gom rồi đẩy lên ở màn Đưa lên máy chủ." />
