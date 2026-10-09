@@ -51,6 +51,7 @@ export const NAV_TREE: V46s[] = [
       { id: "giaoviec", label: "Giao việc", gate: "workManage", leaf: { kind: "view", view: "workManage" }, keywords: "goi viec xac nhan" },
       { id: "viec", label: "Việc của tôi", gate: "work", leaf: { kind: "view", view: "work" }, badge: "myWork" },
       { id: "kyso", label: "Ký số", gate: "sign", leaf: { kind: "view", view: "sign" }, keywords: "token chu ky" },
+      { id: "tachtiff", label: "Tách TIFF", gate: "tiff", leaf: { kind: "view", view: "tiff" }, keywords: "tiff dang tach trang anh" },
       { id: "donggoi", label: "Đóng gói", gate: "package", leaf: { kind: "view", view: "package" }, keywords: "sip aip dip goi tin" },
     ],
   },

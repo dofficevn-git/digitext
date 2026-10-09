@@ -212,6 +212,50 @@ fn stem(file_name: &str) -> &str {
     }
 }
 
+/// Một thư mục nguồn trong đợt tách: các PDF (chỉ số đầu vào, đã sắp theo tên) và thư mục xuất.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderPlan {
+    pub source_dirs: Vec<String>,
+    pub output_dirs: Vec<String>,
+    pub files: Vec<usize>,
+}
+
+/// Gom PDF theo thư mục nguồn (không cần số trang). `inputs`: (chuỗi thư mục nguồn, tên tệp PDF).
+/// Trả thêm danh sách xung đột: hai thư mục nguồn khác nhau ra cùng thư mục xuất và có PDF trùng tên
+/// (→ chắc chắn trùng tên TIFF). Trong cùng thư mục nguồn tên PDF đã khác nhau nên không trùng.
+pub fn group(naming: &TiffNaming, inputs: &[(Vec<String>, String)]) -> (Vec<FolderPlan>, Vec<String>) {
+    use std::collections::{BTreeMap, HashMap};
+    let mut groups: BTreeMap<&[String], Vec<usize>> = BTreeMap::new();
+    for (i, (dirs, _)) in inputs.iter().enumerate() {
+        groups.entry(dirs.as_slice()).or_default().push(i);
+    }
+    let mut out = Vec::with_capacity(groups.len());
+    let mut owner: HashMap<String, &[String]> = HashMap::new();
+    let mut collisions = Vec::new();
+    for (dirs, mut idx) in groups {
+        idx.sort_by(|a, b| natural_cmp(&inputs[*a].1, &inputs[*b].1));
+        let output_dirs = naming.output_dirs(dirs, stem(&inputs[idx[0]].1));
+        for &i in &idx {
+            let key = format!("{}/{}", output_dirs.join("/"), stem(&inputs[i].1)).to_lowercase();
+            match owner.get(key.as_str()) {
+                Some(o) if *o != dirs => collisions.push(format!(
+                    "{}: thư mục \"{}\" và \"{}\" cùng ra \"{}\"",
+                    inputs[i].1,
+                    o.join("/"),
+                    dirs.join("/"),
+                    output_dirs.join("/")
+                )),
+                _ => {
+                    owner.insert(key, dirs);
+                }
+            }
+        }
+        out.push(FolderPlan { source_dirs: dirs.to_vec(), output_dirs, files: idx });
+    }
+    (out, collisions)
+}
+
 /// Lập kế hoạch tên cho cả đợt: gom theo thư mục nguồn, sắp PDF theo tên, đánh STT liên tục trong thư mục.
 pub fn plan(naming: &TiffNaming, inputs: &[PlanInput]) -> Plan {
     use std::collections::{BTreeMap, HashMap};
@@ -365,6 +409,11 @@ mod tests {
             PlanInput { source_dirs: v(&["R", "b"]), file_name: "H49.44-ĐU-NQ-0001-2002.pdf".into(), pages: 1 },
         ];
         assert_eq!(plan(&n, &inp).collisions.len(), 1);
+        let g: Vec<_> = inp.iter().map(|p| (p.source_dirs.clone(), p.file_name.clone())).collect();
+        let (folders, coll) = group(&n, &g);
+        assert_eq!((folders.len(), coll.len()), (2, 1));
+        n.mirror = true;
+        assert!(group(&n, &g).1.is_empty());
     }
 
     #[test]

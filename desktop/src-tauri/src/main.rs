@@ -37,6 +37,7 @@ mod storage;
 mod submission;
 mod sync;
 mod telemetry;
+mod tiff;
 use tauri::Manager;
 fn main() {
     scanner::f_2ib();
@@ -182,6 +183,11 @@ fn main() {
             signing::sign_batch_cancel,
             signing::sign_batch_pause,
             signing::sign_load_stamp,
+            tiff::tiff_scan_local,
+            tiff::tiff_preview,
+            tiff::tiff_run,
+            tiff::tiff_cancel,
+            tiff::tiff_pause,
             signing::sign_cert_info,
             signing::sign_retry,
             progress_report::report_project_progress,
