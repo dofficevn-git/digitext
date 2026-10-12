@@ -24,6 +24,14 @@ pub enum ManualBlock {
     Gap(f32),
     /// Chân trang nhỏ, giữa, xám.
     Footer(String),
+    /// Đầu văn bản hành chính hai cột: trái (tên cơ quan, số), phải (quốc hiệu, địa danh ngày tháng).
+    /// Dòng bắt đầu bằng `*` in đậm (dấu `*` bị bỏ).
+    /// `dated`: dòng địa danh, ngày tháng (nghiêng) dưới gạch của cột phải.
+    OfficialHeader { left: Vec<String>, right: Vec<String>, dated: String },
+    /// Đoạn văn căn trái, xuống dòng tự động.
+    Paragraph(String),
+    /// Khối ký hai cột: (chức danh, ghi chú nhỏ, họ tên) — để trống tên thì chừa chỗ ký.
+    Signatures { left: (String, String, String), right: (String, String, String) },
 }
 
 const MARGIN: f32 = 50.0;
@@ -103,7 +111,25 @@ impl<'a> Layout<'a> {
     fn wrap(&self, s: &str, size: f32, width: f32) -> Result<Vec<String>, PdfError> {
         let mut out = Vec::new();
         for para in s.split('\n') {
-            out.extend(f_2rm(&self.face, para, size, width, "")?);
+            for line in f_2rm(&self.face, para, size, width, "")? {
+                // Từ dài không có dấu cách (tên tệp, mã băm, OBJID) → cắt theo ký tự cho vừa ô.
+                if self.width(&line, size)? <= width {
+                    out.push(line);
+                    continue;
+                }
+                let mut cur = String::new();
+                for ch in line.chars() {
+                    cur.push(ch);
+                    if self.width(&cur, size)? > width && cur.chars().count() > 1 {
+                        let last = cur.pop().expect("có ký tự");
+                        out.push(std::mem::take(&mut cur));
+                        cur.push(last);
+                    }
+                }
+                if !cur.is_empty() {
+                    out.push(cur);
+                }
+            }
         }
         Ok(out)
     }
@@ -190,6 +216,16 @@ fn clean_block(face: &ttf_parser::Face<'_>, b: &ManualBlock) -> ManualBlock {
         },
         ManualBlock::Gap(g) => ManualBlock::Gap(*g),
         ManualBlock::Footer(t) => ManualBlock::Footer(c(t)),
+        ManualBlock::OfficialHeader { left, right, dated } => ManualBlock::OfficialHeader {
+            left: left.iter().map(|s| clean(face, s, true)).collect(),
+            right: right.iter().map(|s| clean(face, s, true)).collect(),
+            dated: clean(face, dated, true),
+        },
+        ManualBlock::Paragraph(t) => ManualBlock::Paragraph(c(t)),
+        ManualBlock::Signatures { left, right } => {
+            let f = |t: &(String, String, String)| (clean(face, &t.0, true), clean(face, &t.1, true), clean(face, &t.2, true));
+            ManualBlock::Signatures { left: f(left), right: f(right) }
+        }
     }
 }
 
@@ -262,6 +298,81 @@ pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, Pdf
                     let cells: Vec<_> = r.iter().enumerate().map(|(i, c)| (xs[i].0, xs[i].1, c.clone(), false, None)).collect();
                     lay.row(&cells, BODY)?;
                 }
+            }
+            ManualBlock::OfficialHeader { left, right, dated } => {
+                all_text.extend(left.iter().chain(right).cloned());
+                all_text.push(dated.clone());
+                let col = cw / 2.0;
+                let top = lay.y;
+                let mut lowest = top;
+                for (lines, x0) in [(left, MARGIN), (right, MARGIN + col)] {
+                    let mut y = top;
+                    for l in lines {
+                        let (bold, s) = match l.strip_prefix('*') {
+                            Some(s) => (true, s),
+                            None => (false, l.as_str()),
+                        };
+                        let size = if bold { 10.5 } else { 10.0 };
+                        for w in lay.wrap(s, size, col - 6.0)? {
+                            y -= 14.0;
+                            let tw = lay.width(&w, size)?;
+                            let x = x0 + ((col - tw) / 2.0).max(0.0);
+                            let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                            page.text(face, &w, size, x, y, bold, BLACK)?;
+                        }
+                    }
+                    // Gạch ngắn dưới dòng cuối mỗi cột, kiểu văn bản hành chính.
+                    if !lines.is_empty() {
+                        let (face_w, page) = (60.0, lay.pages.last_mut().expect("có trang"));
+                        page.hline(x0 + (col - face_w) / 2.0, x0 + (col + face_w) / 2.0, y - 6.0, BLACK, 0.5);
+                    }
+                    lowest = lowest.min(y - 6.0);
+                    if x0 > MARGIN && !dated.is_empty() {
+                        let y2 = y - 22.0;
+                        let tw = lay.width(dated, 10.0)?;
+                        let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                        page.text(face, dated, 10.0, x0 + ((col - tw) / 2.0).max(0.0), y2, false, BLACK)?;
+                        lowest = lowest.min(y2 - 4.0);
+                    }
+                }
+                lay.y = lowest - 10.0;
+            }
+            ManualBlock::Paragraph(t) => {
+                all_text.push(t.clone());
+                for line in lay.wrap(t, BODY + 0.5, cw)? {
+                    lay.ensure(LEAD + 1.0);
+                    lay.y -= LEAD + 1.0;
+                    let y = lay.y;
+                    let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                    page.text(face, &line, BODY + 0.5, MARGIN, y, false, BLACK)?;
+                }
+                lay.y -= 3.0;
+            }
+            ManualBlock::Signatures { left, right } => {
+                // Chừa cả chỗ cho chân trang để khối ký không bị tách riêng chân trang sang trang mới.
+                lay.ensure(150.0);
+                let col = cw / 2.0;
+                let top = lay.y - 10.0;
+                for (t, x0) in [(left, MARGIN), (right, MARGIN + col)] {
+                    all_text.extend([t.0.clone(), t.1.clone(), t.2.clone()]);
+                    let mut y = top;
+                    for (s, size, bold, gap) in [(&t.0, 10.5, true, 14.0), (&t.1, 9.0, false, 13.0)] {
+                        if s.is_empty() {
+                            continue;
+                        }
+                        y -= gap;
+                        let tw = lay.width(s, size)?;
+                        let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                        page.text(face, s, size, x0 + ((col - tw) / 2.0).max(0.0), y, bold, BLACK)?;
+                    }
+                    if !t.2.is_empty() {
+                        let y2 = top - 100.0;
+                        let tw = lay.width(&t.2, 10.5)?;
+                        let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                        page.text(face, &t.2, 10.5, x0 + ((col - tw) / 2.0).max(0.0), y2, true, BLACK)?;
+                    }
+                }
+                lay.y = top - 110.0;
             }
             ManualBlock::Footer(t) => {
                 all_text.push(t.clone());

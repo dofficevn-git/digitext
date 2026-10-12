@@ -261,6 +261,45 @@ pub fn f_2q1(
         archive_time_unix,
     })
 }
+/// Thông tin người ký (chữ ký cuối của PDF) — để báo cáo kiểm tra gói tin của phần mềm khác.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SignerInfo {
+    /// CN (hoặc O) của chứng thư người ký.
+    pub signer: String,
+    /// Chủ thể đầy đủ (RFC 4514).
+    pub subject: String,
+    /// CN (hoặc O) của đơn vị cấp chứng thư.
+    pub issuer: String,
+    pub not_before_unix: i64,
+    pub not_after_unix: i64,
+}
+
+pub fn signer_info(pdf: &[u8]) -> Result<SignerInfo, SignError> {
+    let (a, b) = f_2f8(pdf)?;
+    let (s, e) = f_1cu(pdf, a, b).ok_or_else(|| SignError::Pdf("không thấy ô /Contents của chữ ký".into()))?;
+    let der = f_1gu(&pdf[s..e]).ok_or_else(|| SignError::Pdf("/Contents không phải hex".into()))?;
+    let sd = cms::f_1zy(&der)?;
+    let cert = cms::signer_cert(&sd)?;
+    let issuer_cn = {
+        let tmp = Certificate {
+            tbs_certificate: x509_cert::TbsCertificate {
+                subject: cert.tbs_certificate.issuer.clone(),
+                ..cert.tbs_certificate.clone()
+            },
+            ..cert.clone()
+        };
+        f_2fg(&tmp)
+    };
+    let v = &cert.tbs_certificate.validity;
+    Ok(SignerInfo {
+        signer: f_2fg(&cert),
+        subject: cert.tbs_certificate.subject.to_string(),
+        issuer: issuer_cn,
+        not_before_unix: v.not_before.to_unix_duration().as_secs() as i64,
+        not_after_unix: v.not_after.to_unix_duration().as_secs() as i64,
+    })
+}
+
 fn f_29x(
     timestamp_trusted: bool,
     timestamp_time_unix: Option<i64>,
@@ -674,6 +713,24 @@ fn f_1ig(pdf: &[u8], r_4z2: Option<&Tpv>, placement: Option<SignPlacement>) -> R
     Ok(r_4yv)
 }
 fn f_2f8(r_4z7: &[u8]) -> Result<(usize, usize), SignError> {
+    match f_2f8_acroform(r_4z7) {
+        Ok(r) => Ok(r),
+        // PDF do phần mềm khác ký (iTextSharp…): /AcroForm, /Fields, /V có thể là từ điển trực tiếp hoặc
+        // dict chữ ký nằm trong object stream → tìm thẳng khối object chứa /ByteRange cuối cùng.
+        Err(e) => f_2f8_scan(r_4z7).ok_or(e),
+    }
+}
+/// Khối `N G obj … endobj` chứa `/ByteRange` cuối cùng của tệp (chữ ký mới nhất).
+fn f_2f8_scan(pdf: &[u8]) -> Option<(usize, usize)> {
+    let at = pdf.windows(10).rposition(|w| w == b"/ByteRange")?;
+    let head = &pdf[..at];
+    let obj = head.windows(4).rposition(|w| w == b" obj" || w == b"\nobj" || w == b"\robj")?;
+    // Lùi về đầu dòng "N G obj".
+    let start = head[..obj].iter().rposition(|b| *b == b'\n' || *b == b'\r').map(|i| i + 1).unwrap_or(0);
+    let end = at + find(&pdf[at..], b"endobj")?;
+    Some((start, end))
+}
+fn f_2f8_acroform(r_4z7: &[u8]) -> Result<(usize, usize), SignError> {
     let r_4z8 =
         Document::load_mem(r_4z7).map_err(|e| SignError::Pdf(format!("nạp PDF: {e}")))?;
     let r_4ze = r_4z8

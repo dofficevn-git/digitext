@@ -37,6 +37,7 @@ mod storage;
 mod submission;
 mod sync;
 mod telemetry;
+mod pkgcheck;
 mod tiff;
 use tauri::Manager;
 fn main() {
@@ -183,6 +184,9 @@ fn main() {
             signing::sign_batch_cancel,
             signing::sign_batch_pause,
             signing::sign_load_stamp,
+            pkgcheck::pkgcheck_run,
+            pkgcheck::pkgcheck_cancel,
+            pkgcheck::pkgcheck_report,
             tiff::tiff_scan_local,
             tiff::tiff_preview,
             tiff::tiff_run,

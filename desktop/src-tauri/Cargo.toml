@@ -10,6 +10,7 @@ publish = false
 digitext-core = { path = "../../crates/digitext-core" }
 digitext-extimport = { path = "../../crates/digitext-extimport" }
 digitext-pdf = { path = "../../crates/digitext-pdf" }
+digitext-pkgcheck = { path = "../../crates/digitext-pkgcheck" }
 tauri = { version = "2", features = [] }
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }

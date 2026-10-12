@@ -1,0 +1,19 @@
+[package]
+name = "digitext-pkgcheck"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# KIỂM TRA GÓI TIN (SIP/AIP/DIP) do phần mềm KHÁC tạo — theo TT 05/2025/TT-BNV + E-ARK CSIP:
+# cấu trúc, METS (tham chiếu, mã băm, kích thước), EAD (trường bắt buộc, bảng mã, đối chiếu schema đi kèm),
+# PREMIS, từng tệp PDF (PDF/A, lớp chữ, dpi, chữ ký số) → kết quả + báo cáo PDF.
+
+[dependencies]
+chrono = { workspace = true }
+digitext-extimport = { path = "../digitext-extimport" }
+digitext-pdf = { path = "../digitext-pdf" }
+digitext-sign-verify = { path = "../digitext-sign-verify" }
+quick-xml = { workspace = true }
+serde = { workspace = true }
+sha2 = { workspace = true }
+zip = { workspace = true }
