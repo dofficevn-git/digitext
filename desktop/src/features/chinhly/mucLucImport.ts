@@ -35,6 +35,12 @@ export function chuanTenNhom(s: string): string {
     .replace(/\s+[-–]\s*|\s*[-–]\s+/g, " - ")
     .trim();
 }
+/** THBQ (tên trong Danh mục) từ 20 năm trở lên: "20 năm", "50 năm", "70 năm"… Không có số năm ("Đánh giá lại",
+ *  "Theo tuổi thọ công trình") → false; vĩnh viễn xét riêng theo `vinhVien`. */
+export function tuHaiMuoiNam(thbq: string): boolean {
+  const m = /(\d+)\s*năm/i.exec(thbq.normalize("NFC"));
+  return !!m && Number(m[1]) >= 20;
+}
 /** Tên mảng là "Vấn đề chung" (không phân biệt hoa thường, khoảng trắng, dấu chấm cuối). */
 export function laVanDeChung(ten: string): boolean {
   return ten.normalize("NFC").toLowerCase().replace(/\s+/g, " ").replace(/[.:;]+$/, "").trim() === MANG_VAN_DE_CHUNG.toLowerCase();
@@ -294,8 +300,17 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     if (mangHienTai) mangHienTai.soHoSo++;
     // Số tờ chỉ nhận số tự nhiên (anh Hiếu 5/10/2026): "01 quyển", "3,5", "12 tờ"… là lỗi chặn nhập, tô đỏ ở tệp đánh dấu.
     const soTo = lay(r, "soTo").trim();
-    if (soTo && !/^\d+$/.test(soTo)) loi.push(`Số tờ "${soTo}" không hợp lệ — chỉ ghi số tự nhiên (vd. 12), bỏ chữ như "quyển", "tờ"`);
+    // Tài liệu bảo quản từ 20 năm trở lên (kể cả vĩnh viễn) PHẢI đánh số tờ — không để trống, không ghi "quyển"
+    // (anh Hiếu 12/10/2026).
+    const phaiDanhSoTo = vinhVien === true || (thbq !== null && tuHaiMuoiNam(thbq));
+    if (soTo && !/^\d+$/.test(soTo))
+      loi.push(
+        phaiDanhSoTo
+          ? `Số tờ "${soTo}" không hợp lệ — tài liệu bảo quản từ 20 năm trở lên phải đánh số tờ (ghi số, vd. 12), không ghi "quyển"`
+          : `Số tờ "${soTo}" không hợp lệ — chỉ ghi số tự nhiên (vd. 12), bỏ chữ như "quyển", "tờ"`,
+      );
     else if (soTo && +soTo === 0) loi.push("Số tờ phải lớn hơn 0");
+    else if (!soTo && phaiDanhSoTo) loi.push(`Thiếu số tờ — tài liệu bảo quản ${thbq} phải đánh số tờ`);
     out.rows.push({ dong, hopSo: hopHienTai, hoSoSo, tieuDe, thoiGianGoc, soTo, thbqGoc, thbq, vinhVien, ghiChu: lay(r, "ghiChu"), phongBan: pbHienTai, mang: mangHienTai, tg, loi });
   }
 
