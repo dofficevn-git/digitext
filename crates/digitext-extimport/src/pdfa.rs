@@ -110,23 +110,32 @@ fn producer_of(bytes: &[u8]) -> Option<String> {
 /// Soi MỘT tệp (chưa chạy veraPDF).
 pub fn inspect(path: &Path) -> PdfaReport {
     let name = path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+    match std::fs::read(path) {
+        Ok(b) => inspect_bytes(&path.display().to_string(), &name, &b),
+        Err(e) => {
+            let mut r = inspect_bytes(&path.display().to_string(), &name, &[]);
+            r.error = Some(format!("không đọc được tệp: {e}"));
+            r.verdict = "KHÔNG ĐỌC ĐƯỢC".into();
+            r
+        }
+    }
+}
+
+/// Như `inspect` nhưng trên nội dung đã có trong bộ nhớ (tệp nằm trong gói zip).
+pub fn inspect_bytes(path: &str, name: &str, bytes: &[u8]) -> PdfaReport {
     let mut r = PdfaReport {
-        path: path.display().to_string(), name, bytes: 0, pdf_version: String::new(), declared: None,
+        path: path.to_string(), name: name.to_string(), bytes: 0, pdf_version: String::new(), declared: None,
         has_xmp: false, has_output_intent: false, pages: 0, text_pages: 0, min_dpi: None, min_bit_depth: None,
         max_page_cm: None, is_map: false, signed: false, producer: None, verdict: String::new(), looks_pdfa: false, problems: Vec::new(),
         verapdf: None, error: None,
     };
-    let bytes = match std::fs::read(path) {
-        Ok(b) => b,
-        Err(e) => {
-            r.error = Some(format!("không đọc được tệp: {e}"));
-            r.verdict = "KHÔNG ĐỌC ĐƯỢC".into();
-            return r;
-        }
-    };
+    if bytes.is_empty() {
+        r.verdict = "KHÔNG ĐỌC ĐƯỢC".into();
+        return r;
+    }
     r.bytes = bytes.len() as u64;
     r.pdf_version = bytes.iter().take(8).map(|b| *b as char).filter(|c| c.is_ascii_graphic()).collect::<String>().replace("%PDF-", "");
-    let f: PdfFacts = inspect_pdf(&bytes);
+    let f: PdfFacts = inspect_pdf(bytes);
     if let Some(why) = &f.encrypted_or_broken {
         r.error = Some(why.clone());
         r.verdict = "PDF HỎNG / KHÔNG MỞ ĐƯỢC".into();

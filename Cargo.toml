@@ -17,6 +17,7 @@ members = [
     "crates/digitext-cli",
     "crates/digitext-wipe",
     "crates/digitext-extimport",
+    "crates/digitext-pkgcheck",
 ]
 exclude = ["desktop", "dev/obfuscate/rust-rename"]
 

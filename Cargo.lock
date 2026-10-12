@@ -969,6 +969,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "digitext-pkgcheck"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "digitext-extimport",
+ "digitext-pdf",
+ "digitext-sign-verify",
+ "quick-xml 0.37.5",
+ "serde",
+ "sha2 0.10.9",
+ "zip",
+]
+
+[[package]]
 name = "digitext-sign-verify"
 version = "0.1.0"
 dependencies = [
