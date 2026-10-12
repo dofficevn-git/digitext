@@ -287,6 +287,9 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
 
     const thoiGianGoc = hd.cot.thoiGian !== undefined ? lay(r, "thoiGian", true) : [lay(r, "ngayBatDau", true), lay(r, "ngayKetThuc", true)].filter(Boolean).join(" - ");
     const tg = kiemVaDienThoiGian(thoiGianGoc, tieuDe);
+    // Không xác định được thời gian (ô trống + tiêu đề không ghi năm, hoặc sai định dạng không đọc được) → lỗi chặn
+    // nhập; trước 12/10/2026 chỉ là cảnh báo nên hồ sơ vào hệ thống với thời gian trống (anh Hiếu hỏi).
+    if (!tg.batDau || !tg.ketThuc) loi.push(thoiGianGoc.trim() ? `Thời gian "${thoiGianGoc.trim()}" không đọc được — ghi dd/mm/yyyy - dd/mm/yyyy` : "Thiếu thời gian bắt đầu - kết thúc (ô trống, tiêu đề không ghi năm)");
     if (pbHienTai) pbHienTai.soHoSo++;
     if (mangHienTai) mangHienTai.soHoSo++;
     // Số tờ chỉ nhận số tự nhiên (anh Hiếu 5/10/2026): "01 quyển", "3,5", "12 tờ"… là lỗi chặn nhập, tô đỏ ở tệp đánh dấu.
