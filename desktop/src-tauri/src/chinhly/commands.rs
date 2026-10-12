@@ -292,7 +292,9 @@ pub async fn cl_remote(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthSt
                 "PUT" => client::f_24x::<J>(&base, &token, &path, &body).await,
                 "PATCH" => client::f_20e::<J>(&base, &token, &path, &body).await,
                 "DELETE" => client::f_13z::<J>(&base, &token, &path).await,
-                _ => client::f_23d::<J>(&base, &token, &path, &body).await,
+                // POST chỉnh lý gồm cả việc nặng (nhập mục lục 5.000 dòng kèm tạo hộp, hệ thống hoá) — 12/10/2026 nhập
+                // 998 hồ sơ mất ~40 s, quá hạn 15 s mặc định → báo "Không kết nối được" dù máy chủ vẫn nhập xong.
+                _ => client::post_long::<J>(&base, &token, &path, &body).await,
             }
         }
     })

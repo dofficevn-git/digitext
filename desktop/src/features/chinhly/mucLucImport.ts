@@ -26,6 +26,15 @@ export interface NhomMang {
 /** Tên mảng tự tạo khi hồ sơ nằm ngay dưới phòng ban (12/10/2026). Mã 00 để không đụng số thứ tự 01, 02… trong tệp. */
 export const MANG_VAN_DE_CHUNG = "Vấn đề chung";
 export const MA_MANG_VAN_DE_CHUNG = "00";
+/** Tên phòng ban / mảng: gộp khoảng trắng; gạch ngang có khoảng trắng ở ÍT NHẤT một bên → " - " ("Văn phòng- Thống kê"
+ *  = "Văn phòng - Thống kê", 12/10/2026 hai tệp viết khác nhau sinh 2 phòng ban). Gạch liền ("Đảng-Đoàn", "2010-2012")
+ *  giữ nguyên để khớp mảng đã có. */
+export function chuanTenNhom(s: string): string {
+  return s
+    .replace(/\s+/g, " ")
+    .replace(/\s+[-–]\s*|\s*[-–]\s+/g, " - ")
+    .trim();
+}
 /** Tên mảng là "Vấn đề chung" (không phân biệt hoa thường, khoảng trắng, dấu chấm cuối). */
 export function laVanDeChung(ten: string): boolean {
   return ten.normalize("NFC").toLowerCase().replace(/\s+/g, " ").replace(/[.:;]+$/, "").trim() === MANG_VAN_DE_CHUNG.toLowerCase();
@@ -229,7 +238,7 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
       let m = RE_PHONG_BAN.exec(tieuDe);
       if (m) {
         const stt = romanToInt(m[1]);
-        pbHienTai = { dong, stt, ma: String(stt).padStart(2, "0"), ten: m[2].trim(), mangs: [], soHoSo: 0 };
+        pbHienTai = { dong, stt, ma: String(stt).padStart(2, "0"), ten: chuanTenNhom(m[2]), mangs: [], soHoSo: 0 };
         mangHienTai = null;
         if (out.phongBans.some((p) => p.ma === pbHienTai!.ma)) vanDe.push({ dong, muc: "loi", noiDung: `Phòng ban ${m[1]}. lặp lại (đã có ở dòng ${out.phongBans.find((p) => p.ma === pbHienTai!.ma)!.dong})` });
         out.phongBans.push(pbHienTai);
@@ -242,7 +251,7 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
           continue;
         }
         const stt = +m[1];
-        mangHienTai = { dong, stt, ma: String(stt).padStart(2, "0"), ten: m[2].trim(), soHoSo: 0 };
+        mangHienTai = { dong, stt, ma: String(stt).padStart(2, "0"), ten: chuanTenNhom(m[2]), soHoSo: 0 };
         if (pbHienTai.mangs.some((x) => x.ma === mangHienTai!.ma)) vanDe.push({ dong, muc: "loi", noiDung: `Mảng ${m[1]}. lặp lại trong phòng ban ${pbHienTai.ten}` });
         pbHienTai.mangs.push(mangHienTai);
         continue;
