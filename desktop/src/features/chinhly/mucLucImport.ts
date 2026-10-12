@@ -5,7 +5,8 @@
 // Quyết định 1/10/2026: chỉ nhận I./1. làm phòng ban / mảng (5/10: dòng nhóm khác = mục nhỏ trong mảng, bỏ qua);
 // mã phòng ban / mảng = số thứ tự 2 chữ số. 5/10/2026 (theo DigiText 2025): số tạm = Hồ sơ số trong tệp; Hồ sơ số và
 // Hộp số ghi luôn vào hồ sơ (Hộp số chỉ ghi ở dòng đầu hộp → mang xuống). Đánh số riêng cho 2 loại: vĩnh viễn / có
-// thời hạn (migration 0015) — số tạm, hộp duy nhất trong từng loại.
+// thời hạn (migration 0015) — số tạm, hộp duy nhất trong từng loại. 12/10/2026 (anh Hiếu): phòng ban có hồ sơ đứng ngay
+// dưới mà chưa có dòng mảng "1. …" → tự tạo mảng "Vấn đề chung" (mã 00) nhét các hồ sơ đó vào, không báo lỗi nữa.
 
 import { V4dz } from "@/api/exportFile";
 import { str, type ClRow } from "@/api/chinhly";
@@ -18,7 +19,13 @@ export interface NhomMang {
   ma: string;
   ten: string;
   soHoSo: number;
+  /** Mảng "Vấn đề chung" do hệ thống tự tạo cho phòng ban không có dòng mảng phía trên hồ sơ. */
+  tuDong?: boolean;
 }
+
+/** Tên mảng tự tạo khi hồ sơ nằm ngay dưới phòng ban (12/10/2026). Mã 00 để không đụng số thứ tự 01, 02… trong tệp. */
+export const MANG_VAN_DE_CHUNG = "Vấn đề chung";
+export const MA_MANG_VAN_DE_CHUNG = "00";
 export interface NhomPhongBan {
   dong: number;
   stt: number;
@@ -244,7 +251,14 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     const loi: string[] = [];
     if (!tieuDe) loi.push("Thiếu tiêu đề hồ sơ");
     if (!pbHienTai) loi.push("Chưa có dòng phòng ban (I. …) phía trên");
-    else if (!mangHienTai) loi.push("Chưa có dòng mảng công việc (1. …) phía trên");
+    else if (!mangHienTai) {
+      // Hồ sơ đứng ngay dưới phòng ban, chưa có dòng mảng → gom vào mảng "Vấn đề chung" tự tạo (một mảng / phòng ban).
+      mangHienTai = pbHienTai.mangs.find((x) => x.tuDong) ?? null;
+      if (!mangHienTai) {
+        mangHienTai = { dong, stt: 0, ma: MA_MANG_VAN_DE_CHUNG, ten: MANG_VAN_DE_CHUNG, soHoSo: 0, tuDong: true };
+        pbHienTai.mangs.push(mangHienTai);
+      }
+    }
     const thbqGoc = lay(r, "thbq");
     const thbq = khopThbq(thbqGoc, opts.thbqDanhMuc);
     if (!thbqGoc) loi.push("Thiếu thời hạn bảo quản");
@@ -358,7 +372,7 @@ function dongKiemTra(pt: PhanTichMucLuc, soTam: Map<number, string>): (string | 
     r.hoSoSo,
     soTam.get(r.dong) ?? "",
     r.phongBan ? `${r.phongBan.ma} · ${r.phongBan.ten}` : "",
-    r.mang ? `${r.mang.ma} · ${r.mang.ten}` : "",
+    r.mang ? `${r.mang.ma} · ${r.mang.ten}${r.mang.tuDong ? " (tự tạo)" : ""}` : "",
     r.tieuDe,
     r.thoiGianGoc.replace(/\s*\n\s*/g, " "),
     r.tg.batDau,

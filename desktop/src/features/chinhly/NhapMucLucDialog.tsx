@@ -132,7 +132,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     { key: "so_tam", header: "Hồ sơ số / số tạm", width: 90, cell: (r) => soTam.get(r.dong) },
     { key: "loai", header: "Loại", width: 90, className: "text-sm", cell: (r) => TEN_LOAI(r.vinhVien) },
     { key: "tieu_de", header: "Tiêu đề", className: "max-w-[360px] whitespace-normal", cell: (r) => r.tieuDe },
-    { key: "mang", header: "Mảng", className: "text-sm", cell: (r) => (r.mang ? `${r.mang.ma} · ${r.mang.ten}` : "") },
+    { key: "mang", header: "Mảng", className: "text-sm", cell: (r) => (r.mang ? `${r.mang.ma} · ${r.mang.ten}${r.mang.tuDong ? " (tự tạo)" : ""}` : "") },
     { key: "goc", header: "Thời gian gốc", className: "text-sm whitespace-pre-line", cell: (r) => r.thoiGianGoc || <span className="text-fg-subtle">trống</span> },
     { key: "bd", header: "Bắt đầu", width: 100, cell: (r) => r.tg.batDau || <span className="text-fg-subtle">—</span> },
     { key: "kt", header: "Kết thúc", width: 100, cell: (r) => r.tg.ketThuc || <span className="text-fg-subtle">—</span> },
@@ -306,7 +306,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
                         <ul className="ml-4 list-disc space-y-0.5 pl-2">
                           {p.mangs.map((m) => (
                             <li key={m.ma + m.dong}>
-                              {m.ma} · {m.ten} <span className="text-fg-subtle">({n(m.soHoSo)})</span>
+                              {m.ma} · {m.ten} <span className="text-fg-subtle">({n(m.soHoSo)}{m.tuDong ? " · hệ thống tự tạo vì hồ sơ nằm ngay dưới phòng ban" : ""})</span>
                             </li>
                           ))}
                         </ul>
