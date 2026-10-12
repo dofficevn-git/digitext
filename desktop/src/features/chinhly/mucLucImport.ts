@@ -26,6 +26,10 @@ export interface NhomMang {
 /** Tên mảng tự tạo khi hồ sơ nằm ngay dưới phòng ban (12/10/2026). Mã 00 để không đụng số thứ tự 01, 02… trong tệp. */
 export const MANG_VAN_DE_CHUNG = "Vấn đề chung";
 export const MA_MANG_VAN_DE_CHUNG = "00";
+/** Tên mảng là "Vấn đề chung" (không phân biệt hoa thường, khoảng trắng, dấu chấm cuối). */
+export function laVanDeChung(ten: string): boolean {
+  return ten.normalize("NFC").toLowerCase().replace(/\s+/g, " ").replace(/[.:;]+$/, "").trim() === MANG_VAN_DE_CHUNG.toLowerCase();
+}
 export interface NhomPhongBan {
   dong: number;
   stt: number;
@@ -290,6 +294,17 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     if (r.hopSo && (loaiHop.get(r.hopSo)?.size ?? 0) > 1) r.loi.push(`Hộp ${r.hopSo} có cả hồ sơ vĩnh viễn lẫn có thời hạn — mỗi hộp chỉ một loại`);
   }
   out.soHop = new Set(out.rows.filter((r) => r.hopSo).map((r) => `${r.vinhVien}|${r.hopSo}`)).size;
+
+  // Phòng ban đã có dòng mảng "Vấn đề chung" trong tệp (kể cả đứng SAU hồ sơ, vd. "1. Vấn đề chung") → hồ sơ đứng ngay
+  // dưới phòng ban vào luôn mảng đó, không tạo thêm mảng 00 (anh Hiếu 12/10/2026).
+  for (const pb of out.phongBans) {
+    const tu = pb.mangs.find((m) => m.tuDong);
+    const co = pb.mangs.find((m) => !m.tuDong && laVanDeChung(m.ten));
+    if (!tu || !co) continue;
+    for (const r of out.rows) if (r.mang === tu) r.mang = co;
+    co.soHoSo += tu.soHoSo;
+    pb.mangs = pb.mangs.filter((m) => m !== tu);
+  }
 
   if (out.rows.length === 0 && !vanDe.some((v) => v.muc === "loi")) vanDe.push({ dong: 0, muc: "loi", noiDung: "Tệp không có dòng hồ sơ nào (cột Hồ sơ số trống cả)" });
   let max = 0;
