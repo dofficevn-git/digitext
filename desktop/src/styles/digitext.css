@@ -30,13 +30,16 @@
 
    
   /* 0.18: thanh menu nền mực (màu viền logo), chữ sáng; mục đang mở có vạch hổ phách. */
-  --side-bg: var(--color-gray-900);
-  --side-bg-2: #2a3a3f;
-  --side-bg-3: #34474d;
-  --side-text: #c3d0d0;
+  /* 0.18.15: mực ngả xanh ngọc hơn; nút tròn nhóm (--side-node) đặc để che đường trục quy trình (--side-line-2). */
+  --side-bg: #172629;
+  --side-bg-2: #223539;
+  --side-bg-3: #2e4448;
+  --side-node: #1f3236;
+  --side-text: #b9c8c8;
   --side-strong: #ffffff;
-  --side-faint: #8a9c9e;
-  --side-line: #2f3f44;
+  --side-faint: #879a9c;
+  --side-line: #263a3e;
+  --side-line-2: #2f6563;
   --side-active: var(--color-run-solid);
 
   --radius: var(--radius-md);  
