@@ -16,19 +16,24 @@ import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
 import BrandLogo from "./BrandLogo";
 
-// Mỗi nhóm menu một màu (icon trên ô nền cùng màu) cho dễ nhận, bớt đơn điệu. Từ 0.18 thanh menu nền mực:
-// màu icon sáng (300), nền ô trong suốt để hợp nền tối.
-const MAU_NHOM: Record<string, string> = {
-  home: "bg-sky-400/15 text-sky-300",
-  sohoa: "bg-emerald-400/15 text-emerald-300",
-  xuly: "bg-violet-400/15 text-violet-300",
-  chinhly: "bg-amber-400/15 text-amber-300",
-  luutruso: "bg-indigo-400/20 text-indigo-300",
-  baocao: "bg-rose-400/15 text-rose-300",
-  quantri: "bg-slate-400/20 text-slate-300",
-};
-function mauNhom(id: string): string {
-  return MAU_NHOM[id] ?? "bg-white/10 text-[var(--side-text)]";
+// 0.18.15: bỏ ô màu cầu vồng mỗi nhóm. Bốn nhóm Số hoá → Xử lý → Chỉnh lý → Lưu trữ số là vòng đời một hồ sơ nên
+// xếp trên một "trục quy trình" (đường dọc nối các nút tròn); nhóm đang làm sáng xanh ngọc. Báo cáo / Quản trị nằm
+// dưới đường chia, không thuộc trục. Mục đang mở giữ vạch hổ phách (màu "đang làm" của cả hệ thống).
+const QUY_TRINH = new Set(["sohoa", "xuly", "chinhly", "luutruso"]);
+
+/** Nút tròn mang icon nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. */
+function NutNhom({ icon, lit, size = "md" }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg" }) {
+  return (
+    <span
+      className={cn(
+        "relative z-10 grid flex-none place-items-center rounded-full ring-1 transition-colors",
+        size === "lg" ? "size-9" : "size-7",
+        lit ? "bg-brand-500 text-white ring-brand-300/50" : "bg-[var(--side-node)] text-[var(--side-faint)] ring-[var(--side-line)] group-hover:text-[var(--side-strong)] group-hover:ring-[var(--side-line-2)]",
+      )}
+    >
+      <Icon name={icon} size={size === "lg" ? 17 : 15} />
+    </span>
+  );
 }
 
 export default function Sidebar() {
@@ -118,123 +123,145 @@ export default function Sidebar() {
     }
   };
 
-  const btn = "group flex w-full items-center gap-2 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-300";
+  const btn = "group flex w-full items-center rounded-lg text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-300";
   // Mục đang mở: nền sáng hơn một bậc + vạch hổ phách bên trái (màu "đang làm" của cả hệ thống).
   const tone = (active: boolean) =>
     active
-      ? "bg-[var(--side-bg-2)] text-[var(--side-strong)] font-semibold shadow-[inset_3px_0_0_var(--side-active)]"
-      : "text-[var(--side-text)] font-medium hover:bg-[var(--side-bg-2)] hover:text-[var(--side-strong)]";
+      ? "bg-[var(--side-bg-2)] text-[var(--side-strong)] font-semibold shadow-[inset_2px_0_0_var(--side-active)]"
+      : "text-[var(--side-text)] hover:bg-[var(--side-bg-2)]/70 hover:text-[var(--side-strong)]";
 
   const Badge = ({ n }: { n: number }) =>
     n > 0 ? <span className="ml-auto min-w-5 rounded-full bg-danger-600 px-1.5 text-center text-xs font-semibold leading-5 text-white tabular-nums">{n > 99 ? "99+" : n}</span> : null;
 
-  return (
-    <aside className={cn("sidebar", rail && "collapsed")}>
-      <div className="side-brand">
-        <BrandLogo className="size-7 flex-none" />
-        {!rail && <span className="text-md font-semibold tracking-wide">DIGITEXT</span>}
-      </div>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- roving tabindex: nav bắt mũi tên, các mục bên trong là nút thật */}
-      <nav ref={navRef} className="nav-scroll" aria-label="Điều hướng chính" onKeyDown={onKeyDown}>
-        {rail ? (
-          <ul className="flex flex-col items-center gap-1">
-            {visible.map((g) => {
-              const active = isActive(g);
-              const kids = (g.children ?? []).filter(can);
-              const cnt = kids.reduce((s, c) => s + badgeOf(c.badge), 0) + badgeOf(g.badge);
-              const iconBtn = (
-                <button
-                  type="button"
-                  data-nav
-                  className={cn("relative grid size-9 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-300", active ? "bg-[var(--side-bg-2)] shadow-[inset_3px_0_0_var(--side-active)]" : "hover:bg-[var(--side-bg-2)]")}
-                  aria-label={g.label}
-                  aria-current={g.leaf && active ? "page" : undefined}
-                  onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
-                >
-                  {g.icon && (
-                    <span className={cn("grid size-7 place-items-center rounded-md", mauNhom(g.id))}>
-                      <Icon name={g.icon} size={17} />
-                    </span>
-                  )}
-                  {cnt > 0 && <span className="absolute right-0.5 top-0.5 size-2 rounded-full bg-danger-600" aria-hidden />}
-                </button>
-              );
+  // Chia danh sách: phần đầu (Tổng quan), trục quy trình (4 nhóm vòng đời hồ sơ), phần cuối (Báo cáo, Quản trị).
+  const iDau = visible.findIndex((g) => QUY_TRINH.has(g.id));
+  const dau = iDau < 0 ? visible : visible.slice(0, iDau);
+  const truc = iDau < 0 ? [] : visible.filter((g) => QUY_TRINH.has(g.id));
+  const cuoi = iDau < 0 ? [] : visible.slice(iDau).filter((g) => !QUY_TRINH.has(g.id));
+
+  /** Một nhóm ở chế độ đầy đủ: dòng nhóm (nút tròn + tên + mũi tên) và các mục con thẳng hàng với tên nhóm. */
+  const dongNhom = (g: V46s) => {
+    const active = isActive(g);
+    const isOpen = open.has(g.id);
+    const kids = (g.children ?? []).filter(can);
+    const soChuaDoc = kids.reduce((s, c) => s + badgeOf(c.badge), 0);
+    return (
+      <li key={g.id}>
+        <button
+          type="button"
+          data-nav
+          data-group={g.leaf ? undefined : g.id}
+          className={cn(btn, "h-10 gap-2.5 px-2 text-[14px]", g.leaf ? tone(active) : active ? "font-semibold text-[var(--side-strong)]" : "font-medium text-[var(--side-text)] hover:text-[var(--side-strong)]")}
+          onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
+          aria-expanded={g.leaf ? undefined : isOpen}
+          aria-current={g.leaf && active ? "page" : undefined}
+        >
+          {g.icon && <NutNhom icon={g.icon} lit={active} />}
+          <span className="min-w-0 flex-1 truncate">{g.label}</span>
+          {g.leaf ? (
+            <Badge n={badgeOf(g.badge)} />
+          ) : (
+            <>
+              {!isOpen && soChuaDoc > 0 && <span className="size-2 flex-none rounded-full bg-danger-500" aria-label={`${soChuaDoc} việc cần xem`} />}
+              <Icon name="moNhanh" size={14} className={cn("flex-none text-[var(--side-faint)] transition-transform duration-200", isOpen && "rotate-90")} />
+            </>
+          )}
+        </button>
+        {!g.leaf && isOpen && (
+          <ul className="mb-1.5 ml-[38px] flex flex-col gap-px">
+            {kids.map((c) => {
+              const a = !!c.leaf && leafActive(c.leaf, nav);
               return (
-                <li key={g.id}>
-                  {g.leaf ? (
-                    <Tip text={g.label} side="right">
-                      {iconBtn}
-                    </Tip>
-                  ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>{iconBtn}</DropdownMenuTrigger>
-                      <DropdownMenuContent side="right" align="start" className="w-56">
-                        <DropdownMenuLabel>{g.label}</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {kids.map((c) => (
-                          <DropdownMenuItem key={c.id} onSelect={() => c.leaf && gotoLeaf(c.leaf, nav)} className={cn(c.leaf && leafActive(c.leaf, nav) && "font-semibold text-brand-700")}>
-                            {c.label}
-                            <Badge n={badgeOf(c.badge)} />
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <ul className="flex flex-col gap-0.5">
-            {visible.map((g) => {
-              const active = isActive(g);
-              const isOpen = open.has(g.id);
-              const kids = (g.children ?? []).filter(can);
-              return (
-                <li key={g.id}>
+                <li key={c.id}>
                   <button
                     type="button"
                     data-nav
-                    data-group={g.leaf ? undefined : g.id}
-                    className={cn(btn, tone(active && !!g.leaf), "h-8 px-2 text-base", !g.leaf && active && "text-[var(--side-strong)]")}
-                    onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
-                    aria-expanded={g.leaf ? undefined : isOpen}
-                    aria-current={g.leaf && active ? "page" : undefined}
+                    data-parent={g.id}
+                    className={cn(btn, tone(a), "min-h-8 px-2.5 py-1 text-[13.5px]")}
+                    onClick={() => c.leaf && gotoLeaf(c.leaf, nav)}
+                    aria-current={a ? "page" : undefined}
                   >
-                    {g.icon && (
-                      <span className={cn("grid size-6 flex-none place-items-center rounded-md", mauNhom(g.id))}>
-                        <Icon name={g.icon} size={15} />
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1 truncate">{g.label}</span>
-                    {g.leaf ? <Badge n={badgeOf(g.badge)} /> : <Icon name="moNhanh" size={14} className={cn("flex-none text-[var(--side-faint)] transition-transform", isOpen && "rotate-90")} />}
+                    <span className="min-w-0 flex-1 truncate">{c.label}</span>
+                    <Badge n={badgeOf(c.badge)} />
                   </button>
-                  {!g.leaf && isOpen && (
-                    <ul className="my-0.5 ml-[19px] border-l border-[var(--side-line)] pl-2">
-                      {kids.map((c) => {
-                        const a = !!c.leaf && leafActive(c.leaf, nav);
-                        return (
-                          <li key={c.id}>
-                            <button
-                              type="button"
-                              data-nav
-                              data-parent={g.id}
-                              className={cn(btn, tone(a), !a && "font-normal", "min-h-7 px-2 py-1 text-sm")}
-                              onClick={() => c.leaf && gotoLeaf(c.leaf, nav)}
-                              aria-current={a ? "page" : undefined}
-                            >
-                              <span className="min-w-0 flex-1 truncate">{c.label}</span>
-                              <Badge n={badgeOf(c.badge)} />
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
                 </li>
               );
             })}
           </ul>
+        )}
+      </li>
+    );
+  };
+
+  /** Một nhóm ở chế độ thu gọn (dải icon): nút tròn; nhóm có mục con mở danh sách bên phải. */
+  const nutRail = (g: V46s) => {
+    const active = isActive(g);
+    const kids = (g.children ?? []).filter(can);
+    const cnt = kids.reduce((s, c) => s + badgeOf(c.badge), 0) + badgeOf(g.badge);
+    const iconBtn = (
+      <button
+        type="button"
+        data-nav
+        className="group relative grid size-11 place-items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+        aria-label={g.label}
+        aria-current={g.leaf && active ? "page" : undefined}
+        onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
+      >
+        {g.icon && <NutNhom icon={g.icon} lit={active} size="lg" />}
+        {cnt > 0 && <span className="absolute right-1 top-1 z-20 size-2 rounded-full bg-danger-500" aria-hidden />}
+      </button>
+    );
+    return (
+      <li key={g.id}>
+        {g.leaf ? (
+          <Tip text={g.label} side="right">
+            {iconBtn}
+          </Tip>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>{iconBtn}</DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" className="w-56">
+              <DropdownMenuLabel>{g.label}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {kids.map((c) => (
+                <DropdownMenuItem key={c.id} onSelect={() => c.leaf && gotoLeaf(c.leaf, nav)} className={cn(c.leaf && leafActive(c.leaf, nav) && "font-semibold text-brand-700")}>
+                  {c.label}
+                  <Badge n={badgeOf(c.badge)} />
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </li>
+    );
+  };
+
+  const ve = rail ? nutRail : dongNhom;
+  // Đường trục: chạy qua tâm các nút tròn của nhóm quy trình (tâm = lề nút 8px + nửa nút 14px; dải icon: giữa cột).
+  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-5 bottom-5";
+
+  return (
+    <aside className={cn("sidebar", rail && "collapsed")}>
+      <div className="side-brand">
+        <BrandLogo className="size-8 flex-none" />
+        {!rail && <span className="text-[17px] font-semibold tracking-tight">DigiText</span>}
+      </div>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- roving tabindex: nav bắt mũi tên, các mục bên trong là nút thật */}
+      <nav ref={navRef} className="nav-scroll" aria-label="Điều hướng chính" onKeyDown={onKeyDown}>
+        <ul className={cn("flex flex-col", rail && "items-center")}>{dau.map(ve)}</ul>
+        {truc.length > 0 && (
+          <div className="relative mt-1">
+            <span aria-hidden className={cn("pointer-events-none absolute w-0.5 -translate-x-1/2 rounded-full bg-[var(--side-line-2)]", duongTruc)} />
+            <ul className={cn("flex flex-col", rail && "items-center")} aria-label="Quy trình xử lý hồ sơ">
+              {truc.map(ve)}
+            </ul>
+          </div>
+        )}
+        {cuoi.length > 0 && (
+          <>
+            <div aria-hidden className={cn("my-2 h-px bg-[var(--side-line)]", rail ? "mx-2" : "mx-2")} />
+            <ul className={cn("flex flex-col", rail && "items-center")}>{cuoi.map(ve)}</ul>
+          </>
         )}
       </nav>
 
