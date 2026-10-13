@@ -834,6 +834,26 @@ fn f_qn(r_4bu: &mut Document, ttf: &[u8], r_4bz: &[(char, u16, u16)]) -> lopdf::
 const C_1: f32 = 595.0;
 const C_0: f32 = 842.0;
 pub const C_K3: f32 = 10.0;
+/// Bề rộng tối đa một dòng chữ của khối chữ ký (pt, cỡ chữ C_K3) — tên đơn vị dài tự xuống dòng (13/10/2026).
+pub const SIGN_LINE_MAX_W: f32 = 240.0;
+/// Ngắt các dòng của khối chữ ký theo bề rộng `max_w`: dòng quá dài thì ưu tiên ngắt sau dấu " — " (đơn vị —
+/// cơ quan chủ quản), phần còn dài nữa mới ngắt ở dấu cách; từ dài hơn cả dòng giữ nguyên.
+pub fn wrap_sign_lines(lines: &[String], font_ttf: &[u8], max_w: f32) -> Result<Vec<String>, PdfError> {
+    let face = ttf_parser::Face::parse(font_ttf, 0).map_err(|e| PdfError::BadFont(e.to_string()))?;
+    let rong = |s: &str| -> Result<f32, PdfError> { Ok(f_2bf(&f_2eo(&face, s)?, C_K3)) };
+    let mut out = Vec::new();
+    for l in lines {
+        if rong(l)? <= max_w {
+            out.push(l.clone());
+            continue;
+        }
+        // Ngắt tại " — " thì bỏ luôn dấu gạch (xuống dòng đã tách đơn vị với cơ quan chủ quản).
+        for p in l.split(" — ") {
+            out.extend(f_2rm(&face, p, C_K3, max_w, "")?);
+        }
+    }
+    Ok(out)
+}
 const C_K4: f32 = 12.0;
 const C_K6: f32 = 4.0;
 pub fn f_w0(
@@ -1757,4 +1777,33 @@ pub fn pdfa_markers(bytes: &[u8]) -> PdfaMarkers {
         }
     }
     m
+}
+
+#[cfg(test)]
+mod khoi_ky_mau {
+    /// DIGITEXT_SIGN_BOX=<tệp.pdf> cargo test -p digitext-pdf khoi_ky_mau -- --ignored
+    #[test]
+    #[ignore]
+    fn khoi_ky_ten_dai() {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let out = std::env::var("DIGITEXT_SIGN_BOX").unwrap();
+        let font = std::fs::read(crate::f_1cr("Ký bởi").unwrap()).unwrap();
+        let lines = crate::wrap_sign_lines(
+            &["Ký bởi: TRUNG TÂM LƯU TRỮ LỊCH SỬ BẮC NINH — ỦY BAN NHÂN DÂN THÀNH PHỐ BẮC NINH".to_string(), "Thời gian: 13/10/2026 13:50:28 GMT+7".to_string()],
+            &font,
+            crate::SIGN_LINE_MAX_W,
+        )
+        .unwrap();
+        let mut doc = Document::with_version("1.7");
+        let (form, w, h) = crate::f_w0(&mut doc, &lines, &font).unwrap();
+        let pages = doc.new_object_id();
+        let c = format!("q 1 0 0 1 {} {} cm /S0 Do Q", 595.0 - 14.0 - w, 842.0 - 14.0 - h);
+        let cs = doc.add_object(Stream::new(dictionary! {}, c.into_bytes()));
+        let page = doc.add_object(dictionary! { "Type" => "Page", "Parent" => pages, "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()], "Contents" => cs, "Resources" => dictionary! { "XObject" => dictionary! { "S0" => form } } });
+        doc.objects.insert(pages, Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => vec![page.into()], "Count" => 1 }));
+        let cat = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages });
+        doc.trailer.set("Root", cat);
+        doc.save(&out).unwrap();
+        println!("{lines:?} w={w} h={h}");
+    }
 }
