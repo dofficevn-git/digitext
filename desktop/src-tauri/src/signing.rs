@@ -631,6 +631,39 @@ pub async fn sign_retry(
     })
     .await
 }
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnsignResp {
+    pub reverted: usize,
+    pub skipped: usize,
+}
+/// Xoá các bản đã ký đã tải về thư mục lưu trong lô bị huỷ. Chỉ xoá tệp .pdf nằm TRONG `out_dir` (thư mục
+/// người dùng chọn ở màn Ký số); trả số tệp đã xoá.
+#[tauri::command]
+pub async fn sign_remove_local(auth: State<'_, AuthState>, out_dir: String, paths: Vec<String>) -> Result<usize, AppError> {
+    auth.require_perm(Permission::SignExecute)?;
+    let root = std::fs::canonicalize(out_dir.trim()).map_err(|e| AppError::validation(format!("thư mục lưu không hợp lệ: {e}")))?;
+    let mut n = 0;
+    for p in paths {
+        let Ok(f) = std::fs::canonicalize(&p) else { continue };
+        let pdf = f.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf"));
+        if pdf && f.starts_with(&root) && f.is_file() && std::fs::remove_file(&f).is_ok() {
+            n += 1;
+        }
+    }
+    Ok(n)
+}
+/// "Huỷ" lô ký: các tài liệu vừa ký trong lô quay về chưa ký (máy chủ xoá bản đã ký, đưa về hàng chờ).
+#[tauri::command]
+pub async fn sign_unsign(db: State<'_, Db>, auth: State<'_, AuthState>, document_ids: Vec<String>) -> Result<UnsignResp, AppError> {
+    auth.require_perm(Permission::SignExecute)?;
+    let body = serde_json::json!({ "documentIds": document_ids });
+    f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
+        let body = body.clone();
+        async move { client::post_long(&base, &token, "/sign/unsign", &body).await }
+    })
+    .await
+}
 
 use der::{oid::AssociatedOid, Decode, Encode};
 use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};

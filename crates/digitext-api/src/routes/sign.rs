@@ -17,6 +17,7 @@ pub fn router() -> Router<AppState> {
         .route("/sign/{id}/begin", post(begin))
         .route("/sign/{id}/complete", post(complete))
         .route("/sign/retry", post(retry))
+        .route("/sign/unsign", post(unsign))
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,6 +56,42 @@ async fn retry(
             out.skipped += 1;
         }
     }
+    Ok(Json(out))
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UnsignResp {
+    reverted: usize,
+    skipped: usize,
+}
+/// "Huỷ" giữa lô ký (13/10/2026 anh Hiếu): các tài liệu chính người này vừa ký trong lô quay về chưa ký — xoá
+/// bản đã ký + bản chuẩn bị trên kho, đưa về hàng chờ ký. Bản PDF/A gốc giữ nguyên. ("Tạm dừng" thì không gọi.)
+async fn unsign(State(st): State<AppState>, ts: Ts, Json(req): Json<RetryReq>) -> Result<Json<UnsignResp>, ApiError> {
+    ts.require_perm(Permission::SignExecute)?;
+    if req.document_ids.len() > 200_000 {
+        return Err(ApiError::bad_request("quá nhiều tài liệu trong một lần"));
+    }
+    let store = store(&st)?;
+    let mut out = UnsignResp { reverted: 0, skipped: 0 };
+    for id in req.document_ids {
+        let Some(doc) = documents::get(&st.pool, id).await? else {
+            out.skipped += 1;
+            continue;
+        };
+        authorize_project(&st, &ts, doc.project_id).await?;
+        match sign_sessions::unsign_by_signer(&st.pool, id, ts.user.id).await? {
+            Some((signed, prepared)) => {
+                for k in [signed, prepared].into_iter().flatten() {
+                    if let Err(e) = store.delete(&k).await {
+                        tracing::warn!(key = %k, error = %e, "huỷ ký: không xoá được object (tài liệu vẫn đã về chờ ký)");
+                    }
+                }
+                out.reverted += 1;
+            }
+            None => out.skipped += 1,
+        }
+    }
+    tracing::info!(reverted = out.reverted, skipped = out.skipped, user = %ts.user.id, "huỷ ký");
     Ok(Json(out))
 }
 fn f_13e(r_q2: &str, field: &str) -> Result<Vec<u8>, ApiError> {

@@ -194,6 +194,8 @@ fn main() {
             tiff::tiff_pause,
             signing::sign_cert_info,
             signing::sign_retry,
+            signing::sign_unsign,
+            signing::sign_remove_local,
             progress_report::report_project_progress,
             progress_report::report_set_contract,
             progress_report::report_staff,

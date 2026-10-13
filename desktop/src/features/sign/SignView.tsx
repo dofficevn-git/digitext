@@ -7,7 +7,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { V41p } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
 import { useProject } from "@/state/project";
-import { V4qu, V4qt, V4qv, onSignBatchProgress, signBatch, signBatchCancel, signBatchPause, signCertInfo, signLoadStamp, signRetry, type SignBatchProgress, type SignBatchResult, type SignCertInfo, type SignPlacement, type V4qr, type V4qs } from "@/api/sign";
+import { V4qu, V4qt, V4qv, onSignBatchProgress, signBatch, signBatchCancel, signBatchPause, signCertInfo, signLoadStamp, signRemoveLocal, signRetry, signUnsign, type SignBatchProgress, type SignBatchResult, type SignCertInfo, type SignPlacement, type V4qr, type V4qs } from "@/api/sign";
 import { V4el } from "@/api/docs";
 import { V4ak, type V4a9 } from "@/api/users";
 import { V4e3 } from "@/features/dossier/excel";
@@ -92,6 +92,7 @@ export default function V4qy() {
   const [loi, setLoi] = useState<LoiKy[]>([]);
   const [nhatKy, setNhatKy] = useState<DongNhatKy[]>([]);
   const taiVe = useRef<Promise<void>>(Promise.resolve());
+  const huyRef = useRef(false);
 
   const ghi = (text: string, kind: DongNhatKy["kind"] = "info") => setNhatKy((l) => [...l.slice(-(LOG_MAX - 1)), { at: new Date().toLocaleTimeString("vi-VN"), text, kind }]);
 
@@ -284,7 +285,7 @@ export default function V4qy() {
     const kieu = withStamp ? (stampB64 ? "có dấu, ảnh con dấu đã chọn" : "có dấu") : "không dấu";
     const ok = await confirm({
       title: `${nhan} ${fmtN(list.length)} tài liệu?`,
-      body: [`Dự án: ${project?.name ?? projectId}${phongLoc ? ` · phông ${phongLoc}` : ""}.`, `Vị trí chữ ký: ${where}.`, `Hình thức: ${kieu}; dấu thời gian: ${timestamp ? "có" : "không"}.`, `Tên trên chữ ký: ${tenHienThi.trim() || "theo chứng thư"}.`, `Đầu ra: ${outDir || "chỉ lưu trên máy chủ"}.`, "Chữ ký số không gỡ được sau khi ký."].join("\n"),
+      body: [`Dự án: ${project?.name ?? projectId}${phongLoc ? ` · phông ${phongLoc}` : ""}.`, `Vị trí chữ ký: ${where}.`, `Hình thức: ${kieu}; dấu thời gian: ${timestamp ? "có" : "không"}.`, `Tên trên chữ ký: ${tenHienThi.trim() || "theo chứng thư"}.`, `Đầu ra: ${outDir || "chỉ lưu trên máy chủ"}.`, "Giữa chừng: Tạm dừng thì giữ các tệp đã ký; Huỷ thì các tệp đã ký trong lô quay về chưa ký."].join("\n"),
       confirmLabel: nhan,
     });
     if (!ok) return;
@@ -298,18 +299,27 @@ export default function V4qy() {
     setKetQua(null);
     ghi(`Bắt đầu: ${nhan.toLowerCase()} ${jobIds.length} tài liệu.`);
     setBusy("batch");
+    // Ghi lại tài liệu đã ký + bản đã tải về trong lô này: bấm "Huỷ" thì tất cả quay về chưa ký (Tạm dừng thì giữ).
+    huyRef.current = false;
+    const daKy: string[] = [];
+    const daTai: string[] = [];
     const unlisten = await onSignBatchProgress((p: SignBatchProgress) => {
       const j = byId.get(p.jobId);
       const ten = j?.filename ?? p.jobId;
       setBatch((b) => (b ? { done: p.done, total: p.total, signed: b.signed + (p.status === "signed" ? 1 : 0), bad: b.bad + (p.status === "signed" ? 0 : 1) } : b));
       if (p.status === "signed") {
+        daKy.push(p.jobId);
         setHangDoi((l) => l.filter((x) => x.id !== p.jobId));
         ghi(`Đã ký ${ten}`, "ok");
         if (outDir && j) {
           taiVe.current = taiVe.current.then(() =>
-            V4el(j.id, j.filename, j.relPath ?? undefined, false, outDir, "signed")
-              .then(() => undefined)
-              .catch((e) => ghi(`Không tải được bản đã ký ${ten} về đầu ra: ${errorText(e)}`, "err")),
+            huyRef.current
+              ? undefined
+              : V4el(j.id, j.filename, j.relPath ?? undefined, false, outDir, "signed")
+                  .then((path) => {
+                    daTai.push(path);
+                  })
+                  .catch((e) => ghi(`Không tải được bản đã ký ${ten} về đầu ra: ${errorText(e)}`, "err")),
           );
         }
       } else {
@@ -328,13 +338,48 @@ export default function V4qy() {
       setKetQua({ kind: "err", text: `Ký hàng loạt không hoàn tất: ${errorText(e)}` });
       ghi(`Ký hàng loạt lỗi: ${errorText(e)}`, "err");
     } finally {
+      // Sự kiện tiến độ của tệp cuối có thể đến sau kết quả lô — chờ một nhịp rồi mới gom danh sách đã ký.
+      if (huyRef.current) await new Promise((ok) => window.setTimeout(ok, 500));
       unlisten();
+      await taiVe.current;
+      if (huyRef.current && daKy.length > 0) {
+        // Bấm "Huỷ": mọi tài liệu đã ký trong lô quay về chưa ký — máy chủ xoá bản đã ký, đưa về hàng chờ; bản đã
+        // tải về thư mục lưu cũng xoá.
+        try {
+          const r = await signUnsign(daKy);
+          const xoaMay = outDir && daTai.length ? await signRemoveLocal(outDir, daTai) : 0;
+          const text = `Đã huỷ lô ký: ${fmtN(r.reverted)} tài liệu đã ký quay về chưa ký` + (r.skipped ? ` (${fmtN(r.skipped)} không huỷ được)` : "") + (xoaMay ? `, xoá ${fmtN(xoaMay)} bản đã tải về ${outDir}` : "") + ".";
+          setKetQua({ kind: r.skipped ? "err" : "ok", text });
+          ghi(text, r.skipped ? "err" : "ok");
+          setBatch((b) => (b ? { ...b, signed: b.signed - r.reverted } : b));
+        } catch (e) {
+          const text = `Huỷ lô ký chưa xong — ${fmtN(daKy.length)} tài liệu vẫn đang ở trạng thái đã ký: ${errorText(e)}`;
+          setKetQua({ kind: "err", text });
+          ghi(text, "err");
+        }
+      } else if (outDir && daTai.length) {
+        ghi(`Bản đã ký đã lưu vào ${outDir}.`);
+      }
+      huyRef.current = false;
       setBusy(null);
       setPaused(false);
-      await taiVe.current;
-      if (outDir) ghi(`Bản đã ký đã lưu vào ${outDir}.`);
       void napHangDoi();
     }
+  };
+
+  // "Huỷ": dừng lô VÀ đưa các tệp đã ký trong lô về chưa ký (khác "Tạm dừng" — giữ nguyên các tệp đã ký).
+  const huyLo = async () => {
+    const ok = await confirm({
+      title: "Huỷ lô ký?",
+      body: `Dừng ký và đưa ${batch ? fmtN(batch.signed) : "các"} tài liệu đã ký trong lô này về trạng thái CHƯA KÝ (xoá bản đã ký trên máy chủ${outDir ? " và bản đã tải về thư mục lưu" : ""}).\nMuốn giữ các tệp đã ký thì bấm "Tạm dừng" thay vì Huỷ.`,
+      confirmLabel: "Huỷ lô, bỏ chữ ký",
+      cancelLabel: "Tiếp tục ký",
+      danger: true,
+    });
+    if (!ok) return;
+    huyRef.current = true;
+    ghi("Huỷ lô: dừng ký, đưa các tệp đã ký trong lô về chưa ký…", "err");
+    await signBatchCancel();
   };
 
   const tamDung = async () => {
@@ -398,7 +443,7 @@ export default function V4qy() {
             <Button icon={paused ? "chay" : "tamDung"} disabled={!running} onClick={() => void tamDung()}>
               {paused ? "Tiếp tục" : "Tạm dừng"}
             </Button>
-            <Button variant="dangerOutline" disabled={!running} onClick={() => void signBatchCancel()}>
+            <Button variant="dangerOutline" disabled={!running} onClick={() => void huyLo()}>
               Huỷ
             </Button>
           </>
