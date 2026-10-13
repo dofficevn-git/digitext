@@ -145,7 +145,9 @@ export default function V4qy() {
     }
   };
 
-  V41p(napHangDoi, { topics: ["sign", "docs"] });
+  // Đang ký thì không nạp lại cả hàng chờ theo sự kiện "sign" (mỗi tệp ký xong lại nạp ~160 nghìn dòng, làm
+  // chậm cả máy chủ lẫn lô ký — 13/10/2026); hàng chờ tự bớt theo tiến độ, ký xong nạp lại một lần.
+  V41p(napHangDoi, { topics: ["sign", "docs"], enabled: busy !== "batch" });
 
   useEffect(() => {
     void napModules();

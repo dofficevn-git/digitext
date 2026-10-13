@@ -1,4 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+use futures_util::{FutureExt as _, StreamExt as _};
 use crate::auth::admin::f_2r8;
 use crate::auth::client;
 use crate::auth::AuthState;
@@ -386,6 +387,8 @@ static BATCH_PAUSE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBoo
 const EV_BATCH: &str = "sign://batch";
 /// Dừng liền N tài liệu lỗi thì dừng cả lô (token rút ra / mạng đứt / máy chủ từ chối hàng loạt).
 const BATCH_MAX_CONSECUTIVE_FAIL: usize = 5;
+/// Số tài liệu chạy chồng nhau trong lô (13/10/2026): máy chủ chuẩn bị / lưu song song, token vẫn ký lần lượt.
+const BATCH_PARALLEL: usize = 3;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchArgs {
@@ -444,45 +447,68 @@ pub async fn sign_batch(
         })?;
     let cert = tok.certificate().to_vec();
     let inters = tok.intermediates().to_vec();
-    let mut out = BatchResult { total: job_ids.len(), ..Default::default() };
-    let mut consecutive_fail = 0usize;
-    for (i, job_id) in job_ids.iter().enumerate() {
-        while BATCH_PAUSE.load(std::sync::atomic::Ordering::SeqCst)
-            && !BATCH_CANCEL.load(std::sync::atomic::Ordering::SeqCst)
-        {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-        }
-        if BATCH_CANCEL.load(std::sync::atomic::Ordering::SeqCst) {
-            out.cancelled = job_ids.len() - i;
-            out.stopped_reason = Some("người dùng dừng".into());
-            break;
-        }
-        // Không bọc trong async block: phiên token (cryptoki Session) không Sync nên không được
-        // giữ tham chiếu qua các điểm await — chỉ gọi C_Sign giữa hai lần gọi máy chủ.
-        let begin: Result<BeginResp, String> = f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
-            let body = begin_body(&cert, &inters, placement.as_ref(), &style);
-            let path = format!("/sign/{job_id}/begin");
-            async move { client::f_23d(&base, &token, &path, &body).await }
-        })
-        .await
-        .map_err(|e| e.to_string());
-        let signed: Result<(String, Vec<u8>), String> = match begin {
-            Ok(b) => unb64(&b.tbs_digest)
-                .and_then(|d| tok.sign_digest(&d))
-                .map(|sig| (b.session_id, sig)),
-            Err(e) => Err(e),
-        };
-        let result: Result<String, String> = match signed {
-            Ok((session_id, signature)) => f_2r8(&db, &auth, Permission::SignExecute, |base, token| {
-                let body = complete_body(&session_id, &signature, &style);
+    // Phiên token (cryptoki Session) không Sync: khoá trong Mutex, C_Sign chạy ở luồng chặn — các tài liệu khác
+    // vẫn chuẩn bị / lưu trên máy chủ trong lúc token ký.
+    let tok = std::sync::Arc::new(std::sync::Mutex::new(tok));
+    let (db, auth, cert, inters, placement, style) = (&db, &auth, &cert, &inters, &placement, &style);
+    let ky_mot = |job_id: String| {
+        let tok = tok.clone();
+        let id = job_id.clone();
+        async move {
+            let job_id = id;
+            let b: BeginResp = f_2r8(db, auth, Permission::SignExecute, |base, token| {
+                let body = begin_body(cert, inters, placement.as_ref(), style);
+                let path = format!("/sign/{job_id}/begin");
+                async move { client::f_23d(&base, &token, &path, &body).await }
+            })
+            .await
+            .map_err(|e| e.to_string())?;
+            let digest = unb64(&b.tbs_digest)?;
+            let signature = tauri::async_runtime::spawn_blocking(move || {
+                tok.lock().map_err(|_| "phiên token bị hỏng".to_string())?.sign_digest(&digest)
+            })
+            .await
+            .map_err(|e| format!("luồng token lỗi: {e}"))??;
+            let session_id = b.session_id;
+            f_2r8(db, auth, Permission::SignExecute, |base, token| {
+                let body = complete_body(&session_id, &signature, style);
                 let path = format!("/sign/{job_id}/complete");
                 async move { client::f_23d::<CompleteResp>(&base, &token, &path, &body).await }
             })
             .await
             .map(|r| r.status)
-            .map_err(|e| e.to_string()),
-            Err(e) => Err(e),
-        };
+            .map_err(|e| e.to_string())
+        }
+        .map(move |r: Result<String, String>| (job_id, r))
+    };
+    let total = job_ids.len();
+    let mut out = BatchResult { total, ..Default::default() };
+    let mut consecutive_fail = 0usize;
+    let mut next = 0usize;
+    let mut done = 0usize;
+    let mut stop: Option<String> = None;
+    let mut inflight = futures_util::stream::FuturesUnordered::new();
+    loop {
+        while stop.is_none() && next < total && inflight.len() < BATCH_PARALLEL {
+            if BATCH_CANCEL.load(std::sync::atomic::Ordering::SeqCst) {
+                stop = Some("người dùng dừng".into());
+                break;
+            }
+            if BATCH_PAUSE.load(std::sync::atomic::Ordering::SeqCst) {
+                break;
+            }
+            inflight.push(ky_mot(job_ids[next].clone()));
+            next += 1;
+        }
+        if inflight.is_empty() {
+            if stop.is_some() || next >= total {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            continue;
+        }
+        let Some((job_id, result)) = inflight.next().await else { continue };
+        done += 1;
         let (status, error) = match result {
             Ok(s) if s == "signed" => {
                 out.signed += 1;
@@ -503,18 +529,18 @@ pub async fn sign_batch(
         if let Some(e) = &error {
             tracing::warn!(job = % job_id, error = % e, "sign_batch: tài liệu lỗi");
         }
-        let _ = app.emit(
-            EV_BATCH,
-            BatchProgress { done: i + 1, total: job_ids.len(), job_id: job_id.clone(), status, error },
-        );
-        if consecutive_fail >= BATCH_MAX_CONSECUTIVE_FAIL {
-            out.cancelled = job_ids.len() - i - 1;
-            out.stopped_reason = Some(format!(
+        let _ = app.emit(EV_BATCH, BatchProgress { done, total, job_id, status, error });
+        if consecutive_fail >= BATCH_MAX_CONSECUTIVE_FAIL && stop.is_none() {
+            stop = Some(format!(
                 "{BATCH_MAX_CONSECUTIVE_FAIL} tài liệu liền nhau lỗi — dừng để kiểm tra token/mạng/máy chủ"
             ));
-            break;
         }
     }
+    if stop.is_some() {
+        out.cancelled = total - next;
+        out.stopped_reason = stop;
+    }
+    drop(inflight);
     drop(tok);
     tracing::info!(?out, "sign_batch");
     Ok(out)
