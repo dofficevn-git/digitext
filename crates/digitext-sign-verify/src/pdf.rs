@@ -395,8 +395,19 @@ pub fn f_2fg(cert: &Certificate) -> String {
 pub fn f_2f7(cert: &Certificate, r_4y1: u64) -> Vec<String> {
     vec![
         format!("Ký bởi: {}", f_2fg(cert)),
-        format!("Ký ngày: {}", f_1di(r_4y1)),
+        format!("Thời gian: {}", thoi_gian_ky(r_4y1)),
     ]
+}
+/// "18/12/2025 16:59:00 GMT+7" — kiểu dòng thời gian trên chữ ký số thường gặp (mẫu anh Hiếu 13/10/2026).
+pub fn thoi_gian_ky(unix: u64) -> String {
+    let iso = f_1di(unix); // yyyy-mm-ddTHH:MM:SS+07:00
+    let (d, t) = iso.split_once('T').unwrap_or((&iso, ""));
+    let p: Vec<&str> = d.split('-').collect();
+    let gio = t.get(..8).unwrap_or(t);
+    match p.as_slice() {
+        [y, m, dd] => format!("{dd}/{m}/{y} {gio} GMT+7"),
+        _ => iso,
+    }
 }
 pub fn f_2fh(cert: &Certificate) -> Option<String> {
     const C_JV: const_oid::ObjectIdentifier = const_oid::ObjectIdentifier::new_unwrap("2.5.4.5");
@@ -457,6 +468,8 @@ pub fn f_2qb_ten(r_4y8: &[u8], r_4y9: u64, stamp: bool, ten: Option<&str>) -> Op
             )
         })
         .ok()?;
+    // Tên dài tự xuống dòng (bề rộng tối đa SIGN_LINE_MAX_W) thay vì kéo khối chữ ký dài ra ngoài lề.
+    let lines = digitext_pdf::wrap_sign_lines(&lines, &font_ttf, digitext_pdf::SIGN_LINE_MAX_W).unwrap_or(lines);
     Some(Tpv {
         lines,
         font_ttf,
@@ -1003,5 +1016,14 @@ mod stamp_tests {
         let im = doc.get_object(xo.get(b"Im0").unwrap().as_reference().unwrap()).unwrap().as_stream().unwrap();
         assert_eq!(im.dict.get(b"Subtype").unwrap().as_name().unwrap(), b"Image");
         assert!(im.dict.get(b"SMask").is_ok(), "ảnh nền trong phải có SMask");
+    }
+}
+
+#[cfg(test)]
+mod thoi_gian_tests {
+    #[test]
+    fn dinh_dang_thoi_gian_ky() {
+        // 2025-12-18 09:59:00Z = 16:59:00 GMT+7
+        assert_eq!(super::thoi_gian_ky(1_766_051_940), "18/12/2025 16:59:00 GMT+7");
     }
 }
