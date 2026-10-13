@@ -126,6 +126,9 @@ pub(crate) fn f_1tj(r_2ol: Option<String>) -> Vec<String> {
         r"C:\Windows\System32\eps2003csp11.dll",
         r"C:\Windows\System32\eTPKCS11.dll",
         r"C:\Windows\System32\opensc-pkcs11.dll",
+        // Bit4id (TokenME EVO / Universal Middleware) — 13/10/2026 máy trạm cắm TokenME EVO v2 không dò được.
+        r"C:\Windows\System32\bit4xpki.dll",
+        r"C:\Windows\System32\bit4ipki.dll",
     ];
     #[cfg(target_os = "macos")]
     const BUILTIN: &[&str] = &[
@@ -175,7 +178,7 @@ pub(crate) fn f_290(
             .cloned()
             .ok_or_else(|| {
                 format!(
-                    "không thấy thư viện PKCS#11 nào trên máy — cài phần mềm token của CA (iCA SmartToken, Viettel-CA…) rồi thử lại, hoặc nhập đường dẫn module (hoặc đặt biến môi trường {MODULE_ENV})"
+                    "không thấy thư viện PKCS#11 nào trên máy — cài phần mềm token của CA (iCA SmartToken, Viettel-CA, Bit4id TokenME…) rồi thử lại, hoặc nhập đường dẫn module (hoặc đặt biến môi trường {MODULE_ENV})"
                 )
             });
     }
@@ -195,8 +198,58 @@ pub(crate) fn f_290(
     Ok(requested.to_string())
 }
 fn f_14z() -> Vec<String> {
-    let r_2ot = f_1tj(std::env::var(MODULE_ENV).ok());
+    let mut r_2ot = f_1tj(std::env::var(MODULE_ENV).ok());
+    r_2ot.extend(quet_module_pkcs11());
     f_1ae(&r_2ot, |p| std::path::Path::new(p).exists())
+}
+
+/// Tên tệp giống thư viện PKCS#11 của token (mỗi CA một tên: ica_csp11_v1, vtcaPKCS11, bit4xpki, eps2003csp11…).
+fn giong_pkcs11(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    let Some(stem) = n.strip_suffix(".dll") else { return false };
+    ["pkcs11", "pkcs#11", "csp11", "p11", "xpki", "ipki", "cryptoki"].iter().any(|k| stem.contains(k))
+        && !["msvcp", "vcruntime", "api-ms-", "ucrt"].iter().any(|k| stem.starts_with(k))
+        // p11-kit (kho chứng chỉ của Git/MSYS) không phải token; *_s.dll là thư viện phụ của iCA.
+        && !stem.contains("p11-kit")
+        && !stem.ends_with("_s")
+}
+
+/// Quét thư viện PKCS#11 do phần mềm token của CA cài: System32 (64 bit) và Program Files (sâu tối đa 4 cấp).
+/// Không quét Program Files (x86) — thư viện 32 bit không nạp được vào DigiText 64 bit.
+fn quet_module_pkcs11() -> Vec<String> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut out = Vec::new();
+        if let Ok(rd) = std::fs::read_dir(r"C:\Windows\System32") {
+            for e in rd.flatten() {
+                if giong_pkcs11(&e.file_name().to_string_lossy()) {
+                    out.push(e.path().to_string_lossy().into_owned());
+                }
+            }
+        }
+        let pf = std::env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".into());
+        let mut st = vec![(std::path::PathBuf::from(pf), 0usize)];
+        while let Some((d, depth)) = st.pop() {
+            let Ok(rd) = std::fs::read_dir(&d) else { continue };
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    let ten = e.file_name().to_string_lossy().to_ascii_lowercase();
+                    if depth < 4 && !matches!(ten.as_str(), "git" | "windowsapps" | "common files" | "windows defender" | "nodejs" | "docker") {
+                        st.push((p, depth + 1));
+                    }
+                } else if giong_pkcs11(&e.file_name().to_string_lossy()) {
+                    out.push(p.to_string_lossy().into_owned());
+                }
+            }
+        }
+        out.sort();
+        out
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Vec::new()
+    }
 }
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -793,6 +846,20 @@ mod token {
             self.session
                 .sign(&Mechanism::RsaPkcs, self.key, &r_2pt)
                 .map_err(|e| format!("C_Sign trên token lỗi: {e}"))
+        }
+    }
+}
+
+#[cfg(test)]
+mod quet_pkcs11_tests {
+    use super::giong_pkcs11;
+    #[test]
+    fn nhan_dung_thu_vien_token() {
+        for ok in ["ica_csp11_v1.dll", "vtcaPKCS11.dll", "bit4xpki.dll", "bit4ipki.dll", "eps2003csp11.dll", "eTPKCS11.dll", "opensc-pkcs11.dll"] {
+            assert!(giong_pkcs11(ok), "{ok}");
+        }
+        for no in ["ica_csp11_v1_s.dll", "libp11-kit-0.dll", "p11-kit-trust.dll", "msvcp110.dll", "kernel32.dll", "bit4xpki.exe"] {
+            assert!(!giong_pkcs11(no), "{no}");
         }
     }
 }
