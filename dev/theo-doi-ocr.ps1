@@ -22,6 +22,24 @@ SELECT
 FROM ocr_jobs
 "@
 
+# Ký số (13/10/2026): ký chạy ở máy trạm cắm token, máy chủ chỉ giữ phiên ký — đọc từ sign_sessions + documents.
+# Cột ngăn bằng "~" (PowerShell 5.1 làm hỏng dấu nháy kép khi chuyển sang sh).
+$sqlKy = @"
+SELECT 'T',
+  count(*) FILTER (WHERE status='open' AND lease_until > now()),
+  count(*) FILTER (WHERE status='signed' AND updated_at > now() - interval '10 minutes'),
+  count(*) FILTER (WHERE status='signed' AND updated_at > now() - interval '1 hour'),
+  count(*) FILTER (WHERE status='signed' AND updated_at::date = (now() at time zone 'Asia/Ho_Chi_Minh')::date),
+  count(*) FILTER (WHERE status='rejected' AND updated_at > now() - interval '1 hour'),
+  coalesce(to_char(max(updated_at) FILTER (WHERE status='signed') at time zone 'Asia/Ho_Chi_Minh','DD/MM HH24:MI:SS'),'-'),
+  coalesce((SELECT coalesce(u.display_name,u.username) FROM sign_sessions s2 JOIN users u ON u.id=s2.signer_user_id
+            WHERE s2.status='signed' ORDER BY s2.updated_at DESC LIMIT 1),'-')
+FROM sign_sessions;
+SELECT 'P', p.code, count(*) FILTER (WHERE d.status='to_sign'), count(*) FILTER (WHERE d.status='signing'), count(*) FILTER (WHERE d.status='signed')
+FROM documents d JOIN projects p ON p.id=d.project_id
+WHERE d.status IN ('to_sign','signing','signed') GROUP BY p.code ORDER BY 3 DESC LIMIT 8;
+"@
+
 while ($true) {
   # 6/10/2026: Alienware đi Wi-Fi (ping 11–470 ms) — 5 s hay hụt ở bước bắt tay SSH, báo lỗi giả.
   $gpu = ssh -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 $GpuHost "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits; docker ps --format '{{.Names}}|{{.Status}}'; echo '@@LOG'; docker logs --tail 8 $OcrContainer 2>&1" 2>&1
@@ -65,6 +83,25 @@ while ($true) {
     }
     Write-Host ("  PDF 2 lớp: chờ {0:N0}   xong {1:N0}" -f [int]$v[5], [int]$v[6])
   } else { Write-Host "Không đọc được hàng đợi: $q" -ForegroundColor Red }
+
+  Write-Host ""
+  $k = @($sqlKy | docker exec -i $PgContainer sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -At -F~' 2>&1)
+  $t = $k | Where-Object { "$_".StartsWith('T~') } | Select-Object -First 1
+  if ($t) {
+    $s = "$t" -split '~'
+    $muoi = [int]$s[2]
+    Write-Host "KÝ SỐ (ký ở máy trạm cắm token)" -ForegroundColor Yellow
+    $dang = if ([int]$s[1] -gt 0) { "ĐANG KÝ ($($s[1]) tệp đang xử lý)" } else { "không có phiên ký nào đang mở" }
+    Write-Host ("  Trạng thái: {0}   Lần ký cuối: {1} ({2})" -f $dang, $s[6], $s[7])
+    Write-Host ("  Đã ký: 10 phút qua {0:N0}   1 giờ qua {1:N0}   hôm nay {2:N0}   Bị từ chối 1 giờ qua: {3}" -f $muoi, [int]$s[3], [int]$s[4], [int]$s[5])
+    if ($muoi -gt 0) { Write-Host ("  Tốc độ hiện tại: ~{0:N0} tệp/giờ" -f ($muoi * 6)) }
+    foreach ($r in ($k | Where-Object { "$_".StartsWith('P~') })) {
+      $p = "$r" -split '~'
+      $choKy = [int]$p[2]
+      $eta = if ($muoi -gt 0 -and $choKy -gt 0) { "   còn ~{0:N1} giờ" -f ($choKy / ($muoi * 6)) } else { "" }
+      Write-Host ("  {0,-12} chờ ký {1,9:N0}   đang ký {2,3}   đã ký {3,9:N0}{4}" -f $p[1], $choKy, [int]$p[3], [int]$p[4], $eta)
+    }
+  } else { Write-Host "Không đọc được tiến độ ký: $k" -ForegroundColor Red }
 
   Start-Sleep -Seconds $Seconds
 }
