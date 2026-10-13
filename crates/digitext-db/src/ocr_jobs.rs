@@ -447,7 +447,11 @@ pub async fn f_zj(
     let kinds: Vec<String> = kinds.iter().map(|r_27o| (*r_27o).to_owned()).collect();
     // UPDATE không chạm dòng nào vẫn làm trigger phát sự kiện "ocr" cho mọi máy trạm — chỉ UPDATE khi có việc chờ.
     let any: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM ocr_jobs WHERE status = 'queued' AND kind = ANY($1) AND (not_before IS NULL OR not_before <= now()))",
+        // Dò theo từng loại qua unnest (13/10/2026): `kind = ANY($1)` ở plan chung (câu lệnh chuẩn bị sẵn) bị ước
+        // lượng như mọi việc chờ đều khớp → quét cả bảng ~870 nghìn dòng (≈200 ms) — 146 nghìn việc sign_wait chờ ký
+        // làm Postgres ăn 4 nhân, kho MinIO treo ổ. Cần chỉ mục ix_ocr_jobs_queued_kind_nb (kind, not_before) WHERE status='queued'.
+        "SELECT EXISTS(SELECT 1 FROM unnest($1::text[]) AS k(kind) WHERE EXISTS(SELECT 1 FROM ocr_jobs j \
+         WHERE j.status = 'queued' AND j.kind = k.kind AND (j.not_before IS NULL OR j.not_before <= now())))",
     )
     .bind(&kinds)
     .fetch_one(r_27q)
