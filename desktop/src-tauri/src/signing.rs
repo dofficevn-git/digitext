@@ -389,6 +389,17 @@ const EV_BATCH: &str = "sign://batch";
 const BATCH_MAX_CONSECUTIVE_FAIL: usize = 5;
 /// Số tài liệu chạy chồng nhau trong lô (13/10/2026): máy chủ chuẩn bị / lưu song song, token vẫn ký lần lượt.
 const BATCH_PARALLEL: usize = 3;
+/// Đường hầm Cloudflare rớt vài giây (502 / mất kết nối, 13/10/2026) → thử lại sau 2, 5, 10 giây trước khi báo lỗi.
+const THU_LAI_GIAY: [u64; 3] = [2, 5, 10];
+/// Lỗi đường truyền tạm thời → `Ok(Err(..))` (thử lại được); lỗi thật của máy chủ giữ nguyên `Err`.
+fn tach_loi_tam<T>(r: Result<T, client::ClientError>) -> Result<Result<T, String>, client::ClientError> {
+    match r {
+        Ok(v) => Ok(Ok(v)),
+        Err(e @ client::ClientError::Unreachable(_)) => Ok(Err(crate::auth::admin::map_err(e).to_string())),
+        Err(e @ client::ClientError::Api { status: 502..=504 | 520..=527, .. }) => Ok(Err(crate::auth::admin::map_err(e).to_string())),
+        Err(e) => Err(e),
+    }
+}
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchArgs {
@@ -456,13 +467,34 @@ pub async fn sign_batch(
         let id = job_id.clone();
         async move {
             let job_id = id;
-            let b: BeginResp = f_2r8(db, auth, Permission::SignExecute, |base, token| {
-                let body = begin_body(cert, inters, placement.as_ref(), style);
-                let path = format!("/sign/{job_id}/begin");
-                async move { client::f_23d(&base, &token, &path, &body).await }
-            })
-            .await
-            .map_err(|e| e.to_string())?;
+            let mut lan = 0usize;
+            let b: BeginResp = loop {
+                if lan > 0 {
+                    // Lần trước có thể đã mở phiên trên máy chủ dù mất phản hồi → trả phiên đó về chờ ký rồi mới begin lại.
+                    let body = serde_json::json!({ "documentIds": [job_id] });
+                    let _ = f_2r8(db, auth, Permission::SignExecute, |base, token| {
+                        let body = body.clone();
+                        async move { client::f_23d::<serde_json::Value>(&base, &token, "/sign/retry", &body).await }
+                    })
+                    .await;
+                }
+                let r = f_2r8(db, auth, Permission::SignExecute, |base, token| {
+                    let body = begin_body(cert, inters, placement.as_ref(), style);
+                    let path = format!("/sign/{job_id}/begin");
+                    async move { tach_loi_tam(client::f_23d(&base, &token, &path, &body).await) }
+                })
+                .await
+                .map_err(|e| e.to_string())?;
+                match r {
+                    Ok(b) => break b,
+                    Err(e) if lan < THU_LAI_GIAY.len() => {
+                        tracing::warn!(job = %job_id, error = %e, lan, "sign_batch: begin lỗi đường truyền — thử lại");
+                        tokio::time::sleep(std::time::Duration::from_secs(THU_LAI_GIAY[lan])).await;
+                        lan += 1;
+                    }
+                    Err(e) => return Err(e),
+                }
+            };
             let digest = unb64(&b.tbs_digest)?;
             let signature = tauri::async_runtime::spawn_blocking(move || {
                 tok.lock().map_err(|_| "phiên token bị hỏng".to_string())?.sign_digest(&digest)
@@ -470,14 +502,30 @@ pub async fn sign_batch(
             .await
             .map_err(|e| format!("luồng token lỗi: {e}"))??;
             let session_id = b.session_id;
-            f_2r8(db, auth, Permission::SignExecute, |base, token| {
-                let body = complete_body(&session_id, &signature, style);
-                let path = format!("/sign/{job_id}/complete");
-                async move { client::f_23d::<CompleteResp>(&base, &token, &path, &body).await }
-            })
-            .await
-            .map(|r| r.status)
-            .map_err(|e| e.to_string())
+            let mut lan = 0usize;
+            loop {
+                let r = f_2r8(db, auth, Permission::SignExecute, |base, token| {
+                    let body = complete_body(&session_id, &signature, style);
+                    let path = format!("/sign/{job_id}/complete");
+                    async move { tach_loi_tam(client::f_23d::<CompleteResp>(&base, &token, &path, &body).await) }
+                })
+                .await;
+                match r {
+                    Ok(Ok(c)) => return Ok(c.status),
+                    Ok(Err(e)) if lan < THU_LAI_GIAY.len() => {
+                        tracing::warn!(job = %job_id, error = %e, lan, "sign_batch: complete lỗi đường truyền — thử lại");
+                        tokio::time::sleep(std::time::Duration::from_secs(THU_LAI_GIAY[lan])).await;
+                        lan += 1;
+                    }
+                    Ok(Err(e)) => return Err(e),
+                    Err(e) if lan > 0 && e.to_string().contains("không còn mở") => {
+                        return Err("đã gửi chữ ký nhưng mất kết nối lúc nhận kết quả; máy chủ đã xử lý phiên này \
+                                    (thường là đã ký) — kiểm tra lại tệp"
+                            .into())
+                    }
+                    Err(e) => return Err(e.to_string()),
+                }
+            }
         }
         .map(move |r: Result<String, String>| (job_id, r))
     };
