@@ -864,22 +864,8 @@ pub fn f_w0(
     let w = r_4c7 + C_K6 * 2.0;
     let r_4c5 = r_4c6.len() as f32 * C_K4 + C_K6 * 2.0;
     let r_4c3 = f_qn(r_4c1, r_4c4, &r_4cb);
-    let mut r_4c8 = vec![
-        Operation::new("G", vec![0.into()]),
-        Operation::new("w", vec![0.5.into()]),
-        Operation::new(
-            "re",
-            vec![
-                0.25.into(),
-                0.25.into(),
-                (w - 0.5).into(),
-                (r_4c5 - 0.5).into(),
-            ],
-        ),
-        Operation::new("S", vec![]),
-        Operation::new("g", vec![0.into()]),
-        Operation::new("BT", vec![]),
-    ];
+    // Không vẽ khung viền quanh khối chữ ký (13/10/2026 anh Hiếu: bỏ khung viền đen) — chỉ chữ.
+    let mut r_4c8 = vec![Operation::new("g", vec![0.into()]), Operation::new("BT", vec![])];
     let mut y = r_4c5 - C_K6 - C_K3;
     for line in r_4c6 {
         let run = f_2eo(&r_4c2, line)?;
