@@ -162,6 +162,40 @@ pub async fn release_open_by_signer(pool: &PgPool, document_id: Uuid, signer: Uu
     tx.commit().await?;
     Ok(true)
 }
+/// Huỷ chữ ký vừa ký của CHÍNH người ký (bấm "Huỷ" giữa lô ký, 13/10/2026): phiên `signed` → `released`,
+/// tài liệu `signed` → `to_sign`, việc sign_wait `done` → `queued`. Chỉ khi tài liệu còn đúng "đã ký" (chưa đóng
+/// gói / nộp lưu). Trả (signed_key, prepared_key) để bên gọi xoá object; None = không huỷ được.
+pub async fn unsign_by_signer(pool: &PgPool, document_id: Uuid, signer: Uuid) -> sqlx::Result<Option<(Option<String>, Option<String>)>> {
+    let mut tx = pool.begin().await?;
+    let keys: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+        "UPDATE sign_sessions s SET status = 'released', signed_key = NULL, prepared_key = NULL, updated_at = now() \
+         FROM (SELECT id, signed_key, prepared_key FROM sign_sessions \
+               WHERE document_id = $1 AND status = 'signed' AND signer_user_id = $2 \
+               ORDER BY updated_at DESC LIMIT 1 FOR UPDATE) old \
+         WHERE s.id = old.id RETURNING old.signed_key, old.prepared_key",
+    )
+    .bind(document_id)
+    .bind(signer)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(keys) = keys else {
+        return Ok(None);
+    };
+    let doc = sqlx::query("UPDATE documents SET status = $2 WHERE id = $1 AND status = $3")
+        .bind(document_id)
+        .bind(DocStatus::ToSign.as_str())
+        .bind(DocStatus::Signed.as_str())
+        .execute(&mut *tx)
+        .await?;
+    if doc.rows_affected() == 0 {
+        // Tài liệu đã đi tiếp (đóng gói / nộp lưu…) → không huỷ.
+        tx.rollback().await?;
+        return Ok(None);
+    }
+    f_2f6(&mut tx, document_id, "queued", "done").await?;
+    tx.commit().await?;
+    Ok(Some(keys))
+}
 pub async fn f_29r(r_2c5: &PgPool, document_id: Uuid) -> sqlx::Result<bool> {
     let r_2c6 = sqlx::query("UPDATE documents SET status = $2 WHERE id = $1 AND status = $3")
         .bind(document_id)

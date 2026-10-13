@@ -108,6 +108,16 @@ export function signRetry(documentIds: string[]): Promise<{ requeued: number; sk
   return invoke<{ requeued: number; skipped: number }>("sign_retry", { documentIds });
 }
 
+/** "Huỷ" lô ký: tài liệu vừa ký trong lô quay về chưa ký (xoá bản đã ký trên máy chủ, đưa về hàng chờ). */
+export function signUnsign(documentIds: string[]): Promise<{ reverted: number; skipped: number }> {
+  return invoke<{ reverted: number; skipped: number }>("sign_unsign", { documentIds });
+}
+
+/** Xoá các bản đã ký đã tải về `outDir` (chỉ tệp .pdf trong đúng thư mục đó). */
+export function signRemoveLocal(outDir: string, paths: string[]): Promise<number> {
+  return invoke<number>("sign_remove_local", { outDir, paths });
+}
+
 export async function onSignBatchProgress(cb: (p: SignBatchProgress) => void): Promise<UnlistenFn> {
   if (!isTauri()) return () => {};
   return listen<SignBatchProgress>("sign://batch", (e) => cb(e.payload));
