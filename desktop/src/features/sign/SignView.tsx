@@ -179,16 +179,48 @@ export default function V4qy() {
     return t ? jobs.filter((j) => j.filename.toLowerCase().includes(t) || duongDan(j).toLowerCase().includes(t)) : jobs;
   }, [jobs, q]);
 
+  // Máy có thể cài nhiều phần mềm token (iCA, Viettel, Bit4id TokenME…): thử lần lượt từng thư viện PKCS#11 dò được,
+  // dùng thư viện đầu tiên thấy token (13/10/2026: TokenME EVO v2 không dò được vì chỉ thử thư viện đầu tiên).
   const doToken = async () => {
     setBusy("tokens");
     try {
-      await napModules();
-      const t = await V4qv(modulePath);
-      setTokens(t);
-      setSlot(t.length > 0 ? t[0].index : null);
+      let m: string[] = [];
+      try {
+        m = await V4qu();
+        setModules(m);
+      } catch {
+        /* không dò được thì dùng đường dẫn nhập tay */
+      }
+      const thu = [...new Set([modulePath.trim(), ...m].filter(Boolean))];
+      if (thu.length === 0) thu.push("");
+      let found: V4qs[] = [];
+      let dung = modulePath;
+      const loi: string[] = [];
+      for (const p of thu) {
+        try {
+          const t = await V4qv(p);
+          if (t.length > 0) {
+            found = t;
+            dung = p;
+            break;
+          }
+        } catch (e) {
+          loi.push(`${p || "(tự dò)"}: ${errorText(e)}`);
+        }
+      }
+      setTokens(found);
+      setSlot(found.length > 0 ? found[0].index : null);
       setCert(null);
-      if (t.length === 0) toast.error("Không thấy token nào đang cắm.", { detail: "Kiểm tra USB token đã cắm chưa và thư viện PKCS#11 của nhà cung cấp chứng thư đã cài chưa." });
-      else toast.success(`Thấy ${t.length} token.`);
+      if (found.length > 0) {
+        setModulePath(dung);
+        toast.success(`Thấy ${found.length} token.`, { description: dung ? `Thư viện: ${dung}` : undefined });
+      } else if (loi.length === thu.length && thu[0] === "") {
+        throw new Error(loi[0].replace(/^\(tự dò\): /, ""));
+      } else {
+        toast.error("Không thấy token nào đang cắm.", {
+          detail: `Đã thử ${thu.length} thư viện PKCS#11: ${thu.join("; ")}. Kiểm tra USB token đã cắm và phần mềm token của nhà cung cấp chứng thư (iCA, Viettel-CA, Bit4id…) đã cài.`,
+        });
+      }
     } catch (e) {
       notifyError(e, "dò token");
     } finally {
