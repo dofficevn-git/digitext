@@ -425,10 +425,19 @@ pub fn f_2fh(cert: &Certificate) -> Option<String> {
     (!r_4y5.is_empty()).then_some(r_4y5)
 }
 pub fn f_2qb(r_4y8: &[u8], r_4y9: u64, stamp: bool) -> Option<Tpv> {
+    f_2qb_ten(r_4y8, r_4y9, stamp, None)
+}
+/// Như `f_2qb` nhưng cho phép thay TÊN HIỂN THỊ trên khối chữ ký ("Ký bởi: …" và chữ trên dấu đỏ) — người ký
+/// muốn ghi tên đơn vị gọn hơn tên trong chứng thư (13/10/2026). Chứng thư / chữ ký mật mã không đổi.
+pub fn f_2qb_ten(r_4y8: &[u8], r_4y9: u64, stamp: bool, ten: Option<&str>) -> Option<Tpv> {
     let cert = Certificate::from_der(r_4y8).ok()?;
-    let lines = f_2f7(&cert, r_4y9);
+    let ten = ten.map(str::trim).filter(|s| !s.is_empty()).map(str::to_string);
+    let mut lines = f_2f7(&cert, r_4y9);
+    if let Some(t) = &ten {
+        lines[0] = format!("Ký bởi: {t}");
+    }
     let r_4yb = stamp.then(|| Tly {
-        org: f_2fg(&cert),
+        org: ten.clone().unwrap_or_else(|| f_2fg(&cert)),
         center_lines: f_2fh(&cert)
             .map(|mst| vec![format!("MST: {mst}")])
             .unwrap_or_default(),

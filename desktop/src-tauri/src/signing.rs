@@ -39,6 +39,9 @@ pub struct SignStyle {
     pub stamp_png: Option<String>,
     #[serde(default)]
     pub timestamp: Option<bool>,
+    /// Tên hiển thị trên khối chữ ký thay tên trong chứng thư (trống = tên trong chứng thư).
+    #[serde(default)]
+    pub signer_name: Option<String>,
 }
 /// Vị trí khối chữ ký chọn trên tệp đầu tiên, áp cho cả lô: góc trên-trái theo TỈ LỆ trang
 /// (0..1, `y` từ mép trên); `last_page` = đặt ở trang cuối.
@@ -68,6 +71,9 @@ fn begin_body(
     }
     if let Some(png) = style.stamp_png.as_deref().filter(|s| !s.is_empty()) {
         v["stampPng"] = serde_json::json!(png);
+    }
+    if let Some(t) = style.signer_name.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        v["signerName"] = serde_json::json!(t);
     }
     v
 }

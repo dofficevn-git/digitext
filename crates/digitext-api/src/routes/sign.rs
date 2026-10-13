@@ -160,6 +160,9 @@ struct T19 {
     /// Ảnh con dấu (PNG/JPEG, base64) — chỉ dùng khi ký có dấu.
     #[serde(default, rename = "stampPng")]
     stamp_png: Option<String>,
+    /// Tên hiển thị trên khối chữ ký thay cho tên trong chứng thư (để trống = tên trong chứng thư).
+    #[serde(default, rename = "signerName")]
+    signer_name: Option<String>,
 }
 /// Ảnh dấu tối đa 500 KB (gửi kèm mỗi tài liệu trong lô).
 const STAMP_MAX_BYTES: usize = 500 * 1024;
@@ -244,11 +247,15 @@ async fn begin(
         }
         None => None,
     };
+    let ten_hien_thi = r_qj.signer_name.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    if ten_hien_thi.is_some_and(|t| t.chars().count() > 200) {
+        return Err(ApiError::bad_request("tên hiển thị trên chữ ký quá dài (tối đa 200 ký tự)"));
+    }
     let r_qo = r_qn
         .sign_visible
         .then(|| {
             // Có ảnh dấu thì vẽ ảnh, không vẽ dấu đỏ dựng từ chứng thư.
-            digitext_sign_verify::pdf::f_2qb(&r_qd, r_qm, with_stamp && stamp_png.is_none()).map(|mut t| {
+            digitext_sign_verify::pdf::f_2qb_ten(&r_qd, r_qm, with_stamp && stamp_png.is_none(), ten_hien_thi).map(|mut t| {
                 t.stamp_png = stamp_png;
                 t
             })
