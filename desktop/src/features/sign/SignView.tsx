@@ -80,6 +80,8 @@ export default function V4qy() {
   const [stampPath, setStampPath] = useState<string>(() => nho("sign.stampPath", ""));
   const [stampB64, setStampB64] = useState<string | null>(null);
   const [timestamp, setTimestamp] = useState<boolean>(() => nho("sign.timestamp", false));
+  // Tên hiển thị trên khối chữ ký (thay tên dài trong chứng thư) — nhớ theo máy.
+  const [tenHienThi, setTenHienThi] = useState<string>(() => nho("sign.signerName", ""));
 
   const [placement, setPlacement] = useState<SignPlacement | null>(null);
   const [moViTri, setMoViTri] = useState(false);
@@ -97,6 +99,7 @@ export default function V4qy() {
   useEffect(() => luu("sign.withStamp", withStamp), [withStamp]);
   useEffect(() => luu("sign.stampPath", stampPath), [stampPath]);
   useEffect(() => luu("sign.timestamp", timestamp), [timestamp]);
+  useEffect(() => luu("sign.signerName", tenHienThi), [tenHienThi]);
   useEffect(() => luu("sign.projectId", projectId), [projectId]);
 
   // Mặc định theo ô "Dự án đang làm" trên Topbar khi chưa chọn gì.
@@ -281,7 +284,7 @@ export default function V4qy() {
     const kieu = withStamp ? (stampB64 ? "có dấu, ảnh con dấu đã chọn" : "có dấu") : "không dấu";
     const ok = await confirm({
       title: `${nhan} ${fmtN(list.length)} tài liệu?`,
-      body: [`Dự án: ${project?.name ?? projectId}${phongLoc ? ` · phông ${phongLoc}` : ""}.`, `Vị trí chữ ký: ${where}.`, `Hình thức: ${kieu}; dấu thời gian: ${timestamp ? "có" : "không"}.`, `Đầu ra: ${outDir || "chỉ lưu trên máy chủ"}.`, "Chữ ký số không gỡ được sau khi ký."].join("\n"),
+      body: [`Dự án: ${project?.name ?? projectId}${phongLoc ? ` · phông ${phongLoc}` : ""}.`, `Vị trí chữ ký: ${where}.`, `Hình thức: ${kieu}; dấu thời gian: ${timestamp ? "có" : "không"}.`, `Tên trên chữ ký: ${tenHienThi.trim() || "theo chứng thư"}.`, `Đầu ra: ${outDir || "chỉ lưu trên máy chủ"}.`, "Chữ ký số không gỡ được sau khi ký."].join("\n"),
       confirmLabel: nhan,
     });
     if (!ok) return;
@@ -316,7 +319,7 @@ export default function V4qy() {
       }
     });
     try {
-      const r: SignBatchResult = await signBatch({ jobIds, modulePath, slotIndex: slot!, pin, placement, style: { withStamp, stampPng: withStamp ? stampB64 : null, timestamp } });
+      const r: SignBatchResult = await signBatch({ jobIds, modulePath, slotIndex: slot!, pin, placement, style: { withStamp, stampPng: withStamp ? stampB64 : null, timestamp, signerName: tenHienThi.trim() || null } });
       const text = `Đã ký ${fmtN(r.signed)}/${fmtN(r.total)} tài liệu` + (r.rejected ? ` · máy chủ từ chối ${fmtN(r.rejected)}` : "") + (r.failed ? ` · lỗi ${fmtN(r.failed)}` : "") + (r.cancelled ? ` · chưa ký ${fmtN(r.cancelled)}` : "") + (r.stoppedReason ? `. Dừng vì: ${r.stoppedReason}` : "") + ".";
       const xau = r.failed + r.rejected > 0 || !!r.stoppedReason;
       setKetQua({ kind: xau ? "err" : "ok", text });
@@ -534,6 +537,9 @@ export default function V4qy() {
                 </div>
               </Field>
             )}
+            <Field label="Tên hiển thị trên chữ ký" hint={`Để trống thì dùng tên trong chứng thư${cert?.subject ? `: ${cert.subject}` : ""}. Chỉ đổi chữ hiện trên ô chữ ký, chứng thư số không đổi.`}>
+              <Input value={tenHienThi} onChange={(e) => setTenHienThi(e.target.value)} disabled={running} maxLength={200} placeholder={cert?.subject || "Tên trong chứng thư"} />
+            </Field>
             <Checkbox checked={timestamp} onChange={setTimestamp} disabled={running} text="Gắn dấu thời gian (TSA)" />
             <Field label="Vị trí chữ ký">
               <div className="flex flex-wrap items-center gap-2 text-sm">

@@ -23,6 +23,8 @@ export interface SignStyle {
   stampPng?: string | null;
   /** Gắn dấu thời gian (TSA) hay không. */
   timestamp?: boolean;
+  /** Tên hiển thị trên khối chữ ký thay tên trong chứng thư (trống = tên trong chứng thư). */
+  signerName?: string | null;
 }
 
 export interface SignCertInfo {
