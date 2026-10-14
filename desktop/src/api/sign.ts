@@ -123,6 +123,12 @@ export async function onSignBatchProgress(cb: (p: SignBatchProgress) => void): P
   return listen<SignBatchProgress>("sign://batch", (e) => cb(e.payload));
 }
 
+/** Lô ký đang chờ máy chủ / mạng và sẽ tự thử lại (không phải lỗi). */
+export async function onSignWait(cb: (message: string) => void): Promise<UnlistenFn> {
+  if (!isTauri()) return () => {};
+  return listen<string>("sign://wait", (e) => cb(e.payload));
+}
+
 export function V4qu(): Promise<string[]> {
   return invoke<string[]>("sign_detect_modules");
 }
