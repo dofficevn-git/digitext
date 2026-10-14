@@ -18,6 +18,7 @@ mod error;
 mod forward_progress;
 mod infoops;
 mod khaithac;
+mod kho_scan;
 mod kie;
 mod lan;
 mod lan_identity;
@@ -249,6 +250,8 @@ fn main() {
             collect::data_collect,
             collect::data_collect_cancel,
             collect::data_forward,
+            kho_scan::kho_scan,
+            kho_scan::kho_pending_ids,
             collect::data_forward_cancel,
             collect::collected_list,
             collect::collected_retry_rejected,

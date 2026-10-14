@@ -1154,14 +1154,21 @@ pub fn f_10l(r_1fk: &Connection, r_1fl: &[i64]) -> rusqlite::Result<Vec<T2w>> {
     if r_1fl.is_empty() {
         return Ok(Vec::new());
     }
-    let holes = vec!["?"; r_1fl.len()].join(",");
-    let mut r_1fn = r_1fk.prepare(&format!(
-        "SELECT {COLLECTED_COLS} FROM collected_docs \
-         WHERE forwarded_at IS NULL AND id IN ({holes}) ORDER BY id"
-    ))?;
-    let r_1fm = r_1fn
-        .query_map(rusqlite::params_from_iter(r_1fl), f_1qr)?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
+    // Đẩy theo phông (14/10/2026) có thể hàng chục nghìn id — SQLite giới hạn ~32 nghìn tham số mỗi câu.
+    let mut r_1fm = Vec::with_capacity(r_1fl.len());
+    for phan in r_1fl.chunks(10_000) {
+        let holes = vec!["?"; phan.len()].join(",");
+        let mut r_1fn = r_1fk.prepare(&format!(
+            "SELECT {COLLECTED_COLS} FROM collected_docs \
+             WHERE forwarded_at IS NULL AND id IN ({holes}) ORDER BY id"
+        ))?;
+        r_1fm.extend(
+            r_1fn
+                .query_map(rusqlite::params_from_iter(phan), f_1qr)?
+                .collect::<rusqlite::Result<Vec<_>>>()?,
+        );
+    }
+    r_1fm.sort_by_key(|r| r.id);
     Ok(r_1fm)
 }
 pub fn f_101(r_1fo: &Connection, id: i64) -> rusqlite::Result<usize> {
