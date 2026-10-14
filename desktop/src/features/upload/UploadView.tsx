@@ -9,6 +9,7 @@ import { V460, useCollects, useUploads } from "@/state";
 import { isTauri } from "@/api/ipc";
 import { V3yw } from "@/domain/permissions";
 import V4pp from "./BatchesPanel";
+import KhoScanPanel from "./KhoScanPanel";
 import { V4ps } from "./addFilesMessage";
 import { V4pt } from "./collectMessage";
 import { V4pu } from "./forwardMessage";
@@ -590,6 +591,11 @@ function MayQuanTri() {
         </div>
       )}
 
+      {tab === "doisoat" && (
+        <div className="mt-3">
+          <KhoScanPanel disabled={busyAny} startAddFiles={startAddFiles} startForward={startForward} onChanged={load} />
+        </div>
+      )}
       {tab === "doisoat" && collected && (
         <div className="mt-3 space-y-4">
           <KpiRow>
