@@ -390,7 +390,10 @@ const BATCH_MAX_CONSECUTIVE_FAIL: usize = 5;
 /// Số tài liệu chạy chồng nhau trong lô (13/10/2026): máy chủ chuẩn bị / lưu song song, token vẫn ký lần lượt.
 const BATCH_PARALLEL: usize = 3;
 /// Đường hầm Cloudflare rớt vài giây (502 / mất kết nối, 13/10/2026) → thử lại sau 2, 5, 10 giây trước khi báo lỗi.
-const THU_LAI_GIAY: [u64; 3] = [2, 5, 10];
+// 14/10/2026: ổ HDD của kho khựng / mạng máy trạm chập chờn tới vài phút → chờ tổng ~6 phút rồi mới báo lỗi.
+const THU_LAI_GIAY: [u64; 10] = [2, 5, 10, 20, 30, 60, 60, 60, 60, 60];
+/// Sự kiện "đang chờ máy chủ / mạng" để màn Ký số ghi nhật ký trong lúc thử lại (không tính là lỗi).
+const EV_WAIT: &str = "sign://wait";
 /// Lỗi đường truyền tạm thời → `Ok(Err(..))` (thử lại được); lỗi thật của máy chủ giữ nguyên `Err`.
 fn tach_loi_tam<T>(r: Result<T, client::ClientError>) -> Result<Result<T, String>, client::ClientError> {
     match r {
@@ -462,6 +465,7 @@ pub async fn sign_batch(
     // vẫn chuẩn bị / lưu trên máy chủ trong lúc token ký.
     let tok = std::sync::Arc::new(std::sync::Mutex::new(tok));
     let (db, auth, cert, inters, placement, style) = (&db, &auth, &cert, &inters, &placement, &style);
+    let app_ref = &app;
     let ky_mot = |job_id: String| {
         let tok = tok.clone();
         let id = job_id.clone();
@@ -481,7 +485,7 @@ pub async fn sign_batch(
                 let r = f_2r8(db, auth, Permission::SignExecute, |base, token| {
                     let body = begin_body(cert, inters, placement.as_ref(), style);
                     let path = format!("/sign/{job_id}/begin");
-                    async move { tach_loi_tam(client::f_23d(&base, &token, &path, &body).await) }
+                    async move { tach_loi_tam(client::post_sign(&base, &token, &path, &body).await) }
                 })
                 .await
                 .map_err(|e| e.to_string())?;
@@ -489,6 +493,7 @@ pub async fn sign_batch(
                     Ok(b) => break b,
                     Err(e) if lan < THU_LAI_GIAY.len() => {
                         tracing::warn!(job = %job_id, error = %e, lan, "sign_batch: begin lỗi đường truyền — thử lại");
+                        let _ = app_ref.emit(EV_WAIT, format!("Máy chủ/mạng chưa phản hồi ({e}) — thử lại sau {} giây", THU_LAI_GIAY[lan]));
                         tokio::time::sleep(std::time::Duration::from_secs(THU_LAI_GIAY[lan])).await;
                         lan += 1;
                     }
@@ -507,13 +512,14 @@ pub async fn sign_batch(
                 let r = f_2r8(db, auth, Permission::SignExecute, |base, token| {
                     let body = complete_body(&session_id, &signature, style);
                     let path = format!("/sign/{job_id}/complete");
-                    async move { tach_loi_tam(client::f_23d::<CompleteResp>(&base, &token, &path, &body).await) }
+                    async move { tach_loi_tam(client::post_sign::<CompleteResp>(&base, &token, &path, &body).await) }
                 })
                 .await;
                 match r {
                     Ok(Ok(c)) => return Ok(c.status),
                     Ok(Err(e)) if lan < THU_LAI_GIAY.len() => {
                         tracing::warn!(job = %job_id, error = %e, lan, "sign_batch: complete lỗi đường truyền — thử lại");
+                        let _ = app_ref.emit(EV_WAIT, format!("Máy chủ/mạng chưa phản hồi ({e}) — thử lại sau {} giây", THU_LAI_GIAY[lan]));
                         tokio::time::sleep(std::time::Duration::from_secs(THU_LAI_GIAY[lan])).await;
                         lan += 1;
                     }

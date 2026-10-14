@@ -273,6 +273,25 @@ pub async fn post_long<T: serde::de::DeserializeOwned>(
     )
     .await
 }
+/// POST begin/complete ký số: máy chủ tự thử lại kho object khi ổ khựng (tới ~20 s) — chờ 90 s thay vì 15 s.
+pub const SIGN_POST_TIMEOUT: Duration = Duration::from_secs(90);
+pub async fn post_sign<T: serde::de::DeserializeOwned>(
+    base: &str,
+    token: &str,
+    path: &str,
+    body: &serde_json::Value,
+) -> Result<T, ClientError> {
+    parse(
+        http()
+            .post(api(base, path))
+            .timeout(SIGN_POST_TIMEOUT)
+            .bearer_auth(token)
+            .json(body)
+            .send()
+            .await,
+    )
+    .await
+}
 pub async fn f_20e<T: serde::de::DeserializeOwned>(
     r_f4: &str,
     r_f6: &str,

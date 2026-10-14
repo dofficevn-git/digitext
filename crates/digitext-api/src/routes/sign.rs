@@ -110,6 +110,37 @@ fn storage_err(e: digitext_storage::StorageError) -> ApiError {
     tracing::error!(error = % e, "lỗi kho object (ký số)");
     ApiError::service_unavailable("kho object không sẵn sàng")
 }
+/// Kho MinIO nằm trên ổ HDD SMR, ghi liên tục thì có lúc khựng > 30 s (MinIO tự ngắt ổ → 503; URL ký sẵn quá hạn
+/// → 400) — 13/10/2026 làm lô ký chết. Thử lại sau 1/3/6/10 s trước khi báo "kho object không sẵn sàng".
+const KHO_THU_LAI_GIAY: [u64; 4] = [1, 3, 6, 10];
+async fn kho_get(store: &dyn digitext_storage::ObjectStore, key: &str) -> Result<Option<Vec<u8>>, ApiError> {
+    let mut lan = 0usize;
+    loop {
+        match store.get(key).await {
+            Ok(v) => return Ok(v),
+            Err(e) if lan < KHO_THU_LAI_GIAY.len() => {
+                tracing::warn!(key, error = %e, lan, "kho object lỗi (đọc) — thử lại");
+                tokio::time::sleep(std::time::Duration::from_secs(KHO_THU_LAI_GIAY[lan])).await;
+                lan += 1;
+            }
+            Err(e) => return Err(storage_err(e)),
+        }
+    }
+}
+async fn kho_put(store: &dyn digitext_storage::ObjectStore, key: &str, bytes: &[u8]) -> Result<(), ApiError> {
+    let mut lan = 0usize;
+    loop {
+        match store.put(key, bytes).await {
+            Ok(()) => return Ok(()),
+            Err(e) if lan < KHO_THU_LAI_GIAY.len() => {
+                tracing::warn!(key, error = %e, lan, "kho object lỗi (ghi) — thử lại");
+                tokio::time::sleep(std::time::Duration::from_secs(KHO_THU_LAI_GIAY[lan])).await;
+                lan += 1;
+            }
+            Err(e) => return Err(storage_err(e)),
+        }
+    }
+}
 fn f_2f2(e: digitext_sign_verify::SignError) -> ApiError {
     tracing::error!(error = % e, "lỗi ký PAdES (server-side)");
     ApiError::internal()
@@ -257,10 +288,8 @@ async fn begin(
         .ok_or_else(ApiError::not_found)?;
     authorize_project(&r_qn, &r_qc, r_qe.project_id).await?;
     let r_qp = digitext_storage::f_2qs(r_qe.project_id, id);
-    let r_qg = store
-        .get(&r_qp)
-        .await
-        .map_err(storage_err)?
+    let r_qg = kho_get(&**store, &r_qp)
+        .await?
         .ok_or_else(|| {
             ApiError::conflict(
                 "PDF 2 lớp chưa sẵn trong kho (chưa OCR/ghép xong)",
@@ -313,7 +342,7 @@ async fn begin(
     let r_qh = digitext_sign_verify::pdf::prepare_at(&r_qg, &r_qd, r_qm, r_qo.as_ref(), placement)
         .map_err(f_2f2)?;
     let r_qi = digitext_storage::f_23q(r_qe.project_id, id);
-    store.put(&r_qi, &r_qh.pdf).await.map_err(storage_err)?;
+    kho_put(&**store, &r_qi, &r_qh.pdf).await?;
     sign_sessions::f_2ea(
         &r_qn.pool,
         r_ql.id,
@@ -365,6 +394,10 @@ async fn complete(
     if r_qy.signer_user_id != Some(r_qq.user.id) {
         return Err(ApiError::forbidden());
     }
+    if r_qy.status == "signed" {
+        // Máy trạm gửi lại complete vì mất phản hồi lần trước (đường truyền / kho chậm) — phiên đã ký xong: trả kết quả cũ.
+        return Ok(Json(CompleteResp { status: "signed".into() }));
+    }
     if r_qy.status != "open" {
         return Err(ApiError::conflict("phiên ký không còn mở"));
     }
@@ -378,10 +411,8 @@ async fn complete(
         .signer_cert
         .ok_or_else(|| ApiError::conflict("phiên thiếu cert người ký"))?;
     let intermediates = r_qy.signer_intermediates.unwrap_or_default();
-    let r_qw = store
-        .get(&r_qv)
-        .await
-        .map_err(storage_err)?
+    let r_qw = kho_get(&**store, &r_qv)
+        .await?
         .ok_or_else(|| {
             ApiError::conflict("PDF đã chuẩn bị không còn trong kho")
         })?;
@@ -494,7 +525,7 @@ async fn complete(
         signed_pdf
     };
     let r_r0 = digitext_storage::f_2fc(r_qr.project_id, id);
-    store.put(&r_r0, &signed_pdf).await.map_err(storage_err)?;
+    kho_put(&**store, &r_r0, &signed_pdf).await?;
     sign_sessions::complete(&r_r1.pool, r_qy.id, &r_r0).await?;
     // Kết quả cuối chỉ giữ bản PDF/A + bản đã ký (5/10/2026): bỏ bản trung gian chuẩn bị ký.
     let prepared = digitext_storage::f_23q(r_qr.project_id, id);

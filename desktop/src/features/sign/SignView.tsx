@@ -7,7 +7,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { V41p } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
 import { useProject } from "@/state/project";
-import { V4qu, V4qt, V4qv, onSignBatchProgress, signBatch, signBatchCancel, signBatchPause, signCertInfo, signLoadStamp, signRemoveLocal, signRetry, signUnsign, type SignBatchProgress, type SignBatchResult, type SignCertInfo, type SignPlacement, type V4qr, type V4qs } from "@/api/sign";
+import { V4qu, V4qt, V4qv, onSignBatchProgress, onSignWait, signBatch, signBatchCancel, signBatchPause, signCertInfo, signLoadStamp, signRemoveLocal, signRetry, signUnsign, type SignBatchProgress, type SignBatchResult, type SignCertInfo, type SignPlacement, type V4qr, type V4qs } from "@/api/sign";
 import { V4el } from "@/api/docs";
 import { V4ak, type V4a9 } from "@/api/users";
 import { V4e3 } from "@/features/dossier/excel";
@@ -330,6 +330,7 @@ export default function V4qy() {
         ghi(`Lỗi ${ten}${j ? ` (${duongDan(j)})` : ""}: ${error}`, "err");
       }
     });
+    const unlistenWait = await onSignWait((m) => ghi(m));
     try {
       const r: SignBatchResult = await signBatch({ jobIds, modulePath, slotIndex: slot!, pin, placement, style: { withStamp, stampPng: withStamp ? stampB64 : null, timestamp, signerName: tenHienThi.trim() || null } });
       const text = `Đã ký ${fmtN(r.signed)}/${fmtN(r.total)} tài liệu` + (r.rejected ? ` · máy chủ từ chối ${fmtN(r.rejected)}` : "") + (r.failed ? ` · lỗi ${fmtN(r.failed)}` : "") + (r.cancelled ? ` · chưa ký ${fmtN(r.cancelled)}` : "") + (r.stoppedReason ? `. Dừng vì: ${r.stoppedReason}` : "") + ".";
@@ -343,6 +344,7 @@ export default function V4qy() {
       // Sự kiện tiến độ của tệp cuối có thể đến sau kết quả lô — chờ một nhịp rồi mới gom danh sách đã ký.
       if (huyRef.current) await new Promise((ok) => window.setTimeout(ok, 500));
       unlisten();
+      unlistenWait();
       await taiVe.current;
       if (huyRef.current && daKy.length > 0) {
         // Bấm "Huỷ": mọi tài liệu đã ký trong lô quay về chưa ký — máy chủ xoá bản đã ký, đưa về hàng chờ; bản đã
