@@ -19,6 +19,9 @@ services:
       # 14/10/2026: /data nằm trên HDD SMR — ghi liên tục có lúc khựng > 30 s, MinIO mặc định ngắt ổ (503 cho mọi
       # yêu cầu). Cho chờ tới 2 phút thay vì ngắt.
       MINIO_DRIVE_MAX_TIMEOUT: 2m
+      # Bộ quét nền mặc định quét lại toàn kho (hàng trăm nghìn tệp) mỗi phút → ổ SMR không lúc nào rảnh để tự dọn
+      # vùng đệm, ký số tụt từ ~6.000 xuống < 1.000 tệp/giờ (14/10/2026). Quét chậm nhất.
+      MINIO_SCANNER_SPEED: slowest
     ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
     volumes: ["miniodata:/data"]
 
