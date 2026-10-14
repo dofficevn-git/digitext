@@ -427,7 +427,8 @@ function MayQuanTri() {
     const ten = phongs.find((p) => p.maDuAn === themPhong)?.tenDuAn || themPhong;
     return `${ten}/${themHoSo}`;
   }, [phongs, themPhong, themHoSo, themViTri]);
-  const thieuHoSo = phongs.length > 0 && !themHoSo;
+  // Không chọn phông = giữ nguyên cây thư mục đã chọn (14/10/2026); đã chọn phông thì phải chọn hồ sơ.
+  const thieuHoSo = phongs.length > 0 && !!themPhong && !themHoSo;
   const projectLabel = useMemo(() => {
     const p = projects.find((x) => x.id === projectId.trim()) ?? (projects.length === 1 ? projects[0] : undefined);
     return p ? `${p.code} · ${p.name}`.split("/").join("-").split("\\").join("-") : "";
@@ -544,7 +545,7 @@ function MayQuanTri() {
                         setThemPhong(v);
                         setThemHoSo("");
                       }}
-                      placeholder="— Chọn phông —"
+                      placeholder="— Không chọn: giữ cây thư mục —"
                       options={phongs.map((p) => ({ value: p.maDuAn, label: p.tenDuAn || p.maDuAn }))}
                     />
                   </Field>
@@ -583,7 +584,7 @@ function MayQuanTri() {
               )}
             </Toolbar>
             <p className="mt-2 text-sm text-fg-subtle">
-              {thieuHoSo ? "Chọn phông và hồ sơ theo danh mục rồi mới chọn tệp." : dayThang ? `Tệp giữ nguyên trên ổ đĩa; máy chủ xếp theo cây: ${dest}. Tệp gửi lỗi cần cắm lại ổ này để gửi lại.` : `Sẽ lưu vào Kho: ${dest}`}
+              {thieuHoSo ? "Đã chọn phông thì chọn hồ sơ theo danh mục (hoặc bỏ chọn phông để giữ nguyên cây thư mục)." : dayThang ? `Tệp giữ nguyên trên ổ đĩa; máy chủ xếp theo cây: ${dest}. Tệp gửi lỗi cần cắm lại ổ này để gửi lại.` : `Sẽ lưu vào Kho: ${dest}`}
             </p>
           </Card>
         </div>
