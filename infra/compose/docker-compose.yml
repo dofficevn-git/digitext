@@ -16,6 +16,9 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:?dat MINIO_USER trong infra/compose/.env}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?dat MINIO_PASSWORD trong infra/compose/.env}
+      # 14/10/2026: /data nằm trên HDD SMR — ghi liên tục có lúc khựng > 30 s, MinIO mặc định ngắt ổ (503 cho mọi
+      # yêu cầu). Cho chờ tới 2 phút thay vì ngắt.
+      MINIO_DRIVE_MAX_TIMEOUT: 2m
     ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
     volumes: ["miniodata:/data"]
 
