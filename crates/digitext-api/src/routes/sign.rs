@@ -141,6 +141,28 @@ async fn kho_put(store: &dyn digitext_storage::ObjectStore, key: &str, bytes: &[
         }
     }
 }
+/// Bản PDF chuẩn bị ký giữ trong RAM từ begin tới complete (14/10/2026): ổ HDD SMR của kho quá tải — bớt 1 lần ghi,
+/// 1 lần đọc, 1 lần xoá trên kho cho mỗi tệp ký. API khởi động lại giữa chừng thì complete lùi về đọc kho (không có
+/// → "PDF đã chuẩn bị không còn trong kho", bấm "Ký lại tệp lỗi"). Giữ tối đa 35 phút (phiên ký hết hạn 30 phút).
+static BAN_CHUAN_BI: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<String, (std::time::Instant, std::sync::Arc<Vec<u8>>)>>> =
+    std::sync::LazyLock::new(Default::default);
+const BAN_CHUAN_BI_TOI_DA: usize = 256;
+const BAN_CHUAN_BI_HAN: std::time::Duration = std::time::Duration::from_secs(35 * 60);
+fn ban_chuan_bi_dat(key: String, pdf: Vec<u8>) {
+    let Ok(mut m) = BAN_CHUAN_BI.lock() else { return };
+    m.retain(|_, (t, _)| t.elapsed() < BAN_CHUAN_BI_HAN);
+    while m.len() >= BAN_CHUAN_BI_TOI_DA {
+        let Some(cu) = m.iter().min_by_key(|(_, (t, _))| *t).map(|(k, _)| k.clone()) else { break };
+        m.remove(&cu);
+    }
+    m.insert(key, (std::time::Instant::now(), std::sync::Arc::new(pdf)));
+}
+fn ban_chuan_bi_lay(key: &str) -> Option<std::sync::Arc<Vec<u8>>> {
+    BAN_CHUAN_BI.lock().ok()?.get(key).map(|(_, b)| b.clone())
+}
+fn ban_chuan_bi_bo(key: &str) -> bool {
+    BAN_CHUAN_BI.lock().map(|mut m| m.remove(key).is_some()).unwrap_or(false)
+}
 fn f_2f2(e: digitext_sign_verify::SignError) -> ApiError {
     tracing::error!(error = % e, "lỗi ký PAdES (server-side)");
     ApiError::internal()
@@ -342,7 +364,7 @@ async fn begin(
     let r_qh = digitext_sign_verify::pdf::prepare_at(&r_qg, &r_qd, r_qm, r_qo.as_ref(), placement)
         .map_err(f_2f2)?;
     let r_qi = digitext_storage::f_23q(r_qe.project_id, id);
-    kho_put(&**store, &r_qi, &r_qh.pdf).await?;
+    ban_chuan_bi_dat(r_qi.clone(), r_qh.pdf.clone());
     sign_sessions::f_2ea(
         &r_qn.pool,
         r_ql.id,
@@ -411,11 +433,12 @@ async fn complete(
         .signer_cert
         .ok_or_else(|| ApiError::conflict("phiên thiếu cert người ký"))?;
     let intermediates = r_qy.signer_intermediates.unwrap_or_default();
-    let r_qw = kho_get(&**store, &r_qv)
-        .await?
-        .ok_or_else(|| {
+    let r_qw: std::sync::Arc<Vec<u8>> = match ban_chuan_bi_lay(&r_qv) {
+        Some(b) => b,
+        None => std::sync::Arc::new(kho_get(&**store, &r_qv).await?.ok_or_else(|| {
             ApiError::conflict("PDF đã chuẩn bị không còn trong kho")
-        })?;
+        })?),
+    };
     if r_qx.timestamp == Some(true) && r_r1.tsa_url.is_none() {
         return Err(ApiError::bad_request(
             "máy chủ chưa cấu hình dịch vụ cấp dấu thời gian (DIGITEXT_TSA_URL) — chọn ký không kèm dấu thời gian",
@@ -529,7 +552,9 @@ async fn complete(
     sign_sessions::complete(&r_r1.pool, r_qy.id, &r_r0).await?;
     // Kết quả cuối chỉ giữ bản PDF/A + bản đã ký (5/10/2026): bỏ bản trung gian chuẩn bị ký.
     let prepared = digitext_storage::f_23q(r_qr.project_id, id);
-    if let Err(e) = store.delete(&prepared).await {
+    if ban_chuan_bi_bo(&prepared) {
+        // bản chuẩn bị chỉ nằm trong RAM — không có trên kho để xoá
+    } else if let Err(e) = store.delete(&prepared).await {
         tracing::warn!(document = %id, key = prepared, error = %e, "không xoá được bản chuẩn bị ký");
     }
     Ok(Json(CompleteResp {
