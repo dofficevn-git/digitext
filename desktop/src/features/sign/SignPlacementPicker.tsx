@@ -1,5 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Chọn vị trí khối chữ ký trên tệp đầu tiên của lô: vẽ trang (đầu / cuối) bằng pdf.js, bấm vào đâu thì góc
+// Chọn vị trí khối chữ ký trên một tệp mẫu (ít trang) của lô: vẽ trang (đầu / cuối) bằng pdf.js, bấm vào đâu thì góc
 // trên-trái khối chữ ký đặt ở đó. Toạ độ lưu theo tỉ lệ trang nên áp được cho mọi tệp trong lô.
 
 import { useEffect, useRef, useState } from "react";
@@ -106,7 +106,7 @@ export default function SignPlacementPicker({ jobId, filename, value, onChange }
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="text-fg-subtle">
-          Tệp đầu tiên: <b className="text-fg">{filename}</b>
+          Tệp mẫu: <b className="text-fg">{filename}</b>
           {page && ` · trang ${page.num}/${page.total}`}
         </span>
         <Seg<"dau" | "cuoi"> value={lastPage ? "cuoi" : "dau"} onChange={(v) => changePage(v === "cuoi")} options={[{ value: "dau", label: "Trang đầu" }, { value: "cuoi", label: "Trang cuối" }]} />
@@ -116,8 +116,8 @@ export default function SignPlacementPicker({ jobId, filename, value, onChange }
           </Button>
         )}
       </div>
-      {err !== null && <ErrorBanner error={err} ctx="mở PDF/A của tệp đầu tiên" />}
-      {busy && <p className="text-sm text-fg-subtle">Đang tải PDF/A của tệp đầu tiên…</p>}
+      {err !== null && <ErrorBanner error={err} ctx="mở PDF/A của tệp mẫu" />}
+      {busy && <p className="text-sm text-fg-subtle">Đang tải PDF/A của tệp mẫu…</p>}
       {page && page.rotate !== 0 && <Banner tone="warning">Trang này bị xoay {page.rotate}° trong tệp nên vị trí trên màn hình có thể lệch khi ký. Nên ký thử một tệp rồi mở kiểm tra trước khi ký cả lô.</Banner>}
       <div className="relative inline-block border border-border-subtle" style={{ width: VIEW_W_PX, maxWidth: "100%" }}>
         <canvas ref={canvasRef} onClick={pick} onKeyDown={phim} tabIndex={0} role="button" aria-label="Bấm hoặc dùng mũi tên để đặt vị trí khối chữ ký" className="block w-full cursor-crosshair outline-none focus-visible:ring-2 focus-visible:ring-ring/40" />

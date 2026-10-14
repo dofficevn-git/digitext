@@ -417,7 +417,17 @@ export default function V4qy() {
   const xuatLoi = () => void V4e3(loi.map((e, i) => ({ STT: i + 1, "Tên file": e.filename, "Đường dẫn": e.path, "Lý do": e.error })), "Lỗi ký số", `loi-ky-so-${new Date().toISOString().slice(0, 10)}.xlsx`);
 
   const trang = usePagination(100);
-  const first = jobs[0];
+  // Tệp mẫu để chọn vị trí ký: tệp ÍT TRANG nhất trong 200 tệp đầu lô (14/10/2026: tệp đầu 186 trang / PDF/A 526 MB
+  // phải tải hết qua Internet, hộp chọn vị trí "tải mãi"). Vị trí tính theo tỉ lệ trang nên áp đúng cho cả lô.
+  const first = useMemo(() => {
+    let tot: (typeof jobs)[number] | undefined;
+    for (const j of jobs.slice(0, 200)) {
+      const n = j.pageCount ?? Number.MAX_SAFE_INTEGER;
+      if (!tot || n < (tot.pageCount ?? Number.MAX_SAFE_INTEGER)) tot = j;
+      if (n <= 2) break;
+    }
+    return tot;
+  }, [jobs]);
   const running = busy === "batch";
   const elapsed = startedAt ? now - startedAt : 0;
   const eta = batch && batch.done > 0 && batch.done < batch.total ? (elapsed / batch.done) * (batch.total - batch.done) : null;
@@ -636,7 +646,7 @@ export default function V4qy() {
         <p>Thư viện PKCS#11 là tệp .dll do nhà cung cấp chứng thư cài cùng phần mềm token. Máy chưa cài thì không dò thấy token.</p>
       </Help>
 
-      <Dialog open={moViTri && !!first} onOpenChange={setMoViTri} title="Vị trí chữ ký" description="Chọn trên tệp đầu tiên, áp cho cả lô." size="lg" footer={<Button variant="primary" onClick={() => setMoViTri(false)}>Xong</Button>}>
+      <Dialog open={moViTri && !!first} onOpenChange={setMoViTri} title="Vị trí chữ ký" description="Chọn trên một tệp mẫu nhẹ trong lô, áp cho cả lô." size="lg" footer={<Button variant="primary" onClick={() => setMoViTri(false)}>Xong</Button>}>
         {first && <SignPlacementPicker jobId={first.id} filename={first.filename} value={placement} onChange={setPlacement} />}
       </Dialog>
     </section>
