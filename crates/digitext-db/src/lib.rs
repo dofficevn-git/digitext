@@ -19,6 +19,7 @@ pub mod packages;
 pub mod permissions;
 pub mod pool;
 pub mod progress;
+pub mod project_purge;
 pub mod projects;
 pub mod records;
 pub mod review_queue;

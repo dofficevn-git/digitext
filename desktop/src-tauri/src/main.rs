@@ -97,6 +97,8 @@ fn main() {
             auth::admin::project_set_admins,
             auth::admin::project_add_admin,
             auth::admin::project_remove_admin,
+            auth::admin::project_purge,
+            auth::admin::project_purge_status,
             auth::admin::upload_batches_list,
             auth::admin::upload_batches_matrix,
             sync::tree_publish,

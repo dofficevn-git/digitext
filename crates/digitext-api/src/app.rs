@@ -126,6 +126,7 @@ fn f_rv() -> Router<AppState> {
     crate::routes::auth::router()
         .merge(crate::routes::users::router())
         .merge(crate::routes::projects::router())
+        .merge(crate::routes::project_purge::router())
         .merge(crate::routes::devices::router())
         .merge(crate::routes::stats::router())
         .merge(crate::routes::progress::router())
