@@ -730,14 +730,24 @@ async fn f_173(
             .store
             .as_ref()
             .ok_or_else(|| ApiError::service_unavailable("kho lưu trữ chưa cấu hình"))?;
-        let bytes = store
+        let found = store
             .get(&key)
             .await
             .map_err(|e| {
                 tracing::error!(error = % e, key, "lỗi đọc bản PDF/A từ kho object");
                 ApiError::service_unavailable("kho lưu trữ không sẵn sàng")
-            })?
-            .ok_or_else(ApiError::not_found)?;
+            })?;
+        let Some(bytes) = found else {
+            // PDF/A đã xuất ra lưu trữ ngoài rồi xoá khỏi kho (15/10/2026, migration 0019) — nói rõ thay vì 404.
+            if let Some((at, note)) = documents::pdfa_offload(&state.pool, id).await? {
+                return Err(ApiError::conflict(format!(
+                    "bản PDF/A đã chuyển ra lưu trữ ngoài ngày {}{} — bản ký số vẫn tải được",
+                    at.with_timezone(&chrono::FixedOffset::east_opt(7 * 3600).expect("GMT+7")).format("%d/%m/%Y"),
+                    note.map(|n| format!(" ({n})")).unwrap_or_default()
+                )));
+            }
+            return Err(ApiError::not_found());
+        };
         let n = bytes.len() as u64;
         return Ok((f_177(&r_ev.filename, Some(n)), Body::from(bytes)).into_response());
     }

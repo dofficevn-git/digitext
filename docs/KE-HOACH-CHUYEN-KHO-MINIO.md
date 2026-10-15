@@ -2,6 +2,28 @@
 
 Lập 15/10/2026 · triển khai ngay sau khi ký số xong dự án LTLSBN.
 
+## 0. Quyết định 15/10/2026 (thay cho mục 3 và 5.3–5.6 bên dưới)
+
+Anh Hiếu chốt:
+- **Ổ đích: E:** (HDD). MinIO mới đặt ở `E:\DigiText-KhoMayChu`.
+- **Chỉ dự án LTLSBN** chuyển ra ổ ngoài **F:** (WD Elements 4 TB, USB), dạng **xếp theo hồ sơ** (Phông/Hộp/Hồ sơ, tên tệp gốc). **Một bản duy nhất trên F:**, nên phải kiểm SHA-256 từng tệp trước khi xoá.
+- **Giữ bản ký số trên máy chủ** để đóng gói (đóng gói lấy bản ký trước, PDF/A chỉ là dự phòng). **Chỉ xoá bản PDF/A** của tài liệu đã ký và đã xuất khớp mã băm. Tài liệu chưa ký giữ nguyên PDF/A.
+- CSDL giữ nguyên trạng thái (đã PDF/A, đã ký) và đánh dấu "PDF/A đã chuyển ra lưu trữ ngoài". Tải PDF/A khi đó báo rõ thay vì lỗi kho.
+
+Trình tự:
+1. **Ký xong** → build và khởi động lại API, phát hành desktop (xoá dữ liệu dự án, vai trò, đánh dấu PDF/A ngoài).
+2. **Xuất LTLSBN ra F:** (`dev/xuat-kho-theo-ho-so.py`):
+   - `F:\DigiText-XuatKho\LTLSBN\PDF-A\<Phông>\<Hộp>\<Hồ sơ>\<tên>.pdf` và `…\Ky-so\…`.
+   - Ghi xong đọc lại từ F: so SHA-256 với bản trong kho; `manifest.csv` ghi từng tệp.
+   - Chạy lại được: tệp đã khớp thì bỏ qua.
+   - Ước tính khoảng 3–6 giờ.
+3. **Xoá PDF/A đã xuất khỏi MinIO** (`dev/xoa-pdfa-da-xuat.py`, mặc định chạy thử, thêm `--that` mới xoá; chỉ xoá tài liệu có cả PDF-A lẫn Ky-so `khop=1`, tính lại SHA-256 trên F:, kiểm bản ký còn trong kho), đánh dấu CSDL. Ổ ảo chưa co lại ở bước này.
+   - **Trước đó** áp `migrations/0019_pdfa_offload.sql` lúc **không ai ký / không có truy vấn dài**, kèm `SET lock_timeout = '5s'`. Ngày 15/10 em đã thử áp khi đang ký: `ALTER TABLE documents` phải chờ một truy vấn quét trùng lặp tiêu huỷ dài 15 phút, và trong lúc chờ nó chặn luôn việc ký khoảng 2,5 phút. Em đã huỷ lệnh, chưa áp.
+4. **MinIO mới trên E:** chép phần còn lại (bản ký LTLSBN khoảng 240 GB + dự án khác) sang `E:\DigiText-KhoMayChu`, đối chiếu `mc diff`. E: còn trống khoảng 400 GB nên vừa.
+5. **Ngoài giờ:** dừng API/worker → chép nốt phần chênh → dừng MinIO Docker → xoá volume → thu gọn ổ ảo (dừng Docker 1–3 giờ) → MinIO mới sang cổng 9000 → bật lại → kiểm tra (mục 5.5).
+   - Không giữ được volume cũ 14 ngày như mục 5.6, vì E: không đủ chỗ cho cả hai.
+   - Phần quay lui chỉ còn là bản trên F: (PDF/A + bản ký) và bản trên MinIO mới.
+
 ## 1. Vì sao làm
 
 | Vấn đề hiện tại | Nguyên nhân |
