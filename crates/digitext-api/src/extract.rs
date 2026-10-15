@@ -43,7 +43,7 @@ impl Ts {
 fn f_23t(role: digitext_core::Role) -> bool {
     !matches!(
         role,
-        digitext_core::Role::Admin | digitext_core::Role::SuperAdmin
+        digitext_core::Role::Admin | digitext_core::Role::SuperAdmin | digitext_core::Role::Manager
     )
 }
 pub(crate) fn f_249(
@@ -97,7 +97,7 @@ pub async fn f_29a(
     user: &digitext_db::users::User,
 ) -> Result<Scope, ApiError> {
     match user.role {
-        digitext_core::Role::SuperAdmin => Ok(Scope::All),
+        digitext_core::Role::SuperAdmin | digitext_core::Role::Manager => Ok(Scope::All),
         digitext_core::Role::Admin => {
             let r_48 = digitext_db::projects::f_1ng(r_4a, user.id)
                 .await?

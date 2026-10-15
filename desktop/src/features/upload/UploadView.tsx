@@ -188,7 +188,7 @@ function MayQuanTri() {
     }
     wasRunning.current = forwarding || collecting;
   }, [forwarding, collecting]);
-  const isSuper = session?.role === "super_admin";
+  const isSuper = session?.role === "super_admin" || session?.role === "manager";
   const [tab, setTab] = useState<Tab>("gom");
   const [siteCode, setSiteCode] = useState("");
   const [share, setShare] = useState<V42z | null>(null);

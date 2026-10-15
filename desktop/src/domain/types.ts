@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
-export type V3xs = "super_admin" | "admin" | "user" | "customer";
+export type V3xs = "super_admin" | "manager" | "admin" | "user" | "customer";
 
 export type V3xt =
   | "home"

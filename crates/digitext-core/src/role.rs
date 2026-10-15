@@ -6,6 +6,8 @@ use std::str::FromStr;
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     SuperAdmin,
+    /// Quản lý (15/10/2026): xem và điều hành MỌI dự án như quản trị, nhưng không được xoá.
+    Manager,
     Admin,
     User,
     Customer,
@@ -18,10 +20,11 @@ pub enum Perm {
     Super,
 }
 impl Role {
-    pub const ALL: [Role; 4] = [Role::SuperAdmin, Role::Admin, Role::User, Role::Customer];
+    pub const ALL: [Role; 5] = [Role::SuperAdmin, Role::Manager, Role::Admin, Role::User, Role::Customer];
     pub fn max_perm(self) -> Perm {
         match self {
             Role::SuperAdmin => Perm::Super,
+            Role::Manager => Perm::Admin,
             Role::Admin => Perm::Admin,
             Role::User => Perm::Operate,
             Role::Customer => Perm::Read,
@@ -33,6 +36,7 @@ impl Role {
     pub fn as_str(self) -> &'static str {
         match self {
             Role::SuperAdmin => "super_admin",
+            Role::Manager => "manager",
             Role::Admin => "admin",
             Role::User => "user",
             Role::Customer => "customer",
@@ -52,6 +56,7 @@ impl FromStr for Role {
     fn from_str(r_1zs: &str) -> Result<Self, Self::Err> {
         match r_1zs {
             "super_admin" => Ok(Role::SuperAdmin),
+            "manager" => Ok(Role::Manager),
             "admin" => Ok(Role::Admin),
             "user" => Ok(Role::User),
             "customer" => Ok(Role::Customer),

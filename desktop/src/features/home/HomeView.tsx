@@ -140,7 +140,7 @@ export default function HomeView() {
   const { session, goto, gotoHoSo, gotoReport } = nav;
   const perms = session?.permissions;
   const has = (p: Parameters<typeof V3z9>[1]) => V3z9(perms, p);
-  const isAdmin = session?.role === "admin" || session?.role === "super_admin";
+  const isAdmin = session?.role === "admin" || session?.role === "manager" || session?.role === "super_admin";
   const up = useUploads();
   const col = useCollects();
   const notif = useNotifications();
