@@ -116,6 +116,16 @@ pub async fn pdfa_key(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<String>> {
         .await
         .map(|r| r.flatten())
 }
+/// Bản PDF/A đã chuyển ra lưu trữ ngoài (migration 0019): (lúc chuyển, ghi chú nơi lưu).
+pub async fn pdfa_offload(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<(chrono::DateTime<chrono::Utc>, Option<String>)>> {
+    sqlx::query_as::<_, (Option<chrono::DateTime<chrono::Utc>>, Option<String>)>(
+        "SELECT pdfa_offloaded_at, pdfa_offload_note FROM documents WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .map(|r| r.and_then(|(at, note)| at.map(|at| (at, note))))
+}
 const DOC_COLS: &str = "d.id, d.project_id, d.filename, d.ho_so_ref, d.page_count, \
      d.size_bytes, d.status, u.display_name AS uploaded_by_name, d.uploaded_at, \
      d.review_status, d.reviewed_at, d.review_note, d.rel_path";
