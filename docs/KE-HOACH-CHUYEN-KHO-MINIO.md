@@ -56,7 +56,7 @@ Lập 15/10/2026 · triển khai ngay sau khi ký số xong dự án LTLSBN.
 ### 5.0 Chuẩn bị (làm trước, không ảnh hưởng hệ thống, khoảng 1 giờ)
 1. Lắp SSD, định dạng NTFS, đặt nhãn `DIGITEXT-KHO`. Nếu dùng D: thì bỏ qua bước này.
 2. Cài Go, build `minio.exe` theo đúng thẻ phiên bản, ghi lại SHA-256. Đặt ở `D:\DigiText\infra\minio-win\minio.exe`.
-3. Thêm loại trừ Windows Defender cho thư mục kho và `minio.exe` (quét thời gian thực làm chậm ghi rất nhiều).
+3. **Làm tay:** thêm loại trừ Windows Defender cho thư mục kho và `C:\Users\HieuPC\tools\minio-build\minio.exe` (Windows Security → Virus & threat protection → Exclusions). Quét thời gian thực làm ghi chậm đi rất nhiều. Script tự thêm loại trừ thì bị chính Defender chặn, coi là phần mềm độc hại (15/10).
 4. Viết `dev/minio-win.ps1`:
    - Đọc tài khoản gốc từ `infra/compose/.env` (dùng lại đúng `MINIO_USER` / `MINIO_PASSWORD`, để API/worker không phải đổi khoá).
    - Đặt `MINIO_SCANNER_SPEED=slowest` và `MINIO_DRIVE_MAX_TIMEOUT=2m`.
