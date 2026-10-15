@@ -529,3 +529,49 @@ pub async fn upload_batches_matrix(
     )
     .await
 }
+/// "Xoá dữ liệu dự án" (15/10/2026) — máy chủ chỉ cho super_admin; ở đây gác thêm quyền gán quản trị dự án.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectPurgeArgs {
+    pub project_id: String,
+    #[serde(default)]
+    pub dry_run: Option<bool>,
+    #[serde(default)]
+    pub confirm_code: Option<String>,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub allow_undelivered: Option<bool>,
+}
+#[tauri::command]
+pub async fn project_purge(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+    args: ProjectPurgeArgs,
+) -> Result<serde_json::Value, AppError> {
+    let path = format!("/projects/{}/purge", args.project_id.trim());
+    let body = serde_json::json!({
+        "dryRun": args.dry_run.unwrap_or(true),
+        "confirmCode": args.confirm_code,
+        "reason": args.reason,
+        "allowUndelivered": args.allow_undelivered.unwrap_or(false),
+    });
+    f_2r8(&db, &auth, Permission::ProjectAssignAdmin, move |base, token| {
+        let (path, body) = (path.clone(), body.clone());
+        async move { client::post_long::<serde_json::Value>(&base, &token, &path, &body).await }
+    })
+    .await
+}
+#[tauri::command]
+pub async fn project_purge_status(
+    db: State<'_, Db>,
+    auth: State<'_, AuthState>,
+    project_id: String,
+) -> Result<serde_json::Value, AppError> {
+    let path = format!("/projects/{}/purge", project_id.trim());
+    f_2r8(&db, &auth, Permission::ProjectAssignAdmin, move |base, token| {
+        let path = path.clone();
+        async move { client::f_1eo::<serde_json::Value>(&base, &token, &path).await }
+    })
+    .await
+}

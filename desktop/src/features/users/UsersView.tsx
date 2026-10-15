@@ -12,6 +12,7 @@ import { V4ac, V4ad, V4ae, V4af, V4ag, V4ai, V4aj, V4ak, V4al, V4an, V4ao } from
 import type { V4a8, V4a9, V4ah } from "@/api/users";
 import { V4r3, type V4r0 } from "@/api/stats";
 import { V4r5, V4r6, V4r8, type V4r4 } from "./projectAdmins";
+import ProjectPurgeDialog from "./ProjectPurgeDialog";
 import { Icon } from "@/components/Icon";
 import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, Help, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, Tip, toast, Toolbar, type Column } from "@/ui";
 
@@ -27,6 +28,7 @@ export default function V4ra() {
   const me = session?.userId ?? "";
   const [tab, setTab] = useState<Tab>("users");
   const [dlg, setDlg] = useState<DialogState>(null);
+  const [xoaDuAn, setXoaDuAn] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [roleF, setRoleF] = useState("");
   const [projF, setProjF] = useState("");
@@ -173,6 +175,7 @@ export default function V4ra() {
             }
           }}
           onCreate={() => setDlg({ kind: "project" })}
+          onPurge={(pid) => setXoaDuAn(pid)}
         />
       )}
 
@@ -193,6 +196,7 @@ export default function V4ra() {
       )}
       {dlg?.kind === "password" && <PasswordDialog user={dlg.user} onClose={() => setDlg(null)} />}
       {dlg?.kind === "perms" && <PermsDialog user={dlg.user} onClose={() => setDlg(null)} />}
+      {xoaDuAn && <ProjectPurgeDialog projectId={xoaDuAn} onClose={() => setXoaDuAn(null)} onDone={reload} />}
       {dlg?.kind === "project" && (
         <ProjectDialog
           onClose={() => setDlg(null)}
@@ -207,7 +211,7 @@ export default function V4ra() {
 }
 
 // ---------------- Dự án
-function ProjectsTab({ projects, admins, isSuper, me, loading, onAdd, onRemove, onCreate }: { projects: V4a9[]; admins: V4a8[]; isSuper: boolean; me: string; loading: boolean; onAdd: (pid: string, uid: string) => void; onRemove: (pid: string, uid: string) => void; onCreate: () => void }) {
+function ProjectsTab({ projects, admins, isSuper, me, loading, onAdd, onRemove, onCreate, onPurge }: { projects: V4a9[]; admins: V4a8[]; isSuper: boolean; me: string; loading: boolean; onAdd: (pid: string, uid: string) => void; onRemove: (pid: string, uid: string) => void; onCreate: () => void; onPurge: (pid: string) => void }) {
   const nameOf = (id: string) => {
     const a = admins.find((x) => x.id === id);
     return a ? `${a.displayName} (${a.username})` : id;
@@ -246,6 +250,17 @@ function ProjectsTab({ projects, admins, isSuper, me, loading, onAdd, onRemove, 
       },
     },
     { key: "isActive", header: "Trạng thái", width: 110, cell: (p) => <Badge tone={p.isActive ? "ok" : "gray"}>{p.isActive ? "Hoạt động" : "Đóng"}</Badge> },
+    ...(isSuper
+      ? [
+          {
+            key: "purge",
+            header: "",
+            width: 56,
+            align: "right" as const,
+            cell: (p: V4a9) => <Menu items={[{ label: "Xoá dữ liệu dự án…", icon: "xoa", danger: true, onSelect: () => onPurge(p.id) }]} />,
+          },
+        ]
+      : []),
   ];
   return (
     <Card padding="none" className="mt-3">
