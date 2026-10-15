@@ -509,7 +509,7 @@ export default function V4wh() {
 
       {tab === "dot" && (
         <div className="mt-3">
-          <V4pp isSuper={session?.role === "super_admin"} />
+          <V4pp isSuper={session?.role === "super_admin" || session?.role === "manager"} />
         </div>
       )}
     </section>

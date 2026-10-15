@@ -8,6 +8,7 @@ const V3yu: Record<V3xs, number> = {
   customer: 0,
   user: 1,
   admin: 2,
+  manager: 2,
   super_admin: 3,
 };
 
@@ -385,7 +386,14 @@ const V3z4: Record<V3yx, number> = {
   "loan.manage": 1,
 };
 
+// Quản lý (15/10/2026, khớp digitext-core permission.rs): như quản trị nhưng KHÔNG xoá; được gán quản trị dự án.
+const QUAN_LY_CHAN: V3yx[] = ["dossier.delete", "catalog.delete", "disposal.decide"];
+
 export function V3z5(Vh: V3xs, Vi: V3yx): boolean {
+  if (Vh === "manager") {
+    if (QUAN_LY_CHAN.includes(Vi)) return false;
+    if (Vi === "project.assign_admin") return true;
+  }
   return V3yu[Vh] >= V3z4[Vi];
 }
 
@@ -442,10 +450,12 @@ export function V3za(Vn: V3xs): string {
   switch (Vn) {
     case "super_admin":
       return "Quản trị hệ thống";
+    case "manager":
+      return "Quản lý";
     case "admin":
       return "Quản trị dự án";
     case "user":
-      return "Nhân viên";
+      return "Nhân viên dự án";
     case "customer":
       return "Khách hàng";
   }

@@ -282,6 +282,16 @@ impl Permission {
         }
     }
     pub fn granted_by_default(self, r_1yx: Role) -> bool {
+        if r_1yx == Role::Manager {
+            // Quản lý (15/10/2026): như quản trị nhưng KHÔNG xoá (hồ sơ, danh mục, quyết định tiêu huỷ;
+            // xoá dữ liệu dự án chỉ super_admin ở API); được gán quản trị cho dự án.
+            if matches!(self, Permission::DossierDelete | Permission::CatalogDelete | Permission::DisposalDecide) {
+                return false;
+            }
+            if self == Permission::ProjectAssignAdmin {
+                return true;
+            }
+        }
         r_1yx.allows(self.min_perm())
     }
 }
@@ -340,4 +350,22 @@ pub fn f_18s(r_1z5: Role, r_1z4: &PermissionOverrides) -> BTreeSet<Permission> {
         .into_iter()
         .filter(|p| effective(r_1z5, r_1z4, *p))
         .collect()
+}
+#[cfg(test)]
+mod quan_ly_tests {
+    use super::*;
+    #[test]
+    fn quan_ly_nhu_quan_tri_nhung_khong_xoa() {
+        let m = Role::Manager;
+        assert!(Permission::ProjectCreate.granted_by_default(m));
+        assert!(Permission::UserCreate.granted_by_default(m));
+        assert!(Permission::ProjectAssignAdmin.granted_by_default(m));
+        assert!(Permission::SignExecute.granted_by_default(m));
+        for p in [Permission::DossierDelete, Permission::CatalogDelete, Permission::DisposalDecide] {
+            assert!(!p.granted_by_default(m), "{p} phải bị chặn với quản lý");
+            assert!(p.granted_by_default(Role::SuperAdmin));
+        }
+        assert!(!Permission::ProjectAssignAdmin.granted_by_default(Role::Admin));
+        assert_eq!("manager".parse::<Role>(), Ok(Role::Manager));
+    }
 }

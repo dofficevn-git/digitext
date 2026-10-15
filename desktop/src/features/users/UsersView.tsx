@@ -25,6 +25,8 @@ type DialogState = null | { kind: "create" } | { kind: "edit"; user: V4a8 } | { 
 export default function V4ra() {
   const { session } = V460();
   const isSuper = session?.role === "super_admin";
+  // Quản lý (manager) thấy và điều hành mọi dự án như super_admin, trừ xoá.
+  const toanHeThong = isSuper || session?.role === "manager";
   const me = session?.userId ?? "";
   const [tab, setTab] = useState<Tab>("users");
   const [dlg, setDlg] = useState<DialogState>(null);
@@ -91,7 +93,7 @@ export default function V4ra() {
     <section className="view active">
       <PageHeader
         title="Người dùng và dự án"
-        description={isSuper ? "Toàn hệ thống." : `Các dự án bạn phụ trách (${n(projects.length)}).`}
+        description={toanHeThong ? "Toàn hệ thống." : `Các dự án bạn phụ trách (${n(projects.length)}).`}
         actions={
           <>
             <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
@@ -155,7 +157,8 @@ export default function V4ra() {
         <ProjectsTab
           projects={projects}
           admins={users.filter((u) => u.role === "admin")}
-          isSuper={!!isSuper}
+          isSuper={toanHeThong}
+          canPurge={isSuper}
           me={me}
           loading={loading}
           onAdd={async (pid, uid) => {
@@ -179,12 +182,12 @@ export default function V4ra() {
         />
       )}
 
-      {tab === "stats" && <StatsTab stats={stats} projects={projects} users={users} isSuper={!!isSuper} projectName={projectName} />}
+      {tab === "stats" && <StatsTab stats={stats} projects={projects} users={users} isSuper={toanHeThong} projectName={projectName} />}
 
       {(dlg?.kind === "create" || dlg?.kind === "edit") && (
         <UserDialog
           mode={dlg.kind}
-          isSuper={!!isSuper}
+          myRole={session?.role ?? "user"}
           projects={projects}
           user={dlg.kind === "edit" ? dlg.user : undefined}
           onClose={() => setDlg(null)}
@@ -211,7 +214,7 @@ export default function V4ra() {
 }
 
 // ---------------- Dự án
-function ProjectsTab({ projects, admins, isSuper, me, loading, onAdd, onRemove, onCreate, onPurge }: { projects: V4a9[]; admins: V4a8[]; isSuper: boolean; me: string; loading: boolean; onAdd: (pid: string, uid: string) => void; onRemove: (pid: string, uid: string) => void; onCreate: () => void; onPurge: (pid: string) => void }) {
+function ProjectsTab({ projects, admins, isSuper, canPurge, me, loading, onAdd, onRemove, onCreate, onPurge }: { projects: V4a9[]; admins: V4a8[]; isSuper: boolean; canPurge: boolean; me: string; loading: boolean; onAdd: (pid: string, uid: string) => void; onRemove: (pid: string, uid: string) => void; onCreate: () => void; onPurge: (pid: string) => void }) {
   const nameOf = (id: string) => {
     const a = admins.find((x) => x.id === id);
     return a ? `${a.displayName} (${a.username})` : id;
@@ -250,7 +253,7 @@ function ProjectsTab({ projects, admins, isSuper, me, loading, onAdd, onRemove, 
       },
     },
     { key: "isActive", header: "Trạng thái", width: 110, cell: (p) => <Badge tone={p.isActive ? "ok" : "gray"}>{p.isActive ? "Hoạt động" : "Đóng"}</Badge> },
-    ...(isSuper
+    ...(canPurge
       ? [
           {
             key: "purge",
@@ -365,25 +368,41 @@ function StatsTab({ stats, projects, users, isSuper, projectName }: { stats: V4r
 }
 
 // ---------------- Hộp thoại người dùng
-const ROLES: V3xs[] = ["super_admin", "admin", "user", "customer"];
+// Bốn vai trò khi tạo tài khoản (15/10/2026). "Khách hàng" (customer) chỉ còn cho tài khoản cũ, không tạo mới.
+const VAI_TRO: { role: V3xs; mo_ta: string }[] = [
+  { role: "super_admin", mo_ta: "Toàn quyền: mọi dự án, mọi tài khoản, kể cả xoá dữ liệu dự án." },
+  { role: "manager", mo_ta: "Xem và điều hành mọi dự án, tạo quản trị dự án và nhân viên. Không được xoá." },
+  { role: "admin", mo_ta: "Quản trị một dự án: phân việc, duyệt, ký số, đóng gói, tạo nhân viên của dự án đó." },
+  { role: "user", mo_ta: "Làm các việc trong một dự án: quét, nhập liệu, chỉnh lý, ký số khi được giao." },
+];
+/** Vai trò người đang đăng nhập được phép tạo. */
+function vaiTroDuocTao(myRole: string): V3xs[] {
+  if (myRole === "super_admin") return ["super_admin", "manager", "admin", "user"];
+  if (myRole === "manager") return ["admin", "user"];
+  return ["user"];
+}
 
-function UserDialog({ mode, isSuper, projects, user, onClose, onDone }: { mode: "create" | "edit"; isSuper: boolean; projects: V4a9[]; user?: V4a8; onClose: () => void; onDone: () => void }) {
+function UserDialog({ mode, myRole, projects, user, onClose, onDone }: { mode: "create" | "edit"; myRole: string; projects: V4a9[]; user?: V4a8; onClose: () => void; onDone: () => void }) {
+  const duocTao = vaiTroDuocTao(myRole);
+  const toanHeThong = myRole === "super_admin" || myRole === "manager";
   const [username, setUsername] = useState(user?.username ?? "");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<V3xs>(user?.role ?? "user");
-  const [projectId, setProjectId] = useState(user?.projectId ?? (!isSuper && projects.length === 1 ? projects[0].id : ""));
+  const [projectId, setProjectId] = useState(user?.projectId ?? (projects.length === 1 ? projects[0].id : ""));
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
-  const effRole: V3xs = isSuper ? role : "user";
-  const askProject = mode === "create" && (effRole === "user" || (isSuper && effRole === "admin"));
+  const effRole: V3xs = duocTao.includes(role) ? role : "user";
+  // Quản trị dự án / nhân viên dự án luôn gắn đúng một dự án.
+  const askProject = mode === "create" && (effRole === "user" || effRole === "admin");
   const errs = {
     username: mode === "create" && !username.trim() ? "Chưa nhập tên đăng nhập." : undefined,
     displayName: !displayName.trim() ? "Chưa nhập tên hiển thị." : undefined,
     password: mode === "create" && password.length < 8 ? "Mật khẩu cần ít nhất 8 ký tự." : undefined,
+    projectId: askProject && !projectId ? "Chọn dự án." : undefined,
   };
-  const valid = !errs.username && !errs.displayName && !errs.password;
+  const valid = !errs.username && !errs.displayName && !errs.password && !errs.projectId;
 
   const save = async () => {
     setTouched(true);
@@ -392,7 +411,7 @@ function UserDialog({ mode, isSuper, projects, user, onClose, onDone }: { mode: 
     try {
       if (mode === "create") {
         const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, projectId: askProject ? projectId || null : null });
-        if (isSuper && effRole === "admin" && projectId) await V4an(projectId, created.id);
+        if (toanHeThong && effRole === "admin" && projectId) await V4an(projectId, created.id);
         toast.success(`Đã tạo tài khoản ${username.trim()}.`);
       } else if (user) {
         await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null });
@@ -429,14 +448,14 @@ function UserDialog({ mode, isSuper, projects, user, onClose, onDone }: { mode: 
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
           </Field>
         )}
-        {mode === "create" && isSuper && (
-          <Field label="Vai trò">
-            <Select value={role} onChange={(v) => setRole(v as V3xs)} options={ROLES.map((r) => ({ value: r, label: V3za(r) }))} />
+        {mode === "create" && duocTao.length > 1 && (
+          <Field label="Vai trò" hint={VAI_TRO.find((v) => v.role === effRole)?.mo_ta}>
+            <Select value={effRole} onChange={(v) => setRole(v as V3xs)} options={VAI_TRO.filter((v) => duocTao.includes(v.role)).map((v) => ({ value: v.role, label: V3za(v.role) }))} />
           </Field>
         )}
         {askProject && (
-          <Field label="Dự án" hint={projects.length === 0 ? "Chưa có dự án nào, tài khoản sẽ không gắn dự án." : "Tuỳ chọn"}>
-            <Select value={projectId} onChange={setProjectId} placeholder="Không gắn dự án" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} disabled={projects.length === 0} />
+          <Field label="Dự án" required hint={projects.length === 0 ? "Chưa có dự án nào — tạo dự án trước." : effRole === "admin" ? "Quản trị dự án chỉ phụ trách một dự án." : undefined} error={touched ? errs.projectId : undefined}>
+            <Select value={projectId} onChange={setProjectId} placeholder="— Chọn dự án —" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} disabled={projects.length === 0} />
           </Field>
         )}
         <button type="submit" className="hidden" />

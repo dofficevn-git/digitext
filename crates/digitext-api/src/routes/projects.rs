@@ -185,14 +185,21 @@ async fn f_28k(r_oi: &AppState, r_og: &Ts, id: Uuid) -> Result<Scope, ApiError> 
     }
     Ok(r_oh)
 }
-async fn f_28e(r_oj: &AppState, admin_id: Uuid) -> Result<(), ApiError> {
+async fn f_28e(r_oj: &AppState, admin_id: Uuid, project_id: Uuid) -> Result<(), ApiError> {
     let r_ok = users::f_1eg(&r_oj.pool, admin_id)
         .await?
         .ok_or_else(ApiError::not_found)?;
     if r_ok.role != Role::Admin {
         return Err(ApiError::bad_request(
-            "người được gán phải có vai trò admin",
+            "người được gán phải có vai trò quản trị dự án",
         ));
+    }
+    // Quản trị dự án chỉ phụ trách MỘT dự án (15/10/2026).
+    if let Some(khac) = projects::f_1ng(&r_oj.pool, admin_id).await?.into_iter().find(|p| p.id != project_id) {
+        return Err(ApiError::conflict(format!(
+            "quản trị dự án chỉ phụ trách một dự án — {} đang phụ trách {}, gỡ ở đó trước",
+            r_ok.username, khac.code
+        )));
     }
     Ok(())
 }
@@ -221,7 +228,7 @@ async fn f_2ed(
     admin_ids.sort();
     admin_ids.dedup();
     for admin_id in &admin_ids {
-        f_28e(&r_oq, *admin_id).await?;
+        f_28e(&r_oq, *admin_id, id).await?;
     }
     projects::f_2dy(&r_oq.pool, id, &admin_ids, Some(r_on.user.id)).await?;
     for admin_id in &admin_ids {
@@ -251,7 +258,7 @@ async fn f_qt(
     let project = projects::get(&r_ot.pool, id)
         .await?
         .ok_or_else(ApiError::not_found)?;
-    f_28e(&r_ot, r_os.admin_id).await?;
+    f_28e(&r_ot, r_os.admin_id, id).await?;
     projects::f_qm(&r_ot.pool, id, r_os.admin_id, Some(r_or.user.id)).await?;
     f_2eb(&r_ot, r_os.admin_id, id).await?;
     audit::append(

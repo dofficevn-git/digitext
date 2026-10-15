@@ -87,6 +87,8 @@ pub struct Tb1 {
 fn f_x0(r_w1: &User, r_w3: &User, r_w2: &Scope) -> bool {
     match r_w1.role {
         Role::SuperAdmin => true,
+        // Quản lý không đụng tới tài khoản super_admin / quản lý khác.
+        Role::Manager => !matches!(r_w3.role, Role::SuperAdmin | Role::Manager),
         Role::Admin => r_w3.role == Role::User && r_w2.allows_opt(r_w3.project_id),
         _ => false,
     }
@@ -125,6 +127,13 @@ async fn f_12g(
     r_wc.require_perm(Permission::UserCreate)?;
     validate_password(&r_wi.password)?;
     let r_wj = f_29a(&r_wk.pool, &r_wc.user).await?;
+    if r_wc.user.role == Role::Manager && matches!(r_wi.role, Role::SuperAdmin | Role::Manager) {
+        return Err(ApiError::forbidden());
+    }
+    // Quản trị dự án / nhân viên dự án luôn gắn đúng MỘT dự án (15/10/2026).
+    if matches!(r_wi.role, Role::Admin | Role::User) && r_wi.project_id.is_none() {
+        return Err(ApiError::bad_request("chọn dự án cho quản trị dự án / nhân viên dự án"));
+    }
     let project_id = match r_wj {
         Scope::All => r_wi.project_id,
         Scope::Projects(r_wf) => {
