@@ -49,6 +49,17 @@ Lập 15/10/2026 · triển khai ngay sau khi ký số xong dự án LTLSBN.
 - Hại: phải sửa và kiểm lại 6 crate (`api`, `ocr`, `ingest`, `storage`, `wipe`, `cli`). Rủi ro cao hơn hẳn, mất khoảng 3–5 ngày.
 - → **Để sau.** Chỉ cân nhắc nếu A gặp trục trặc khi build hoặc chạy.
 
+## 4b. Đã làm trước (15/10/2026)
+
+- [x] Go 1.24.8 (bản giải nén, kiểm SHA-256) ở `C:\Users\HieuPC\tools\go`.
+- [x] Build `minio.exe` từ thẻ `RELEASE.2025-10-15T17-29-55Z` (commit `9e49d5e7`) → `C:\Users\HieuPC\tools\minio-build\minio.exe`, SHA-256 `a7ee0d09…44e2f1`.
+- [x] `dev/minio-win.ps1` (chạy MinIO) và `dev/minio-win-task.ps1` (đăng ký Scheduled Task, tự xin UAC).
+- [x] Chạy thử cổng 9100, thư mục thử trên C::
+  - `mc` trong container cũ gọi được qua `host.docker.internal:9100`.
+  - Chép 2 tệp thật (PDF/A + bản ký) khớp md5.
+  - **Xoá xong, ổ trống lại sau khoảng 1 phút.**
+- [ ] Chọn ổ đích (Q1), thêm loại trừ Defender, đăng ký task ở cổng 9100 → bắt đầu bước 5.3 khi ký xong.
+
 ## 5. Các bước — Phương án A
 
 Ước tính trên SSD. Trên HDD thì bước 5.3 dài 10–20 giờ.
