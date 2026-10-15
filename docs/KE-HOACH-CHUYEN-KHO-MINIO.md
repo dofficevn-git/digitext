@@ -58,7 +58,10 @@ Lập 15/10/2026 · triển khai ngay sau khi ký số xong dự án LTLSBN.
   - `mc` trong container cũ gọi được qua `host.docker.internal:9100`.
   - Chép 2 tệp thật (PDF/A + bản ký) khớp md5.
   - **Xoá xong, ổ trống lại sau khoảng 1 phút.**
-- [ ] Chọn ổ đích (Q1), thêm loại trừ Defender, đăng ký task ở cổng 9100 → bắt đầu bước 5.3 khi ký xong.
+- [x] Mã chức năng **Xoá dữ liệu dự án** (mục 6): API `/projects/{id}/purge` + hộp thoại desktop (commit `01e1432`).
+- [x] **Vai trò rõ ràng** (commit `d08d56e`): thêm "Quản lý" (`manager`); quản trị dự án chỉ một dự án; migration 0018 đã áp.
+- [ ] **Khi ký xong:** build + khởi động lại API, phát hành desktop (hai mục trên mới có hiệu lực).
+- [ ] Chọn ổ đích (Q1), thêm loại trừ Defender, đăng ký task ở cổng 9100 → bắt đầu bước 5.3.
 
 ## 5. Các bước — Phương án A
 
