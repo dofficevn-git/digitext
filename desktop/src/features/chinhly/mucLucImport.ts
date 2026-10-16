@@ -298,16 +298,18 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
     if (!tg.batDau || !tg.ketThuc) loi.push(thoiGianGoc.trim() ? `Thời gian "${thoiGianGoc.trim()}" không đọc được — ghi dd/mm/yyyy - dd/mm/yyyy` : "Thiếu thời gian bắt đầu - kết thúc (ô trống, tiêu đề không ghi năm)");
     if (pbHienTai) pbHienTai.soHoSo++;
     if (mangHienTai) mangHienTai.soHoSo++;
-    // Số tờ chỉ nhận số tự nhiên (anh Hiếu 5/10/2026): "01 quyển", "3,5", "12 tờ"… là lỗi chặn nhập, tô đỏ ở tệp đánh dấu.
-    const soTo = lay(r, "soTo").trim();
+    // Số tờ chỉ nhận số tự nhiên (anh Hiếu 5/10/2026): "01 quyển", "3,5"… là lỗi chặn nhập, tô đỏ ở tệp đánh dấu.
+    // "47 tờ" / "47tờ" / "47 TỜ" / "47 to" thì nhận là 47 (anh Hiếu 16/10/2026).
+    const soToGoc = lay(r, "soTo").trim();
+    const soTo = soToGoc.normalize("NFC").replace(/^(\d+)\s*(tờ|to)\.?$/iu, "$1");
     // Tài liệu bảo quản từ 20 năm trở lên (kể cả vĩnh viễn) PHẢI đánh số tờ — không để trống, không ghi "quyển"
     // (anh Hiếu 12/10/2026).
     const phaiDanhSoTo = vinhVien === true || (thbq !== null && tuHaiMuoiNam(thbq));
     if (soTo && !/^\d+$/.test(soTo))
       loi.push(
         phaiDanhSoTo
-          ? `Số tờ "${soTo}" không hợp lệ — tài liệu bảo quản từ 20 năm trở lên phải đánh số tờ (ghi số, vd. 12), không ghi "quyển"`
-          : `Số tờ "${soTo}" không hợp lệ — chỉ ghi số tự nhiên (vd. 12), bỏ chữ như "quyển", "tờ"`,
+          ? `Số tờ "${soTo}" không hợp lệ — tài liệu bảo quản từ 20 năm trở lên phải đánh số tờ (vd. 12 hoặc 12 tờ), không ghi "quyển"`
+          : `Số tờ "${soTo}" không hợp lệ — chỉ ghi số (vd. 12 hoặc 12 tờ), không ghi "quyển" hay số lẻ`,
       );
     else if (soTo && +soTo === 0) loi.push("Số tờ phải lớn hơn 0");
     else if (!soTo && phaiDanhSoTo) loi.push(`Thiếu số tờ — tài liệu bảo quản ${thbq} phải đánh số tờ`);
