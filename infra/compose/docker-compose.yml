@@ -3,6 +3,7 @@ name: digitext-dev
 services:
   postgres:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${PG_USER:?dat PG_USER trong infra/compose/.env}
       POSTGRES_PASSWORD: ${PG_PASSWORD:?dat PG_PASSWORD trong infra/compose/.env}
@@ -13,6 +14,9 @@ services:
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
+    # 16/10/2026: tạo lại container (14/10) bằng file này làm MẤT chính sách tự chạy → Windows Update khởi động
+    # lại máy, MinIO không lên, API/worker thoát — sập ~10 giờ. Giữ dòng này.
+    restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:?dat MINIO_USER trong infra/compose/.env}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?dat MINIO_PASSWORD trong infra/compose/.env}
@@ -27,6 +31,7 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:latest
+    restart: unless-stopped
     environment:
       MEILI_MASTER_KEY: ${MEILI_KEY:?dat MEILI_KEY trong infra/compose/.env}
     ports: ["127.0.0.1:7700:7700"]
