@@ -11,7 +11,8 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
-$log = Join-Path $repo "logs\minio.log"
+# Mỗi cổng một tệp log: MinIO đang chạy giữ tệp của nó, MinIO thứ hai ghi chung sẽ lỗi và thoát (17/10/2026).
+$log = Join-Path $repo "logs\minio-$Port.log"
 if (-not (Test-Path $Exe)) { throw "Không thấy $Exe" }
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 
