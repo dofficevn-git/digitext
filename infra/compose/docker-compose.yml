@@ -47,6 +47,8 @@ services:
     volumes: ["rustusdata:/data"]
 
   nginx:
+    # Không chạy trên máy chủ hiện tại; phụ thuộc minio Docker cũ nên cùng profile (17/10/2026).
+    profiles: ["minio-docker-cu"]
     image: nginx:stable
     ports: ["127.0.0.1:8443:443"]
     volumes: ["./nginx:/etc/nginx/conf.d:ro"]
