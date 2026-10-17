@@ -12,6 +12,9 @@ services:
     volumes: ["pgdata:/var/lib/postgresql/data"]
 
   minio:
+    # 17/10/2026: kho DigiText chuyển sang MinIO chạy thẳng trên Windows (E:\DigiText-KhoMayChu, cổng 9000 —
+    # dev\minio-win-task.ps1). Dịch vụ này chỉ còn để tham khảo; KHÔNG bật lại (trùng cổng 9000).
+    profiles: ["minio-docker-cu"]
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     # 16/10/2026: tạo lại container (14/10) bằng file này làm MẤT chính sách tự chạy → Windows Update khởi động
