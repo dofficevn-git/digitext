@@ -199,6 +199,39 @@ def nap(a) -> int:
                     return
                 time.sleep(min(30, 2 * lan))
 
+    # Ổ HDD SMR (19/10/2026): ghi nhanh tới khi vùng đệm đầy rồi tụt; --nghi-khi-cham X: tốc độ phút < X MB/s
+    # liền 3 phút thì ngừng đẩy --nghi-phut phút cho ổ tự dọn, rồi chạy tiếp. Mỗi phút in một dòng tiến độ.
+    het = threading.Event()
+    nghi_den = [0.0]
+
+    nghi_ds = [float(x) for x in str(a.nghi_phut).split(",") if x.strip()]
+
+    def theo_doi() -> None:
+        truoc, cham = 0, 0
+        chu_ky, cky_t, cky_b, nghi_truoc = 0, t0, 0, 0.0
+        while not het.wait(60):
+            with khoa:
+                b = byte
+            mbs = (b - truoc) / 1e6 / 60
+            truoc = b
+            dang_nghi = time.time() < nghi_den[0]
+            print(f"{time.strftime('%H:%M:%S')}  {xong:,}/{len(can):,} tệp · {b / 1e9:,.1f}/{tong / 1e9:,.1f} GB · "
+                  f"phút vừa qua {mbs:,.1f} MB/s{' · ĐANG NGHỈ' if dang_nghi else ''} · lỗi {len(loi)}", flush=True)
+            if a.nghi_khi_cham and not dang_nghi and time.time() - t0 > 120:
+                cham = cham + 1 if mbs < a.nghi_khi_cham else 0
+                if cham >= 3:
+                    phut = nghi_ds[chu_ky % len(nghi_ds)]
+                    chay = (time.time() - cky_t) / 60
+                    gb = (b - cky_b) / 1e9
+                    print(f"{time.strftime('%H:%M:%S')}  CHU KỲ {chu_ky}: sau nghỉ {nghi_truoc:g} phút ghi được {gb:,.1f} GB "
+                          f"trong {chay:,.0f} phút chạy · TB cả chu kỳ (kể cả nghỉ) "
+                          f"{gb * 1e3 / ((chay + nghi_truoc) * 60):,.1f} MB/s", flush=True)
+                    nghi_den[0] = time.time() + phut * 60
+                    cham, chu_ky, nghi_truoc = 0, chu_ky + 1, phut
+                    cky_t, cky_b = nghi_den[0], b
+                    print(f"{time.strftime('%H:%M:%S')}  tốc độ thấp 3 phút liền → nghỉ {phut:g} phút cho ổ dọn vùng đệm", flush=True)
+
+    threading.Thread(target=theo_doi, daemon=True).start()
     with ThreadPoolExecutor(a.luong) as ex:
         dang = []
         for tep in sorted(goc.glob("kho-*.tar")):
@@ -206,6 +239,8 @@ def nap(a) -> int:
                 for ti in tar:
                     if ti.name not in can:
                         continue
+                    while time.time() < nghi_den[0]:
+                        time.sleep(5)
                     body = tar.extractfile(ti).read()
                     if hashlib.sha256(body).hexdigest() != da[ti.name][1]:
                         loi.append(f"{ti.name}: SHA-256 trong {tep.name} không khớp danh sách")
@@ -214,12 +249,9 @@ def nap(a) -> int:
                     if len(dang) >= a.luong * 4:
                         dang[0].result()
                         dang.pop(0)
-                    if xong and xong % 2000 == 0:
-                        dt = max(time.time() - t0, 1)
-                        print(f"{time.strftime('%H:%M:%S')}  {xong:,}/{len(can):,} tệp · {byte / 1e9:,.1f}/{tong / 1e9:,.1f} GB · "
-                              f"{byte / 1e6 / dt:,.1f} MB/s · lỗi {len(loi)}", flush=True)
         for f in dang:
             f.result()
+    het.set()
     for r in loi[:20]:
         print("LỖI", r)
     print(f"XONG nạp: {xong:,} tệp, {byte / 1e9:,.1f} GB, lỗi {len(loi)}.", flush=True)
@@ -266,6 +298,8 @@ def main() -> int:
     ap.add_argument("--bucket", default="pages")
     ap.add_argument("--luong", type=int, default=4)
     ap.add_argument("--gioi-han", type=int, default=0, help="chỉ đóng gói N tệp đầu (thử)")
+    ap.add_argument("--nghi-khi-cham", type=float, default=0, help="nap: tốc độ phút < X MB/s liền 3 phút thì nghỉ")
+    ap.add_argument("--nghi-phut", default="30", help="nap: số phút nghỉ cho ổ dọn vùng đệm; danh sách '10,5,15' thì luân phiên (thử)")
     a = ap.parse_args()
     return {"xuat": xuat, "nap": nap, "kiem": kiem}[a.viec](a)
 

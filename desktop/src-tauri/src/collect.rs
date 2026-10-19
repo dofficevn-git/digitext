@@ -3063,7 +3063,14 @@ pub async fn collect_add_files(
     }
     rep.stage(
         cprog::Stage::Disk,
-        if args.direct {
+        if r_yo.iter().all(|(src, _)| inside(&root, src)) {
+            // Tệp chép tay sẵn trong Kho (Quét Kho → Đẩy): chỉ ghi sổ tại chỗ, không chép.
+            format!(
+                "Đang ghi sổ {} tệp có sẵn trong Kho (không chép){}…",
+                r_yo.len(),
+                if args.direct { " và gửi lên máy chủ" } else { "" }
+            )
+        } else if args.direct {
             format!("Đang ghi sổ {} tệp trên ổ đĩa (không chép) và gửi lên máy chủ…", r_yo.len())
         } else {
             format!("Đang thêm {} tệp từ ổ cứng vào Kho…", r_yo.len())
