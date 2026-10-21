@@ -217,9 +217,9 @@ def nap(a) -> int:
             dang_nghi = time.time() < nghi_den[0]
             print(f"{time.strftime('%H:%M:%S')}  {xong:,}/{len(can):,} tệp · {b / 1e9:,.1f}/{tong / 1e9:,.1f} GB · "
                   f"phút vừa qua {mbs:,.1f} MB/s{' · ĐANG NGHỈ' if dang_nghi else ''} · lỗi {len(loi)}", flush=True)
-            if a.nghi_khi_cham and not dang_nghi and time.time() - t0 > 120:
+            if a.nghi_khi_cham and not dang_nghi and b > 0 and time.time() - t0 > 120:
                 cham = cham + 1 if mbs < a.nghi_khi_cham else 0
-                if cham >= 3:
+                if cham >= a.so_phut_cham:
                     phut = nghi_ds[chu_ky % len(nghi_ds)]
                     chay = (time.time() - cky_t) / 60
                     gb = (b - cky_b) / 1e9
@@ -229,7 +229,7 @@ def nap(a) -> int:
                     nghi_den[0] = time.time() + phut * 60
                     cham, chu_ky, nghi_truoc = 0, chu_ky + 1, phut
                     cky_t, cky_b = nghi_den[0], b
-                    print(f"{time.strftime('%H:%M:%S')}  tốc độ thấp 3 phút liền → nghỉ {phut:g} phút cho ổ dọn vùng đệm", flush=True)
+                    print(f"{time.strftime('%H:%M:%S')}  tốc độ thấp {a.so_phut_cham} phút liền → nghỉ {phut:g} phút cho ổ dọn vùng đệm", flush=True)
 
     threading.Thread(target=theo_doi, daemon=True).start()
     with ThreadPoolExecutor(a.luong) as ex:
@@ -299,6 +299,8 @@ def main() -> int:
     ap.add_argument("--luong", type=int, default=4)
     ap.add_argument("--gioi-han", type=int, default=0, help="chỉ đóng gói N tệp đầu (thử)")
     ap.add_argument("--nghi-khi-cham", type=float, default=0, help="nap: tốc độ phút < X MB/s liền 3 phút thì nghỉ")
+    ap.add_argument("--so-phut-cham", type=int, default=3,
+                    help="nap: số phút chậm liền nhau thì nghỉ (21/10/2026: OCR đọc chung ổ — chậm 3 phút là OCR khựng 3 phút; dùng 1)")
     ap.add_argument("--nghi-phut", default="30", help="nap: số phút nghỉ cho ổ dọn vùng đệm; danh sách '10,5,15' thì luân phiên (thử)")
     a = ap.parse_args()
     return {"xuat": xuat, "nap": nap, "kiem": kiem}[a.viec](a)

@@ -30,5 +30,14 @@ $env:MINIO_DRIVE_MAX_TIMEOUT = "2m"
 $env:MINIO_SCANNER_SPEED = "slowest"
 $env:MINIO_UPDATE = "off"
 
-Add-Content -Path $log -Value ("{0:yyyy-MM-dd HH:mm:ss} khởi động MinIO cổng {1}, dữ liệu {2}" -f (Get-Date), $Port, $DataDir) -Encoding UTF8
-& $Exe server $DataDir --address "127.0.0.1:$Port" --console-address "127.0.0.1:$($Port + 1)" --quiet *>> $log
+# 21/10/2026: KHÔNG chạy `& $Exe ... *>> $log` dưới $ErrorActionPreference = "Stop": PowerShell 5.1 coi mỗi dòng
+# stderr của MinIO là lỗi → dừng script, MinIO chết theo. Ổ HDD SMR khựng là MinIO cảnh báo ra stderr → kho sập
+# (12:40 19/10, 17:22 21/10). Để cmd ghi log, và MinIO thoát vì bất cứ lý do gì thì chạy lại sau 5 giây.
+$ErrorActionPreference = "Continue"
+while ($true) {
+  Add-Content -Path $log -Value ("{0:yyyy-MM-dd HH:mm:ss} khởi động MinIO cổng {1}, dữ liệu {2}" -f (Get-Date), $Port, $DataDir) -Encoding UTF8
+  # Bọc cả lệnh trong một cặp ngoặc kép nữa: cmd /c bỏ cặp ngoài cùng, giữ nguyên ngoặc của từng đường dẫn.
+  cmd /c "`"`"$Exe`" server `"$DataDir`" --address 127.0.0.1:$Port --console-address 127.0.0.1:$($Port + 1) --quiet >> `"$log`" 2>&1`""
+  Add-Content -Path $log -Value ("{0:yyyy-MM-dd HH:mm:ss} MinIO thoát mã {1} — chạy lại sau 5 giây" -f (Get-Date), $LASTEXITCODE) -Encoding UTF8
+  Start-Sleep -Seconds 5
+}
