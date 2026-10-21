@@ -80,8 +80,14 @@ impl HttpOcrInfer {
     }
 }
 
-/// Ô ảnh RGB8 thô → PNG.
-fn encode_png(tile: &Tile) -> Result<Vec<u8>, WorkerError> {
+/// Chất lượng JPEG cho ô cắt từ trang lớn. 21/10/2026: bản quét khổ lớn (tới ~5.000×7.000 px) bị chia
+/// ô và nén PNG không mất mát → ~70–100 MB/trang qua USB Wi-Fi của máy chủ (~10 MB/s): 15 yêu cầu song
+/// song nghẽn cả đường, hết giờ 90 s rồi gửi lại từ đầu, OCR tụt còn ~2 trang/phút. JPEG 92 nhỏ hơn
+/// 5–10 lần, chữ không đổi (ô trọn trang vốn đã gửi nguyên JPEG gốc).
+const TILE_JPEG_QUALITY: u8 = 92;
+
+/// Ô ảnh RGB8 thô → JPEG.
+fn encode_jpeg(tile: &Tile) -> Result<Vec<u8>, WorkerError> {
     let expected = tile.width as usize * tile.height as usize * 3;
     if tile.pixels.len() != expected {
         return Err(WorkerError::CorruptInput(format!(
@@ -92,15 +98,15 @@ fn encode_png(tile: &Tile) -> Result<Vec<u8>, WorkerError> {
             tile.pixels.len()
         )));
     }
-    let mut out = Vec::with_capacity(expected / 4);
-    image::codecs::png::PngEncoder::new(&mut out)
+    let mut out = Vec::with_capacity(expected / 10);
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, TILE_JPEG_QUALITY)
         .write_image(
             &tile.pixels,
             tile.width,
             tile.height,
             image::ExtendedColorType::Rgb8,
         )
-        .map_err(|e| WorkerError::CorruptInput(format!("không nén được PNG: {e}")))?;
+        .map_err(|e| WorkerError::CorruptInput(format!("không nén được JPEG: {e}")))?;
     Ok(out)
 }
 
@@ -142,16 +148,16 @@ impl Tok for HttpOcrInfer {
     }
     async fn infer_tile(&self, tile: &Tile, _batch: usize) -> Result<To6, WorkerError> {
         // Ô phủ trọn trang mang sẵn JPEG gốc: gửi thẳng (nhỏ hơn PNG 5–10 lần, khỏi nén lại;
-        // dịch vụ giải mã bằng cv2.imdecode như PNG). Còn lại nén PNG ở luồng blocking.
+        // dịch vụ giải mã bằng cv2.imdecode). Còn lại nén JPEG ở luồng blocking.
         let b64 = match &tile.encoded {
             Some(jpeg) => base64::engine::general_purpose::STANDARD.encode(jpeg.as_slice()),
             None => {
                 let t = tile.clone();
                 tokio::task::spawn_blocking(move || {
-                    encode_png(&t).map(|png| base64::engine::general_purpose::STANDARD.encode(&png))
+                    encode_jpeg(&t).map(|j| base64::engine::general_purpose::STANDARD.encode(&j))
                 })
                 .await
-                .map_err(|e| WorkerError::CorruptInput(format!("nén PNG: {e}")))??
+                .map_err(|e| WorkerError::CorruptInput(format!("nén JPEG: {e}")))??
             }
         };
 
