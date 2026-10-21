@@ -217,7 +217,9 @@ def nap(a) -> int:
             dang_nghi = time.time() < nghi_den[0]
             print(f"{time.strftime('%H:%M:%S')}  {xong:,}/{len(can):,} tệp · {b / 1e9:,.1f}/{tong / 1e9:,.1f} GB · "
                   f"phút vừa qua {mbs:,.1f} MB/s{' · ĐANG NGHỈ' if dang_nghi else ''} · lỗi {len(loi)}", flush=True)
-            if a.nghi_khi_cham and not dang_nghi and b > 0 and time.time() - t0 > 120:
+            # Chỉ xét phút đã chạy TRỌN sau khi hết nghỉ: phút vừa hết nghỉ gần như chưa ghi gì, xét nó thì nghỉ tiếp
+            # mãi (21/10/2026, --so-phut-cham 1: 17:49–19:52 nghỉ liền 5 lượt, ghi 0,1 GB).
+            if a.nghi_khi_cham and not dang_nghi and b > 0 and time.time() - t0 > 120 and time.time() - nghi_den[0] >= 55:
                 cham = cham + 1 if mbs < a.nghi_khi_cham else 0
                 if cham >= a.so_phut_cham:
                     phut = nghi_ds[chu_ky % len(nghi_ds)]
