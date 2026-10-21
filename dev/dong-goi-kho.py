@@ -207,20 +207,22 @@ def nap(a) -> int:
     nghi_ds = [float(x) for x in str(a.nghi_phut).split(",") if x.strip()]
 
     def theo_doi() -> None:
-        truoc, cham = 0, 0
+        truoc, cham, tep_truoc = 0, 0, 0
         chu_ky, cky_t, cky_b, nghi_truoc = 0, t0, 0, 0.0
         while not het.wait(60):
             with khoa:
                 b = byte
             mbs = (b - truoc) / 1e6 / 60
             truoc = b
+            tep_phut, tep_truoc = xong - tep_truoc, xong
             dang_nghi = time.time() < nghi_den[0]
             print(f"{time.strftime('%H:%M:%S')}  {xong:,}/{len(can):,} tệp · {b / 1e9:,.1f}/{tong / 1e9:,.1f} GB · "
                   f"phút vừa qua {mbs:,.1f} MB/s{' · ĐANG NGHỈ' if dang_nghi else ''} · lỗi {len(loi)}", flush=True)
             # Chỉ xét phút đã chạy TRỌN sau khi hết nghỉ: phút vừa hết nghỉ gần như chưa ghi gì, xét nó thì nghỉ tiếp
             # mãi (21/10/2026, --so-phut-cham 1: 17:49–19:52 nghỉ liền 5 lượt, ghi 0,1 GB).
             if a.nghi_khi_cham and not dang_nghi and b > 0 and time.time() - t0 > 120 and time.time() - nghi_den[0] >= 55:
-                cham = cham + 1 if mbs < a.nghi_khi_cham else 0
+                # 22/10/2026: đoạn nhiều tệp nhỏ (~2 MB) ghi ít MB/s mà ổ vẫn khoẻ → chỉ coi là chậm khi CẢ số tệp/phút thấp.
+                cham = cham + 1 if mbs < a.nghi_khi_cham and tep_phut < a.tep_khi_cham else 0
                 if cham >= a.so_phut_cham:
                     phut = nghi_ds[chu_ky % len(nghi_ds)]
                     chay = (time.time() - cky_t) / 60
@@ -301,6 +303,8 @@ def main() -> int:
     ap.add_argument("--luong", type=int, default=4)
     ap.add_argument("--gioi-han", type=int, default=0, help="chỉ đóng gói N tệp đầu (thử)")
     ap.add_argument("--nghi-khi-cham", type=float, default=0, help="nap: tốc độ phút < X MB/s liền 3 phút thì nghỉ")
+    ap.add_argument("--tep-khi-cham", type=int, default=10**9,
+                    help="nap: chỉ coi là chậm khi số tệp/phút cũng dưới mức này (mặc định: không xét)")
     ap.add_argument("--so-phut-cham", type=int, default=3,
                     help="nap: số phút chậm liền nhau thì nghỉ (21/10/2026: OCR đọc chung ổ — chậm 3 phút là OCR khựng 3 phút; dùng 1)")
     ap.add_argument("--nghi-phut", default="30", help="nap: số phút nghỉ cho ổ dọn vùng đệm; danh sách '10,5,15' thì luân phiên (thử)")
