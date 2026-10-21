@@ -49,8 +49,18 @@ pub fn f_1hv(bytes: &[u8]) -> Result<(u32, u32), WorkerError> {
             ))
         })
 }
+/// Trần bộ nhớ khi giải mã MỘT ảnh trang. Mặc định của `image` là 512 MiB → bản quét màu khổ lớn
+/// độ phân giải cao (LTLSBN, 20/10/2026: 443 trang / 212 tài liệu, ~8–9 MB JPEG mỗi trang) báo
+/// "Memory limit exceeded" và bị đánh hỏng VĨNH VIỄN. 4 GiB đủ cho ảnh ~20.000 × 20.000 px RGB.
+const DECODE_MAX_ALLOC: u64 = 4 << 30;
 pub fn f_13f(bytes: &[u8]) -> Result<RgbImage, WorkerError> {
-    let r_3di = image::load_from_memory(bytes).map_err(|e| {
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|e| WorkerError::CorruptInput(format!("đoán định dạng ảnh trang lỗi: {e}")))?;
+    let mut limits = image::Limits::default();
+    limits.max_alloc = Some(DECODE_MAX_ALLOC);
+    reader.limits(limits);
+    let r_3di = reader.decode().map_err(|e| {
         WorkerError::CorruptInput(format!("giải mã ảnh trang lỗi: {e}"))
     })?;
     Ok(r_3di.to_rgb8())
