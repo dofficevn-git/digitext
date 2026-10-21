@@ -49,6 +49,14 @@ pub async fn find_by_hash(r_2e3: &PgPool, token_hash: &str) -> sqlx::Result<Opti
         .fetch_optional(r_2e3)
         .await
 }
+/// Token này đã sinh token kế tiếp (xoay xong trọn vẹn) chưa? `false` = đã đánh dấu `rotated` mà
+/// chưa cấp được token mới (CSDL nghẽn giữa hai bước, 19/10/2026) — client vẫn giữ đúng token này.
+pub async fn has_child(pool: &PgPool, id: Uuid) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM refresh_tokens WHERE rotated_from = $1)")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+}
 pub async fn revoke(r_2e4: &PgPool, id: Uuid, r_2e5: &str) -> sqlx::Result<bool> {
     let r_2e6 = sqlx::query(
         "UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = $2 \

@@ -232,7 +232,11 @@ async fn refresh(
         return Err(ApiError::auth_failed());
     };
     let r_au = Utc::now();
-    let grace = rotated_recently(&r_aw, r_au);
+    // 19/10/2026: token đã đánh dấu `rotated` mà KHÔNG có token kế tiếp = máy chủ nghẽn sau bước thu hồi,
+    // chưa cấp được token mới → client chưa từng nhận token nào khác, gửi lại token cũ là đúng, không phải
+    // trộm. Thiếu nhánh này: 6 phút sau gửi lại → thu hồi cả phiên → 6.009 tệp đang đẩy lỗi «Chưa đăng nhập».
+    let grace = rotated_recently(&r_aw, r_au)
+        || (r_aw.revoked_reason.as_deref() == Some("rotated") && !tokens::has_child(&r_ay.pool, r_aw.id).await?);
     if grace {
         tracing::warn!(token = % r_aw.id, "refresh token vừa xoay bị gửi lại trong thời gian châm chước — cấp phiên mới, không thu hồi");
     }
