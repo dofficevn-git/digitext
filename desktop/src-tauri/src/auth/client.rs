@@ -82,6 +82,14 @@ pub struct UserProfile {
     pub grants: Vec<Permission>,
     #[serde(default)]
     pub denies: Vec<Permission>,
+    /// Vai trò động (máy chủ ≥ 22/10/2026).
+    #[serde(default)]
+    pub role_code: Option<String>,
+    #[serde(default)]
+    pub role_name: Option<String>,
+    /// Quyền hiệu lực máy chủ đã tính (gồm bộ quyền vai trò động); máy chủ cũ không gửi → tự tính như trước.
+    #[serde(default)]
+    pub permissions: Option<Vec<Permission>>,
 }
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -171,6 +179,8 @@ pub struct Tl6 {
     pub email: Option<String>,
     pub display_name: String,
     pub role: Role,
+    #[serde(default)]
+    pub role_code: Option<String>,
     pub project_id: Option<String>,
     pub is_active: bool,
     pub created_at: String,

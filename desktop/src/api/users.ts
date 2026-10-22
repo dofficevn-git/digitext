@@ -10,6 +10,7 @@ export interface V4a8 {
   email: string | null;
   displayName: string;
   role: V3xs;
+  roleCode?: string | null;
   projectId: string | null;
   isActive: boolean;
   createdAt: string;
@@ -31,6 +32,8 @@ export interface V4aa {
   displayName: string;
   email?: string | null;
   role: V3xs;
+  /** Vai trò động (mã trong bảng roles); có thì vai trò gốc lấy theo vai trò đó. */
+  roleCode?: string | null;
   projectId?: string | null;
 }
 
@@ -38,6 +41,8 @@ export interface V4ab {
   id: string;
   displayName?: string | null;
   email?: string | null;
+  /** Đổi vai trò (mã vai trò); người này phải đăng nhập lại. */
+  roleCode?: string | null;
 }
 
 export function V4ac(Vpn?: string | null): Promise<V4a8[]> {

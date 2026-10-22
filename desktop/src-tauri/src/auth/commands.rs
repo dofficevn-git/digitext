@@ -62,6 +62,10 @@ fn f_2ds(r_ho: &Tb, r_hp: SessionMode, locked: bool, r_hq: Vec<Permission>) -> T
     }
 }
 fn f_18m(r_hs: &client::UserProfile) -> Vec<Permission> {
+    // Máy chủ mới gửi thẳng quyền hiệu lực (bộ quyền vai trò động ∪ cấp riêng − chặn riêng).
+    if let Some(p) = &r_hs.permissions {
+        return p.clone();
+    }
     let r_hr = PermissionOverrides {
         grants: r_hs.grants.iter().copied().collect(),
         denies: r_hs.denies.iter().copied().collect(),

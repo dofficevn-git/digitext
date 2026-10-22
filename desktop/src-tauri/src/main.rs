@@ -32,6 +32,7 @@ mod work;
 mod extimport;
 mod records;
 mod report;
+mod roles;
 mod scanner;
 mod signing;
 mod stats;
@@ -224,6 +225,11 @@ fn main() {
             chinhly::commands::cl_migrate_run,
             chinhly::commands::cl_project_get,
             chinhly::commands::cl_project_set,
+            roles::roles_list,
+            roles::role_create,
+            roles::role_update,
+            roles::role_reset,
+            roles::role_delete,
             dashboard::dashboard_overview,
             dashboard::dashboard_project,
             dashboard::dashboard_staff,

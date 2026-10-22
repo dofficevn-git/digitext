@@ -18,6 +18,7 @@ pub mod progress;
 pub mod project_purge;
 pub mod projects;
 pub mod records;
+pub mod roles;
 pub mod sign;
 pub mod stats;
 pub mod submissions;

@@ -143,6 +143,8 @@ pub struct T3h {
     pub email: Option<String>,
     pub role: String,
     #[serde(default)]
+    pub role_code: Option<String>,
+    #[serde(default)]
     pub project_id: Option<String>,
 }
 #[derive(Debug, Deserialize)]
@@ -153,6 +155,8 @@ pub struct Tp6 {
     pub display_name: Option<String>,
     #[serde(default)]
     pub email: Option<String>,
+    #[serde(default)]
+    pub role_code: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -254,6 +258,9 @@ pub async fn user_create(
     {
         body["projectId"] = serde_json::Value::String(r_c8.to_string());
     }
+    if let Some(rc) = args.role_code.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        body["roleCode"] = serde_json::Value::String(rc.to_string());
+    }
     f_2r8(&db, &auth, Permission::UserCreate, move |r_c6, r_c9| {
         let body = body.clone();
         async move { client::f_23d::<Tl6>(&r_c6, &r_c9, "/users", &body).await }
@@ -278,6 +285,9 @@ pub async fn user_update(
     }
     if let Some(r_cc) = args.email.as_deref().map(str::trim) {
         body["email"] = serde_json::Value::String(r_cc.to_string());
+    }
+    if let Some(rc) = args.role_code.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        body["roleCode"] = serde_json::Value::String(rc.to_string());
     }
     f_2r8(&db, &auth, Permission::UserUpdate, move |r_ca, r_ce| {
         let (id, body) = (id.clone(), body.clone());

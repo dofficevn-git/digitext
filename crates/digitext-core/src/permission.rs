@@ -351,6 +351,36 @@ pub fn f_18s(r_1z5: Role, r_1z4: &PermissionOverrides) -> BTreeSet<Permission> {
         .filter(|p| effective(r_1z5, r_1z4, *p))
         .collect()
 }
+
+/// Bộ quyền mặc định của một vai trò gốc (nguồn seed cho bảng `roles` — migration 0022).
+pub fn default_set(role: Role) -> BTreeSet<Permission> {
+    Permission::ALL.into_iter().filter(|p| p.granted_by_default(role)).collect()
+}
+/// Vai trò gốc `role` có được mang quyền `p` không — trần của bộ quyền một vai trò (hệ thống hay tuỳ chỉnh):
+/// không vượt tầng của vai trò gốc. Ngoại lệ có sẵn: Quản lý được gán quản trị dự án (tầng Super).
+pub fn allowed_for_base(role: Role, p: Permission) -> bool {
+    role == Role::SuperAdmin || role.allows(p.min_perm()) || (role == Role::Manager && p == Permission::ProjectAssignAdmin)
+}
+/// Quyền hiệu lực khi vai trò có bộ quyền riêng (`preset`, từ bảng `roles`); None → mặc định theo vai trò gốc.
+/// Chặn riêng luôn thắng; rồi bộ quyền vai trò hoặc cấp riêng.
+pub fn effective_with(preset: Option<&BTreeSet<Permission>>, role: Role, ov: &PermissionOverrides, p: Permission) -> bool {
+    if ov.denies.contains(&p) {
+        return false;
+    }
+    let base = match preset {
+        Some(set) => set.contains(&p),
+        None => p.granted_by_default(role),
+    };
+    base || ov.grants.contains(&p)
+}
+pub fn effective_set_with(preset: Option<&BTreeSet<Permission>>, role: Role, ov: &PermissionOverrides) -> BTreeSet<Permission> {
+    Permission::ALL.into_iter().filter(|p| effective_with(preset, role, ov, *p)).collect()
+}
+/// Mã vai trò hợp lệ (trùng CHECK của bảng roles): chữ thường, số, gạch dưới, 2–40 ký tự, bắt đầu bằng chữ.
+pub fn is_role_code(s: &str) -> bool {
+    let b = s.as_bytes();
+    (2..=40).contains(&b.len()) && b[0].is_ascii_lowercase() && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'_')
+}
 #[cfg(test)]
 mod quan_ly_tests {
     use super::*;
@@ -367,5 +397,23 @@ mod quan_ly_tests {
         }
         assert!(!Permission::ProjectAssignAdmin.granted_by_default(Role::Admin));
         assert_eq!("manager".parse::<Role>(), Ok(Role::Manager));
+    }
+    #[test]
+    fn bo_quyen_vai_tro_thay_mac_dinh_va_khong_vuot_tang() {
+        let mut preset = default_set(Role::User);
+        preset.remove(&Permission::SignExecute);
+        preset.insert(Permission::DocumentList);
+        let ov = PermissionOverrides::default();
+        assert!(!effective_with(Some(&preset), Role::User, &ov, Permission::SignExecute));
+        assert!(effective_with(Some(&preset), Role::User, &ov, Permission::DocumentList));
+        assert!(effective_with(None, Role::User, &ov, Permission::SignExecute), "không có bộ quyền → mặc định");
+        let mut deny = PermissionOverrides::default();
+        deny.denies.insert(Permission::DocumentList);
+        assert!(!effective_with(Some(&preset), Role::User, &deny, Permission::DocumentList), "chặn riêng thắng");
+        assert!(allowed_for_base(Role::User, Permission::ScanExecute));
+        assert!(!allowed_for_base(Role::User, Permission::UserCreate));
+        assert!(allowed_for_base(Role::Manager, Permission::ProjectAssignAdmin));
+        assert!(!allowed_for_base(Role::Admin, Permission::ProjectAssignAdmin));
+        assert!(is_role_code("ky_so_vien") && !is_role_code("Ký số") && !is_role_code("a"));
     }
 }

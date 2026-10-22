@@ -413,6 +413,7 @@ const V3z7: Record<V3xt, V3yx> = {
   sign: "sign.view",
   tiff: "sign.view",
   users: "user.view",
+  roles: "user.view",
   settings: "settings.view",
 
   package: "package.view",

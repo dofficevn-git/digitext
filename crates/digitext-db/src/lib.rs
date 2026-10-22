@@ -24,6 +24,7 @@ pub mod project_purge;
 pub mod projects;
 pub mod records;
 pub mod review_queue;
+pub mod roles;
 pub mod sign_sessions;
 pub mod stats;
 pub mod submissions;

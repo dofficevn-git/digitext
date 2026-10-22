@@ -99,6 +99,9 @@ pub struct Tat {
     pub perm_grants: Vec<String>,
     #[serde(default)]
     pub perm_denies: Vec<String>,
+    /// Quyền hiệu lực máy chủ đã tính (phiên ngoại tuyến, máy chủ ≥ 22/10/2026).
+    #[serde(default)]
+    pub perms: Vec<String>,
 }
 pub fn f_2pv(r_n5: &str, r_n6: &str, r_n3: &str, r_n2: Option<&str>) -> Result<Tat, AppError> {
     let key = DecodingKey::from_ed_pem(r_n6.as_bytes()).map_err(|_| {
@@ -150,6 +153,9 @@ pub fn f_1mr(r_nd: &Tat, r_nc: Role) -> bool {
     r_nd.role == r_nc
 }
 pub fn f_18p(r_ne: &Tat) -> Vec<Permission> {
+    if !r_ne.perms.is_empty() {
+        return r_ne.perms.iter().filter_map(|p| p.parse::<Permission>().ok()).collect();
+    }
     let mut r_nh = PermissionOverrides::default();
     for r_ng in &r_ne.perm_grants {
         if let Ok(p) = r_ng.parse::<Permission>() {

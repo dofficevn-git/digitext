@@ -33,6 +33,16 @@ impl Role {
     pub fn allows(self, perm: Perm) -> bool {
         self.max_perm() >= perm
     }
+    /// Tên hiển thị tiếng Việt (trùng desktop V3za) — dùng để seed bảng roles.
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Role::SuperAdmin => "Quản trị hệ thống",
+            Role::Manager => "Quản lý",
+            Role::Admin => "Quản trị dự án",
+            Role::User => "Nhân viên dự án",
+            Role::Customer => "Khách hàng",
+        }
+    }
     pub fn as_str(self) -> &'static str {
         match self {
             Role::SuperAdmin => "super_admin",

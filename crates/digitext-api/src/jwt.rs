@@ -34,6 +34,9 @@ pub struct T2s {
     pub perm_grants: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub perm_denies: Vec<String>,
+    /// Quyền HIỆU LỰC đã tính ở máy chủ (gồm bộ quyền vai trò động) — desktop dùng thẳng khi ngoại tuyến.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub perms: Vec<String>,
 }
 pub struct JwtKeys {
     encoding: EncodingKey,
@@ -108,12 +111,14 @@ impl JwtKeys {
             offline_expiry: None,
             perm_grants: Vec::new(),
             perm_denies: Vec::new(),
+            perms: Vec::new(),
         })
     }
     pub fn sign_offline_lease(
         &self,
         user: &User,
         r_57: &PermissionOverrides,
+        effective: &std::collections::BTreeSet<digitext_core::Permission>,
         device_id: Option<Uuid>,
         r_56: DateTime<Utc>,
     ) -> anyhow::Result<(String, DateTime<Utc>)> {
@@ -131,6 +136,7 @@ impl JwtKeys {
             offline_expiry: Some(r_54.timestamp()),
             perm_grants: r_57.grants.iter().map(|p| p.as_str().to_owned()).collect(),
             perm_denies: r_57.denies.iter().map(|p| p.as_str().to_owned()).collect(),
+            perms: effective.iter().map(|p| p.as_str().to_owned()).collect(),
         })?;
         Ok((r_55, r_54))
     }

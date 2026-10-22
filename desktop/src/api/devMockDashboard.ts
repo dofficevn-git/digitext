@@ -4,6 +4,8 @@
 // chọn vai trò (sessionCore), `?project=1` giả lập đã chọn dự án ở Topbar.
 import type { DayMetrics, Health, KpiLine, KpiSettings, MeDash, MeDay, Metrics, Overview, OverviewProject, ProjectDash, StaffBoard, StaffRow } from "./dashboard";
 import { EMPTY_METRICS, QUOTA_METRICS } from "./dashboard";
+import { V3z1, V3z6 } from "@/domain/permissions";
+import type { V3xs } from "@/domain/types";
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -239,6 +241,12 @@ export function devMockDashboard(cmd: string, args?: Record<string, unknown>): u
     }
     case "cl_project_set":
       return null;
+    case "roles_list": {
+      const ten: Record<V3xs, string> = { super_admin: "Quản trị hệ thống", manager: "Quản lý", admin: "Quản trị dự án", user: "Nhân viên dự án", customer: "Khách hàng" };
+      const sys = (["super_admin", "manager", "admin", "user", "customer"] as V3xs[]).map((r, i) => ({ code: r, name: ten[r], description: null, baseRole: r, baseRoleName: ten[r], isSystem: true, sortOrder: i * 10, permissions: V3z6(r), allowed: r === "super_admin" ? V3z1 : V3z6(r).concat(r === "user" ? ["document.list"] : []), userCount: [3, 1, 2, 14, 0][i], updatedAt: new Date().toISOString() }));
+      const kysoAllowed = V3z6("user");
+      return [...sys, { code: "ky_so_vien", name: "Ký số viên", description: "Chỉ ký số và xem kho máy chủ", baseRole: "user", baseRoleName: ten.user, isSystem: false, sortOrder: 200, permissions: kysoAllowed.filter((p) => p.startsWith("sign.") || p === "drive.view"), allowed: kysoAllowed, userCount: 2, updatedAt: new Date().toISOString() }];
+    }
     default:
       return undefined;
   }

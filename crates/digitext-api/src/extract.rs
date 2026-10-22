@@ -10,6 +10,8 @@ pub struct Ts {
     pub user: digitext_db::users::User,
     pub claims: T2s,
     pub overrides: digitext_core::PermissionOverrides,
+    /// Bộ quyền của vai trò (bảng roles, migration 0022); None → mặc định theo vai trò gốc.
+    pub preset: Option<std::collections::BTreeSet<digitext_core::Permission>>,
     pub client_ip: Option<std::net::IpAddr>,
 }
 impl Ts {
@@ -21,7 +23,11 @@ impl Ts {
         }
     }
     pub fn has_perm(&self, r_3z: digitext_core::Permission) -> bool {
-        digitext_core::effective(self.user.role, &self.overrides, r_3z)
+        digitext_core::effective_with(self.preset.as_ref(), self.user.role, &self.overrides, r_3z)
+    }
+    /// Toàn bộ quyền hiệu lực của người gọi.
+    pub fn effective_set(&self) -> std::collections::BTreeSet<digitext_core::Permission> {
+        digitext_core::effective_set_with(self.preset.as_ref(), self.user.role, &self.overrides)
     }
     pub fn require_perm(&self, r_40: digitext_core::Permission) -> Result<(), ApiError> {
         if self.has_perm(r_40) {
@@ -142,6 +148,7 @@ impl FromRequestParts<AppState> for Ts {
             }
         }
         let overrides = digitext_db::permissions::f_1o5(&r_4g.pool, user.id).await?;
+        let preset = crate::routes::roles::preset_cached(&r_4g.pool, &user).await?;
         let r_4f = r_4e
             .extensions
             .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
@@ -151,6 +158,7 @@ impl FromRequestParts<AppState> for Ts {
             user,
             claims,
             overrides,
+            preset,
             client_ip,
         })
     }
