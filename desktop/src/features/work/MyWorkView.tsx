@@ -290,7 +290,7 @@ export default function MyWorkView() {
                       </div>
                       <Tip text={`${n(p.nTotal - con)}/${n(p.nTotal)} mục đã làm`}>
                         <div className="mt-2 h-2 rounded bg-border-subtle">
-                          <div className="h-2 rounded bg-accent" style={{ width: `${((p.nTotal - con) / Math.max(1, p.nTotal)) * 100}%` }} />
+                          <div className="h-2 rounded bg-brand-500" style={{ width: `${((p.nTotal - con) / Math.max(1, p.nTotal)) * 100}%` }} />
                         </div>
                       </Tip>
                       <Button variant="primary" icon="chay" className="mt-3" disabled={con === 0} onClick={() => setLam({ pkg: p })}>

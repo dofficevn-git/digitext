@@ -2,6 +2,7 @@
 // Dữ liệu giả CHỈ cho bản dev chạy trong trình duyệt (xem trước giao diện, chụp màn). Không vào bản phát hành:
 // ipc.ts chỉ nạp tệp này khi import.meta.env.DEV và không có Tauri. Lệnh không có ở đây vẫn báo lỗi như cũ.
 import type { ReviewSummaryRow } from "./docs";
+import { devMockDashboard } from "./devMockDashboard";
 
 function row(phong: string, hop: string, hoSo: string, pages: number, mb: number, ocr: number, pdfa: boolean, signed: boolean): ReviewSummaryRow {
   return {
@@ -25,7 +26,7 @@ const SUMMARY: ReviewSummaryRow[] = [
 
 let taiThu = 0;
 
-export function devMock(cmd: string): unknown {
+export function devMock(cmd: string, args?: Record<string, unknown>): unknown {
   switch (cmd) {
     case "docs_download":
       // Tải giả: 0,8 giây mỗi tệp, cứ tệp thứ 7 thì lỗi — để xem khung tiến độ tải xuống.
@@ -33,6 +34,6 @@ export function devMock(cmd: string): unknown {
     case "docs_review_summary":
       return SUMMARY;
     default:
-      return undefined;
+      return devMockDashboard(cmd, args);
   }
 }
