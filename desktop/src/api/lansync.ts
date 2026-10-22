@@ -116,6 +116,24 @@ export interface V43d {
   projectLabel?: string;
   /** Đẩy thẳng từ ổ đĩa: không chép vào Kho, tệp vừa ghi sổ là gửi lên máy chủ ngay. */
   direct?: boolean;
+  /** Thư mục đã chọn là cả dự án: mỗi thư mục con cấp 1 là một phông (bỏ tên thư mục đã chọn). */
+  subAsPhong?: boolean;
+}
+
+/** Xem trước hai cấp đầu của thư mục đã chọn để xác nhận "một phông" hay "cả dự án". */
+export interface PeekSub {
+  name: string;
+  dirs: number;
+}
+export interface PeekFolder {
+  path: string;
+  name: string;
+  isDir: boolean;
+  subs: PeekSub[];
+  pdfs: number;
+}
+export function collectPeekFolders(paths: string[]): Promise<PeekFolder[]> {
+  return invoke<PeekFolder[]>("collect_peek_folders", { args: { paths } });
 }
 
 export interface V43e {

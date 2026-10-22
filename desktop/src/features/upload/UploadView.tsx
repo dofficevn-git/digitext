@@ -23,7 +23,8 @@ import { V4cl, V4cm } from "@/features/dossier/logic";
 import type { V3yl, V3ym, V3yo } from "@/domain/types";
 import "./khogom.css";
 import { V4ak, type V4a9 } from "@/api/users";
-import { V431, V432, V433, V434, V435, V436, V43i, V43j, collectedClearErrors, collectedWipeAll, type V42z, type V43g, type V43h } from "@/api/lansync";
+import { V431, V432, V433, V434, V435, V436, V43i, V43j, collectedClearErrors, collectedWipeAll, collectPeekFolders, type PeekFolder, type V42z, type V43g, type V43h } from "@/api/lansync";
+import { XacNhanCayThuMuc, doanCheDo, type CheDoThuMuc } from "./FolderPreviewDialog";
 import { V4qa } from "./siteCodeWidth";
 import { V4qb, V4qc } from "./sharePort";
 import { Icon } from "@/components/Icon";
@@ -237,9 +238,27 @@ function MayQuanTri() {
   };
   const [projects, setProjects] = useState<V4a9[]>([]);
   const [projectId, setProjectId] = useState("");
+  // Mặc định: tên thư mục đã chọn là phông, thư mục con là Hộp/Hồ sơ (22/10/2026). Chỉ khi bật
+  // "Gắn theo danh mục" mới chọn phông/hồ sơ từ mục lục (dành cho tệp lẻ).
+  const [theoDanhMuc, setTheoDanhMuc] = useState(false);
   const [themPhong, setThemPhong] = useState("");
   const [themHoSo, setThemHoSo] = useState("");
   const [themViTri, setThemViTri] = useState("");
+  const [xemTruoc, setXemTruoc] = useState<{ paths: string[]; folders: PeekFolder[]; cheDo: CheDoThuMuc } | null>(null);
+  // Xem trước giao diện (DEV): ?view=upload&preview=cay mở sẵn hộp thoại xác nhận cây với dữ liệu mẫu.
+  useEffect(() => {
+    const preview = import.meta.env.DEV && !isTauri() ? new URLSearchParams(window.location.search).get("preview") : null;
+    if (preview === "them") setTab("them");
+    if (preview !== "cay") return;
+    const hop = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `HOP ${String(i + 1).padStart(2, "0")}`, dirs: 5 + (i % 7) }));
+    const folders: PeekFolder[] = [
+      { path: "F:/LTLSBN/UBND XÃ AN SINH", name: "UBND XÃ AN SINH", isDir: true, subs: hop(12), pdfs: 0 },
+      { path: "F:/LTLSBN/PHONG SO THUY LOI HB", name: "PHONG SO THUY LOI HB", isDir: true, subs: hop(99), pdfs: 3 },
+      { path: "F:/LTLSBN/PHONG TY THUỶ SẢN", name: "PHONG TY THUỶ SẢN", isDir: true, subs: [], pdfs: 0 },
+    ];
+    setTab("them");
+    setXemTruoc({ paths: folders.map((f) => f.path), folders, cheDo: doanCheDo(folders) });
+  }, []);
   const [ketQua, setKetQua] = useState<{ tone: "info" | "success" | "warning" | "danger"; text: string } | null>(null);
 
   // Kho gom có thể vài chục nghìn dòng: khi đang đẩy, sự kiện bắn liên tục → nạp lại tối đa 5 s/lần.
@@ -388,8 +407,31 @@ function MayQuanTri() {
       return;
     }
     if (!paths.length) return;
+    // Chọn thư mục mà không gắn theo danh mục: xác nhận cây trước khi đẩy (thư mục = phông hay = cả dự án).
+    if (thuMuc && !theoDanhMuc) {
+      try {
+        const folders = await collectPeekFolders(paths);
+        setXemTruoc({ paths, folders, cheDo: doanCheDo(folders) });
+      } catch (e) {
+        notifyError(e, "đọc thư mục đã chọn");
+      }
+      return;
+    }
+    await themVaoKho(paths, false);
+  };
+
+  const themVaoKho = async (paths: string[], subAsPhong: boolean) => {
+    const theoDm = theoDanhMuc && !subAsPhong;
     await run("add", "thêm tệp", async () => {
-      const r = await startAddFiles({ paths, projectId: projectId.trim() || undefined, destRel: destRel || undefined, phongMa: themHoSo && themHoSo !== UNSORTED ? themPhong || undefined : undefined, projectLabel: projectLabel || undefined, direct: dayThang });
+      const r = await startAddFiles({
+        paths,
+        projectId: projectId.trim() || undefined,
+        destRel: theoDm && destRel ? destRel : undefined,
+        phongMa: theoDm && themHoSo && themHoSo !== UNSORTED ? themPhong || undefined : undefined,
+        projectLabel: projectLabel || undefined,
+        direct: dayThang,
+        subAsPhong,
+      });
       setKetQua({ tone: r.direct ? (r.pushFailed + r.pushRejected > 0 ? "warning" : r.pushed > 0 ? "success" : "info") : r.added > 0 ? "success" : "info", text: V4ps(r) });
       if (r.direct) await load();
       if (!r.direct && tuDongDay && r.added > 0 && !forwarding) {
@@ -428,18 +470,19 @@ function MayQuanTri() {
     const ten = phongs.find((p) => p.maDuAn === themPhong)?.tenDuAn || themPhong;
     return `${ten}/${themHoSo}`;
   }, [phongs, themPhong, themHoSo, themViTri]);
-  // Không chọn phông = giữ nguyên cây thư mục đã chọn (14/10/2026); đã chọn phông thì phải chọn hồ sơ.
-  const thieuHoSo = phongs.length > 0 && !!themPhong && !themHoSo;
+  // Gắn theo danh mục: đã chọn phông thì phải chọn hồ sơ. Không gắn: tên thư mục là phông.
+  const thieuHoSo = theoDanhMuc && phongs.length > 0 && !!themPhong && !themHoSo;
   const projectLabel = useMemo(() => {
     const p = projects.find((x) => x.id === projectId.trim()) ?? (projects.length === 1 ? projects[0] : undefined);
     return p ? `${p.code} · ${p.name}`.split("/").join("-").split("\\").join("-") : "";
   }, [projects, projectId]);
   const dest = useMemo(() => {
-    const hoSo = !!(themHoSo && themHoSo !== UNSORTED);
-    if (!destRel && !hoSo && projectLabel) return `${projectLabel}/‹tên thư mục đã chọn›/… (tệp lẻ vào ${projectLabel}/Chưa phân loại)`;
-    const tail = destRel || "Chưa phân loại";
+    const hoSo = theoDanhMuc && !!(themHoSo && themHoSo !== UNSORTED);
+    const rel = theoDanhMuc ? destRel : "";
+    if (!rel && !hoSo) return `${projectLabel || "‹dự án›"}/‹tên thư mục = phông›/‹hộp›/‹hồ sơ›/tệp.pdf (tệp lẻ vào Chưa phân loại)`;
+    const tail = rel || "Chưa phân loại";
     return hoSo || !projectLabel ? tail : `${projectLabel}/${tail}`;
-  }, [themHoSo, destRel, projectLabel]);
+  }, [theoDanhMuc, themHoSo, destRel, projectLabel]);
   const pbCuaPhong = useMemo(() => V4cl(phongBans, flt.maDa), [phongBans, flt.maDa]);
   const mangCuaPb = useMemo(() => V4cm(mangs, flt.maDv), [mangs, flt.maDv]);
   const busyAny = busy !== "" || forwarding || collecting;
@@ -537,7 +580,10 @@ function MayQuanTri() {
               <Field label="Dự án đích">
                 <Select value={projectId} onChange={setProjectId} placeholder={projects.length ? "— Chọn dự án —" : "Dự án của tài khoản này"} options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} />
               </Field>
-              {phongs.length > 0 ? (
+              <Field label="Gắn theo danh mục hồ sơ" inline hint={phongs.length > 0 ? "Chỉ cho tệp lẻ: chọn phông và hồ sơ trong mục lục. Bỏ trống để máy tự nhận tên thư mục là phông." : "Tự gõ vị trí trong Kho thay vì lấy tên thư mục làm phông."}>
+                <Checkbox checked={theoDanhMuc} onChange={setTheoDanhMuc} disabled={busyAny} />
+              </Field>
+              {!theoDanhMuc ? null : phongs.length > 0 ? (
                 <>
                   <Field label="Phông">
                     <Select
@@ -585,9 +631,25 @@ function MayQuanTri() {
               )}
             </Toolbar>
             <p className="mt-2 text-sm text-fg-subtle">
-              {thieuHoSo ? "Đã chọn phông thì chọn hồ sơ theo danh mục (hoặc bỏ chọn phông để giữ nguyên cây thư mục)." : dayThang ? `Tệp giữ nguyên trên ổ đĩa; máy chủ xếp theo cây: ${dest}. Tệp gửi lỗi cần cắm lại ổ này để gửi lại.` : `Sẽ lưu vào Kho: ${dest}`}
+              {thieuHoSo ? "Đã chọn phông thì chọn hồ sơ theo danh mục (hoặc tắt Gắn theo danh mục để máy tự nhận tên thư mục là phông)." : dayThang ? `Tệp giữ nguyên trên ổ đĩa; máy chủ xếp theo cây: ${dest}. Tệp gửi lỗi cần cắm lại ổ này để gửi lại.` : `Sẽ lưu vào Kho: ${dest}`}
             </p>
+            {!theoDanhMuc && <p className="mt-1 text-sm text-fg-subtle">Chọn một hay nhiều thư mục phông cùng lúc; nếu chọn thư mục chứa cả dự án, bước xác nhận cho phép lấy từng thư mục con làm phông.</p>}
           </Card>
+          {xemTruoc && (
+            <XacNhanCayThuMuc
+              duAn={projectLabel || "‹dự án›"}
+              folders={xemTruoc.folders}
+              cheDo={xemTruoc.cheDo}
+              onCheDo={(cheDo) => setXemTruoc({ ...xemTruoc, cheDo })}
+              nhanNut={dayThang ? "Đẩy lên máy chủ" : "Thêm vào Kho"}
+              onClose={() => setXemTruoc(null)}
+              onOk={() => {
+                const { paths, cheDo } = xemTruoc;
+                setXemTruoc(null);
+                void themVaoKho(paths, cheDo === "duAn");
+              }}
+            />
+          )}
         </div>
       )}
 

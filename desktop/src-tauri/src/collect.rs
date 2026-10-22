@@ -2812,6 +2812,10 @@ pub struct Tf {
     /// (phiên gửi chạy song song với phiên ghi sổ).
     #[serde(default)]
     pub direct: bool,
+    /// Thư mục đã chọn là CẢ DỰ ÁN (chứa nhiều phông): mỗi thư mục con cấp 1 là một phông,
+    /// bỏ tên thư mục đã chọn khỏi cây (22/10/2026). Mặc định false: thư mục đã chọn là một phông.
+    #[serde(default)]
+    pub sub_as_phong: bool,
 }
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -2896,6 +2900,75 @@ mod keep_name_tests {
         assert_eq!(keep_selected_folder_name(Path::new(r"F:\TTLTLS BNI\PHONG SCTBG"), sub.clone(), false), sub);
         assert_eq!(keep_selected_folder_name(Path::new(r"F:\"), sub.clone(), true), sub);
     }
+}
+/// Một thư mục con cấp 1 của thư mục đã chọn: tên và số thư mục con của nó (để đoán
+/// đây là cấp Hộp hay cấp Phông).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeekSub {
+    pub name: String,
+    pub dirs: usize,
+}
+/// Xem trước một thư mục người dùng chọn ở "Thêm từ ổ đĩa": chỉ đọc hai cấp đầu, không
+/// duyệt sâu, để giao diện xác nhận "thư mục này là một phông hay là cả dự án".
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeekFolder {
+    pub path: String,
+    pub name: String,
+    pub is_dir: bool,
+    pub subs: Vec<PeekSub>,
+    /// Tệp PDF nằm ngay trong thư mục (không tính thư mục con).
+    pub pdfs: usize,
+}
+fn count_subdirs(dir: &Path) -> usize {
+    std::fs::read_dir(dir)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+                .filter(|e| !f_2fv(&e.file_name().to_string_lossy()))
+                .count()
+        })
+        .unwrap_or(0)
+}
+fn peek_folder(path: &Path) -> PeekFolder {
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.to_string_lossy().into_owned());
+    let is_dir = path.is_dir();
+    let mut subs = Vec::new();
+    let mut pdfs = 0usize;
+    if is_dir {
+        if let Ok(rd) = std::fs::read_dir(path) {
+            for e in rd.flatten() {
+                let Ok(t) = e.file_type() else { continue };
+                let n = e.file_name().to_string_lossy().into_owned();
+                if t.is_dir() {
+                    if !f_2fv(&n) {
+                        subs.push(PeekSub { dirs: count_subdirs(&e.path()), name: n });
+                    }
+                } else if t.is_file() && n.to_ascii_lowercase().ends_with(".pdf") {
+                    pdfs += 1;
+                }
+            }
+        }
+        subs.sort_by(|a, b| digitext_core::tiff_naming::natural_cmp(&a.name, &b.name));
+    }
+    PeekFolder { path: path.to_string_lossy().into_owned(), name, is_dir, subs, pdfs }
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeekArgs {
+    pub paths: Vec<String>,
+}
+#[tauri::command]
+pub async fn collect_peek_folders(auth: State<'_, AuthState>, args: PeekArgs) -> Result<Vec<PeekFolder>, AppError> {
+    auth.require(Perm::Admin)?;
+    let paths = args.paths;
+    tauri::async_runtime::spawn_blocking(move || paths.iter().map(|p| peek_folder(Path::new(p))).collect::<Vec<_>>())
+        .await
+        .map_err(|e| AppError::internal(format!("luồng đọc thư mục lỗi ({e})")))
 }
 fn inside(root: &Path, path: &Path) -> bool {
     let r_yi = |r_yj: &Path| r_yj.canonicalize().unwrap_or_else(|_| r_yj.to_path_buf());
@@ -3033,7 +3106,16 @@ pub async fn collect_add_files(
                             .collect::<Vec<_>>()
                     })
                     .unwrap_or_default();
-                let sub = keep_selected_folder_name(&src, sub, chua_phan_loai);
+                let sub = if args.sub_as_phong && chua_phan_loai {
+                    // Thư mục chọn = dự án: con cấp 1 là phông; tệp nằm ngay dưới gốc → "Chưa phân loại".
+                    if sub.is_empty() {
+                        vec![crate::data_share::C_P0.to_string()]
+                    } else {
+                        sub
+                    }
+                } else {
+                    keep_selected_folder_name(&src, sub, chua_phan_loai)
+                };
                 let r_yt: Vec<&str> = sub.iter().map(String::as_str).collect();
                 r_yo.push((f, crate::storage::f_1jt(&dir_folder, &r_yt, false)));
             }

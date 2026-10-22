@@ -273,6 +273,7 @@ fn main() {
             collect::collected_clear_errors,
             collect::collected_wipe_all,
             collect::collect_add_files,
+            collect::collect_peek_folders,
             scanner::list_scanners,
             scanner::start_scan_batch,
             scanner::cancel_scan_batch,
