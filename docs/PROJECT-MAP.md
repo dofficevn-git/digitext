@@ -221,7 +221,8 @@ axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs
 | Nhóm | Đường dẫn tiêu biểu |
 | --- | --- |
 | `auth` | `/auth/login`, `/refresh`, `/logout`, `/validate`, `/pubkey` |
-| `users` | `/users`, `/{id}/password`, `/{id}/revoke`, `/{id}/permissions` |
+| `users` | `/users` (tạo nhận `roleCode`), `/{id}` (PATCH đổi `roleCode`), `/{id}/password`, `/{id}/revoke`, `/{id}/permissions` |
+| `roles` | `/roles` GET/POST, `/roles/{code}` GET/PUT/DELETE, `/roles/{code}/reset` — bộ quyền vai trò (migration 0022, 22/10/2026) |
 | `projects` | `/projects`, `/{id}/admins`, `/{id}/members`, `/{id}/tree` |
 | `documents` | `/documents/{id}/download`, `/tree`, `/ocr-all`, `/make-pdf2-all`, `/extract-fields-all`, `/rebuild-non-pdfa`, `/progress`, `/pdfa-report`, `/report`, `/{id}/review`, `/review-bulk` |
 | `submissions` | `/submissions`, `/{id}/confirm`, `/refuse`, `/reconcile`, `/receive`, `/approve`, `/complete`, `/returned`, `/report`, `/dossier` |
@@ -296,6 +297,7 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
 - `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
+  Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
   xem trước dev `?view=home&role=user|admin|manager&project=1`) · Số hoá (`drive`, `scan`, `tree`, `dossier`, `upload`,
@@ -361,6 +363,15 @@ sinh lại từ đầu.
 
 Không có macro `query!`/`query_as!` nào — toàn bộ dùng API runtime. Sai tên cột
 sẽ nổ lúc chạy chứ không phải lúc `cargo build`. Sửa DB phải test thật.
+
+### Quyền: vai trò gốc trong code, bộ quyền trong CSDL (22/10/2026)
+
+- 5 vai trò gốc (`digitext-core::Role`) quyết định tầng `Perm` và phạm vi dự án; bộ quyền của từng vai trò (kể cả
+  5 vai trò hệ thống) nằm ở bảng `roles` + `role_permissions`, sửa ở Quản trị › Vai trò và quyền. `users.role_code`
+  trỏ tới vai trò tuỳ chỉnh (NULL = vai trò gốc). Quyền hiệu lực = `effective_with(preset, role, overrides, p)` —
+  bộ quyền không vượt tầng của vai trò gốc (`allowed_for_base`). API tự chèn vai trò hệ thống khi khởi động
+  (`roles::ensure_system`); `Ts` nạp bộ quyền qua cache 20 s (`routes/roles.rs::preset_cached`). Đăng nhập / lease trả
+  thẳng danh sách quyền hiệu lực nên desktop không tự tính nữa (máy chủ cũ thì vẫn tự tính).
 
 ### Quyền cài đặt hai lần
 
