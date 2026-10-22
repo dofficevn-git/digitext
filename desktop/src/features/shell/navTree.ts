@@ -1,5 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Cây menu 2 cấp theo vòng đời nghiệp vụ: nhóm (icon) → mục. Mỗi nút có `gate` = màn dùng để kiểm quyền
+// Cây menu 2 cấp theo vòng đời nghiệp vụ: nhóm (icon) → mục. Trục quy trình đi đúng luồng chuẩn (22/10/2026):
+// Chỉnh lý → Số hoá → Xử lý → Lưu trữ số — hồ sơ được chỉnh lý xong mới phát cây thư mục để quét. Mỗi nút có `gate` = màn dùng để kiểm quyền
 // (domain/permissions.ts V3z7). `badge` là số đếm nhỏ cạnh mục, lấy từ useNotifications.
 
 import type { V3xu, V3xw, V3xx, V3xt } from "@/domain/types";
@@ -23,42 +24,17 @@ export interface V46s {
   badge?: NavBadge;
   /** Từ khoá thêm cho tìm nhanh (không dấu). */
   keywords?: string;
+  /** Nhóm thuộc trục quy trình: "Bước n · việc chính", hiện dưới tên nhóm. */
+  step?: string;
 }
 
 export const NAV_TREE: V46s[] = [
   { id: "home", label: "Tổng quan", icon: "trangChu", gate: "home", leaf: { kind: "view", view: "home" }, keywords: "trang chu dashboard" },
   {
-    id: "sohoa",
-    label: "Số hoá",
-    icon: "sohoa",
-    gate: "drive",
-    children: [
-      { id: "drive", label: "Kho tài liệu", gate: "drive", leaf: { kind: "view", view: "drive" }, keywords: "thu muc tep" },
-      { id: "scan", label: "Quét", gate: "scan", leaf: { kind: "view", view: "scan" }, keywords: "may quet scan" },
-      { id: "tree", label: "Cây thư mục", gate: "tree", leaf: { kind: "view", view: "tree" }, keywords: "phat cay ho so muc luc" },
-      { id: "taolap", label: "Tài liệu đã quét", gate: "dossier", leaf: { kind: "hoso", pane: "sohoa" }, keywords: "tao lap co so du lieu pdf" },
-      { id: "upload", label: "Đưa lên máy chủ", gate: "upload", leaf: { kind: "view", view: "upload" }, keywords: "dong bo tai len gom lan" },
-      { id: "server", label: "Kho máy chủ", gate: "server", leaf: { kind: "view", view: "server" }, keywords: "may chu tai ve pdf/a" },
-    ],
-  },
-  {
-    id: "xuly",
-    label: "Xử lý",
-    icon: "xuLy",
-    gate: "dossier",
-    children: [
-      { id: "ocr", label: "OCR và bóc tách", gate: "dossier", leaf: { kind: "hoso", pane: "ocr" }, keywords: "nhan dang 16 truong" },
-      { id: "giaoviec", label: "Giao việc", gate: "workManage", leaf: { kind: "view", view: "workManage" }, keywords: "goi viec xac nhan" },
-      { id: "viec", label: "Việc của tôi", gate: "work", leaf: { kind: "view", view: "work" }, badge: "myWork" },
-      { id: "kyso", label: "Ký số", gate: "sign", leaf: { kind: "view", view: "sign" }, keywords: "token chu ky" },
-      { id: "tachtiff", label: "Tách TIFF", gate: "tiff", leaf: { kind: "view", view: "tiff" }, keywords: "tiff dang tach trang anh" },
-      { id: "donggoi", label: "Đóng gói", gate: "package", leaf: { kind: "view", view: "package" }, keywords: "sip aip dip goi tin" },
-    ],
-  },
-  {
     id: "chinhly",
     label: "Chỉnh lý",
     icon: "chinhly",
+    step: "Bước 1 · lập hồ sơ",
     gate: "dossier",
     children: [
       { id: "danhmuccl", label: "Danh mục", gate: "dossier", leaf: { kind: "hoso", pane: "danhmuccl" }, keywords: "phong phong ban mang thbq" },
@@ -71,9 +47,40 @@ export const NAV_TREE: V46s[] = [
     ],
   },
   {
+    id: "sohoa",
+    label: "Số hoá",
+    icon: "sohoa",
+    step: "Bước 2 · quét, tải lên",
+    gate: "drive",
+    children: [
+      { id: "tree", label: "Cây thư mục", gate: "tree", leaf: { kind: "view", view: "tree" }, keywords: "phat cay ho so muc luc" },
+      { id: "scan", label: "Quét", gate: "scan", leaf: { kind: "view", view: "scan" }, keywords: "may quet scan" },
+      { id: "drive", label: "Kho tài liệu", gate: "drive", leaf: { kind: "view", view: "drive" }, keywords: "thu muc tep" },
+      { id: "taolap", label: "Tài liệu đã quét", gate: "dossier", leaf: { kind: "hoso", pane: "sohoa" }, keywords: "tao lap co so du lieu pdf" },
+      { id: "upload", label: "Đưa lên máy chủ", gate: "upload", leaf: { kind: "view", view: "upload" }, keywords: "dong bo tai len gom lan" },
+      { id: "server", label: "Kho máy chủ", gate: "server", leaf: { kind: "view", view: "server" }, keywords: "may chu tai ve pdf/a" },
+    ],
+  },
+  {
+    id: "xuly",
+    label: "Xử lý",
+    icon: "xuLy",
+    step: "Bước 3 · OCR, ký số",
+    gate: "dossier",
+    children: [
+      { id: "ocr", label: "OCR và bóc tách", gate: "dossier", leaf: { kind: "hoso", pane: "ocr" }, keywords: "nhan dang 16 truong" },
+      { id: "giaoviec", label: "Giao việc", gate: "workManage", leaf: { kind: "view", view: "workManage" }, keywords: "goi viec xac nhan" },
+      { id: "viec", label: "Việc của tôi", gate: "work", leaf: { kind: "view", view: "work" }, badge: "myWork" },
+      { id: "kyso", label: "Ký số", gate: "sign", leaf: { kind: "view", view: "sign" }, keywords: "token chu ky" },
+      { id: "tachtiff", label: "Tách TIFF", gate: "tiff", leaf: { kind: "view", view: "tiff" }, keywords: "tiff dang tach trang anh" },
+      { id: "donggoi", label: "Đóng gói", gate: "package", leaf: { kind: "view", view: "package" }, keywords: "sip aip dip goi tin" },
+    ],
+  },
+  {
     id: "luutruso",
     label: "Lưu trữ số",
     icon: "luuTruSo",
+    step: "Bước 4 · nộp lưu",
     gate: "submission",
     children: [
       { id: "thunop", label: "Thu nộp", gate: "submission", leaf: { kind: "view", view: "submission" }, badge: "notifications", keywords: "nop luu lich su" },

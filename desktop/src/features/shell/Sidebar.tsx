@@ -16,10 +16,10 @@ import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
 import BrandLogo from "./BrandLogo";
 
-// 0.18.15: bỏ ô màu cầu vồng mỗi nhóm. Bốn nhóm Số hoá → Xử lý → Chỉnh lý → Lưu trữ số là vòng đời một hồ sơ nên
-// xếp trên một "trục quy trình" (đường dọc nối các nút tròn); nhóm đang làm sáng xanh ngọc. Báo cáo / Quản trị nằm
-// dưới đường chia, không thuộc trục. Mục đang mở giữ vạch hổ phách (màu "đang làm" của cả hệ thống).
-const QUY_TRINH = new Set(["sohoa", "xuly", "chinhly", "luutruso"]);
+// Bốn nhóm Chỉnh lý → Số hoá → Xử lý → Lưu trữ số là vòng đời một hồ sơ (luồng chuẩn: chỉnh lý xong mới số hoá)
+// nên xếp trên một "trục quy trình" (đường dọc nối các nút tròn), mỗi nhóm ghi "Bước n" dưới tên; nhóm đang làm
+// sáng xanh ngọc. Báo cáo / Quản trị nằm dưới đường chia, không thuộc trục. Mục đang mở giữ vạch hổ phách.
+const QUY_TRINH = new Set(["chinhly", "sohoa", "xuly", "luutruso"]);
 
 /** Nút tròn mang icon nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. */
 function NutNhom({ icon, lit, size = "md" }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg" }) {
@@ -151,13 +151,20 @@ export default function Sidebar() {
           type="button"
           data-nav
           data-group={g.leaf ? undefined : g.id}
-          className={cn(btn, "h-10 gap-2.5 px-2 text-[14px]", g.leaf ? tone(active) : active ? "font-semibold text-[var(--side-strong)]" : "font-medium text-[var(--side-text)] hover:text-[var(--side-strong)]")}
+          className={cn(btn, g.step ? "min-h-12 gap-2.5 px-2 py-1 text-[14px]" : "h-10 gap-2.5 px-2 text-[14px]", g.leaf ? tone(active) : active ? "font-semibold text-[var(--side-strong)]" : "font-medium text-[var(--side-text)] hover:text-[var(--side-strong)]")}
           onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
           aria-expanded={g.leaf ? undefined : isOpen}
           aria-current={g.leaf && active ? "page" : undefined}
         >
           {g.icon && <NutNhom icon={g.icon} lit={active} />}
-          <span className="min-w-0 flex-1 truncate">{g.label}</span>
+          {g.step ? (
+            <span className="flex min-w-0 flex-1 flex-col leading-tight">
+              <span className="truncate">{g.label}</span>
+              <span className={cn("truncate text-[11.5px] font-normal", active ? "text-brand-200" : "text-[var(--side-faint)]")}>{g.step}</span>
+            </span>
+          ) : (
+            <span className="min-w-0 flex-1 truncate">{g.label}</span>
+          )}
           {g.leaf ? (
             <Badge n={badgeOf(g.badge)} />
           ) : (
@@ -203,7 +210,7 @@ export default function Sidebar() {
         type="button"
         data-nav
         className="group relative grid size-11 place-items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
-        aria-label={g.label}
+        aria-label={g.step ? `${g.label} — ${g.step}` : g.label}
         aria-current={g.leaf && active ? "page" : undefined}
         onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
       >
@@ -221,7 +228,10 @@ export default function Sidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>{iconBtn}</DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="w-56">
-              <DropdownMenuLabel>{g.label}</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {g.label}
+                {g.step && <span className="block text-xs font-normal text-fg-subtle">{g.step}</span>}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {kids.map((c) => (
                 <DropdownMenuItem key={c.id} onSelect={() => c.leaf && gotoLeaf(c.leaf, nav)} className={cn(c.leaf && leafActive(c.leaf, nav) && "font-semibold text-brand-700")}>
@@ -237,8 +247,9 @@ export default function Sidebar() {
   };
 
   const ve = rail ? nutRail : dongNhom;
-  // Đường trục: chạy qua tâm các nút tròn của nhóm quy trình (tâm = lề nút 8px + nửa nút 14px; dải icon: giữa cột).
-  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-5 bottom-5";
+  // Đường trục: chạy qua tâm các nút tròn của nhóm quy trình (tâm = lề nút 8px + nửa nút 14px; dòng nhóm cao 48px
+  // nên tâm cách mép 24px; dải icon: giữa cột).
+  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-6 bottom-6";
 
   return (
     <aside className={cn("sidebar", rail && "collapsed")}>
