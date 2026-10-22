@@ -13,7 +13,7 @@ pub mod tiff_naming;
 pub use doc_status::{DocStatus, Tgl};
 pub use field::{Tgr, VanBanField};
 pub use job::{JobKind, JobStatus, Tgm, Tgn};
-pub use permission::{effective, f_18s, Permission, PermissionOverrides, Tgo};
+pub use permission::{allowed_for_base, default_set, effective, effective_set_with, effective_with, f_18s, is_role_code, Permission, PermissionOverrides, Tgo};
 pub use review_status::{ReviewStatus, Tgp};
 pub use role::{Perm, Role, Tgq};
 pub use text::{f_ue, f_x2, C_Y};

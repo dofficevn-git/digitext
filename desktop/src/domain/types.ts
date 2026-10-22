@@ -14,6 +14,7 @@ export type V3xt =
   | "sign"
   | "tiff"
   | "users"
+  | "roles"
   | "settings"
   | "package"
   | "submission"

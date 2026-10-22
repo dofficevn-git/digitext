@@ -246,6 +246,11 @@ async fn serve() -> anyhow::Result<()> {
     }
     crate::routes::documents::f_2id(r_24.data_dir.as_path()).await;
     f_2gr(r_24.data_dir.clone());
+    match digitext_db::roles::ensure_system(&r_22).await {
+        Ok(n) if n > 0 => tracing::info!(added = n, "vai trò hệ thống: đã chèn bộ quyền mặc định vào bảng roles"),
+        Ok(_) => {}
+        Err(e) => tracing::warn!(error = %e, "không chèn được vai trò hệ thống (migration 0022 chưa áp?) — dùng mặc định trong code"),
+    }
     crate::routes::dashboard::spawn_rollup(r_22.clone());
     f_2gs(r_22);
     axum::serve(
@@ -358,6 +363,7 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
             display_name: r_2l.as_deref().unwrap_or(&username),
             pwd_hash: &password::hash(&r_2n)?,
             role: Role::SuperAdmin,
+            role_code: None,
             project_id: None,
             created_by: None,
         },

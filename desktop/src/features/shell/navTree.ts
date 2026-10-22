@@ -110,7 +110,8 @@ export const NAV_TREE: V46s[] = [
     icon: "quanTri",
     gate: "users",
     children: [
-      { id: "users", label: "Người dùng và dự án", gate: "users", leaf: { kind: "view", view: "users" }, keywords: "phan quyen" },
+      { id: "users", label: "Người dùng và dự án", gate: "users", leaf: { kind: "view", view: "users" }, keywords: "phan quyen tai khoan" },
+      { id: "roles", label: "Vai trò và quyền", gate: "roles", leaf: { kind: "view", view: "roles" }, keywords: "role phan quyen bo quyen mac dinh" },
       { id: "settings", label: "Cài đặt", gate: "settings", leaf: { kind: "view", view: "settings" }, keywords: "may chu may quet luu tru" },
     ],
   },

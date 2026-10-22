@@ -125,6 +125,7 @@ pub fn router(r_b: AppState) -> Router {
 fn f_rv() -> Router<AppState> {
     crate::routes::auth::router()
         .merge(crate::routes::users::router())
+        .merge(crate::routes::roles::router())
         .merge(crate::routes::projects::router())
         .merge(crate::routes::project_purge::router())
         .merge(crate::routes::devices::router())

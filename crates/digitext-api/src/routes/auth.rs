@@ -39,9 +39,14 @@ pub struct UserProfile {
     pub username: String,
     pub display_name: String,
     pub role: Role,
+    /// Vai trò động (bảng roles); None = vai trò gốc.
+    pub role_code: Option<String>,
+    pub role_name: String,
     pub project: Option<ProjectBrief>,
     pub grants: Vec<Permission>,
     pub denies: Vec<Permission>,
+    /// Quyền hiệu lực đã tính ở máy chủ (bộ quyền vai trò ∪ cấp riêng − chặn riêng).
+    pub permissions: Vec<Permission>,
 }
 impl UserProfile {
     async fn load(
@@ -59,14 +64,23 @@ impl UserProfile {
                 }),
             None => None,
         };
+        let code = user.role_code.clone().unwrap_or_else(|| user.role.as_str().to_owned());
+        let role_name = match digitext_db::roles::get(&r_ab.pool, &code).await {
+            Ok(Some(r)) => r.name,
+            _ => user.role.display_name().to_owned(),
+        };
+        let preset = crate::routes::roles::preset_cached(&r_ab.pool, user).await?;
         Ok(UserProfile {
             id: user.id,
             username: user.username.clone(),
             display_name: user.display_name.clone(),
             role: user.role,
+            role_code: user.role_code.clone(),
+            role_name,
             project,
             grants: r_a8.grants.iter().copied().collect(),
             denies: r_a8.denies.iter().copied().collect(),
+            permissions: digitext_core::effective_set_with(preset.as_ref(), user.role, r_a8).into_iter().collect(),
         })
     }
 }
@@ -116,9 +130,11 @@ async fn f_1jp(
 ) -> Result<SessionResponse, ApiError> {
     let r_ae = Utc::now();
     let r_af = permissions::f_1o5(&r_ai.pool, user.id).await?;
+    let preset = crate::routes::roles::preset_cached(&r_ai.pool, user).await?;
+    let effective = digitext_core::effective_set_with(preset.as_ref(), user.role, &r_af);
     let access_token = r_ai.keys.sign_access(user, device_id, r_ae)?;
     let (offline_lease, offline_expiry) =
-        r_ai.keys.sign_offline_lease(user, &r_af, device_id, r_ae)?;
+        r_ai.keys.sign_offline_lease(user, &r_af, &effective, device_id, r_ae)?;
     let r_ag = f_1u6();
     tokens::insert(
         &r_ai.pool,

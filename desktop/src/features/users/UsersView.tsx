@@ -11,6 +11,7 @@ import type { V3xs } from "@/domain/types";
 import { V4ac, V4ad, V4ae, V4af, V4ag, V4ai, V4aj, V4ak, V4al, V4an, V4ao } from "@/api/users";
 import type { V4a8, V4a9, V4ah } from "@/api/users";
 import { V4r3, type V4r0 } from "@/api/stats";
+import { rolesList, type RoleInfo } from "@/api/roles";
 import { V4r5, V4r6, V4r8, type V4r4 } from "./projectAdmins";
 import ProjectPurgeDialog from "./ProjectPurgeDialog";
 import { Icon } from "@/components/Icon";
@@ -37,13 +38,16 @@ export default function V4ra() {
 
   const load = useCallback(async () => {
     const [users, projects] = await Promise.all([V4ac(), V4ak()]);
-    const stats = await V4r3().catch(() => [] as V4r0[]);
-    return { users, projects, stats };
+    const [stats, roles] = await Promise.all([V4r3().catch(() => [] as V4r0[]), rolesList().catch(() => [] as RoleInfo[])]);
+    return { users, projects, stats, roles };
   }, []);
   const { data, error, loading, refreshing, reload } = V41t(load, { topics: ["users", "projects", "stats"] });
   const users = useMemo(() => data?.users ?? [], [data]);
   const projects = useMemo(() => data?.projects ?? [], [data]);
   const stats = useMemo(() => data?.stats ?? [], [data]);
+  const roles = useMemo(() => data?.roles ?? [], [data]);
+  // Tên vai trò hiển thị: theo bảng vai trò (có vai trò tuỳ chỉnh), không có thì tên vai trò gốc.
+  const tenVaiTro = useCallback((u: { role: V3xs; roleCode?: string | null }) => roles.find((r) => r.code === (u.roleCode ?? u.role))?.name ?? V3za(u.role), [roles]);
 
   const projectName = useMemo(() => {
     const m = new Map(projects.map((p) => [p.id, p.name]));
@@ -52,7 +56,7 @@ export default function V4ra() {
 
   const shownUsers = useMemo(() => {
     const k = q.trim().toLowerCase();
-    return users.filter((u) => (!roleF || u.role === roleF) && (!projF || u.projectId === projF) && (!k || u.displayName.toLowerCase().includes(k) || u.username.toLowerCase().includes(k) || (u.email ?? "").toLowerCase().includes(k)));
+    return users.filter((u) => (!roleF || (u.roleCode ?? u.role) === roleF) && (!projF || u.projectId === projF) && (!k || u.displayName.toLowerCase().includes(k) || u.username.toLowerCase().includes(k) || (u.email ?? "").toLowerCase().includes(k)));
   }, [users, q, roleF, projF]);
 
   const toggleActive = async (u: V4a8) => {
@@ -84,7 +88,7 @@ export default function V4ra() {
         </div>
       ),
     },
-    { key: "role", header: "Vai trò", sortable: true, cell: (u) => V3za(u.role), width: 150 },
+    { key: "role", header: "Vai trò", sortable: true, sortValue: (u) => tenVaiTro(u), cell: (u) => tenVaiTro(u), width: 170 },
     { key: "projectId", header: "Dự án", sortable: true, sortValue: (u) => projectName(u.projectId), cell: (u) => projectName(u.projectId) },
     { key: "isActive", header: "Trạng thái", width: 120, cell: (u) => <Badge tone={u.isActive ? "ok" : "gray"}>{u.isActive ? "Hoạt động" : "Đã khoá"}</Badge> },
   ];
@@ -128,7 +132,7 @@ export default function V4ra() {
           <div className="border-b border-border-subtle p-3">
             <Toolbar>
               <Input size="sm" prefix="tim" placeholder="Tìm tên, tài khoản, email" value={q} onChange={(e) => setQ(e.target.value)} className="w-64" aria-label="Tìm người dùng" />
-              <Select size="sm" value={roleF} onChange={setRoleF} placeholder="Mọi vai trò" options={(["super_admin", "admin", "user", "customer"] as V3xs[]).map((r) => ({ value: r, label: V3za(r) }))} className="w-44" aria-label="Lọc vai trò" />
+              <Select size="sm" value={roleF} onChange={setRoleF} placeholder="Mọi vai trò" options={roles.length ? roles.map((r) => ({ value: r.code, label: r.name })) : (["super_admin", "manager", "admin", "user"] as V3xs[]).map((r) => ({ value: r, label: V3za(r) }))} className="w-44" aria-label="Lọc vai trò" />
               {projects.length > 1 && <Select size="sm" value={projF} onChange={setProjF} placeholder="Mọi dự án" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} className="w-56" aria-label="Lọc dự án" />}
             </Toolbar>
           </div>
@@ -186,6 +190,8 @@ export default function V4ra() {
 
       {(dlg?.kind === "create" || dlg?.kind === "edit") && (
         <UserDialog
+          me={me}
+          roles={roles}
           mode={dlg.kind}
           myRole={session?.role ?? "user"}
           projects={projects}
@@ -382,18 +388,24 @@ function vaiTroDuocTao(myRole: string): V3xs[] {
   return ["user"];
 }
 
-function UserDialog({ mode, myRole, projects, user, onClose, onDone }: { mode: "create" | "edit"; myRole: string; projects: V4a9[]; user?: V4a8; onClose: () => void; onDone: () => void }) {
+function UserDialog({ mode, myRole, me, roles, projects, user, onClose, onDone }: { mode: "create" | "edit"; myRole: string; me: string; roles: RoleInfo[]; projects: V4a9[]; user?: V4a8; onClose: () => void; onDone: () => void }) {
   const duocTao = vaiTroDuocTao(myRole);
   const toanHeThong = myRole === "super_admin" || myRole === "manager";
   const [username, setUsername] = useState(user?.username ?? "");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<V3xs>(user?.role ?? "user");
+  // Vai trò chọn theo bảng vai trò (hệ thống + tuỳ chỉnh); vai trò gốc đi theo vai trò đã chọn.
+  const chonDuoc = useMemo(() => roles.filter((r) => duocTao.includes(r.baseRole) && (mode === "edit" || !r.isSystem || r.code !== "customer")), [roles, duocTao, mode]);
+  const banDau = user?.roleCode ?? user?.role ?? "user";
+  const [roleCode, setRoleCode] = useState<string>(banDau);
   const [projectId, setProjectId] = useState(user?.projectId ?? (projects.length === 1 ? projects[0].id : ""));
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
-  const effRole: V3xs = duocTao.includes(role) ? role : "user";
+  const chon = chonDuoc.find((r) => r.code === roleCode) ?? chonDuoc.find((r) => r.code === "user") ?? chonDuoc[0];
+  const effRole: V3xs = chon ? chon.baseRole : duocTao.includes((user?.role ?? "user") as V3xs) ? (user?.role ?? "user") : "user";
+  const effCode = chon?.code ?? effRole;
+  const doiVaiTro = mode === "edit" && !!user && user.id !== me && chonDuoc.length > 1 && effCode !== banDau;
   // Quản trị dự án / nhân viên dự án luôn gắn đúng một dự án.
   const askProject = mode === "create" && (effRole === "user" || effRole === "admin");
   const errs = {
@@ -410,12 +422,12 @@ function UserDialog({ mode, myRole, projects, user, onClose, onDone }: { mode: "
     setBusy(true);
     try {
       if (mode === "create") {
-        const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, projectId: askProject ? projectId || null : null });
+        const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, roleCode: effCode, projectId: askProject ? projectId || null : null });
         if (toanHeThong && effRole === "admin" && projectId) await V4an(projectId, created.id);
         toast.success(`Đã tạo tài khoản ${username.trim()}.`);
       } else if (user) {
-        await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null });
-        toast.success("Đã lưu thông tin tài khoản.");
+        await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null, roleCode: doiVaiTro ? effCode : null });
+        toast.success(doiVaiTro ? "Đã lưu. Người này phải đăng nhập lại để nhận vai trò mới." : "Đã lưu thông tin tài khoản.");
       }
       onDone();
     } catch (e) {
@@ -448,11 +460,12 @@ function UserDialog({ mode, myRole, projects, user, onClose, onDone }: { mode: "
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
           </Field>
         )}
-        {mode === "create" && duocTao.length > 1 && (
-          <Field label="Vai trò" hint={VAI_TRO.find((v) => v.role === effRole)?.mo_ta}>
-            <Select value={effRole} onChange={(v) => setRole(v as V3xs)} options={VAI_TRO.filter((v) => duocTao.includes(v.role)).map((v) => ({ value: v.role, label: V3za(v.role) }))} />
+        {(mode === "create" ? chonDuoc.length > 1 : !!user && user.id !== me && chonDuoc.length > 1) && (
+          <Field label="Vai trò" hint={chon?.description ?? VAI_TRO.find((v) => v.role === effRole)?.mo_ta ?? (mode === "edit" ? "Đổi vai trò thì người này phải đăng nhập lại." : undefined)}>
+            <Select value={effCode} onChange={setRoleCode} options={chonDuoc.map((r) => ({ value: r.code, label: r.isSystem ? r.name : `${r.name} (nền ${r.baseRoleName})` }))} />
           </Field>
         )}
+        {mode === "edit" && doiVaiTro && (effRole === "user" || effRole === "admin") && !user?.projectId && <p className="text-xs text-warning-700">Tài khoản chưa gắn dự án — gắn dự án trước khi đổi sang vai trò theo dự án.</p>}
         {askProject && (
           <Field label="Dự án" required hint={projects.length === 0 ? "Chưa có dự án nào — tạo dự án trước." : effRole === "admin" ? "Quản trị dự án chỉ phụ trách một dự án." : undefined} error={touched ? errs.projectId : undefined}>
             <Select value={projectId} onChange={setProjectId} placeholder="— Chọn dự án —" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} disabled={projects.length === 0} />

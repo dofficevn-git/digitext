@@ -11,6 +11,8 @@ pub struct User {
     pub display_name: String,
     #[sqlx(try_from = "String")]
     pub role: Role,
+    /// Vai trò động (bảng roles, migration 0022); None = dùng đúng vai trò gốc `role`.
+    pub role_code: Option<String>,
     pub project_id: Option<Uuid>,
     pub is_active: bool,
     pub token_version: i32,
@@ -18,7 +20,7 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
-const USER_COLS: &str = "id, username, email, display_name, role, project_id, \
+const USER_COLS: &str = "id, username, email, display_name, role, role_code, project_id, \
      is_active, token_version, created_by, created_at, updated_at";
 #[derive(Debug)]
 pub struct Te1<'a> {
@@ -27,6 +29,7 @@ pub struct Te1<'a> {
     pub display_name: &'a str,
     pub pwd_hash: &'a str,
     pub role: Role,
+    pub role_code: Option<&'a str>,
     pub project_id: Option<Uuid>,
     pub created_by: Option<Uuid>,
 }
@@ -42,8 +45,8 @@ pub async fn create(r_2ex: &PgPool, r_2ew: Te1<'_>) -> sqlx::Result<User> {
         User,
     >(
             &format!(
-                "INSERT INTO users (id, username, email, display_name, pwd_hash, role, project_id, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING {USER_COLS}"
+                "INSERT INTO users (id, username, email, display_name, pwd_hash, role, role_code, project_id, created_by) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING {USER_COLS}"
             ),
         )
         .bind(Uuid::now_v7())
@@ -52,10 +55,22 @@ pub async fn create(r_2ex: &PgPool, r_2ew: Te1<'_>) -> sqlx::Result<User> {
         .bind(r_2ew.display_name)
         .bind(r_2ew.pwd_hash)
         .bind(r_2ew.role.as_str())
+        .bind(r_2ew.role_code)
         .bind(r_2ew.project_id)
         .bind(r_2ew.created_by)
         .fetch_one(r_2ex)
         .await
+}
+/// Đổi vai trò (gốc + mã vai trò động). Tăng token_version để mọi phiên cũ phải đăng nhập lại và nhận bộ quyền mới.
+pub async fn set_role(pool: &PgPool, id: Uuid, role: Role, role_code: Option<&str>) -> sqlx::Result<Option<User>> {
+    sqlx::query_as::<_, User>(&format!(
+        "UPDATE users SET role = $2, role_code = $3, token_version = token_version + 1, updated_at = now() WHERE id = $1 RETURNING {USER_COLS}"
+    ))
+    .bind(id)
+    .bind(role.as_str())
+    .bind(role_code)
+    .fetch_optional(pool)
+    .await
 }
 pub async fn f_1eg(r_2ey: &PgPool, id: Uuid) -> sqlx::Result<Option<User>> {
     sqlx::query_as::<_, User>(&format!("SELECT {USER_COLS} FROM users WHERE id = $1"))

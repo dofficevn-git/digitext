@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use chrono::{DateTime, Utc};
-use digitext_core::{f_18s, Permission, PermissionOverrides, Role};
+use digitext_core::{Permission, PermissionOverrides, Role};
 use digitext_db::users::{self, User};
 use digitext_db::{audit, permissions, tokens};
 use serde::{Deserialize, Serialize};
@@ -29,6 +29,7 @@ pub struct UserDto {
     pub email: Option<String>,
     pub display_name: String,
     pub role: Role,
+    pub role_code: Option<String>,
     pub project_id: Option<Uuid>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
@@ -41,6 +42,7 @@ impl From<User> for UserDto {
             email: r_w0.email,
             display_name: r_w0.display_name,
             role: r_w0.role,
+            role_code: r_w0.role_code,
             project_id: r_w0.project_id,
             is_active: r_w0.is_active,
             created_at: r_w0.created_at,
@@ -56,6 +58,9 @@ pub struct T3i {
     #[serde(default)]
     pub email: Option<String>,
     pub role: Role,
+    /// Vai trò động (mã trong bảng roles). Có → vai trò gốc lấy theo vai trò đó, `role` chỉ để tương thích.
+    #[serde(default)]
+    pub role_code: Option<String>,
     #[serde(default)]
     pub project_id: Option<Uuid>,
 }
@@ -68,6 +73,9 @@ pub struct Tgt {
     pub email: Option<String>,
     #[serde(default)]
     pub is_active: Option<bool>,
+    /// Đổi vai trò: mã vai trò (hệ thống hoặc tuỳ chỉnh). Người này phải đăng nhập lại.
+    #[serde(default)]
+    pub role_code: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -127,6 +135,9 @@ async fn f_12g(
     r_wc.require_perm(Permission::UserCreate)?;
     validate_password(&r_wi.password)?;
     let r_wj = f_29a(&r_wk.pool, &r_wc.user).await?;
+    // Vai trò động: vai trò gốc đi theo vai trò được chọn.
+    let (role, role_code) = resolve_role(&r_wk, r_wi.role_code.as_deref(), r_wi.role).await?;
+    let r_wi = T3i { role, ..r_wi };
     if r_wc.user.role == Role::Manager && matches!(r_wi.role, Role::SuperAdmin | Role::Manager) {
         return Err(ApiError::forbidden());
     }
@@ -156,6 +167,7 @@ async fn f_12g(
             display_name: &r_wi.display_name,
             pwd_hash: &r_wh,
             role: r_wi.role,
+            role_code: role_code.as_deref(),
             project_id,
             created_by: Some(r_wc.user.id),
         },
@@ -176,7 +188,7 @@ async fn f_12g(
             action: "user.create",
             target: Some(format!("user:{}", r_wd.id)),
             detail: Some(serde_json::json!(
-                { "username" : r_wd.username, "role" : r_wd.role, }
+                { "username" : r_wd.username, "role" : r_wd.role, "roleCode": r_wd.role_code }
             )),
             ip: r_wc.ip(),
         },
@@ -217,7 +229,7 @@ async fn f_20i(
     if r_wr && r_wt.is_active.is_some() && !r_ws {
         return Err(ApiError::forbidden());
     }
-    let r_wx = users::update(
+    let mut r_wx = users::update(
         &r_wv.pool,
         r_ww.id,
         users::Tph {
@@ -228,6 +240,39 @@ async fn f_20i(
     )
     .await?
     .ok_or_else(ApiError::not_found)?;
+    // Đổi vai trò (22/10/2026): không tự đổi vai trò của mình; quản lý không đưa ai lên super_admin / quản lý;
+    // quản trị dự án chỉ gán vai trò gốc Nhân viên. Người bị đổi phải đăng nhập lại (token_version tăng).
+    if let Some(code) = r_wt.role_code.as_deref().map(str::trim).filter(|c| !c.is_empty()) {
+        if r_wr {
+            return Err(ApiError::bad_request("không thể tự đổi vai trò của mình"));
+        }
+        r_wq.require_perm(Permission::UserUpdate)?;
+        let (role, role_code) = resolve_role(&r_wv, Some(code), r_ww.role).await?;
+        if r_wq.user.role == Role::Manager && matches!(role, Role::SuperAdmin | Role::Manager) {
+            return Err(ApiError::forbidden());
+        }
+        if !matches!(r_wu, Scope::All) && role != Role::User {
+            return Err(ApiError::forbidden());
+        }
+        if matches!(role, Role::Admin | Role::User) && r_ww.project_id.is_none() && role != r_ww.role {
+            return Err(ApiError::bad_request("tài khoản chưa gắn dự án — gắn dự án trước khi đổi sang vai trò theo dự án"));
+        }
+        if role != r_ww.role || role_code != r_ww.role_code {
+            r_wx = users::set_role(&r_wv.pool, r_ww.id, role, role_code.as_deref()).await?.ok_or_else(ApiError::not_found)?;
+            audit::append(
+                &r_wv.pool,
+                audit::Tp {
+                    actor_id: Some(r_wq.user.id),
+                    device_id: r_wq.claims.device_id,
+                    action: "user.role",
+                    target: Some(format!("user:{}", r_ww.id)),
+                    detail: Some(serde_json::json!({ "from": r_ww.role, "fromCode": r_ww.role_code, "to": role, "toCode": role_code })),
+                    ip: r_wq.ip(),
+                },
+            )
+            .await?;
+        }
+    }
     audit::append(
         &r_wv.pool,
         audit::Tp {
@@ -345,19 +390,32 @@ pub struct Tlf {
     #[serde(default)]
     pub denies: Vec<Permission>,
 }
-fn f_vt(r_xa: &Ts, role: Role, r_xb: &PermissionOverrides) -> Tpi {
-    Tpi {
-        effective: f_18s(role, r_xb).into_iter().collect(),
+/// Bộ quyền hiệu lực của một người: theo vai trò động nếu có, không thì mặc định vai trò gốc.
+async fn f_vt(r_xa: &Ts, pool: &sqlx::PgPool, target: &User, r_xb: &PermissionOverrides) -> Result<Tpi, ApiError> {
+    let preset = crate::routes::roles::preset_cached(pool, target).await?;
+    let role_defaults: Vec<Permission> = match &preset {
+        Some(s) => s.iter().copied().collect(),
+        None => digitext_core::default_set(target.role).into_iter().collect(),
+    };
+    Ok(Tpi {
+        effective: digitext_core::effective_set_with(preset.as_ref(), target.role, r_xb).into_iter().collect(),
         grants: r_xb.grants.iter().copied().collect(),
         denies: r_xb.denies.iter().copied().collect(),
-        role_defaults: Permission::ALL
-            .into_iter()
-            .filter(|p| p.granted_by_default(role))
-            .collect(),
+        role_defaults,
         grantable: Permission::ALL
             .into_iter()
             .filter(|p| r_xa.has_perm(*p))
             .collect(),
+    })
+}
+/// Mã vai trò → (vai trò gốc, mã lưu). Mã trùng vai trò hệ thống thì lưu role_code = NULL.
+async fn resolve_role(st: &AppState, code: Option<&str>, fallback: Role) -> Result<(Role, Option<String>), ApiError> {
+    let Some(code) = code.map(str::trim).filter(|c| !c.is_empty()) else { return Ok((fallback, None)) };
+    let row = digitext_db::roles::get(&st.pool, code).await?.ok_or_else(|| ApiError::bad_request(format!("vai trò «{code}» không tồn tại")))?;
+    if row.is_system {
+        Ok((row.base_role, None))
+    } else {
+        Ok((row.base_role, Some(row.code)))
     }
 }
 async fn f_sw(r_xe: &AppState, r_xc: &Ts, r_xf: &User) -> Result<(), ApiError> {
@@ -381,7 +439,7 @@ async fn f_1f1(
     let r_xj = f_1ox(&r_xi, id).await?;
     f_sw(&r_xi, &r_xg, &r_xj).await?;
     let r_xh = permissions::f_1o5(&r_xi.pool, r_xj.id).await?;
-    Ok(Json(f_vt(&r_xg, r_xj.role, &r_xh)))
+    Ok(Json(f_vt(&r_xg, &r_xi.pool, &r_xj, &r_xh).await?))
 }
 async fn f_24z(
     State(r_xo): State<AppState>,
@@ -418,5 +476,5 @@ async fn f_24z(
         },
     )
     .await?;
-    Ok(Json(f_vt(&r_xk, r_xp.role, &r_xl)))
+    Ok(Json(f_vt(&r_xk, &r_xo.pool, &r_xp, &r_xl).await?))
 }
