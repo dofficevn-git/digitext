@@ -15,6 +15,12 @@ Tính năng **"① Thu thập từ máy user (LAN)"** (mDNS + TCP nội bộ) ch
 mạng — máy khác mạng vẫn dùng được **"③ Thêm tài liệu từ ổ cứng" → "② Đẩy lên máy chủ"**,
 và mọi màn hình máy chủ (OCR, PDF 2 lớp, bóc trường, đóng gói).
 
+**Thêm từ ổ đĩa — cây thư mục (22/10/2026):** máy **tự nhận tên thư mục đã chọn là PHÔNG**,
+thư mục con là Hộp, trong hộp là Hồ sơ (`<dự án>/<phông>/<hộp>/<hồ sơ>/tệp.pdf`; máy chủ lấy
+phông = tầng 1 của `rel_path`). Trước khi gửi có hộp thoại **Xác nhận cây thư mục**
+(`collect_peek_folders` chỉ đọc hai cấp đầu); nếu lỡ chọn thư mục của cả dự án thì chuyển
+"Thư mục con là phông" (`subAsPhong`). Ô "Gắn theo danh mục hồ sơ" chỉ dành cho tệp lẻ.
+
 ## 1. Dựng bộ cài
 
 ```powershell
