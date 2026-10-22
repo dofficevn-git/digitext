@@ -180,6 +180,13 @@ async fn f_12g(
             r_we.into()
         }
     })?;
+    // Quản trị dự án: phạm vi (Scope::Projects) lấy từ project_admins → gán ngay dự án đã chọn,
+    // không phụ thuộc máy trạm gọi thêm PUT /projects/{id}/admins (22/10/2026).
+    if r_wd.role == Role::Admin {
+        if let Some(pid) = r_wd.project_id {
+            digitext_db::projects::f_qm(&r_wk.pool, pid, r_wd.id, Some(r_wc.user.id)).await?;
+        }
+    }
     audit::append(
         &r_wk.pool,
         audit::Tp {
@@ -259,6 +266,12 @@ async fn f_20i(
         }
         if role != r_ww.role || role_code != r_ww.role_code {
             r_wx = users::set_role(&r_wv.pool, r_ww.id, role, role_code.as_deref()).await?.ok_or_else(ApiError::not_found)?;
+            // Đổi sang nền Quản trị dự án: gán luôn dự án của tài khoản vào project_admins.
+            if role == Role::Admin {
+                if let Some(pid) = r_ww.project_id {
+                    digitext_db::projects::f_qm(&r_wv.pool, pid, r_ww.id, Some(r_wq.user.id)).await?;
+                }
+            }
             audit::append(
                 &r_wv.pool,
                 audit::Tp {

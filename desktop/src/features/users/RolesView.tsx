@@ -14,6 +14,16 @@ import { Icon } from "@/components/Icon";
 import { V462 as cn } from "@/lib/utils";
 import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, Help, Input, notifyError, PageHeader, Select, Skeleton, Textarea, Tip, toast } from "@/ui";
 
+// Phạm vi dữ liệu do vai trò GỐC quyết định, không sửa được bằng bộ quyền: quản trị / nhân viên dự án
+// chỉ làm việc trên dự án được gán (máy chủ chặn mọi dự án khác), quản lý và quản trị hệ thống thấy mọi dự án.
+const PHAM_VI: Record<string, string> = {
+  super_admin: "Phạm vi: mọi dự án",
+  manager: "Phạm vi: mọi dự án",
+  admin: "Phạm vi: chỉ dự án được gán",
+  user: "Phạm vi: chỉ dự án được gán",
+  customer: "Phạm vi: dự án được gán, chỉ xem",
+};
+
 const n = (v: number) => v.toLocaleString("vi-VN");
 const BASE_ORDER: V3xs[] = ["super_admin", "manager", "admin", "user", "customer"];
 
@@ -154,6 +164,7 @@ export default function RolesView() {
                 <span className="flex flex-wrap items-center gap-2">
                   {role.name}
                   <Badge tone="gray">Nền: {role.baseRoleName}</Badge>
+                  <Badge tone={role.baseRole === "admin" || role.baseRole === "user" ? "warn" : "gray"}>{PHAM_VI[role.baseRole]}</Badge>
                   {khoa && role.code === "super_admin" && <Badge tone="ok">Luôn toàn quyền</Badge>}
                 </span>
               }
