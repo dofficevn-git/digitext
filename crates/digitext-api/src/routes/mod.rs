@@ -4,6 +4,7 @@ pub mod access;
 pub mod auth;
 pub mod changes;
 pub mod chinh_ly;
+pub mod dashboard;
 pub mod devices;
 pub mod disposal;
 pub mod documents;
