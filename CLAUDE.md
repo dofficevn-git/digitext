@@ -80,7 +80,8 @@ liên quan tới dịch vụ OCR, web KIE, hay fine-tune VietOCR.
 - **Không có migrations Postgres trong repo** — clone về không dựng lại được CSDL.
 - **Không có `query!` macro** — SQL chỉ nổ lúc chạy, không nổ lúc biên dịch.
 - **Quyền cài đặt hai nơi**: `digitext-core/src/permission.rs` và
-  `desktop/src/domain/permissions.ts`. Sửa một bên phải sửa bên kia.
+  `desktop/src/domain/permissions.ts`. Sửa một bên phải sửa bên kia. Từ 22/10/2026 bộ quyền
+  THẬT của từng vai trò nằm trong bảng `roles` (migration 0022) — code chỉ là mặc định để seed.
 - **Graph không phân giải được lời gọi hàm trong Rust** (0 CALLS edge trên 210 file
   `.rs`). Kết quả `impact`/`query` trên `.rs` phải đối chiếu source.
 - **Không có test nào cho code sản phẩm.** `crates/`, `desktop/src`, `ml/` đều 0 test;
