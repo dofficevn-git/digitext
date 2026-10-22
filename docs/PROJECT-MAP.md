@@ -234,6 +234,7 @@ axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs
 | `upload_batches` | `/upload-batches`, `/matrix`, `/{id}` |
 | `devices` | `/devices`, `/register`, `/{id}/revoke` |
 | `ops` | `/ops/integrity`, `/ops/integrity/run`, `/ops/backups` |
+| `dashboard` | `/dashboard/overview` (lãnh đạo), `/project`, `/staff`, `/me` (nhân viên: chỉ số của mình + trung bình nhóm ẩn danh), `/kpi-settings` GET/PUT, `POST /rollup` (super) — 22/10/2026 |
 | còn lại | `records`, `stats`, `changes`, `notifications`, `/healthz` |
 
 Ba mẫu hình lặp lại đáng để ý:
@@ -243,6 +244,11 @@ Ba mẫu hình lặp lại đáng để ý:
 - **Thao tác hàng loạt**: `ocr-all`, `make-pdf2-all`, `extract-fields-all`,
   `rebuild-non-pdfa`, `review-bulk`, `sweep`.
 - **`/changes` + `/notifications`** phục vụ đồng bộ tăng dần cho client.
+- **Dashboard theo ngày** (`routes/dashboard.rs`, migration `0021_dashboard_daily.sql`): bảng `dashboard_daily`
+  (ngày VN × dự án × người; dòng tổng dự án `user_id = uuid 0`) do hàm SQL `dashboard_rollup(từ, đến)` tính;
+  API tự roll hôm qua + hôm nay mỗi 2 phút và 35 ngày lúc 00:15 (`spawn_rollup` gọi từ `cli.rs`), phát topic
+  `dashboard`. Toán sức khoẻ dự án (RAG, dự kiến xong, bước nghẽn) ở `digitext-core::dashboard` — desktop không tự
+  tính. Máy mới: áp 0021 rồi backfill theo khối 30 ngày (lệnh trong header migration).
 
 ---
 
@@ -281,13 +287,18 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   chuẩn), Banner/ErrorBanner, Menu, Badge, Seg, Dialog, Table (cấu hình cột hoặc
   compound `Table.Root/Head/Body/Row/HeadCell/Cell`), Pagination, toast (sonner)
   + `notifyError`, `confirm()`/`prompt()` (store mức module, host `ConfirmHost`),
-  `describeError` từ `lib/errors.ts`.
+  `describeError` từ `lib/errors.ts`. **Biểu đồ** `ui/charts/` (22/10/2026, SVG tự viết, không thư viện):
+  ChartFrame (đo bề rộng, legend ≥ 2 chuỗi, "Xem bảng", ←/→), Sparkline, BarChart, LineChart (≤ 4 chuỗi),
+  StackedBar, Ring; màu qua token `--color-chart-*` (phân loại thứ tự cố định đã kiểm CVD, tuần tự = dải brand;
+  không dùng màu trạng thái cho chuỗi số liệu).
 - `styles/theme.css` — nguồn token duy nhất (màu trạng thái 50–800, thang chữ
   xs 12 / sm 13 / base 14); `do365-tokens.css` đóng băng; `digitext.css` chỉ còn
   luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
 - `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
-  Tổng quan (`home`) · Số hoá (`drive`, `scan`, `tree`, `dossier`, `upload`,
+  Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
+  `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
+  xem trước dev `?view=home&role=user|admin|manager&project=1`) · Số hoá (`drive`, `scan`, `tree`, `dossier`, `upload`,
   `server`) · Xử lý (`dossier/OcrPane`, `work`, `sign`, `package`) · Chỉnh lý
   (`chinhly/*`: bản sao đồng bộ, offline được; nhập mục lục hồ sơ có dòng nhóm
   I./1. ở `chinhly/mucLucImport.ts` + `thoiGianHoSo.ts` + `NhapMucLucDialog.tsx`,
