@@ -54,6 +54,23 @@
   --color-brand-800: #064a4c;
   --color-brand-900: #05393b;
 
+  /* Biểu đồ (dashboard 22/10/2026). Phân loại: 4 màu thứ tự cố định, đã qua validator CVD của skill dataviz
+     (ΔE kề nhau ≥ 8, chroma ≥ 0,1, tương phản ≥ 3:1 trên nền sáng) — chuỗi 1 luôn là xanh ngọc. Tuần tự: một màu
+     nhạt → đậm (dải brand). Không dùng màu trạng thái (success/warning/danger) cho chuỗi dữ liệu. */
+  --color-chart-1: #0a9ba0;
+  --color-chart-2: #5b5bd6;
+  --color-chart-3: #b4508c;
+  --color-chart-4: #a06a10;
+  --color-chart-seq-1: var(--color-brand-100);
+  --color-chart-seq-2: var(--color-brand-200);
+  --color-chart-seq-3: var(--color-brand-300);
+  --color-chart-seq-4: var(--color-brand-500);
+  --color-chart-seq-5: var(--color-brand-700);
+  --color-chart-grid: var(--color-gray-150);
+  --color-chart-axis: var(--color-gray-500);
+  --color-chart-target: var(--color-gray-700);
+  --color-chart-muted: var(--color-gray-200);
+
   /* Hổ phách — CHỈ cho việc đang chạy (bước dây chuyền đang làm, dự án đang chọn). Không dùng làm cảnh báo. */
   --color-run-50: #fdf6ec;
   --color-run-100: #fdf1df;

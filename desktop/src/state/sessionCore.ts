@@ -1,6 +1,7 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 
 import type { V3zc } from "@/api/auth";
+import type { V3xs } from "@/domain/types";
 import { V3z6 } from "@/domain/permissions";
 
 export type V3zp = "loading" | "signedOut" | "locked" | "active";
@@ -60,18 +61,23 @@ export function V3zt(V14: string, V15: string): string {
 }
 
 export function V3zu(): V3zc {
+  // `?role=user|admin|manager|super_admin` (chỉ bản dev) để xem trước Tổng quan theo từng vai trò.
+  const roles: V3xs[] = ["super_admin", "manager", "admin", "user"];
+  const want = typeof window !== "undefined" && import.meta.env.DEV ? new URLSearchParams(window.location.search).get("role") : null;
+  const role: V3xs = roles.find((r) => r === want) ?? "admin";
+  const gan = role === "admin" || role === "user";
   return {
     userId: "dev-user",
     username: "dev",
     displayName: "Dev (browser)",
-    role: "admin",
-    projectId: null,
-    projectCode: "DEV",
-    projectName: "Chế độ trình duyệt",
+    role,
+    projectId: gan ? "dev-ltlsbn" : null,
+    projectCode: gan ? "LTLSBN" : "DEV",
+    projectName: gan ? "Lưu trữ lịch sử Bắc Ninh" : "Chế độ trình duyệt",
     mode: "offline",
     offlineExpiry: new Date(Date.now() + 365 * 86_400_000).toISOString(),
     locked: false,
 
-    permissions: V3z6("admin"),
+    permissions: V3z6(role),
   };
 }

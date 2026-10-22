@@ -8,6 +8,7 @@ mod chinhly;
 mod collect;
 mod collect_progress;
 mod config;
+mod dashboard;
 mod data_share;
 mod db;
 mod disposal;
@@ -223,6 +224,12 @@ fn main() {
             chinhly::commands::cl_migrate_run,
             chinhly::commands::cl_project_get,
             chinhly::commands::cl_project_set,
+            dashboard::dashboard_overview,
+            dashboard::dashboard_project,
+            dashboard::dashboard_staff,
+            dashboard::dashboard_me,
+            dashboard::dashboard_kpi_settings_get,
+            dashboard::dashboard_kpi_settings_set,
             kie::kie_examples_list,
             kie::kie_example_set_active,
             work::work_list_packages,

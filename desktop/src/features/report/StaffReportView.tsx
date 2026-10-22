@@ -7,10 +7,12 @@ import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { useProject } from "@/state/project";
 import { reportSetTarget, reportStaff, type StaffRow, type StaffTask } from "@/api/progressReport";
+import { dashboardStaff, type KpiSettings, type MetricKey, type StaffBoard } from "@/api/dashboard";
 import { V4ak, type V4a9 } from "@/api/users";
 import { V4e5 } from "@/features/dossier/excel";
+import KpiSettingsDialog from "./KpiSettingsDialog";
 import type { V3y0 } from "@/domain/types";
-import { Badge, Button, Card, Dialog, Field, FormGrid, Help, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Table, Tip, toast, type Column } from "@/ui";
+import { Badge, Button, Card, Dialog, Field, FormGrid, Help, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Sparkline, Table, Tip, toast, type Column } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 
@@ -24,15 +26,29 @@ export const TASKS: { key: StaffTask; label: string; unit: string }[] = [
 ];
 const taskOf = (k: StaffTask) => TASKS.find((t) => t.key === k) ?? TASKS[0];
 
-/** Ngưỡng KPI mặc định, cần bên dùng xác nhận. */
+/** Ngưỡng KPI mặc định khi dự án chưa cài đặt (Định mức › Xếp loại KPI ghi đè theo dự án). */
 export const KPI = { xuatSac: { hoanThanh: 100, loi: 1 }, dat: { hoanThanh: 80, loi: 3 } };
+export type KpiNguong = typeof KPI;
+export function nguongTu(s: KpiSettings | null | undefined): KpiNguong {
+  return s ? { xuatSac: { hoanThanh: s.excellentPct, loi: s.excellentErrPct }, dat: { hoanThanh: s.passPct, loi: s.passErrPct } } : KPI;
+}
 
-export function kpiOf(hoanThanh: number | null, tyLeLoi: number): { label: string; tone: V3y0 } {
-  if (hoanThanh == null) return tyLeLoi > KPI.dat.loi ? { label: "Cảnh báo lỗi", tone: "err" } : { label: "Chưa giao sản lượng", tone: "gray" };
-  if (hoanThanh >= KPI.xuatSac.hoanThanh && tyLeLoi <= KPI.xuatSac.loi) return { label: "Xuất sắc", tone: "ok" };
-  if (hoanThanh >= KPI.dat.hoanThanh && tyLeLoi <= KPI.dat.loi) return { label: "Đạt", tone: "info" };
+export function kpiOf(hoanThanh: number | null, tyLeLoi: number, k: KpiNguong = KPI): { label: string; tone: V3y0 } {
+  if (hoanThanh == null) return tyLeLoi > k.dat.loi ? { label: "Cảnh báo lỗi", tone: "err" } : { label: "Chưa giao sản lượng", tone: "gray" };
+  if (hoanThanh >= k.xuatSac.hoanThanh && tyLeLoi <= k.xuatSac.loi) return { label: "Xuất sắc", tone: "ok" };
+  if (hoanThanh >= k.dat.hoanThanh && tyLeLoi <= k.dat.loi) return { label: "Đạt", tone: "info" };
   return { label: "Cảnh báo lỗi", tone: "err" };
 }
+
+/** Công việc của báo cáo ↔ chỉ số theo ngày của dashboard (cột "14 ngày") và khoá định mức. */
+const TASK_METRIC: Record<StaffTask, { metric: MetricKey; quota: string } | null> = {
+  scan: { metric: "pagesScanned", quota: "pages_scanned" },
+  kiem_tra_scan: null,
+  nhap_lieu: { metric: "fieldsEdited", quota: "fields_edited" },
+  kiem_tra_nhap_lieu: { metric: "workItemsCheckedOk", quota: "work_items_checked_ok" },
+  xac_nhan: { metric: "workItemsDone", quota: "work_items_done" },
+  kiem_tra_xac_nhan: null,
+};
 
 interface Dong extends StaffRow {
   hoanThanh: number | null;
@@ -102,6 +118,7 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [giao, setGiao] = useState<Dong | null>(null);
+  const [dinhMuc, setDinhMuc] = useState(false);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -116,6 +133,10 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
 
   const loader = useCallback(() => (isTauri() ? reportStaff({ projectId: projectId || undefined, from: from || undefined, to: to || undefined }) : Promise.resolve([] as StaffRow[])), [projectId, from, to]);
   const { data, error, loading, reload } = V41t(loader, { topics: ["work", "docs"], errorText: () => "Không lấy được số liệu nhân viên." });
+  const boardLoader = useCallback(() => dashboardStaff(projectId, from || undefined, to || undefined), [projectId, from, to]);
+  const board = V41t(boardLoader, { topics: ["dashboard"], enabled: !!projectId && (isTauri() || import.meta.env.DEV), errorText: () => "Không lấy được số theo ngày." });
+  const bd: StaffBoard | undefined = projectId && board.data?.projectId === projectId ? board.data : undefined;
+  const nguong = nguongTu(bd?.kpi);
   const dong = useMemo(() => (data ?? []).map(tinh), [data]);
   const tong = useMemo(
     () => ({
@@ -130,7 +151,7 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
     const aoa: (string | number)[][] = [["STT", "Nhân viên", "Tài khoản", "Công việc", "Đơn vị", "Sản lượng giao", "Sản lượng thi công", "Năng suất TB/ngày", "% hoàn thành", "Số lỗi", "Tỷ lệ lỗi (%)", "Đánh giá KPI"]];
     dong.forEach((d, i) => {
       const t = taskOf(d.task);
-      aoa.push([i + 1, d.displayName, d.username, t.label, t.unit, d.target ?? "", d.done, d.nangSuat ?? "", d.hoanThanh ?? "", d.errors, d.tyLeLoi, kpiOf(d.hoanThanh, d.tyLeLoi).label]);
+      aoa.push([i + 1, d.displayName, d.username, t.label, t.unit, d.target ?? "", d.done, d.nangSuat ?? "", d.hoanThanh ?? "", d.errors, d.tyLeLoi, kpiOf(d.hoanThanh, d.tyLeLoi, nguong).label]);
     });
     void V4e5([{ name: "TongKetNhanVien", aoa }], `tong-ket-nhan-vien-${new Date().toISOString().slice(0, 10)}.xlsx`).then(() => toast.success("Đã xuất báo cáo nhân viên."));
   };
@@ -141,10 +162,21 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
     { key: "target", header: "Giao", align: "right", width: 110, cell: (d) => (d.target != null ? `${n(d.target)} ${taskOf(d.task).unit}` : "—") },
     { key: "done", header: "Thi công", align: "right", width: 120, sortable: true, cell: (d) => (d.task === "nhap_lieu" ? <Tip text={`${n(d.fields)} trường`}><span>{n(d.done)} {taskOf(d.task).unit}</span></Tip> : `${n(d.done)} ${taskOf(d.task).unit}`) },
     { key: "nangSuat", header: "Năng suất / ngày", align: "right", width: 130, sortable: true, cell: (d) => (d.nangSuat != null ? n(d.nangSuat) : "—") },
+    {
+      key: "14ngay",
+      header: "14 ngày",
+      width: 110,
+      cell: (d) => {
+        const tm = TASK_METRIC[d.task];
+        const u = bd?.users.find((x) => x.userId === d.userId);
+        if (!tm || !u) return <span className="text-fg-subtle">—</span>;
+        return <Sparkline values={u.series.slice(-14).map((s) => s[tm.metric])} refValue={bd?.kpi.quotas[tm.quota] ?? null} ariaLabel={`${d.displayName} 14 ngày`} />;
+      },
+    },
     { key: "hoanThanh", header: "Hoàn thành", align: "right", width: 110, sortable: true, cell: (d) => (d.hoanThanh != null ? `${d.hoanThanh}%` : "—") },
     { key: "errors", header: "Lỗi", align: "right", width: 70, sortable: true, cell: (d) => n(d.errors) },
     { key: "tyLeLoi", header: "Tỷ lệ lỗi", align: "right", width: 90, sortable: true, cell: (d) => `${d.tyLeLoi}%` },
-    { key: "kpi", header: "KPI", width: 150, cell: (d) => { const k = kpiOf(d.hoanThanh, d.tyLeLoi); return <Badge tone={k.tone}>{k.label}</Badge>; } },
+    { key: "kpi", header: "KPI", width: 150, cell: (d) => { const k = kpiOf(d.hoanThanh, d.tyLeLoi, nguong); return <Badge tone={k.tone}>{k.label}</Badge>; } },
   ];
 
   const body = (
@@ -167,16 +199,33 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
           <KpiTile label="Trường đã nhập" value={tong.truong} />
         </KpiRow>
       </Card>
-      <Card padding="none" title="Theo nhân viên và công việc" description={projectId ? "Bấm Giao ở cuối dòng để giao sản lượng cho người đó." : "Chọn một dự án để giao sản lượng."} actions={<Button size="sm" icon="tepExcel" onClick={xuat} disabled={dong.length === 0}>Xuất Excel</Button>}>
+      <Card
+        padding="none"
+        title="Theo nhân viên và công việc"
+        description={projectId ? "Bấm Giao ở cuối dòng để giao sản lượng cho người đó. Cột 14 ngày lấy từ tổng hợp theo ngày của máy chủ." : "Chọn một dự án để giao sản lượng."}
+        actions={
+          <>
+            {projectId && (
+              <Button size="sm" icon="caiDat" onClick={() => setDinhMuc(true)}>
+                Định mức
+              </Button>
+            )}
+            <Button size="sm" icon="tepExcel" onClick={xuat} disabled={dong.length === 0}>
+              Xuất Excel
+            </Button>
+          </>
+        }
+      >
         <Table columns={cols} rows={dong} getRowId={(d) => `${d.userId}-${d.task}`} dense rowActions={projectId ? (d) => <Button size="sm" onClick={() => setGiao(d)}>Giao</Button> : undefined} state={{ loading: loading && !data, error, onRetry: reload, empty: { title: "Chưa có số liệu trong phạm vi này", icon: "nguoi" } }} />
       </Card>
       <Help title="Cách tính" className="mt-4">
         <p>Quét tính theo trang người đó quét, tệp đẩy lên máy chủ đứng tên người quét. Lỗi là tài liệu của người đó bị từ chối khi xác nhận hoặc bị kiểm tra chéo chấm có lỗi. Xác nhận dữ liệu và kiểm tra nhập liệu lấy từ gói việc ở màn Giao việc; kiểm tra quét và kiểm tra xác nhận chưa có nơi ghi nhận.</p>
         <p>
-          KPI: Xuất sắc khi hoàn thành từ {KPI.xuatSac.hoanThanh}% và lỗi tối đa {KPI.xuatSac.loi}%; Đạt khi hoàn thành từ {KPI.dat.hoanThanh}% và lỗi tối đa {KPI.dat.loi}%; còn lại là Cảnh báo lỗi.
+          KPI: Xuất sắc khi hoàn thành từ {nguong.xuatSac.hoanThanh}% và lỗi tối đa {nguong.xuatSac.loi}%; Đạt khi hoàn thành từ {nguong.dat.hoanThanh}% và lỗi tối đa {nguong.dat.loi}%; còn lại là Cảnh báo lỗi. {bd ? "Ngưỡng theo cài đặt của dự án (nút Định mức)." : "Ngưỡng mặc định; chọn dự án và bấm Định mức để đặt riêng."}
         </p>
       </Help>
       {giao && projectId && <GiaoDialog projectId={projectId} row={giao} onClose={() => setGiao(null)} onDone={reload} />}
+      {dinhMuc && projectId && <KpiSettingsDialog projectId={projectId} projectLabel={projects.find((p) => p.id === projectId)?.name} onClose={() => setDinhMuc(false)} onSaved={() => board.reload()} />}
     </>
   );
   if (embedded) return body;

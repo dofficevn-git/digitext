@@ -33,7 +33,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
 
   const refresh = useCallback(() => {
-    if (!isTauri() || !active) {
+    if (!(isTauri() || import.meta.env.DEV) || !active) {
       setInfo(null);
       return;
     }

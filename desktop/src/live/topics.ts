@@ -82,6 +82,12 @@ export const V3xc: readonly string[] = [
 
   "changes_poll",
 
+  "dashboard_overview",
+  "dashboard_project",
+  "dashboard_staff",
+  "dashboard_me",
+  "dashboard_kpi_settings_get",
+
   "users_list",
   "user_permissions_get",
   "projects_list",
@@ -238,6 +244,7 @@ export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
   docs_review_bulk: ["docs"],
   ocr_field_correct: ["ocrFields"],
   kie_example_set_active: ["ocrFields"],
+  dashboard_kpi_settings_set: ["dashboard", "stats", "work"],
   ocr_run_page: ["ocr"],
   ocr_save_boxes: ["ocr"],
   sign_execute: ["sign", "docs"],

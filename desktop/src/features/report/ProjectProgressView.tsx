@@ -7,8 +7,10 @@ import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { useProject } from "@/state/project";
 import { reportProjectProgress, reportSetContract, type ProjectContract, type ProjectProgress } from "@/api/progressReport";
+import { dashboardProject, type ProjectDash } from "@/api/dashboard";
 import { V4e5 } from "@/features/dossier/excel";
-import { Badge, Button, Card, Dialog, EmptyState, ErrorBanner, Field, FormGrid, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Skeleton, Tip, toast } from "@/ui";
+import { RagBadge, duKienText } from "@/features/home/blocks/common";
+import { Badge, BarChart, Button, Card, Dialog, EmptyState, ErrorBanner, Field, FormGrid, Input, KpiRow, KpiTile, notifyError, PageHeader, Ring, Select, Skeleton, Tip, toast } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 const pct = (a: number, b: number | null | undefined): number | null => (b && b > 0 ? Math.min(100, Math.floor((a / b) * 100)) : null);
@@ -39,22 +41,6 @@ function cacBuoc(p: ProjectProgress): Buoc[] {
     { key: "ky", ten: "Ký số", done: p.signedFiles, total: p.files, donVi: "tệp", moTa: "Tệp đã ký số trên tổng tệp" },
     { key: "ocr", ten: "OCR", done: p.approvedFiles, total: p.files, donVi: "tệp", moTa: `Tệp đã duyệt trên tổng tệp. Chưa duyệt ${n(p.files - p.approvedFiles - p.rejectedFiles)}, từ chối ${n(p.rejectedFiles)}` },
   ];
-}
-
-function Vong({ value, label }: { value: number | null; label: string }) {
-  const r = 34;
-  const c = 2 * Math.PI * r;
-  const v = value ?? 0;
-  const mau = value == null ? "var(--color-gray-300)" : v >= 100 ? "var(--color-success-600)" : v >= 50 ? "var(--color-brand-500)" : "var(--color-warning-600)";
-  return (
-    <svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label={`${label}: ${value == null ? "chưa có số liệu" : `${value}%`}`}>
-      <circle cx="42" cy="42" r={r} fill="none" stroke="var(--color-border-subtle)" strokeWidth="8" />
-      <circle cx="42" cy="42" r={r} fill="none" stroke={mau} strokeWidth="8" strokeDasharray={`${(c * v) / 100} ${c}`} transform="rotate(-90 42 42)" strokeLinecap="round" />
-      <text x="42" y="47" textAnchor="middle" fontSize="16" fontWeight="700" fill="currentColor">
-        {value == null ? "—" : `${value}%`}
-      </text>
-    </svg>
-  );
 }
 
 function HopDongDialog({ p, onSaved, onClose }: { p: ProjectProgress; onSaved: (c: ProjectContract) => void; onClose: () => void }) {
@@ -137,6 +123,10 @@ export default function ProjectProgressView() {
     return r;
   }, [projectId, from, to]);
   const { data, error, loading, reload, setData } = V41t(loader, { topics: ["docs", "sign", "ocr"], errorText: () => "Không lấy được số liệu tiến độ." });
+  // Khi xem MỘT dự án: sức khoẻ (RAG, dự kiến xong) và sản lượng theo ngày lấy từ dashboard máy chủ.
+  const dashLoader = useCallback(() => dashboardProject(projectId, 30), [projectId]);
+  const dash = V41t(dashLoader, { topics: ["dashboard"], enabled: !!projectId && (isTauri() || import.meta.env.DEV), errorText: () => "Không lấy được số theo ngày." });
+  const dd: ProjectDash | undefined = projectId && dash.data?.projectId === projectId ? dash.data : undefined;
   const rows = useMemo(() => data ?? [], [data]);
   // Danh sách dự án cho ô chọn: lấy từ lần tải "tất cả" gần nhất hoặc chính kết quả hiện tại.
   const dsDuAn = tatCa.length ? tatCa : rows;
@@ -144,11 +134,13 @@ export default function ProjectProgressView() {
   const tong = useMemo(() => rows.reduce((a, r) => ({ duAn: a.duAn + 1, trang: a.trang + r.pages, file: a.file + r.files }), { duAn: 0, trang: 0, file: 0 }), [rows]);
 
   const xuat = () => {
-    const aoa: (string | number)[][] = [["STT", "Mã dự án", "Tên dự án", "Ngày ký HĐ", "Ngày kết thúc HĐ", "Hạn chót", "Cán bộ phụ trách", "Trang đã quét", "Trang hợp đồng", "% Quét", "Tổng tệp", "Tệp PDF/A", "% PDF/A", "Tệp đã ký số", "% Ký số", "Tệp OCR đã duyệt", "% OCR", "% thời gian đã qua", "% hoàn thành công việc"]];
+    const aoa: (string | number)[][] = [["STT", "Mã dự án", "Tên dự án", "Ngày ký HĐ", "Ngày kết thúc HĐ", "Hạn chót", "Cán bộ phụ trách", "Trang đã quét", "Trang hợp đồng", "% Quét", "Tổng tệp", "Tệp PDF/A", "% PDF/A", "Tệp đã ký số", "% Ký số", "Tệp OCR đã duyệt", "% OCR", "% thời gian đã qua", "% hoàn thành công việc", "Tình trạng", "Dự kiến xong", "Trang quét/ngày (7 ngày)"]];
+    const ragTen = { green: "Đúng tiến độ", amber: "Có rủi ro", red: "Chậm tiến độ", grey: "Chưa có hợp đồng" } as const;
     rows.forEach((r, i) => {
       const b = cacBuoc(r).map((x) => pct(x.done, x.total));
       const cv = trungBinh(b);
-      aoa.push([i + 1, r.code, r.name, ngay(r.contract.signedOn), ngay(r.contract.endOn), ngay(r.contract.deadlineOn), r.contract.managerName ?? "", r.pages, r.contract.contractPages ?? "", b[0] ?? "", r.files, r.pdfaFiles, b[1] ?? "", r.signedFiles, b[2] ?? "", r.approvedFiles, b[3] ?? "", timePct(r.contract) ?? "", cv ?? ""]);
+      const h = dd && dd.projectId === r.projectId ? dd.health : null;
+      aoa.push([i + 1, r.code, r.name, ngay(r.contract.signedOn), ngay(r.contract.endOn), ngay(r.contract.deadlineOn), r.contract.managerName ?? "", r.pages, r.contract.contractPages ?? "", b[0] ?? "", r.files, r.pdfaFiles, b[1] ?? "", r.signedFiles, b[2] ?? "", r.approvedFiles, b[3] ?? "", timePct(r.contract) ?? "", cv ?? "", h ? ragTen[h.rag] : "", h?.projectedFinishOn ? ngay(h.projectedFinishOn) : "", h ? Math.round(h.runRate7d.pagesScanned) : ""]);
     });
     void V4e5([{ name: "TienDoDuAn", aoa }], `tien-do-du-an-${new Date().toISOString().slice(0, 10)}.xlsx`).then(() => toast.success("Đã xuất báo cáo tiến độ."));
   };
@@ -200,8 +192,14 @@ export default function ProjectProgressView() {
             title={
               <span className="flex flex-wrap items-center gap-2">
                 {r.code} · {r.name}
-                {quaHan && <Badge tone="err">Quá hạn chót</Badge>}
-                {lech != null && (lech >= 0 ? <Badge tone="ok">Đúng tiến độ, +{lech} điểm</Badge> : <Badge tone={lech < -10 ? "err" : "warn"}>Chậm {-lech} điểm</Badge>)}
+                {dd ? (
+                  <RagBadge rag={dd.health.rag} />
+                ) : (
+                  <>
+                    {quaHan && <Badge tone="err">Quá hạn chót</Badge>}
+                    {lech != null && (lech >= 0 ? <Badge tone="ok">Đúng tiến độ, +{lech} điểm</Badge> : <Badge tone={lech < -10 ? "err" : "warn"}>Chậm {-lech} điểm</Badge>)}
+                  </>
+                )}
               </span>
             }
             actions={
@@ -238,14 +236,14 @@ export default function ProjectProgressView() {
             </div>
             <Tip text={tg != null ? `Vạch đỏ: ${tg}% thời gian đã qua` : "Chưa có thời gian hợp đồng"}>
               <div className="relative mt-1 h-2 rounded bg-border-subtle">
-                <div className="h-2 rounded bg-accent" style={{ width: `${cv ?? 0}%` }} />
+                <div className="h-2 rounded bg-brand-500" style={{ width: `${cv ?? 0}%` }} />
                 {tg != null && <div className="absolute -top-[3px] h-[14px] w-0.5 bg-danger-600" style={{ left: `${tg}%` }} />}
               </div>
             </Tip>
             <div className="mt-4 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
               {buoc.map((b, i) => (
                 <div key={b.key} className="flex items-center gap-3">
-                  <Vong value={ptBuoc[i]} label={b.ten} />
+                  <Ring value={ptBuoc[i]} label={b.ten} />
                   <div className="text-sm">
                     <div className="font-semibold">{b.ten}</div>
                     <div>
@@ -256,6 +254,12 @@ export default function ProjectProgressView() {
                 </div>
               ))}
             </div>
+            {dd && (
+              <div className="mt-4 border-t border-border-subtle pt-3">
+                <p className="mb-2 text-sm text-fg-muted">{duKienText(dd.health, dd.contract.deadlineOn ?? dd.contract.endOn)} · quét {n(Math.round(dd.health.runRate7d.pagesScanned))} trang/ngày (7 ngày), cần {n(Math.round(dd.health.requiredRate.pagesScanned))}/ngày để kịp hạn.</p>
+                <BarChart data={dd.series.map((s) => ({ label: s.day, value: s.pagesScanned }))} unit="trang" height={160} target={dd.health.requiredRate.pagesScanned > 0 ? { value: Math.round(dd.health.requiredRate.pagesScanned), label: "Cần/ngày" } : null} ariaLabel={`Trang quét theo ngày, ${dd.days} ngày`} />
+              </div>
+            )}
           </Card>
         );
       })}
