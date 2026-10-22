@@ -32,6 +32,7 @@ export const V3x9 = [
   "ocr",
 
   "ocrFields",
+  "dashboard",
 
   "submissions",
 

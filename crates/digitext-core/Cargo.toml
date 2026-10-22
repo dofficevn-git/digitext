@@ -5,6 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
+chrono = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 unicode-normalization = { workspace = true }

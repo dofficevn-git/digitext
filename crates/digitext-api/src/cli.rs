@@ -246,6 +246,7 @@ async fn serve() -> anyhow::Result<()> {
     }
     crate::routes::documents::f_2id(r_24.data_dir.as_path()).await;
     f_2gr(r_24.data_dir.clone());
+    crate::routes::dashboard::spawn_rollup(r_22.clone());
     f_2gs(r_22);
     axum::serve(
         r_1y,
