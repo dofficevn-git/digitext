@@ -72,7 +72,7 @@ export default function V4x4() {
             ))}
           </ol>
         </div>
-        <span className="text-sm text-[var(--side-faint)]">Phiên bản {appVersion || "…"}</span>
+        <span className="text-sm text-white/70">Phiên bản {appVersion || "…"}</span>
       </aside>
       <main className="login-main">
       <div className="login-card">

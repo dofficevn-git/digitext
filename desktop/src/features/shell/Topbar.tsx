@@ -1,5 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Thanh trên cùng: logo · đường dẫn "Nhóm › Mục" · dự án đang làm · tìm nhanh (Ctrl+K) · chuông · tài khoản.
+// Thanh trên cùng (0.19: nền tím chạy suốt chiều ngang như DO365): logo + tên · đường dẫn "Nhóm › Mục" · dự án đang làm ·
+// tìm nhanh (Ctrl+K) · chuông · tài khoản. Màu các nút con lấy từ token đổi trong phạm vi .topbar (digitext.css).
 
 import { useEffect, useState } from "react";
 import { V460, useCollects, useDownloads, useUploads } from "@/state";
@@ -10,6 +11,7 @@ import { V462 as cn } from "@/lib/utils";
 import { IconButton, Kbd, Tip } from "@/ui";
 import CommandPalette from "./CommandPalette";
 import ProjectSwitch from "./ProjectSwitch";
+import BrandLogo from "./BrandLogo";
 import { navPath } from "./navTree";
 import { useNotifications } from "./useNotifications";
 
@@ -46,6 +48,10 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
+      <div className="brand">
+        <BrandLogo className="size-8 flex-none" />
+        <span>DigiText</span>
+      </div>
       <nav aria-label="Vị trí" className="flex min-w-0 items-center gap-1 text-sm text-fg-subtle">
         {path.map((n, i) => (
           <span key={n.id} className="flex min-w-0 items-center gap-1">

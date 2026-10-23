@@ -293,8 +293,12 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   StackedBar, Ring; màu qua token `--color-chart-*` (phân loại thứ tự cố định đã kiểm CVD, tuần tự = dải brand;
   không dùng màu trạng thái cho chuỗi số liệu).
 - `styles/theme.css` — nguồn token duy nhất (màu trạng thái 50–800, thang chữ
-  xs 12 / sm 13 / base 14); `do365-tokens.css` đóng băng; `digitext.css` chỉ còn
-  luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
+  xs 12 / sm 13 / base 14). **0.19 (23/10/2026) đồng bộ DO365 / MS Teams:** phông Segoe UI
+  (không gói font), brand = tím DOFFICE #5A58A6, gray = xám Fluent, trạng thái theo Teams,
+  `run-*` cam #E8772E chỉ cho "đang chạy", chart-1..4 đã kiểm CVD — giá trị lấy từ
+  `D:\DO365-MASTER_EXECUTIONrontend\web\src\styles.css`. `do365-tokens.css` đóng băng;
+  `digitext.css`: `--side-*` (menu trái nền trắng), `.topbar` tím chạy suốt + ghi đè token
+  trong phạm vi, luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
 - `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·

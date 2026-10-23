@@ -29,18 +29,25 @@
   --raised: var(--color-surface-sunken);
 
    
-  /* 0.18: thanh menu nền mực (màu viền logo), chữ sáng; mục đang mở có vạch hổ phách. */
-  /* 0.18.15: mực ngả xanh ngọc hơn; nút tròn nhóm (--side-node) đặc để che đường trục quy trình (--side-line-2). */
-  --side-bg: #172629;
-  --side-bg-2: #223539;
-  --side-bg-3: #2e4448;
-  --side-node: #1f3236;
-  --side-text: #b9c8c8;
-  --side-strong: #ffffff;
-  --side-faint: #879a9c;
-  --side-line: #263a3e;
-  --side-line-2: #2f6563;
-  --side-active: var(--color-run-solid);
+  /* 0.19 (23/10/2026): thanh menu NỀN TRẮNG kiểu Teams / DO365 (.sidebar #FFF, viền #E1DFDD, mục đang mở nền tím nhạt
+     + vạch tím). Nút tròn nhóm (--side-node) đặc để che đường trục quy trình (--side-line-2). */
+  --side-bg: var(--color-gray-0);
+  --side-bg-2: var(--color-brand-50);
+  --side-bg-3: var(--color-gray-200);
+  --side-node: var(--color-gray-100);
+  --side-text: var(--color-fg);
+  --side-strong: var(--color-brand-700);
+  --side-faint: var(--color-fg-subtle);
+  --side-line: var(--color-gray-200);
+  --side-line-2: var(--color-brand-200);
+  --side-active: var(--color-brand-500);
+  /* Thanh trên tím chạy suốt chiều ngang như DO365 (header 50px, chữ trắng, ô tìm nền trắng mờ). */
+  --top-bg: var(--color-brand-500);
+  --top-fg: #ffffff;
+  --top-fg-2: rgba(255, 255, 255, 0.82);
+  --top-fill: rgba(255, 255, 255, 0.14);
+  --top-fill-2: rgba(255, 255, 255, 0.22);
+  --top-line: rgba(255, 255, 255, 0.3);
 
   --radius: var(--radius-md);  
   --radius-sm: var(--radius-sm);  
@@ -93,8 +100,8 @@ html, body, #root {
   padding: 0;
 }
 .login-side {
-  background: var(--side-bg);
-  color: var(--side-text);
+  background: linear-gradient(160deg, var(--color-brand-500), var(--color-brand-700));
+  color: rgba(255, 255, 255, 0.85);
   padding: 40px 48px;
   display: flex;
   flex-direction: column;
@@ -122,9 +129,9 @@ html, body, #root {
 }
 .login-steps li {
   padding-top: 12px;
-  border-top: 6px solid var(--color-brand-500);
+  border-top: 6px solid rgba(255, 255, 255, 0.45);
   font-size: var(--text-sm);
-  color: var(--side-text);
+  color: rgba(255, 255, 255, 0.85);
 }
 .login-steps li:nth-child(2) {
   border-top-color: var(--color-run-solid);
@@ -132,7 +139,7 @@ html, body, #root {
   font-weight: 500;
 }
 .login-steps li:nth-child(n + 3) {
-  border-top-color: var(--side-bg-3);
+  border-top-color: rgba(255, 255, 255, 0.2);
 }
 .login-screen.split .login-logo {
   display: none;
@@ -349,7 +356,7 @@ html, body, #root {
   grid-template-columns: var(--size-sidebar) 1fr;
   grid-template-rows: var(--size-topbar) 1fr var(--size-statusbar);
   grid-template-areas:
-    "sidebar topbar"
+    "topbar topbar"
     "sidebar content"
     "sidebar statusbar";
   height: 100dvh;
@@ -357,21 +364,60 @@ html, body, #root {
 
 .topbar {
   grid-area: topbar;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--top-bg);
+  color: var(--top-fg);
   display: flex;
   align-items: center;
   gap: var(--do-sp-3);
-  padding: 0 var(--do-sp-5);
+  padding: 0 var(--do-sp-4) 0 var(--do-sp-3);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.14);
+  z-index: 20;
+  /* Token màu đổi trong phạm vi thanh: các lớp text-fg-* / bg-surface / border-border của nút con tự ra màu trắng mờ. */
+  --color-fg: var(--top-fg);
+  --color-fg-strong: var(--top-fg);
+  --color-fg-muted: var(--top-fg-2);
+  --color-fg-subtle: var(--top-fg-2);
+  --color-fg-link: var(--top-fg);
+  --color-surface: var(--top-fill);
+  --color-surface-hover: var(--top-fill-2);
+  --color-surface-active: var(--top-fill-2);
+  --color-border: var(--top-line);
+  --color-border-subtle: var(--top-line);
+  --color-border-strong: rgba(255, 255, 255, 0.55);
+  --color-ring: #ffffff;
+}
+.topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--do-sp-2);
+  width: calc(var(--size-sidebar) - var(--do-sp-3));
+  flex: none;
+  color: var(--top-fg);
+  font-weight: 600;
+  font-size: var(--text-md);
+  letter-spacing: 0.01em;
+}
+.app-shell:has(.sidebar.collapsed) .topbar .brand {
+  width: auto;
+}
+.topbar .brand img {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+.topbar select,
+.topbar option {
+  color: var(--color-gray-900);
 }
 
 .sidebar {
   grid-area: sidebar;
   background: var(--side-bg);
   color: var(--side-text);
+  border-right: 1px solid var(--side-line);
   display: flex;
   flex-direction: column;
-  padding: 0 var(--do-sp-2) var(--do-sp-2);
+  padding: var(--do-sp-2) var(--do-sp-2) var(--do-sp-2);
   min-height: 0;
 }
 .side-brand {
