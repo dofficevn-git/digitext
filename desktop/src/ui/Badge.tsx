@@ -6,15 +6,16 @@ import type { V3y0 } from "@/domain/types";
 import { V462 } from "@/lib/utils";
 
 const V47x = cva(
-  // 0.18: viên thuốc có chấm màu đầu nhãn (chấm theo màu chữ) — đọc trạng thái nhờ cả màu lẫn chữ.
-  "inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-2 text-sm font-medium leading-[22px] before:size-1.5 before:flex-none before:rounded-full before:bg-current before:opacity-80 before:content-['']",
+  // do365-tokens.css .do-badge: viên thuốc, chữ nhỏ 600, nền nhạt + chữ màu đặc; giữ chấm màu đầu nhãn (0.18) để đọc
+  // trạng thái nhờ cả màu lẫn chữ.
+  "inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-2 text-xs font-semibold leading-[20px] before:size-1.5 before:flex-none before:rounded-full before:bg-current before:opacity-80 before:content-['']",
   {
     variants: {
       tone: {
-        ok: "bg-success-50 text-success-700",
-        info: "bg-info-50 text-info-700",
-        warn: "bg-warning-50 text-warning-700",
-        err: "bg-danger-50 text-danger-700",
+        ok: "bg-success-100 text-success-600",
+        info: "bg-info-50 text-info-600",
+        warn: "bg-warning-50 text-warning-600",
+        err: "bg-danger-50 text-danger-600",
         gray: "bg-gray-100 text-fg-muted",
         // Đang chạy (OCR, ghép PDF/A, ký…): hổ phách — màu "đang làm" của cả hệ thống.
         run: "bg-run-bg text-run",

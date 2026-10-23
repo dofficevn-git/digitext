@@ -295,8 +295,10 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
 - `styles/theme.css` — nguồn token duy nhất (màu trạng thái 50–800, thang chữ
   xs 12 / sm 13 / base 14). **0.19 (23/10/2026) đồng bộ DO365 / MS Teams:** phông Segoe UI
   (không gói font), brand = tím DOFFICE #5A58A6, gray = xám Fluent, trạng thái theo Teams,
-  `run-*` cam #E8772E chỉ cho "đang chạy", chart-1..4 đã kiểm CVD — giá trị lấy từ
-  `D:\DO365-MASTER_EXECUTIONrontend\web\src\styles.css`. `do365-tokens.css` đóng băng;
+  `run-*` cam #E8772E chỉ cho "đang chạy", chart-1..4 đã kiểm CVD — giá trị lấy từ tệp
+  "DO365 Shared Design Tokens v1.0" (do365-tokens.css dùng chung hệ sinh thái DOFFICE; bản
+  app ở `D:\DO365-MASTER_EXECUTIONrontend\web\src\styles.css`). Nút/huy hiệu/thẻ theo
+  `.do-btn-*`, `.do-badge`, `.do-card` của tệp đó. Chưa có chế độ tối. `do365-tokens.css` đóng băng;
   `digitext.css`: `--side-*` (menu trái nền trắng), `.topbar` tím chạy suốt + ghi đè token
   trong phạm vi, luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
