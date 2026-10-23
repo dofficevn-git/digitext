@@ -14,11 +14,11 @@ import { getOpenGroups, setOpenGroups, V46v, V46w } from "./sidebarPrefs";
 import { TOGGLE_SIDEBAR_EVENT } from "./Topbar";
 import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
-import BrandLogo from "./BrandLogo";
 
 // Bốn nhóm Chỉnh lý → Số hoá → Xử lý → Lưu trữ số là vòng đời một hồ sơ (luồng chuẩn: chỉnh lý xong mới số hoá)
 // nên xếp trên một "trục quy trình" (đường dọc nối các nút tròn), mỗi nhóm ghi "Bước n" dưới tên; nhóm đang làm
-// sáng xanh ngọc. Báo cáo / Quản trị nằm dưới đường chia, không thuộc trục. Mục đang mở giữ vạch hổ phách.
+// sáng tím. Báo cáo / Quản trị nằm dưới đường chia, không thuộc trục. Mục đang mở: nền tím nhạt + vạch tím (0.19, kiểu
+// Teams / DO365; logo + tên đã chuyển lên thanh trên).
 const QUY_TRINH = new Set(["chinhly", "sohoa", "xuly", "luutruso"]);
 
 /** Nút tròn mang icon nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. */
@@ -28,7 +28,7 @@ function NutNhom({ icon, lit, size = "md" }: { icon: NonNullable<V46s["icon"]>; 
       className={cn(
         "relative z-10 grid flex-none place-items-center rounded-full ring-1 transition-colors",
         size === "lg" ? "size-9" : "size-7",
-        lit ? "bg-brand-500 text-white ring-brand-300/50" : "bg-[var(--side-node)] text-[var(--side-faint)] ring-[var(--side-line)] group-hover:text-[var(--side-strong)] group-hover:ring-[var(--side-line-2)]",
+        lit ? "bg-brand-500 text-white ring-brand-200" : "bg-[var(--side-node)] text-[var(--side-faint)] ring-[var(--side-line)] group-hover:text-[var(--side-strong)] group-hover:ring-[var(--side-line-2)]",
       )}
     >
       <Icon name={icon} size={size === "lg" ? 17 : 15} />
@@ -160,7 +160,7 @@ export default function Sidebar() {
           {g.step ? (
             <span className="flex min-w-0 flex-1 flex-col leading-tight">
               <span className="truncate">{g.label}</span>
-              <span className={cn("truncate text-[11.5px] font-normal", active ? "text-brand-200" : "text-[var(--side-faint)]")}>{g.step}</span>
+              <span className={cn("truncate text-[11.5px] font-normal", active ? "text-brand-600" : "text-[var(--side-faint)]")}>{g.step}</span>
             </span>
           ) : (
             <span className="min-w-0 flex-1 truncate">{g.label}</span>
@@ -253,10 +253,6 @@ export default function Sidebar() {
 
   return (
     <aside className={cn("sidebar", rail && "collapsed")}>
-      <div className="side-brand">
-        <BrandLogo className="size-8 flex-none" />
-        {!rail && <span className="text-[17px] font-semibold tracking-tight">DigiText</span>}
-      </div>
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- roving tabindex: nav bắt mũi tên, các mục bên trong là nút thật */}
       <nav ref={navRef} className="nav-scroll" aria-label="Điều hướng chính" onKeyDown={onKeyDown}>
         <ul className={cn("flex flex-col", rail && "items-center")}>{dau.map(ve)}</ul>

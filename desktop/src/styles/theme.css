@@ -1,25 +1,9 @@
- 
-
 @import "tailwindcss";
 @import "tw-animate-css";
 
- 
-/* 0.18 "Giấy, mực và phím xanh": màu lấy từ logo DIGITEXT (phím xanh ngọc, tay hổ phách, viền than chì);
-   chữ Be Vietnam Pro — thiết kế cho tiếng Việt, dấu không chồng nét ở cỡ nhỏ. Gói font cục bộ: app chạy
-   cả khi không có mạng. */
-@import "@fontsource/be-vietnam-pro/vietnamese-400.css";
-@import "@fontsource/be-vietnam-pro/vietnamese-500.css";
-@import "@fontsource/be-vietnam-pro/vietnamese-600.css";
-@import "@fontsource/be-vietnam-pro/vietnamese-700.css";
-@import "@fontsource/be-vietnam-pro/latin-400.css";
-@import "@fontsource/be-vietnam-pro/latin-500.css";
-@import "@fontsource/be-vietnam-pro/latin-600.css";
-@import "@fontsource/be-vietnam-pro/latin-700.css";
-@import "@fontsource/be-vietnam-pro/latin-ext-400.css";
-@import "@fontsource/be-vietnam-pro/latin-ext-500.css";
-@import "@fontsource/be-vietnam-pro/latin-ext-600.css";
-@import "@fontsource/be-vietnam-pro/vietnamese-400-italic.css";
-@import "@fontsource/be-vietnam-pro/latin-400-italic.css";
+/* 0.19 "Đồng bộ DO365 / Teams" (23/10/2026): chữ Segoe UI như Microsoft Teams (có sẵn trên Windows, không cần gói
+   font), màu tím DOFFICE #5A58A6 + xám Fluent lấy từ bộ token DO365 (D:\DO365-MASTER, 02_EXECUTION/frontend/web/src/styles.css:
+   70 % Fluent/Teams · 30 % nhận diện DOP). Cam #E8772E chỉ cho "đang chạy"; cảnh báo vẫn dùng warning-*. */
 
 @theme {
 
@@ -27,40 +11,40 @@
 
 
 
-  /* Xám ngả xanh mực (ink): chữ, viền, nền — cùng họ với màu chính, không dùng xám trung tính lạnh. */
+  /* Xám trung tính Fluent (Teams): nền trang #F5F5F5, viền #E1DFDD, chữ phụ #616161, chữ chính #242424. */
   --color-gray-0: #ffffff;
-  --color-gray-25: #fafbfb;
-  --color-gray-50: #f4f7f6;
-  --color-gray-100: #ebf0ef;
-  --color-gray-150: #e3e9e8;
-  --color-gray-200: #d5dedd;
-  --color-gray-300: #c2cdcc;
-  --color-gray-400: #9aa8a9;
-  --color-gray-500: #7a898b;
-  --color-gray-600: #56666a;
-  --color-gray-700: #3d4c50;
-  --color-gray-800: #2a383c;
-  --color-gray-900: #1e2b2f;
+  --color-gray-25: #fafafa;
+  --color-gray-50: #f5f5f5;
+  --color-gray-100: #f3f2f1;
+  --color-gray-150: #edebe9;
+  --color-gray-200: #e1dfdd;
+  --color-gray-300: #c8c6c4;
+  --color-gray-400: #a19f9d;
+  --color-gray-500: #8a8886;
+  --color-gray-600: #605e5c;
+  --color-gray-700: #484644;
+  --color-gray-800: #323130;
+  --color-gray-900: #201f1e;
 
-  /* Phím ngọc — màu chính (500 = #0B7A7E, chữ trắng trên nền này 5,1:1). Giữ tên "brand" để mọi màn đổi theo. */
-  --color-brand-50: #eaf6f5;
-  --color-brand-100: #d3ecea;
-  --color-brand-200: #a8d8d5;
-  --color-brand-300: #74bdb9;
-  --color-brand-400: #3e9c9a;
-  --color-brand-500: #0b7a7e;
-  --color-brand-600: #086a6e;
-  --color-brand-700: #075a5d;
-  --color-brand-800: #064a4c;
-  --color-brand-900: #05393b;
+  /* Tím DOFFICE (DO365 --do-primary-purple #5A58A6, đậm #47458A, nền #EEEDF8). Chữ trắng trên 500: 6,2:1. */
+  --color-brand-50: #eeedf8;
+  --color-brand-100: #dedcf2;
+  --color-brand-200: #c2bfe6;
+  --color-brand-300: #a09cd6;
+  --color-brand-400: #7b78bf;
+  --color-brand-500: #5a58a6;
+  --color-brand-600: #47458a;
+  --color-brand-700: #3b3973;
+  --color-brand-800: #2f2d5c;
+  --color-brand-900: #232245;
 
-  /* Biểu đồ (dashboard 22/10/2026). Phân loại: 4 màu thứ tự cố định, đã qua validator CVD của skill dataviz
-     (ΔE kề nhau ≥ 8, chroma ≥ 0,1, tương phản ≥ 3:1 trên nền sáng) — chuỗi 1 luôn là xanh ngọc. Tuần tự: một màu
+  /* Biểu đồ (dashboard 22/10/2026, đổi 23/10). Phân loại: 4 màu thứ tự cố định, đã qua validator CVD của skill dataviz
+     (ΔE kề nhau ≥ 8, chroma ≥ 0,1, tương phản ≥ 3:1 trên nền sáng) — chuỗi 1 luôn là tím thương hiệu. Tuần tự: một màu
      nhạt → đậm (dải brand). Không dùng màu trạng thái (success/warning/danger) cho chuỗi dữ liệu. */
-  --color-chart-1: #0a9ba0;
-  --color-chart-2: #5b5bd6;
-  --color-chart-3: #b4508c;
-  --color-chart-4: #a06a10;
+  --color-chart-1: #5a58a6;
+  --color-chart-2: #0a9ba0;
+  --color-chart-3: #a06a10;
+  --color-chart-4: #b4508c;
   --color-chart-seq-1: var(--color-brand-100);
   --color-chart-seq-2: var(--color-brand-200);
   --color-chart-seq-3: var(--color-brand-300);
@@ -71,50 +55,52 @@
   --color-chart-target: var(--color-gray-700);
   --color-chart-muted: var(--color-gray-200);
 
-  /* Hổ phách — CHỈ cho việc đang chạy (bước dây chuyền đang làm, dự án đang chọn). Không dùng làm cảnh báo. */
-  --color-run-50: #fdf6ec;
-  --color-run-100: #fdf1df;
-  --color-run-200: #f6ddb6;
-  --color-run-500: #e89a2c;
-  --color-run-700: #8a4e05;
+  /* Cam DOFFICE (DO365 --do-rieng #E8772E) — CHỈ cho việc đang chạy (bước dây chuyền đang làm, dự án đang chọn).
+     Không dùng làm cảnh báo. */
+  --color-run-50: #fff7f0;
+  --color-run-100: #fff1e6;
+  --color-run-200: #f8d5ba;
+  --color-run-500: #e8772e;
+  --color-run-700: #c45f1c;
   --color-run: var(--color-run-700);
   --color-run-bg: var(--color-run-100);
   --color-run-solid: var(--color-run-500);
 
    
   /* Màu trạng thái: đủ thang 50→800; bí danh không hậu tố (--color-danger…) để text-danger / border-warning… hợp lệ. */
-  --color-success-50: #ecfdf3;
-  --color-success-100: #d1fadf;
-  --color-success-200: #a9e5c1;
-  --color-success-300: #6ce9a6;
-  --color-success-500: #12b76a;
-  --color-success-600: #039855;
-  --color-success-700: #0f7b34;
-  --color-success-800: #05603a;
-  --color-danger-50: #fef3f2;
-  --color-danger-100: #fee4e2;
-  --color-danger-200: #fbc8c3;
-  --color-danger-300: #fda29b;
-  --color-danger-500: #f04438;
-  --color-danger-600: #d92d20;
-  --color-danger-700: #b42318;
-  --color-danger-800: #912018;
-  --color-warning-50: #fffaeb;
-  --color-warning-100: #fef0c7;
-  --color-warning-200: #fbdc9b;
-  --color-warning-300: #fec84b;
-  --color-warning-500: #f79009;
-  --color-warning-600: #dc6803;
-  --color-warning-700: #b54708;
-  --color-warning-800: #93370d;
-  --color-info-50: #eff6ff;
-  --color-info-100: #dbeafe;
-  --color-info-200: #bcd4f7;
-  --color-info-300: #93c5fd;
-  --color-info-500: #3b82f6;
-  --color-info-600: #2563eb;
-  --color-info-700: #175cd3;
-  --color-info-800: #1e40af;
+  /* Trạng thái theo Fluent/Teams (DO365 pill: xong #DFF6DD/#107C10 · chờ #FFF4CE/#7A5F00 · quá hạn #FDECEA/#A4262C). */
+  --color-success-50: #effaee;
+  --color-success-100: #dff6dd;
+  --color-success-200: #a7dfa3;
+  --color-success-300: #6cc46a;
+  --color-success-500: #13a10e;
+  --color-success-600: #107c10;
+  --color-success-700: #0e6b0e;
+  --color-success-800: #0b5a0b;
+  --color-danger-50: #fdecea;
+  --color-danger-100: #fbe1e0;
+  --color-danger-200: #f1bbbd;
+  --color-danger-300: #e58a90;
+  --color-danger-500: #d13438;
+  --color-danger-600: #c4314b;
+  --color-danger-700: #a4262c;
+  --color-danger-800: #8e1c27;
+  --color-warning-50: #fff9e6;
+  --color-warning-100: #fff4ce;
+  --color-warning-200: #f9e3a3;
+  --color-warning-300: #f2c661;
+  --color-warning-500: #f7b500;
+  --color-warning-600: #b26a00;
+  --color-warning-700: #835b00;
+  --color-warning-800: #6e4c00;
+  --color-info-50: #eff6fc;
+  --color-info-100: #deecf9;
+  --color-info-200: #c7e0f4;
+  --color-info-300: #71afe5;
+  --color-info-500: #2b88d8;
+  --color-info-600: #106ebe;
+  --color-info-700: #0f6cbd;
+  --color-info-800: #005a9e;
 
   --color-success: var(--color-success-700);
   --color-success-bg: var(--color-success-50);
@@ -136,16 +122,17 @@
    
 
    
-  /* Nền ứng dụng = màu bìa hồ sơ lưu trữ; bảng / khung nội dung = trang giấy trắng. */
-  --color-canvas: #eef2f1;
+  /* Nền ứng dụng xám Fluent #F5F5F5 (Teams); thẻ / bảng nền trắng; tiêu đề bảng tím nhạt như DO365. */
+  --color-canvas: var(--color-gray-50);
   --color-surface: var(--color-gray-0);
-  --color-surface-sunken: var(--color-gray-50);
-  --color-surface-hover: var(--color-gray-50);
-  --color-surface-active: var(--color-gray-100);
+  --color-surface-sunken: var(--color-gray-25);
+  --color-surface-hover: var(--color-gray-100);
+  --color-surface-active: var(--color-gray-150);
   --color-surface-selected: var(--color-brand-50);
+  --color-table-head: #f5f4fc;
 
    
-  --color-fg: var(--color-gray-800);  
+  --color-fg: #242424;  
   --color-fg-strong: var(--color-gray-900);  
   --color-fg-muted: var(--color-gray-700);  
   --color-fg-subtle: var(--color-gray-600);  
@@ -155,28 +142,30 @@
   --color-fg-link: var(--color-brand-600);
 
    
-  --color-border-subtle: var(--color-gray-200);  
-  --color-border: var(--color-gray-300);  
-  --color-border-strong: var(--color-gray-400);  
+  --color-border-subtle: var(--color-gray-150);  
+  --color-border: var(--color-gray-200);  
+  --color-border-strong: var(--color-gray-300);  
   --color-border-brand: var(--color-brand-500);
 
    
   --color-ring: var(--color-brand-500);
 
    
+  /* Segoe UI như Microsoft Teams / Fluent (Win11 có "Segoe UI Variable"; đều hỗ trợ dấu tiếng Việt). */
   --font-sans:
-    "Be Vietnam Pro", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Mono", "Consolas", ui-monospace, monospace;
+    "Segoe UI Variable Text", "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto,
+    "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;
 
-  /* Thang chữ 0.17: nhỏ nhất 12px (xs), 13px (sm), nền 14px sàn 13px. `2xs` chỉ còn là bí danh của xs, sẽ bỏ. */
+  /* Thang chữ 0.17: nhỏ nhất 12px (xs), 13px (sm), nền 14px sàn 13px. Segoe UI không cần siết khoảng chữ (letter-spacing 0). */
   --text-2xs: max(11.5px, calc(12px * var(--ui-scale, 1)));
   --text-2xs--line-height: max(16px, calc(16px * var(--ui-scale, 1)));
-  --text-2xs--letter-spacing: 0.005em;
+  --text-2xs--letter-spacing: 0em;
   --text-2xs--font-weight: 500;
 
   --text-xs: max(11.5px, calc(12px * var(--ui-scale, 1)));
   --text-xs--line-height: max(16px, calc(16px * var(--ui-scale, 1)));
-  --text-xs--letter-spacing: 0.005em;
+  --text-xs--letter-spacing: 0em;
 
   --text-sm: max(12px, calc(13px * var(--ui-scale, 1)));
   --text-sm--line-height: max(17px, calc(18px * var(--ui-scale, 1)));
@@ -184,27 +173,27 @@
 
   --text-base: max(13px, calc(14px * var(--ui-scale, 1)));
   --text-base--line-height: max(18px, calc(20px * var(--ui-scale, 1)));
-  --text-base--letter-spacing: -0.006em;
+  --text-base--letter-spacing: 0em;
 
   --text-md: max(13px, calc(15px * var(--ui-scale, 1)));
   --text-md--line-height: max(19px, calc(22px * var(--ui-scale, 1)));
-  --text-md--letter-spacing: -0.01em;
+  --text-md--letter-spacing: 0em;
 
   --text-lg: max(15px, calc(17px * var(--ui-scale, 1)));
   --text-lg--line-height: max(21px, calc(24px * var(--ui-scale, 1)));
-  --text-lg--letter-spacing: -0.015em;
+  --text-lg--letter-spacing: 0em;
 
   --text-xl: max(18px, calc(20px * var(--ui-scale, 1)));
   --text-xl--line-height: max(25px, calc(28px * var(--ui-scale, 1)));
-  --text-xl--letter-spacing: -0.02em;
+  --text-xl--letter-spacing: 0em;
 
   --text-2xl: max(21px, calc(24px * var(--ui-scale, 1)));
   --text-2xl--line-height: max(28px, calc(32px * var(--ui-scale, 1)));
-  --text-2xl--letter-spacing: -0.022em;
+  --text-2xl--letter-spacing: 0em;
 
   --text-3xl: max(26px, calc(30px * var(--ui-scale, 1)));
   --text-3xl--line-height: max(33px, calc(38px * var(--ui-scale, 1)));
-  --text-3xl--letter-spacing: -0.028em;
+  --text-3xl--letter-spacing: 0em;
 
    
   /* Bo góc theo cấp: ô nhập / nút 6, khung 8, hộp thoại 10. */
@@ -217,10 +206,10 @@
   --radius-full: 9999px;
 
   /* Bóng nhuốm màu mực, rất nhẹ — khung nội dung đứng trên nền nhờ viền, không nhờ bóng. */
-  --shadow-xs: 0 1px 2px 0 rgb(30 43 47 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(30 43 47 / 0.07), 0 1px 2px -1px rgb(30 43 47 / 0.05);
-  --shadow-md: 0 4px 10px -2px rgb(30 43 47 / 0.1), 0 2px 4px -2px rgb(30 43 47 / 0.06);
-  --shadow-lg: 0 16px 28px -6px rgb(30 43 47 / 0.16), 0 4px 8px -2px rgb(30 43 47 / 0.06);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 2px 8px 0 rgb(0 0 0 / 0.08);
+  --shadow-md: 0 4px 10px -2px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 16px 28px -6px rgb(0 0 0 / 0.16), 0 4px 8px -2px rgb(0 0 0 / 0.06);
 
    
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);

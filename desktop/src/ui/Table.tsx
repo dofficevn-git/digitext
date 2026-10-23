@@ -69,9 +69,9 @@ function Root({
     <SortContext.Provider value={{ sort, onSort }}>
       <div className="relative w-full overflow-auto rounded-lg border border-border-subtle bg-surface" style={maxHeight ? { maxHeight } : undefined}>
         <table
-          className={cn("w-full border-collapse text-base [&>thead]:bg-gray-50 [&>thead_th]:h-9 [&>thead_th]:px-3 [&>thead_th]:text-sm [&>thead_th]:font-medium [&>thead_th]:text-fg-muted [&>thead_th]:border-b [&>thead_th]:border-border-subtle", dense ? "[&_td]:py-1 [&_td]:text-sm" : "[&_td]:py-2", // Tiêu đề dính khi cuộn: nền đặc trên TỪNG ô (nền của thead không đi theo ô dính → chữ dòng dưới lộ qua,
+          className={cn("w-full border-collapse text-base [&>thead]:bg-table-head [&>thead_th]:h-9 [&>thead_th]:px-3 [&>thead_th]:text-sm [&>thead_th]:font-medium [&>thead_th]:text-fg-muted [&>thead_th]:border-b [&>thead_th]:border-border-subtle", dense ? "[&_td]:py-1 [&_td]:text-sm" : "[&_td]:py-2", // Tiêu đề dính khi cuộn: nền đặc trên TỪNG ô (nền của thead không đi theo ô dính → chữ dòng dưới lộ qua,
           // 0.18.3) + vạch dưới bằng bóng trong (viền của ô dính mất khi border-collapse).
-          stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-gray-50 [&_thead_th]:shadow-[inset_0_-1px_0_var(--color-border)]", className)}
+          stickyHeader && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-table-head [&_thead_th]:shadow-[inset_0_-1px_0_var(--color-border)]", className)}
           {...rest}
         >
           {children}
@@ -83,7 +83,7 @@ function Root({
 
 function Head({ children, className, ...rest }: React.ComponentProps<"thead">) {
   return (
-    <thead className={cn("bg-gray-50 text-sm text-fg-muted [&_th]:border-b [&_th]:border-border-subtle", className)} {...rest}>
+    <thead className={cn("bg-table-head text-sm text-fg-muted [&_th]:border-b [&_th]:border-border-subtle", className)} {...rest}>
       {children}
     </thead>
   );
