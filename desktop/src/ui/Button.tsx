@@ -11,12 +11,14 @@ import { V462 as cn } from "@/lib/utils";
 import Spinner from "./Spinner";
 
 export const buttonStyles = cva(
-  "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border font-medium transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border font-semibold transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        secondary: "border-border bg-surface text-fg hover:bg-surface-hover hover:border-border-strong active:bg-surface-active",
-        primary: "border-brand-500 bg-brand-500 text-fg-onbrand hover:bg-brand-600 hover:border-brand-600 active:bg-brand-700",
+        // do365-tokens.css .do-btn-secondary: nền trong, viền + chữ tím, hover nền tím nhạt.
+        secondary: "border-brand-500 bg-transparent text-brand-600 hover:bg-brand-50 active:bg-brand-100",
+        // .do-btn-primary: tím → đậm khi rê → đậm hơn khi bấm.
+        primary: "border-brand-500 bg-brand-500 text-fg-onbrand hover:bg-brand-600 hover:border-brand-600 active:bg-brand-700 active:border-brand-700",
         ghost: "border-transparent bg-transparent text-fg-muted hover:bg-surface-active hover:text-fg",
         danger: "border-danger-solid bg-danger-solid text-white hover:bg-danger-700 hover:border-danger-700",
         dangerOutline: "border-border bg-surface text-danger-700 hover:bg-danger-50 hover:border-danger-200",

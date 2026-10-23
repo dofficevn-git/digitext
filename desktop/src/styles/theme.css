@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* 0.19 "Đồng bộ DO365 / Teams" (23/10/2026): chữ Segoe UI như Microsoft Teams (có sẵn trên Windows, không cần gói
-   font), màu tím DOFFICE #5A58A6 + xám Fluent lấy từ bộ token DO365 (D:\DO365-MASTER, 02_EXECUTION/frontend/web/src/styles.css:
-   70 % Fluent/Teams · 30 % nhận diện DOP). Cam #E8772E chỉ cho "đang chạy"; cảnh báo vẫn dùng warning-*. */
+/* 0.19 "Đồng bộ DO365 / Teams" (23/10/2026): giá trị lấy từ "DO365 Shared Design Tokens v1.0 (26/06/2026)" —
+   do365-tokens.css dùng chung hệ sinh thái DOFFICE (30 % nhận diện: tím #5A58A6; 70 % Fluent/Teams: xám, bóng, bo góc,
+   Segoe UI, thang chữ 14 gốc). Cam #E8772E (DO365 --do-rieng) chỉ cho "đang chạy"; cảnh báo dùng warning-* (#F7630C). */
 
 @theme {
 
@@ -68,8 +68,9 @@
 
    
   /* Màu trạng thái: đủ thang 50→800; bí danh không hậu tố (--color-danger…) để text-danger / border-warning… hợp lệ. */
-  /* Trạng thái theo Fluent/Teams (DO365 pill: xong #DFF6DD/#107C10 · chờ #FFF4CE/#7A5F00 · quá hạn #FDECEA/#A4262C). */
-  --color-success-50: #effaee;
+  /* Trạng thái = do365-tokens.css: success #107C10/#DFF6DD · danger #C50F1F/#FDF3F4 · warning #F7630C/#FFF9F0 ·
+     info #0078D4/#EFF6FC; accent #F26522/#FFF4CE chỉ cho huy hiệu/cảnh báo. 600 = màu đặc của DO365, 700 = chữ nhỏ (≥ 4,5:1). */
+  --color-success-50: #dff6dd;
   --color-success-100: #dff6dd;
   --color-success-200: #a7dfa3;
   --color-success-300: #6cc46a;
@@ -77,30 +78,32 @@
   --color-success-600: #107c10;
   --color-success-700: #0e6b0e;
   --color-success-800: #0b5a0b;
-  --color-danger-50: #fdecea;
-  --color-danger-100: #fbe1e0;
-  --color-danger-200: #f1bbbd;
+  --color-danger-50: #fdf3f4;
+  --color-danger-100: #fbe1e3;
+  --color-danger-200: #f1b8bd;
   --color-danger-300: #e58a90;
   --color-danger-500: #d13438;
-  --color-danger-600: #c4314b;
-  --color-danger-700: #a4262c;
-  --color-danger-800: #8e1c27;
-  --color-warning-50: #fff9e6;
+  --color-danger-600: #c50f1f;
+  --color-danger-700: #a80c1a;
+  --color-danger-800: #8a0a16;
+  --color-warning-50: #fff9f0;
   --color-warning-100: #fff4ce;
-  --color-warning-200: #f9e3a3;
-  --color-warning-300: #f2c661;
-  --color-warning-500: #f7b500;
-  --color-warning-600: #b26a00;
-  --color-warning-700: #835b00;
-  --color-warning-800: #6e4c00;
+  --color-warning-200: #fbd9b8;
+  --color-warning-300: #f9a96b;
+  --color-warning-500: #f7630c;
+  --color-warning-600: #c94e05;
+  --color-warning-700: #a33f03;
+  --color-warning-800: #7a2f02;
   --color-info-50: #eff6fc;
   --color-info-100: #deecf9;
   --color-info-200: #c7e0f4;
   --color-info-300: #71afe5;
-  --color-info-500: #2b88d8;
+  --color-info-500: #0078d4;
   --color-info-600: #106ebe;
-  --color-info-700: #0f6cbd;
-  --color-info-800: #005a9e;
+  --color-info-700: #005a9e;
+  --color-info-800: #004578;
+  --color-accent: #f26522;
+  --color-accent-bg: #fff4ce;
 
   --color-success: var(--color-success-700);
   --color-success-bg: var(--color-success-50);
@@ -134,17 +137,17 @@
    
   --color-fg: #242424;  
   --color-fg-strong: var(--color-gray-900);  
-  --color-fg-muted: var(--color-gray-700);  
-  --color-fg-subtle: var(--color-gray-600);  
-  --color-fg-placeholder: var(--color-gray-600);  
-  --color-fg-disabled: var(--color-gray-400);
+  --color-fg-muted: #424242;  
+  --color-fg-subtle: #616161;  
+  --color-fg-placeholder: #616161;  
+  --color-fg-disabled: #bdbdbd;
   --color-fg-onbrand: var(--color-gray-0);
   --color-fg-link: var(--color-brand-600);
 
    
-  --color-border-subtle: var(--color-gray-150);  
-  --color-border: var(--color-gray-200);  
-  --color-border-strong: var(--color-gray-300);  
+  --color-border-subtle: #edebe9;  
+  --color-border: #d1d1d1;  
+  --color-border-strong: #c7c7c7;  
   --color-border-brand: var(--color-brand-500);
 
    
@@ -152,12 +155,11 @@
 
    
   /* Segoe UI như Microsoft Teams / Fluent (Win11 có "Segoe UI Variable"; đều hỗ trợ dấu tiếng Việt). */
-  --font-sans:
-    "Segoe UI Variable Text", "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto,
-    "Helvetica Neue", system-ui, sans-serif;
-  --font-mono: "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;
+  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", monospace;
 
-  /* Thang chữ 0.17: nhỏ nhất 12px (xs), 13px (sm), nền 14px sàn 13px. Segoe UI không cần siết khoảng chữ (letter-spacing 0). */
+  /* Thang chữ: xs 12 / sm 13 / base 14 (sàn đọc tiếng Việt; DO365 bảng 13, menu 12) · tiêu đề theo do365-tokens.css
+     md 16 · lg 20 · xl 24 · 2xl 28 · 3xl 32, dòng 1,2–1,4. Segoe UI không siết khoảng chữ (letter-spacing 0). */
   --text-2xs: max(11.5px, calc(12px * var(--ui-scale, 1)));
   --text-2xs--line-height: max(16px, calc(16px * var(--ui-scale, 1)));
   --text-2xs--letter-spacing: 0em;
@@ -175,46 +177,52 @@
   --text-base--line-height: max(18px, calc(20px * var(--ui-scale, 1)));
   --text-base--letter-spacing: 0em;
 
-  --text-md: max(13px, calc(15px * var(--ui-scale, 1)));
-  --text-md--line-height: max(19px, calc(22px * var(--ui-scale, 1)));
+  --text-md: max(14px, calc(16px * var(--ui-scale, 1)));
+  --text-md--line-height: max(20px, calc(22px * var(--ui-scale, 1)));
   --text-md--letter-spacing: 0em;
 
-  --text-lg: max(15px, calc(17px * var(--ui-scale, 1)));
-  --text-lg--line-height: max(21px, calc(24px * var(--ui-scale, 1)));
+  --text-lg: max(18px, calc(20px * var(--ui-scale, 1)));
+  --text-lg--line-height: max(24px, calc(26px * var(--ui-scale, 1)));
   --text-lg--letter-spacing: 0em;
 
-  --text-xl: max(18px, calc(20px * var(--ui-scale, 1)));
-  --text-xl--line-height: max(25px, calc(28px * var(--ui-scale, 1)));
+  --text-xl: max(22px, calc(24px * var(--ui-scale, 1)));
+  --text-xl--line-height: max(28px, calc(30px * var(--ui-scale, 1)));
   --text-xl--letter-spacing: 0em;
 
-  --text-2xl: max(21px, calc(24px * var(--ui-scale, 1)));
-  --text-2xl--line-height: max(28px, calc(32px * var(--ui-scale, 1)));
+  --text-2xl: max(26px, calc(28px * var(--ui-scale, 1)));
+  --text-2xl--line-height: max(32px, calc(34px * var(--ui-scale, 1)));
   --text-2xl--letter-spacing: 0em;
 
-  --text-3xl: max(26px, calc(30px * var(--ui-scale, 1)));
-  --text-3xl--line-height: max(33px, calc(38px * var(--ui-scale, 1)));
+  --text-3xl: max(30px, calc(32px * var(--ui-scale, 1)));
+  --text-3xl--line-height: max(36px, calc(38px * var(--ui-scale, 1)));
   --text-3xl--letter-spacing: 0em;
 
    
-  /* Bo góc theo cấp: ô nhập / nút 6, khung 8, hộp thoại 10. */
+  /* Bo góc do365-tokens.css: xs 2 · sm 4 · md 6 (ô nhập, nút) · lg 8 (thẻ) · xl 12 (hộp thoại) · pill. */
   --radius-none: 0;
+  --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-DEFAULT: 6px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 10px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* Bóng nhuốm màu mực, rất nhẹ — khung nội dung đứng trên nền nhờ viền, không nhờ bóng. */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 2px 8px 0 rgb(0 0 0 / 0.08);
-  --shadow-md: 0 4px 10px -2px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
-  --shadow-lg: 0 16px 28px -6px rgb(0 0 0 / 0.16), 0 4px 8px -2px rgb(0 0 0 / 0.06);
+  /* Bóng Fluent (do365-tokens.css): sm thẻ · md panel · lg menu/hộp thoại · xl hộp thoại lớn. */
+  --shadow-xs: 0 0 2px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.14);
+  --shadow-sm: 0 0 2px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.14);
+  --shadow-md: 0 0 2px rgb(0 0 0 / 0.12), 0 2px 4px rgb(0 0 0 / 0.14);
+  --shadow-lg: 0 0 8px rgb(0 0 0 / 0.12), 0 4px 16px rgb(0 0 0 / 0.14);
+  --shadow-xl: 0 0 8px rgb(0 0 0 / 0.12), 0 16px 48px rgb(0 0 0 / 0.2);
 
    
-  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-quint: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 100ms;
-  --duration-normal: 160ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
 
    
   --size-topbar: calc(48px * var(--ui-scale, 1));
