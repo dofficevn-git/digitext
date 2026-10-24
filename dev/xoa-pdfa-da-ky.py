@@ -2,6 +2,10 @@
 
     python -I dev/xoa-pdfa-da-ky.py --du-an LTLSBN --ban-ky "F:/2026/PDFa/LTLSBN · LTLSBNinh"           ← CHẠY THỬ
     python -I dev/xoa-pdfa-da-ky.py --du-an LTLSBN --ban-ky "F:/2026/PDFa/LTLSBN · LTLSBNinh" --that    ← xoá thật
+    python -I dev/xoa-pdfa-da-ky.py --du-an LTLSBN --ban-ky "..." --tai-ve [--luong 4]                    ← 24/10/2026:
+        tài liệu đã ký mà ổ ngoài CHƯA có bản ký (ký sau 16/10, máy trạm không tải về) → tải bản ký từ kho ra ổ ngoài
+        đúng cây <ban-ky>/<rel_path>/<tên>, ghi .part rồi đổi tên, đọc lại so SHA-256; xong mới tính là "đủ điều kiện".
+        Chỉ GHI THÊM ra ổ ngoài; xoá PDF/A vẫn cần --that.
 
 Chỉ xoá PDF/A của tài liệu thoả TẤT CẢ:
   - đã ký (status = signed), bản ký số còn trong kho;
@@ -50,6 +54,8 @@ def main() -> int:
     ap.add_argument("--du-an", required=True)
     ap.add_argument("--ban-ky", required=True, help="thư mục bản ký số đã tải ra ổ ngoài")
     ap.add_argument("--that", action="store_true", help="xoá thật (mặc định chỉ chạy thử)")
+    ap.add_argument("--tai-ve", action="store_true", help="tải bản ký còn thiếu từ kho ra ổ ngoài trước khi đối chiếu")
+    ap.add_argument("--luong", type=int, default=4, help="số luồng tải (--tai-ve)")
     ap.add_argument("--da-doi-chieu", action="store_true",
                     help="ổ ngoài không cắm vào máy chủ: dùng kết quả đối chiếu trước (16/10 10:45: 160.375/160.375 bản ký khớp) — "
                          "chỉ kiểm bản ký còn trong kho")
@@ -95,6 +101,7 @@ def main() -> int:
     long = goc.name.lower()
 
     duoc, bo = [], defaultdict(int)
+    thieu: list[tuple] = []
     for did, rel, fn, pk, sk in docs:
         if not pk or pk not in kho:
             bo["PDF/A không còn trong kho"] += 1
@@ -118,9 +125,65 @@ def main() -> int:
             if len(cung) == 1:
                 tim = cung[0]
         if not tim:
-            bo["bản ký trên ổ ngoài thiếu / sai kích thước"] += 1
+            if a.tai_ve:
+                thieu.append((did, rel, fn, pk, sk, n_ky, phan))
+            else:
+                bo["bản ký trên ổ ngoài thiếu / sai kích thước"] += 1
             continue
         duoc.append((did, rel, fn, pk, kho[pk][0], kho[pk][1], sk, n_ky, tim))
+
+    if thieu:
+        import hashlib
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        print(f"Tải {len(thieu):,} bản ký còn thiếu ra {goc} ({sum(x[5] for x in thieu) / 1e9:,.1f} GB, {a.luong} luồng)…", flush=True)
+
+        def tai(x):
+            did, rel, fn, pk, sk, n_ky, phan = x
+            dest = goc.joinpath(*phan, fn)
+            if dest.is_file() and dest.stat().st_size == n_ky:
+                return x, str(dest), None
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            part = dest.with_name(dest.name + ".part")
+            try:
+                h = hashlib.sha256()
+                body = s3.get_object(Bucket=bucket, Key=sk)["Body"]
+                with open(part, "wb") as f:
+                    for chunk in iter(lambda: body.read(1 << 20), b""):
+                        f.write(chunk)
+                        h.update(chunk)
+                if part.stat().st_size != n_ky:
+                    raise RuntimeError(f"kích thước {part.stat().st_size} ≠ kho {n_ky}")
+                h2 = hashlib.sha256()
+                with open(part, "rb") as f:
+                    for chunk in iter(lambda: f.read(1 << 20), b""):
+                        h2.update(chunk)
+                if h2.hexdigest() != h.hexdigest():
+                    raise RuntimeError("đọc lại từ ổ ngoài không khớp SHA-256")
+                part.replace(dest)
+                return x, str(dest), None
+            except Exception as e:  # noqa: BLE001
+                try:
+                    part.unlink()
+                except OSError:
+                    pass
+                return x, None, str(e)
+
+        xong = loi = 0
+        t0 = time.time()
+        with ThreadPoolExecutor(max_workers=max(1, a.luong)) as ex:
+            for fut in as_completed([ex.submit(tai, x) for x in thieu]):
+                x, dest, err = fut.result()
+                did, rel, fn, pk, sk, n_ky, phan = x
+                if err:
+                    loi += 1
+                    bo["tải bản ký ra ổ ngoài lỗi"] += 1
+                    print(f"  LỖI {rel}/{fn}: {err}", flush=True)
+                else:
+                    xong += 1
+                    duoc.append((did, rel, fn, pk, kho[pk][0], kho[pk][1], sk, n_ky, dest))
+                if (xong + loi) % 500 == 0:
+                    print(f"  đã tải {xong:,} (lỗi {loi}) sau {int(time.time() - t0)} s", flush=True)
+        print(f"Tải xong: {xong:,} bản ký, lỗi {loi}.", flush=True)
 
     tong = sum(x[4] for x in duoc)
     print(f"Đủ điều kiện xoá: {len(duoc):,} PDF/A ({tong / 1e9:,.1f} GB). Bỏ qua: {dict(bo) or 0}")
