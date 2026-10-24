@@ -56,6 +56,9 @@ def main() -> int:
     ap.add_argument("--that", action="store_true", help="xoá thật (mặc định chỉ chạy thử)")
     ap.add_argument("--tai-ve", action="store_true", help="tải bản ký còn thiếu từ kho ra ổ ngoài trước khi đối chiếu")
     ap.add_argument("--luong", type=int, default=4, help="số luồng tải (--tai-ve)")
+    ap.add_argument("--ca-da-chuyen", action="store_true",
+                    help="với --tai-ve: tải bản ký cả cho tài liệu PDF/A đã chuyển ra ngoài (pdfa_offloaded_at có giá trị) — "
+                         "dùng khi bản PDF/A bị xoá trước lúc tải bản ký (24/10/2026)")
     ap.add_argument("--da-doi-chieu", action="store_true",
                     help="ổ ngoài không cắm vào máy chủ: dùng kết quả đối chiếu trước (16/10 10:45: 160.375/160.375 bản ký khớp) — "
                          "chỉ kiểm bản ký còn trong kho")
@@ -71,7 +74,8 @@ def main() -> int:
         "SELECT d.id, COALESCE(d.rel_path,''), d.filename, COALESCE(d.pdfa_key,''), "
         "COALESCE((SELECT s.signed_key FROM sign_sessions s WHERE s.document_id = d.id AND s.status = 'signed' "
         "AND s.signed_key IS NOT NULL ORDER BY s.updated_at DESC LIMIT 1), '') "
-        f"FROM documents d WHERE d.project_id = '{pid}' AND d.status = 'signed' AND d.pdfa_offloaded_at IS NULL"
+        f"FROM documents d WHERE d.project_id = '{pid}' AND d.status = 'signed'"
+        + ("" if a.ca_da_chuyen else " AND d.pdfa_offloaded_at IS NULL")
     )
     print(f"{a.du_an}: {len(docs):,} tài liệu đã ký, chưa chuyển PDF/A.")
 
@@ -103,13 +107,19 @@ def main() -> int:
     duoc, bo = [], defaultdict(int)
     thieu: list[tuple] = []
     for did, rel, fn, pk, sk in docs:
-        if not pk or pk not in kho:
-            bo["PDF/A không còn trong kho"] += 1
-            continue
         if not sk or sk not in kho:
             bo["bản ký không có trong kho"] += 1
             continue
         n_ky = kho[sk][0]
+        if not pk or pk not in kho:
+            if a.tai_ve and a.ca_da_chuyen:
+                phan = [x for x in rel.replace("\\", "/").split("/") if x.strip()]
+                dest = goc.joinpath(*phan, fn)
+                if not (dest.is_file() and dest.stat().st_size == n_ky):
+                    thieu.append((did, rel, fn, "", sk, n_ky, phan))
+            else:
+                bo["PDF/A không còn trong kho"] += 1
+            continue
         phan = [x for x in rel.replace("\\", "/").split("/") if x.strip()]
         ung_vien = ["/".join(phan + [fn]), "/".join([long] + phan + [fn]), "/".join(phan[:3] + [fn]), "/".join([long] + phan[:3] + [fn])]
         tim = None
@@ -180,7 +190,8 @@ def main() -> int:
                     print(f"  LỖI {rel}/{fn}: {err}", flush=True)
                 else:
                     xong += 1
-                    duoc.append((did, rel, fn, pk, kho[pk][0], kho[pk][1], sk, n_ky, dest))
+                    if pk and pk in kho:
+                        duoc.append((did, rel, fn, pk, kho[pk][0], kho[pk][1], sk, n_ky, dest))
                 if (xong + loi) % 500 == 0:
                     print(f"  đã tải {xong:,} (lỗi {loi}) sau {int(time.time() - t0)} s", flush=True)
         print(f"Tải xong: {xong:,} bản ký, lỗi {loi}.", flush=True)
