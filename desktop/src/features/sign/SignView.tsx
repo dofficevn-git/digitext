@@ -89,6 +89,9 @@ export default function V4qy() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [paused, setPaused] = useState(false);
+  // Đồng hồ "Đã chạy" trừ thời gian tạm dừng (24/10/2026): mốc bắt đầu tạm dừng + tổng đã tạm dừng.
+  const tamDungTu = useRef<number | null>(null);
+  const tongTamDung = useRef(0);
   const [loi, setLoi] = useState<LoiKy[]>([]);
   const [nhatKy, setNhatKy] = useState<DongNhatKy[]>([]);
   const taiVe = useRef<Promise<void>>(Promise.resolve());
@@ -297,6 +300,8 @@ export default function V4qy() {
     setStartedAt(Date.now());
     setNow(Date.now());
     setPaused(false);
+    tamDungTu.current = null;
+    tongTamDung.current = 0;
     setLoi([]);
     setKetQua(null);
     ghi(`Bắt đầu: ${nhan.toLowerCase()} ${jobIds.length} tài liệu.`);
@@ -382,7 +387,7 @@ export default function V4qy() {
     });
     if (!ok) return;
     huyRef.current = true;
-    ghi("Huỷ lô: dừng ký, đưa các tệp đã ký trong lô về chưa ký…", "err");
+    ghi("Huỷ lô: dừng ký (kể cả đang chờ máy chủ), đưa các tệp đã ký trong lô về chưa ký…", "err");
     await signBatchCancel();
   };
 
@@ -390,7 +395,12 @@ export default function V4qy() {
     const moi = !paused;
     await signBatchPause(moi);
     setPaused(moi);
-    ghi(moi ? "Tạm dừng, ký xong tệp đang dở thì chờ." : "Tiếp tục ký.");
+    if (moi) tamDungTu.current = Date.now();
+    else if (tamDungTu.current != null) {
+      tongTamDung.current += Date.now() - tamDungTu.current;
+      tamDungTu.current = null;
+    }
+    ghi(moi ? "Tạm dừng: ký xong tệp đang dở thì chờ; đang chờ máy chủ thì cũng ngừng thử lại." : "Tiếp tục ký.");
   };
 
   const kyLaiLoi = async () => {
@@ -429,7 +439,7 @@ export default function V4qy() {
     return tot;
   }, [jobs]);
   const running = busy === "batch";
-  const elapsed = startedAt ? now - startedAt : 0;
+  const elapsed = startedAt ? Math.max(0, now - startedAt - tongTamDung.current - (tamDungTu.current != null ? now - tamDungTu.current : 0)) : 0;
   const eta = batch && batch.done > 0 && batch.done < batch.total ? (elapsed / batch.done) * (batch.total - batch.done) : null;
   const khoaForm = busy !== null;
 

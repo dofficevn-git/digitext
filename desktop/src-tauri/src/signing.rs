@@ -394,6 +394,25 @@ const BATCH_PARALLEL: usize = 3;
 const THU_LAI_GIAY: [u64; 10] = [2, 5, 10, 20, 30, 60, 60, 60, 60, 60];
 /// Sự kiện "đang chờ máy chủ / mạng" để màn Ký số ghi nhật ký trong lúc thử lại (không tính là lỗi).
 const EV_WAIT: &str = "sign://wait";
+/// Chờ trước khi thử lại, nhưng nghe lệnh người dùng (24/10/2026): "Huỷ" → thoát ngay với lỗi "người dùng dừng";
+/// "Tạm dừng" → đứng yên không đếm, không gửi lại cho tới khi bấm Tiếp tục. Trước đây `tokio::time::sleep` ngủ trọn
+/// 2–60 s rồi vẫn gửi tiếp dù đã bấm Huỷ, nên lô "huỷ rồi mà vẫn chạy" tới 6 phút.
+async fn cho_thu_lai(giay: u64) -> Result<(), String> {
+    use std::sync::atomic::Ordering::SeqCst;
+    let mut con = giay * 4;
+    loop {
+        if BATCH_CANCEL.load(SeqCst) {
+            return Err("người dùng dừng".into());
+        }
+        if !BATCH_PAUSE.load(SeqCst) {
+            if con == 0 {
+                return Ok(());
+            }
+            con -= 1;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    }
+}
 /// Lỗi đường truyền tạm thời → `Ok(Err(..))` (thử lại được); lỗi thật của máy chủ giữ nguyên `Err`.
 fn tach_loi_tam<T>(r: Result<T, client::ClientError>) -> Result<Result<T, String>, client::ClientError> {
     match r {
@@ -494,7 +513,7 @@ pub async fn sign_batch(
                     Err(e) if lan < THU_LAI_GIAY.len() => {
                         tracing::warn!(job = %job_id, error = %e, lan, "sign_batch: begin lỗi đường truyền — thử lại");
                         let _ = app_ref.emit(EV_WAIT, format!("Máy chủ/mạng chưa phản hồi ({e}) — thử lại sau {} giây", THU_LAI_GIAY[lan]));
-                        tokio::time::sleep(std::time::Duration::from_secs(THU_LAI_GIAY[lan])).await;
+                        cho_thu_lai(THU_LAI_GIAY[lan]).await?;
                         lan += 1;
                     }
                     Err(e) => return Err(e),
@@ -520,7 +539,8 @@ pub async fn sign_batch(
                     Ok(Err(e)) if lan < THU_LAI_GIAY.len() => {
                         tracing::warn!(job = %job_id, error = %e, lan, "sign_batch: complete lỗi đường truyền — thử lại");
                         let _ = app_ref.emit(EV_WAIT, format!("Máy chủ/mạng chưa phản hồi ({e}) — thử lại sau {} giây", THU_LAI_GIAY[lan]));
-                        tokio::time::sleep(std::time::Duration::from_secs(THU_LAI_GIAY[lan])).await;
+                        // Đã có chữ ký trong tay: huỷ ở đây thì phiên trên máy chủ vẫn mở, "Huỷ lô" sẽ trả về chưa ký.
+                        cho_thu_lai(THU_LAI_GIAY[lan]).await?;
                         lan += 1;
                     }
                     Ok(Err(e)) => return Err(e),
@@ -556,6 +576,11 @@ pub async fn sign_batch(
         }
         if inflight.is_empty() {
             if stop.is_some() || next >= total {
+                break;
+            }
+            // Đang tạm dừng (không còn tài liệu dở): nghe Huỷ để thoát ngay.
+            if BATCH_CANCEL.load(std::sync::atomic::Ordering::SeqCst) {
+                stop = Some("người dùng dừng".into());
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
