@@ -188,16 +188,23 @@ export default function PackFromServer() {
     const co = new Set(trongPhong.map((r) => khoaHoSo(r.hop, r.hoSo)));
     return mucLuc.dongs.filter((d) => !co.has(khoaHoSo(d.hop, d.hoSo)));
   }, [mucLuc, trongPhong]);
-  const nhapMucLuc = async (files: FileList | null) => {
-    if (!files?.length || !phong) return;
+  const nhapMucLuc = async (files: File[]) => {
+    if (!phong) {
+      toast.error("Chọn phông trước rồi mới nhập mục lục.");
+      return;
+    }
+    if (files.length === 0) {
+      toast.error("Chưa chọn tệp Excel nào.");
+      return;
+    }
     setDocMl(true);
     try {
       let ml = mucLuc;
-      for (const f of Array.from(files)) {
+      for (const f of files) {
         const pt = await docMucLucTuBuffer(await f.arrayBuffer(), f.name, THBQ_DANH_MUC, ["Vĩnh viễn"]);
         const dongs = pt.rows.filter((r) => r.hoSoSo).map(rutGon);
         if (dongs.length === 0) {
-          toast.error(`${f.name}: không thấy dòng hồ sơ nào`, { detail: pt.vanDe[0]?.noiDung });
+          toast.error(`${f.name}: không thấy dòng hồ sơ nào`, { detail: pt.vanDe[0]?.noiDung ?? "Cần dòng tiêu đề cột Hộp số · Hồ sơ số · Tiêu đề hồ sơ · Thời gian BĐ - KT trong 15 dòng đầu." });
           continue;
         }
         ml = gopMucLuc(ml, f.name, dongs);
@@ -287,7 +294,7 @@ export default function PackFromServer() {
         <span className="flex-1" />
         {phong && (
           <>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.xlsm" multiple hidden aria-hidden onChange={(e) => { const fs = e.target.files; e.target.value = ""; void nhapMucLuc(fs); }} />
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.xlsm" multiple hidden aria-hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; void nhapMucLuc(fs); }} />
             <Tip text="Tệp Mục lục hồ sơ (Hộp số · Hồ sơ số · Tiêu đề · Thời gian · Số tờ · THBQ). Ghép theo số hộp + số hồ sơ; chọn thêm tệp thứ hai (vĩnh viễn / có thời hạn) thì gộp.">
               <Button size="sm" icon="nhapTep" loading={docMl} onClick={() => fileRef.current?.click()}>
                 {mucLuc ? "Thêm mục lục" : "Nhập mục lục Excel"}
