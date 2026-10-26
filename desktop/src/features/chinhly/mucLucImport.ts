@@ -179,6 +179,9 @@ export function timTieuDeCot(rows: unknown[][]): { dong: number; cot: CotMap } |
 
 const RE_PHONG_BAN = /^\s*([IVXLCDM]+)\s*[.\-)]\s*(.+)$/;
 const RE_MANG = /^\s*(\d+)\s*[.\-)]\s*(.+)$/;
+/** Mục nhỏ trong mảng: "1.1 Văn bản đi", "2.3.1 …" — anh Hiếu 26/10/2026: coi là một phần của mảng lớn phía trên,
+ *  không phải mảng mới (trước đây RE_MANG bắt "1.1 …" thành mảng 1 → báo "Mảng 1. lặp lại"). */
+const RE_MANG_CON = /^\s*\d+(?:\s*\.\s*\d+)+\s*[.\-)]?\s*\S/;
 const RE_DONG_DANH_SO = /^\(?\s*-?\d{1,2}\s*\)?$/;
 
 // ------------------------------------------------------------------ phân tích (thuần)
@@ -250,6 +253,8 @@ export function phanTichMucLuc(rows: unknown[][], opts: { tenTep: string; sheet:
         out.phongBans.push(pbHienTai);
         continue;
       }
+      // "1.1 …" là mục nhỏ trong mảng hiện tại → bỏ qua dòng, hồ sơ phía dưới vẫn thuộc mảng đó.
+      if (RE_MANG_CON.test(tieuDe)) continue;
       m = RE_MANG.exec(tieuDe);
       if (m) {
         if (!pbHienTai) {
