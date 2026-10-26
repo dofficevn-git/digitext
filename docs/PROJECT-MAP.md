@@ -433,6 +433,7 @@ Node có bậc cao nhất — sửa vào đây là lan rộng nhất:
 | `V4p9` (ScanView) | 236 | [desktop/src/features/scan/ScanView.tsx](../desktop/src/features/scan/ScanView.tsx) |
 | `invoke` | 208 | cầu nối Tauri IPC |
 | `SoHoaPane` | 201 | màn hình số hoá |
+| `package/PackFromServer` | 385 | Đóng gói › Từ hồ sơ (26/10/2026): phông/hộp/hồ sơ từ `docs_review_summary` của dự án đang chọn — mỗi thư mục đẩy lên là một phông; thay SoHoaPane(donggoi) vốn đọc bảng `phong` cục bộ không phân dự án |
 | `LapHoSoView` | 192 | lập hồ sơ |
 | `KhaiThacView` | 191 | khai thác |
 | `data_collect` | 188 | phía Tauri |
