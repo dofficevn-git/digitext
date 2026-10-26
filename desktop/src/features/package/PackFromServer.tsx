@@ -32,6 +32,13 @@ const khoaSo = (s: string | null | undefined): string => {
   return m ? String(Number(m[1])) : (s ?? "").trim().toLowerCase();
 };
 const khoaHoSo = (hop: string | null | undefined, hoSo: string | null | undefined) => `${khoaSo(hop)}|${khoaSo(hoSo)}`;
+/** Mã hồ sơ suy từ tên tệp theo mẫu <mã hồ sơ>.<tt văn bản>.<tt tệp>.pdf (H05.13.24.01.1998.31.01.0000033.pdf →
+ *  H05.13.24.01.1998.31); chấp nhận dấu phẩy gõ nhầm thay dấu chấm. Dùng khi tên tệp trên máy chủ không có trong Excel
+ *  (số thứ tự tệp bị đánh lại) nhưng Excel vẫn có hồ sơ đó. */
+function maTuTenTep(t: string): string | null {
+  const m = /^(.+?)[.,]\d{2}[.,]\d{6,8}\.pdf$/i.exec(t.replace(/,/g, "."));
+  return m ? m[1].toUpperCase() : null;
+}
 /** Tên THBQ → mã thời hạn bảo quản TT02: 01 vĩnh viễn, 02 70 năm, 03 50, 04 30, 05 20, 06 10, 07 khác. */
 function maintenanceOf(thbq: string): string {
   const t = thbq.toLowerCase();
@@ -69,6 +76,8 @@ export interface DongMucLuc {
   soTepKhop?: number;
   /** Metadata phẳng: tệp trong cùng thư mục nhưng Excel ghi mã hồ sơ khác (thường là dòng gõ lệch). */
   maKhac?: { ma: string; soTep: number }[];
+  /** Metadata phẳng: số tệp khớp nhờ mã suy từ tên tệp (tên tệp trên máy chủ không có trong Excel). */
+  soTepSuyMa?: number;
   /** Hồ sơ Excel không thành gói riêng: lý do (nằm trong thư mục nào). */
   lyDo?: string;
 }
@@ -231,14 +240,25 @@ export default function PackFromServer() {
     const md = docMetadataPhang(rows, dongTieuDe);
     const tepNhom = await napTepNhom();
     const theoMa = new Map(md.hoSos.map((h) => [h.maHoSo, h]));
+    const maHoa = new Map(md.hoSos.map((h) => [h.maHoSo.toUpperCase(), h.maHoSo]));
     const daDung = new Set<string>();
     const lyDoKhac = new Map<string, string>();
     const dongs: DongMucLuc[] = [];
     for (const r of trongPhong) {
       const tep = tepNhom.get(idOf(r)) ?? [];
       const dem = new Map<string, number>();
+      let suyMa = 0;
       for (const t of tep) {
-        const ma = md.tepToiHoSo.get(t);
+        let ma = md.tepToiHoSo.get(t);
+        if (!ma) {
+          // Tên tệp không có trong Excel: thử mã hồ sơ suy từ tên tệp.
+          const suy = maTuTenTep(t);
+          const ma2 = suy ? maHoa.get(suy) : undefined;
+          if (ma2) {
+            ma = ma2;
+            suyMa += 1;
+          }
+        }
         if (ma) dem.set(ma, (dem.get(ma) ?? 0) + 1);
       }
       if (dem.size === 0) continue;
@@ -250,7 +270,7 @@ export default function PackFromServer() {
       daDung.add(ma);
       const maKhac = xep.slice(1).map(([m, k]) => ({ ma: m, soTep: k }));
       for (const { ma: m } of maKhac) lyDoKhac.set(m, `${r.hop || "—"} / ${r.hoSo || "—"} (mã chính ${ma})`);
-      dongs.push({ hop: r.hop, hoSo: r.hoSo, tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, maGocGiay: h.maGocGiay, soTep: tep.length, soTepKhop: khop, maKhac: maKhac.length ? maKhac : undefined });
+      dongs.push({ hop: r.hop, hoSo: r.hoSo, tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, maGocGiay: h.maGocGiay, soTep: tep.length, soTepKhop: khop, maKhac: maKhac.length ? maKhac : undefined, soTepSuyMa: suyMa || undefined });
     }
     const khongTep = md.hoSos
       .filter((h) => !daDung.has(h.maHoSo))
@@ -340,7 +360,14 @@ export default function PackFromServer() {
                       <Badge tone="warn" className="ml-1.5">{`${n(d.soTep! - d.soTepKhop!)} tệp Excel ghi mã khác`}</Badge>
                     </Tip>
                   ) : d.soTep != null && d.soTepKhop != null && d.soTepKhop < d.soTep ? (
-                    <Badge tone="warn" className="ml-1.5">{`${n(d.soTep - d.soTepKhop)} tệp không có trong Excel`}</Badge>
+                    <Tip text="Tên tệp này không có trong Excel và cũng không suy được mã hồ sơ từ tên. Gói vẫn lấy đủ tệp trong thư mục.">
+                      <Badge tone="warn" className="ml-1.5">{`${n(d.soTep - d.soTepKhop)} tệp không có trong Excel`}</Badge>
+                    </Tip>
+                  ) : null}
+                  {d.soTepSuyMa ? (
+                    <Tip text="Tên tệp trên máy chủ khác Excel (thường do số thứ tự tệp đánh lại) nhưng mã hồ sơ trong tên tệp có trong Excel nên vẫn ghép được.">
+                      <Badge tone="info" className="ml-1.5">{`${n(d.soTepSuyMa)} tệp ghép theo mã`}</Badge>
+                    </Tip>
                   ) : null}
                 </span>
               );
