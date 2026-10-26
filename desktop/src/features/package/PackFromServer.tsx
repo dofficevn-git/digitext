@@ -6,9 +6,12 @@
 // Nhập mục lục Excel (26/10/2026): tệp "Mục lục hồ sơ" (Hộp số · Hồ sơ số · Tiêu đề · Thời gian · Số tờ · THBQ, cùng
 // mẫu màn Chỉnh lý) ghép với hồ sơ trên máy chủ theo số hộp + số hồ sơ trong phông đã chọn → gói mang tiêu đề, thời
 // gian, số tờ, THBQ thật thay vì tên thư mục. Mục lục đã ghép được nhớ theo dự án + phông (localStorage).
+// Hai mẫu Excel: (1) Mục lục hồ sơ → ghép theo số hộp + số hồ sơ; (2) Metadata phẳng (Metadata-<PHÔNG>.xlsx, mỗi dòng
+// một văn bản, "Mã lưu trữ tài liệu" = tên tệp) → ghép theo TÊN TỆP trên máy chủ, lấy luôn mã hồ sơ / mã phông.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { docMucLucTuBuffer, type DongHoSo } from "@/features/chinhly/mucLucImport";
+import { phanTichMucLuc, type DongHoSo } from "@/features/chinhly/mucLucImport";
+import { docLuoiExcel, docMetadataPhang, laMetadataPhang } from "./metadataPhang";
 import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
 import { docsForGroups, docsReviewSummary, type ReviewSummaryRow, type V4ej } from "@/api/docs";
@@ -36,10 +39,15 @@ function maintenanceOf(thbq: string): string {
   for (const [nam, ma] of [["70", "02"], ["50", "03"], ["30", "04"], ["20", "05"], ["10", "06"]] as const) if (new RegExp(`\\b${nam}\\b`).test(t)) return ma;
   return "07";
 }
-/** dd/mm/yyyy → yyyy-mm-dd (TT02 dùng ngày ISO); không đúng dạng thì giữ nguyên. */
-function isoNgay(s: string): string {
-  const m = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(s ?? "");
-  return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : (s ?? "").trim();
+/** dd/mm/yyyy → yyyy-mm-dd (TT02 dùng ngày ISO); chỉ có năm → đầu/cuối năm; không đúng dạng thì giữ nguyên. */
+function isoNgay(s: string, cuoi = false): string {
+  const t = (s ?? "").trim();
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  m = /^(\d{1,2})\/(\d{4})$/.exec(t);
+  if (m) return `${m[2]}-${m[1].padStart(2, "0")}-${cuoi ? "28" : "01"}`;
+  if (/^\d{4}$/.test(t)) return cuoi ? `${t}-12-31` : `${t}-01-01`;
+  return t;
 }
 const THBQ_DANH_MUC = ["Vĩnh viễn", "70 năm", "50 năm", "30 năm", "20 năm", "10 năm", "5 năm"];
 
@@ -53,13 +61,24 @@ export interface DongMucLuc {
   soTo: string;
   thbq: string;
   dong: number;
+  /** Metadata phẳng: mã hồ sơ (H05.13.24.01.2005.01) → dùng làm Fondcode.hồ sơ trong gói. */
+  maHoSo?: string;
+  maGocGiay?: string;
+  /** Metadata phẳng: số tệp trên máy chủ của hồ sơ này và số tệp có tên trong Excel. */
+  soTep?: number;
+  soTepKhop?: number;
 }
 export interface MucLucDaNhap {
   ten: string;
   luc: string;
+  loai?: "mucluc" | "phang";
   dongs: DongMucLuc[];
   /** Khoá hộp|hồ sơ bị trùng trong tệp (lấy dòng đầu). */
   trung: string[];
+  /** Metadata phẳng: hồ sơ trong Excel không có tệp nào trên máy chủ. */
+  khongTep?: DongMucLuc[];
+  fondCode?: string;
+  fondName?: string;
 }
 function rutGon(r: DongHoSo): DongMucLuc {
   return { hop: r.hopSo, hoSo: r.hoSoSo, tieuDe: r.tieuDe, batDau: r.tg.batDau, ketThuc: r.tg.ketThuc, soTo: r.soTo, thbq: (r.thbq ?? r.thbqGoc).trim(), dong: r.dong };
@@ -185,9 +204,47 @@ export default function PackFromServer() {
   const soKhop = useMemo(() => trongPhong.filter((r) => mlTheoKhoa.has(khoaHoSo(r.hop, r.hoSo))).length, [trongPhong, mlTheoKhoa]);
   const dongThieuTep = useMemo(() => {
     if (!mucLuc) return [];
+    if (mucLuc.loai === "phang") return mucLuc.khongTep ?? [];
     const co = new Set(trongPhong.map((r) => khoaHoSo(r.hop, r.hoSo)));
     return mucLuc.dongs.filter((d) => !co.has(khoaHoSo(d.hop, d.hoSo)));
   }, [mucLuc, trongPhong]);
+  // Tên tệp từng hồ sơ trên máy chủ (nạp một lần mỗi phông khi ghép metadata phẳng).
+  const tepNhomRef = useRef<{ phong: string; map: Map<string, string[]> } | null>(null);
+  const napTepNhom = async (): Promise<Map<string, string[]>> => {
+    if (tepNhomRef.current?.phong === `${projectId}|${phong}`) return tepNhomRef.current.map;
+    const all = await docsForGroups(trongPhong.map((r) => ({ projectId: r.projectId, phong: r.phong, hop: r.hop, hoSo: r.hoSo })));
+    const map = new Map<string, string[]>();
+    for (const d of all) {
+      if (d.status === "disposed") continue;
+      const k = reviewKeyOf(d);
+      map.set(k, [...(map.get(k) ?? []), d.filename.toLowerCase()]);
+    }
+    tepNhomRef.current = { phong: `${projectId}|${phong}`, map };
+    return map;
+  };
+  /** Metadata phẳng → một dòng cho mỗi hồ sơ trên máy chủ: mã hồ sơ chiếm đa số tệp. */
+  const ghepPhang = async (ten: string, rows: unknown[][], dongTieuDe: number): Promise<MucLucDaNhap> => {
+    const md = docMetadataPhang(rows, dongTieuDe);
+    const tepNhom = await napTepNhom();
+    const theoMa = new Map(md.hoSos.map((h) => [h.maHoSo, h]));
+    const daDung = new Set<string>();
+    const dongs: DongMucLuc[] = [];
+    for (const r of trongPhong) {
+      const tep = tepNhom.get(idOf(r)) ?? [];
+      const dem = new Map<string, number>();
+      for (const t of tep) {
+        const ma = md.tepToiHoSo.get(t);
+        if (ma) dem.set(ma, (dem.get(ma) ?? 0) + 1);
+      }
+      if (dem.size === 0) continue;
+      const [ma, khop] = [...dem.entries()].sort((a, b) => b[1] - a[1])[0];
+      const h = theoMa.get(ma)!;
+      daDung.add(ma);
+      dongs.push({ hop: r.hop, hoSo: r.hoSo, tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, maGocGiay: h.maGocGiay, soTep: tep.length, soTepKhop: khop });
+    }
+    const khongTep = md.hoSos.filter((h) => !daDung.has(h.maHoSo)).map((h) => ({ hop: "", hoSo: "", tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, soTep: h.tep.length }));
+    return { ten, luc: new Date().toISOString(), loai: "phang", dongs, trung: [], khongTep, fondCode: md.fondCode, fondName: md.fondName };
+  };
   const nhapMucLuc = async (files: File[]) => {
     if (!phong) {
       toast.error("Chọn phông trước rồi mới nhập mục lục.");
@@ -199,22 +256,35 @@ export default function PackFromServer() {
     }
     setDocMl(true);
     try {
-      let ml = mucLuc;
+      let ml = mucLuc?.loai === "phang" ? null : mucLuc;
       for (const f of files) {
-        const pt = await docMucLucTuBuffer(await f.arrayBuffer(), f.name, THBQ_DANH_MUC, ["Vĩnh viễn"]);
+        const { sheet, rows: luoi } = await docLuoiExcel(await f.arrayBuffer());
+        const iPhang = laMetadataPhang(luoi);
+        if (iPhang >= 0) {
+          // Metadata phẳng: thay hẳn mục lục cũ của phông (ghép theo tên tệp, không gộp với mẫu mục lục).
+          const kq = await ghepPhang(f.name, luoi, iPhang);
+          ml = kq;
+          const soTepKhop = kq.dongs.reduce((a, d) => a + (d.soTepKhop ?? 0), 0);
+          const tong = kq.dongs.length + (kq.khongTep?.length ?? 0);
+          toast.success(`Metadata ${n(tong)} hồ sơ: khớp ${n(kq.dongs.length)}/${n(trongPhong.length)} hồ sơ trên máy chủ (${n(soTepKhop)} tệp cùng tên).`, {
+            description: kq.khongTep?.length ? `${n(kq.khongTep.length)} hồ sơ trong Excel chưa có tệp nào trên máy chủ.` : undefined,
+          });
+          continue;
+        }
+        const pt = phanTichMucLuc(luoi, { tenTep: f.name, sheet, thbqDanhMuc: THBQ_DANH_MUC, thbqVinhVien: ["Vĩnh viễn"] });
         const dongs = pt.rows.filter((r) => r.hoSoSo).map(rutGon);
         if (dongs.length === 0) {
           toast.error(`${f.name}: không thấy dòng hồ sơ nào`, { detail: pt.vanDe[0]?.noiDung ?? "Cần dòng tiêu đề cột Hộp số · Hồ sơ số · Tiêu đề hồ sơ · Thời gian BĐ - KT trong 15 dòng đầu." });
           continue;
         }
-        ml = gopMucLuc(ml, f.name, dongs);
+        ml = gopMucLuc(ml?.loai === "phang" ? null : ml, f.name, dongs);
+        const co = new Set(trongPhong.map((r) => khoaHoSo(r.hop, r.hoSo)));
+        const khop = ml.dongs.filter((d) => co.has(khoaHoSo(d.hop, d.hoSo))).length;
+        toast.success(`Mục lục ${n(ml.dongs.length)} hồ sơ, khớp ${n(khop)}/${n(trongPhong.length)} hồ sơ trên máy chủ.`, { description: ml.trung.length ? `${n(ml.trung.length)} cặp hộp/hồ sơ trùng trong tệp, lấy dòng đầu.` : undefined });
       }
       if (ml) {
         setMucLuc(ml);
         luuMucLuc(projectId, phong, ml);
-        const co = new Set(trongPhong.map((r) => khoaHoSo(r.hop, r.hoSo)));
-        const khop = ml.dongs.filter((d) => co.has(khoaHoSo(d.hop, d.hoSo))).length;
-        toast.success(`Mục lục ${n(ml.dongs.length)} hồ sơ, khớp ${n(khop)} hồ sơ trên máy chủ.`, { description: ml.trung.length ? `${n(ml.trung.length)} cặp hộp/hồ sơ trùng trong tệp, lấy dòng đầu.` : undefined });
       }
     } catch (e) {
       notifyError(e, "đọc mục lục Excel");
@@ -248,7 +318,14 @@ export default function PackFromServer() {
             className: "whitespace-normal",
             cell: (r: ReviewSummaryRow) => {
               const d = mlCua(r);
-              return d ? <span title={`Dòng ${d.dong} · ${mucLuc.ten}`}>{d.tieuDe}</span> : <span className="text-warning-700">Chưa có trong mục lục</span>;
+              if (!d) return <span className="text-warning-700">Chưa có trong mục lục</span>;
+              return (
+                <span title={`Dòng ${d.dong} · ${mucLuc.ten}`}>
+                  {d.maHoSo && <span className="mr-1.5 font-mono text-xs text-fg-subtle">{d.maHoSo}</span>}
+                  {d.tieuDe}
+                  {d.soTep != null && d.soTepKhop != null && d.soTepKhop < d.soTep && <Badge tone="warn" className="ml-1.5">{`${n(d.soTepKhop)}/${n(d.soTep)} tệp có trong Excel`}</Badge>}
+                </span>
+              );
             },
           },
           { key: "tg", header: "Thời gian", width: 190, cell: (r: ReviewSummaryRow) => { const d = mlCua(r); return d ? [d.batDau, d.ketThuc].filter(Boolean).join(" – ") || "—" : ""; } },
@@ -313,9 +390,10 @@ export default function PackFromServer() {
       </div>
       {mucLuc && phong && (
         <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle bg-surface-sunken px-3 py-1.5 text-sm">
-          <Badge tone="info">Mục lục: {mucLuc.ten}</Badge>
+          <Badge tone="info">{mucLuc.loai === "phang" ? "Metadata" : "Mục lục"}: {mucLuc.ten}</Badge>
+          {mucLuc.fondCode && <Badge tone="gray">Mã phông {mucLuc.fondCode}</Badge>}
           <span>
-            {n(mucLuc.dongs.length)} dòng · khớp <b>{n(soKhop)}</b>/{n(trongPhong.length)} hồ sơ trên máy chủ
+            {n(mucLuc.dongs.length + (mucLuc.khongTep?.length ?? 0))} hồ sơ trong Excel · khớp <b>{n(soKhop)}</b>/{n(trongPhong.length)} hồ sơ trên máy chủ
             {dongThieuTep.length ? <> · <button type="button" className="text-fg-link hover:underline" onClick={() => setXemThieu(true)}>{n(dongThieuTep.length)} dòng mục lục không có tệp</button></> : null}
             {mucLuc.trung.length ? ` · ${n(mucLuc.trung.length)} cặp hộp/hồ sơ trùng trong tệp` : ""}
           </span>
@@ -329,13 +407,13 @@ export default function PackFromServer() {
         </div>
       )}
       {xemThieu && (
-        <Dialog open onOpenChange={(o) => !o && setXemThieu(false)} title={`${n(dongThieuTep.length)} dòng mục lục không có tệp trên máy chủ`} description={`Phông ${phong}: hồ sơ ghi trong mục lục nhưng chưa thấy thư mục hộp/hồ sơ tương ứng đã đẩy lên.`} size="lg">
+        <Dialog open onOpenChange={(o) => !o && setXemThieu(false)} title={`${n(dongThieuTep.length)} hồ sơ trong Excel không có tệp trên máy chủ`} description={mucLuc?.loai === "phang" ? `Phông ${phong}: không tệp nào của các hồ sơ này trùng tên với tệp đã đẩy lên.` : `Phông ${phong}: hồ sơ ghi trong mục lục nhưng chưa thấy thư mục hộp/hồ sơ tương ứng đã đẩy lên.`} size="lg">
           <Table
             columns={[
               { key: "dong", header: "Dòng", width: 70, align: "right", cell: (d: DongMucLuc) => d.dong },
-              { key: "hop", header: "Hộp", width: 80, cell: (d: DongMucLuc) => d.hop },
-              { key: "hoSo", header: "Hồ sơ", width: 90, cell: (d: DongMucLuc) => d.hoSo },
+              { key: "ma", header: mucLuc?.loai === "phang" ? "Mã hồ sơ" : "Hộp · Hồ sơ", width: 200, cell: (d: DongMucLuc) => d.maHoSo || `${d.hop} · ${d.hoSo}` },
               { key: "tieuDe", header: "Tiêu đề", className: "whitespace-normal", cell: (d: DongMucLuc) => d.tieuDe },
+              { key: "soTep", header: "Tệp trong Excel", width: 120, align: "right", cell: (d: DongMucLuc) => (d.soTep != null ? n(d.soTep) : "") },
             ]}
             rows={dongThieuTep.slice(0, 500)}
             getRowId={(d) => String(d.dong)}
@@ -358,7 +436,7 @@ export default function PackFromServer() {
           empty: !phong ? { title: "Chọn phông để xem hồ sơ", description: "Mỗi thư mục đã đẩy lên máy chủ là một phông; bên trong là hộp, hồ sơ." } : { title: "Không có hồ sơ khớp bộ lọc" },
         }}
       />
-      {dialog && <PackServerDialog rows={daChon} mucLuc={mlTheoKhoa} projectId={projectId} projectLabel={proj.projectLabel || projectId} onClose={() => setDialog(false)} />}
+      {dialog && <PackServerDialog rows={daChon} mucLuc={mlTheoKhoa} excelFond={mucLuc ? { code: mucLuc.fondCode ?? "", name: mucLuc.fondName ?? "" } : undefined} projectId={projectId} projectLabel={proj.projectLabel || projectId} onClose={() => setDialog(false)} />}
     </Card>
   );
 }
@@ -369,15 +447,16 @@ interface KetQua {
   loi: string[];
 }
 
-function PackServerDialog({ rows, mucLuc, projectId, projectLabel, onClose }: { rows: ReviewSummaryRow[]; mucLuc: Map<string, DongMucLuc>; projectId: string; projectLabel: string; onClose: () => void }) {
+function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, onClose }: { rows: ReviewSummaryRow[]; mucLuc: Map<string, DongMucLuc>; excelFond?: { code: string; name: string }; projectId: string; projectLabel: string; onClose: () => void }) {
   const mlCua = (r: ReviewSummaryRow) => mucLuc.get(khoaHoSo(r.hop, r.hoSo));
   const soCoMl = rows.filter((r) => mlCua(r)).length;
   const [chiCoMl, setChiCoMl] = useState(soCoMl > 0 && soCoMl < rows.length);
   const dsPhong = useMemo(() => [...new Set(rows.map((r) => r.phong || CHUA_PHAN_LOAI))], [rows]);
   const motPhong = dsPhong.length === 1 ? dsPhong[0] : "";
   const [kind, setKind] = useState<V4sj>("aip_hoso");
-  const [fondCode, setFondCode] = useState(() => (motPhong ? nho(`pack.fondCode.${motPhong}`) || goiYMaPhong(motPhong) : ""));
-  const [fondName, setFondName] = useState(() => (motPhong ? nho(`pack.fondName.${motPhong}`) || motPhong : ""));
+  // Mã / tên phông: ưu tiên Excel metadata, rồi lần nhớ trước, rồi gợi ý từ tên thư mục.
+  const [fondCode, setFondCode] = useState(() => excelFond?.code || (motPhong ? nho(`pack.fondCode.${motPhong}`) || goiYMaPhong(motPhong) : ""));
+  const [fondName, setFondName] = useState(() => excelFond?.name || (motPhong ? nho(`pack.fondName.${motPhong}`) || motPhong : ""));
   const [orgCode, setOrgCode] = useState(() => nho("pack.archiveOrgCode"));
   const [orgName, setOrgName] = useState(() => nho("pack.archiveOrgName"));
   const [maintenance, setMaintenance] = useState("01");
@@ -441,15 +520,16 @@ function PackServerDialog({ rows, mucLuc, projectId, projectLabel, onClose }: { 
         archiveOrgCode: orgCode.trim(),
         fondName: fondName.trim() || r.phong,
         archiveOrgName: orgName.trim(),
-        fileCode: `${fondCode.trim()}.${hopSo}.${hsSo}`,
+        // Mã hồ sơ: theo Excel metadata nếu có (H05.13.24.01.2005.01), không thì <mã phông>.<hộp>.<hồ sơ>.
+        fileCode: ml?.maHoSo?.trim() || `${fondCode.trim()}.${hopSo}.${hsSo}`,
         title: tieuDe,
         // THBQ: theo dòng mục lục nếu có, không thì theo lựa chọn chung; SIP luôn vĩnh viễn.
         maintenance: kind.startsWith("sip") ? "01" : ml?.thbq ? maintenanceOf(ml.thbq) : maintenance,
         numberOfPaper: ml?.soTo ? String(Number(ml.soTo) || ml.soTo) : "",
         numberOfPage: String(ds.reduce((a, d) => a + (d.pageCount ?? 0), 0) || ""),
-        paperFileCode: `${hopSo}.${hsSo}`,
+        paperFileCode: ml?.maGocGiay?.trim() || ml?.maHoSo?.trim() || `${hopSo}.${hsSo}`,
         startDate: ml ? isoNgay(ml.batDau) : "",
-        endDate: ml ? isoNgay(ml.ketThuc) : "",
+        endDate: ml ? isoNgay(ml.ketThuc, true) : "",
         submissionAgreement: agreement,
         certTrichYeu: dip.certTrichYeu || tieuDe,
       };
@@ -592,8 +672,7 @@ function PackServerDialog({ rows, mucLuc, projectId, projectLabel, onClose }: { 
         <Table columns={cols} rows={rows} getRowId={idOf} maxHeight={300} dense />
       </div>
       <p className="mt-2 text-xs text-fg-subtle">
-        Mã hồ sơ trong gói ghi theo <b>mã phông.số hộp.số hồ sơ</b>.{" "}
-        {mucLuc.size ? "Tiêu đề, thời gian, số tờ, THBQ lấy từ dòng mục lục đã ghép." : "Chưa nhập mục lục Excel: tiêu đề hồ sơ lấy theo tên thư mục, không có thời gian và số tờ."}
+        {excelFond?.code ? <>Mã hồ sơ trong gói lấy đúng <b>Mã hồ sơ</b> trong Excel metadata; tiêu đề, thời gian, số tờ, THBQ cũng từ đó.</> : mucLuc.size ? <>Mã hồ sơ trong gói ghi theo <b>mã phông.số hộp.số hồ sơ</b>; tiêu đề, thời gian, số tờ, THBQ lấy từ dòng mục lục đã ghép.</> : <>Chưa nhập Excel: mã hồ sơ ghi theo <b>mã phông.số hộp.số hồ sơ</b>, tiêu đề theo tên thư mục, không có thời gian và số tờ.</>}
       </p>
     </Dialog>
   );
