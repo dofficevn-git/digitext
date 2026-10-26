@@ -64,9 +64,13 @@ export interface DongMucLuc {
   /** Metadata phẳng: mã hồ sơ (H05.13.24.01.2005.01) → dùng làm Fondcode.hồ sơ trong gói. */
   maHoSo?: string;
   maGocGiay?: string;
-  /** Metadata phẳng: số tệp trên máy chủ của hồ sơ này và số tệp có tên trong Excel. */
+  /** Metadata phẳng: số tệp trên máy chủ của hồ sơ này và số tệp mang đúng mã hồ sơ này trong Excel. */
   soTep?: number;
   soTepKhop?: number;
+  /** Metadata phẳng: tệp trong cùng thư mục nhưng Excel ghi mã hồ sơ khác (thường là dòng gõ lệch). */
+  maKhac?: { ma: string; soTep: number }[];
+  /** Hồ sơ Excel không thành gói riêng: lý do (nằm trong thư mục nào). */
+  lyDo?: string;
 }
 export interface MucLucDaNhap {
   ten: string;
@@ -228,6 +232,7 @@ export default function PackFromServer() {
     const tepNhom = await napTepNhom();
     const theoMa = new Map(md.hoSos.map((h) => [h.maHoSo, h]));
     const daDung = new Set<string>();
+    const lyDoKhac = new Map<string, string>();
     const dongs: DongMucLuc[] = [];
     for (const r of trongPhong) {
       const tep = tepNhom.get(idOf(r)) ?? [];
@@ -237,12 +242,19 @@ export default function PackFromServer() {
         if (ma) dem.set(ma, (dem.get(ma) ?? 0) + 1);
       }
       if (dem.size === 0) continue;
-      const [ma, khop] = [...dem.entries()].sort((a, b) => b[1] - a[1])[0];
+      // Mã chiếm nhiều tệp nhất; hoà thì ưu tiên mã đầy đủ (có năm 4 chữ số, không có ".."), rồi mã xuất hiện trước trong Excel.
+      const duDay = (ma: string) => (/\.\d{4}\./.test(ma) && !ma.includes("..") ? 1 : 0);
+      const xep = [...dem.entries()].sort((a, b) => b[1] - a[1] || duDay(b[0]) - duDay(a[0]) || (theoMa.get(a[0])?.dong ?? 0) - (theoMa.get(b[0])?.dong ?? 0));
+      const [ma, khop] = xep[0];
       const h = theoMa.get(ma)!;
       daDung.add(ma);
-      dongs.push({ hop: r.hop, hoSo: r.hoSo, tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, maGocGiay: h.maGocGiay, soTep: tep.length, soTepKhop: khop });
+      const maKhac = xep.slice(1).map(([m, k]) => ({ ma: m, soTep: k }));
+      for (const { ma: m } of maKhac) lyDoKhac.set(m, `${r.hop || "—"} / ${r.hoSo || "—"} (mã chính ${ma})`);
+      dongs.push({ hop: r.hop, hoSo: r.hoSo, tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, maGocGiay: h.maGocGiay, soTep: tep.length, soTepKhop: khop, maKhac: maKhac.length ? maKhac : undefined });
     }
-    const khongTep = md.hoSos.filter((h) => !daDung.has(h.maHoSo)).map((h) => ({ hop: "", hoSo: "", tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, soTep: h.tep.length }));
+    const khongTep = md.hoSos
+      .filter((h) => !daDung.has(h.maHoSo))
+      .map((h) => ({ hop: "", hoSo: "", tieuDe: h.tieuDe, batDau: h.batDau, ketThuc: h.ketThuc, soTo: h.soTo, thbq: h.thbq, dong: h.dong, maHoSo: h.maHoSo, soTep: h.tep.length, lyDo: lyDoKhac.get(h.maHoSo) ? `tệp nằm trong ${lyDoKhac.get(h.maHoSo)}` : "không tệp nào trùng tên trên máy chủ" }));
     return { ten, luc: new Date().toISOString(), loai: "phang", dongs, trung: [], khongTep, fondCode: md.fondCode, fondName: md.fondName };
   };
   const nhapMucLuc = async (files: File[]) => {
@@ -323,7 +335,13 @@ export default function PackFromServer() {
                 <span title={`Dòng ${d.dong} · ${mucLuc.ten}`}>
                   {d.maHoSo && <span className="mr-1.5 font-mono text-xs text-fg-subtle">{d.maHoSo}</span>}
                   {d.tieuDe}
-                  {d.soTep != null && d.soTepKhop != null && d.soTepKhop < d.soTep && <Badge tone="warn" className="ml-1.5">{`${n(d.soTepKhop)}/${n(d.soTep)} tệp có trong Excel`}</Badge>}
+                  {d.maKhac?.length ? (
+                    <Tip text={`Excel ghi mã khác cho ${n(d.soTep! - d.soTepKhop!)} tệp trong thư mục này: ${d.maKhac.map((k) => `${k.ma} (${n(k.soTep)} tệp)`).join(", ")}. Gói vẫn lấy đủ ${n(d.soTep!)} tệp theo mã chính; sửa mã trong Excel nếu đó là dòng gõ lệch.`}>
+                      <Badge tone="warn" className="ml-1.5">{`${n(d.soTep! - d.soTepKhop!)} tệp Excel ghi mã khác`}</Badge>
+                    </Tip>
+                  ) : d.soTep != null && d.soTepKhop != null && d.soTepKhop < d.soTep ? (
+                    <Badge tone="warn" className="ml-1.5">{`${n(d.soTep - d.soTepKhop)} tệp không có trong Excel`}</Badge>
+                  ) : null}
                 </span>
               );
             },
@@ -394,7 +412,7 @@ export default function PackFromServer() {
           {mucLuc.fondCode && <Badge tone="gray">Mã phông {mucLuc.fondCode}</Badge>}
           <span>
             {n(mucLuc.dongs.length + (mucLuc.khongTep?.length ?? 0))} hồ sơ trong Excel · khớp <b>{n(soKhop)}</b>/{n(trongPhong.length)} hồ sơ trên máy chủ
-            {dongThieuTep.length ? <> · <button type="button" className="text-fg-link hover:underline" onClick={() => setXemThieu(true)}>{n(dongThieuTep.length)} dòng mục lục không có tệp</button></> : null}
+            {dongThieuTep.length ? <> · <button type="button" className="text-fg-link hover:underline" onClick={() => setXemThieu(true)}>{mucLuc.loai === "phang" ? `${n(dongThieuTep.length)} mã hồ sơ Excel không thành gói riêng` : `${n(dongThieuTep.length)} dòng mục lục không có tệp`}</button></> : null}
             {mucLuc.trung.length ? ` · ${n(mucLuc.trung.length)} cặp hộp/hồ sơ trùng trong tệp` : ""}
           </span>
           <span className="flex-1" />
@@ -407,13 +425,14 @@ export default function PackFromServer() {
         </div>
       )}
       {xemThieu && (
-        <Dialog open onOpenChange={(o) => !o && setXemThieu(false)} title={`${n(dongThieuTep.length)} hồ sơ trong Excel không có tệp trên máy chủ`} description={mucLuc?.loai === "phang" ? `Phông ${phong}: không tệp nào của các hồ sơ này trùng tên với tệp đã đẩy lên.` : `Phông ${phong}: hồ sơ ghi trong mục lục nhưng chưa thấy thư mục hộp/hồ sơ tương ứng đã đẩy lên.`} size="lg">
+        <Dialog open onOpenChange={(o) => !o && setXemThieu(false)} title={mucLuc?.loai === "phang" ? `${n(dongThieuTep.length)} mã hồ sơ trong Excel không thành gói riêng` : `${n(dongThieuTep.length)} hồ sơ trong Excel không có tệp trên máy chủ`} description={mucLuc?.loai === "phang" ? `Phông ${phong}: mã hồ sơ này hoặc không có tệp trùng tên trên máy chủ, hoặc tệp của nó nằm chung thư mục với một mã khác (thường là dòng Excel gõ lệch mã).` : `Phông ${phong}: hồ sơ ghi trong mục lục nhưng chưa thấy thư mục hộp/hồ sơ tương ứng đã đẩy lên.`} size="xl">
           <Table
             columns={[
               { key: "dong", header: "Dòng", width: 70, align: "right", cell: (d: DongMucLuc) => d.dong },
               { key: "ma", header: mucLuc?.loai === "phang" ? "Mã hồ sơ" : "Hộp · Hồ sơ", width: 200, cell: (d: DongMucLuc) => d.maHoSo || `${d.hop} · ${d.hoSo}` },
               { key: "tieuDe", header: "Tiêu đề", className: "whitespace-normal", cell: (d: DongMucLuc) => d.tieuDe },
-              { key: "soTep", header: "Tệp trong Excel", width: 120, align: "right", cell: (d: DongMucLuc) => (d.soTep != null ? n(d.soTep) : "") },
+              { key: "soTep", header: "Tệp trong Excel", width: 110, align: "right", cell: (d: DongMucLuc) => (d.soTep != null ? n(d.soTep) : "") },
+              ...(mucLuc?.loai === "phang" ? [{ key: "lyDo", header: "Vì sao không thành gói riêng", className: "whitespace-normal text-sm", cell: (d: DongMucLuc) => d.lyDo ?? "" } as Column<DongMucLuc>] : []),
             ]}
             rows={dongThieuTep.slice(0, 500)}
             getRowId={(d) => String(d.dong)}
