@@ -1,12 +1,10 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Đóng gói theo tiêu chuẩn: Từ hồ sơ (chọn hồ sơ rồi đóng gói SIP / AIP / DIP) · Gói tin (theo dõi, tải về) ·
-// Nâng cao (form đầy đủ trường) · Từ kho ngoài (thư mục PDF + Excel) · Kiểm PDF/A.
+// Đóng gói theo tiêu chuẩn: Từ hồ sơ (phông / hộp / hồ sơ của dự án đang chọn trên máy chủ → SIP / AIP / DIP) ·
+// Gói tin (theo dõi, tải về) · Nâng cao (form đầy đủ trường) · Từ kho ngoài (thư mục PDF + Excel) · Kiểm PDF/A.
+// 26/10/2026: tab Từ hồ sơ thôi dùng danh mục hồ sơ cục bộ (không phân dự án) — xem PackFromServer.
 
-import { useCallback, useState } from "react";
-import { V41p } from "@/live/useLive";
-import { isTauri } from "@/api/ipc";
-import { V40w, type V40v } from "@/api/archive";
-import SoHoaPane from "@/features/dossier/SoHoaPane";
+import { useState } from "react";
+import PackFromServer from "./PackFromServer";
 import { PackageList } from "./PackFromDossiers";
 import V4sx from "./PackageView";
 import ExternalImportPanel from "./ExternalImportPanel";
@@ -18,13 +16,6 @@ type Tab = "hoso" | "goi" | "nangcao" | "ngoai" | "nhanh" | "pdfa" | "kiemgoi";
 
 export default function DongGoiView() {
   const [tab, setTab] = useState<Tab>("hoso");
-  const [phongs, setPhongs] = useState<V40v[]>([]);
-  const load = useCallback(() => {
-    V40w()
-      .then(setPhongs)
-      .catch(() => {});
-  }, []);
-  V41p(load, { topics: ["catalog", "hoso"], enabled: isTauri() });
   return (
     <section className="view active">
       <PageHeader title="Đóng gói" description="Tạo gói SIP, AIP, DIP theo bố cục E-ARK từ hồ sơ đã số hoá hoặc từ kho tài liệu bên ngoài." />
@@ -42,7 +33,7 @@ export default function DongGoiView() {
         ]}
       />
       <div className="mt-3">
-        {tab === "hoso" && <SoHoaPane phongs={phongs} mode="donggoi" />}
+        {tab === "hoso" && <PackFromServer />}
         {tab === "goi" && <PackageList />}
         {tab === "nangcao" && <V4sx />}
         {tab === "ngoai" && <ExternalImportPanel />}
