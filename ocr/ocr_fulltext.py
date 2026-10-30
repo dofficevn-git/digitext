@@ -128,7 +128,7 @@ def device_info() -> dict:
             info["paddle_reserved_mb"] = round(paddle.device.cuda.memory_reserved(0) / 1e6, 1)
     except Exception:  # noqa: BLE001
         pass
-    info["det_backend"] = "paddle"
+    info["det_backend"] = os.getenv("OCR_DET_BACKEND", "paddle").strip().lower()
     info["warmup"] = dict(_WARMUP)
     info["infer_concurrency"] = int(os.getenv("OCR_GPU_CONCURRENCY", "2"))
     info["rec_batch"] = int(os.getenv("OCR_REC_BATCH", "8"))
@@ -151,9 +151,20 @@ class DetectorManager:
             if cls._engine is not None:
                 return cls._engine
             try:
+                gpu = use_gpu()
+                backend = os.getenv("OCR_DET_BACKEND", "paddle").strip().lower()
+                if backend == "onnx":
+                    # Dự phòng card Blackwell (30/10/2026): DBNet qua ONNX Runtime, cùng tiền/hậu xử lý
+                    # PaddleOCR 2.x — xem det_onnx.py. VietOCR vẫn torch như thường.
+                    import det_onnx
+
+                    cls._engine = det_onnx.OnnxDetector(use_gpu=gpu)
+                    _warmup_det(cls._engine)
+                    cls._error = None
+                    print(f"✅ Đã nạp DBNet ONNX ({cls._engine.provider}, {os.path.basename(cls._engine.path)})", flush=True)
+                    return cls._engine
                 from paddleocr import PaddleOCR
 
-                gpu = use_gpu()
                 # use_gpu/gpu_mem là API PaddleOCR 2.x (bản đang ghim). Trước đây
                 # KHÔNG truyền nên dù OCR_USE_GPU=true thì DBNet vẫn chạy CPU —
                 # chỉ VietOCR lên GPU. gpu_mem là trần MB paddle được giữ.

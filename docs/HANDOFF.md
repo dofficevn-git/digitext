@@ -6,6 +6,10 @@
 
 Chốt tại commit `bbf551e`, cây làm việc sạch.
 
+> **30/10/2026 — đang chuyển máy chủ sang OCR PC.** Runbook + nhật ký + bộ mang sang:
+> [CHUYEN-MAY-OCR-PC.md](CHUYEN-MAY-OCR-PC.md). GĐ0 (máy .127 + Alienware) đã xong; GĐ1 chờ OpenSSH trên OCR PC.
+> Mục 0 dưới đây là bản cũ (chuyển sang máy dev); bộ mang sang thật nằm ở `D:\DigiText-ChuyenMay` (§2.3 của runbook).
+
 ---
 
 ## 0. Mang gì sang máy mới
