@@ -1,6 +1,6 @@
 ﻿# Canh dịch vụ DigiText trên máy chủ (OCR PC) — chạy mỗi phút bằng Scheduled Task "DigiText-Watchdog" (SYSTEM).
-# Thay alienware-autoheal.sh (restart container unhealthy) + yêu cầu "watchdog mạng" sau các lần Wi-Fi rớt kéo
-# tunnel 530 trên máy .127 (10/2026). Chỉ khởi động lại thứ đã hỏng; mỗi lần làm gì đều ghi logs\watchdog.log.
+# Thay alienware-autoheal.sh (restart container unhealthy) + yêu cầu "watchdog mạng" sau các lần Wi-Fi rớt làm
+# API mất kết nối ra ngoài trên máy .127 (10/2026). Chỉ khởi động lại thứ đã hỏng; mỗi lần làm gì đều ghi logs\watchdog.log.
 #
 # Đăng ký (PowerShell admin):
 #   $a = New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File D:\DigiText\dev\watchdog.ps1"
@@ -9,16 +9,14 @@
 #   $s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew -StartWhenAvailable
 #   Register-ScheduledTask DigiText-Watchdog -Action $a -Trigger $t -Principal $p -Settings $s
 #
-# Kiểm theo thứ tự: API tại chỗ → API qua tên miền (Caddy + NAT + DNS) → tunnel Cloudflare → container Docker
+# Kiểm theo thứ tự: API tại chỗ → API qua tên miền (Caddy + NAT 443 + DNS, không còn tunnel) → container Docker
 # unhealthy → worker OCR /readyz → MinIO. Không đụng Postgres (Docker restart policy tự lo).
 param(
   [string]$ApiLocal = "http://127.0.0.1:8080/healthz",
-  [string]$ApiPublic = "https://kho.digitext.vn:5005/healthz",
-  [string]$ApiTunnel = "https://api.digitext.vn/healthz",
+  [string]$ApiPublic = "https://api.digitext.vn/healthz",
   [string]$WorkerReady = "http://127.0.0.1:9095/readyz",
   [string]$MinioLive = "http://127.0.0.1:9000/minio/health/live",
   [string]$CaddyService = "DigiText-Caddy",
-  [string]$TunnelService = "cloudflared-digitext",
   # Số lần hỏng LIÊN TIẾP trước khi khởi động lại (tránh khởi động lại vì một lần mạng khựng).
   [int]$Nguong = 3
 )
@@ -61,15 +59,9 @@ if ($st["api"] -eq 0) {
     Ghi "API qua $ApiPublic không tới được (lần $n)"
     if ($n -ge $Nguong -and ($n % $Nguong) -eq 0) { KhoiDongLaiService $CaddyService }
   }
-  # 3. Tunnel Cloudflare (updater + dự phòng).
-  if (Kiem $ApiTunnel) { Tot "tunnel" } else {
-    $n = Hong "tunnel"
-    Ghi "API qua tunnel $ApiTunnel không tới được (lần $n)"
-    if ($n -ge $Nguong -and ($n % $Nguong) -eq 0) { KhoiDongLaiService $TunnelService }
-  }
 }
 
-# 4. Container Docker unhealthy (OCR, vLLM, ClamAV…) — như alienware-autoheal.sh.
+# 3. Container Docker unhealthy (OCR, vLLM, ClamAV…) — như alienware-autoheal.sh.
 $unhealthy = @(docker ps --filter health=unhealthy --format "{{.Names}}" 2>$null | Where-Object { $_ })
 foreach ($c in $unhealthy) {
   $n = Hong "docker:$c"
@@ -78,7 +70,7 @@ foreach ($c in $unhealthy) {
 }
 foreach ($k in @($st.Keys)) { if ($k -like "docker:*" -and $unhealthy -notcontains $k.Substring(7)) { Tot $k } }
 
-# 5. Worker OCR: /readyz 200 = worker lên VÀ thấy dịch vụ OCR.
+# 4. Worker OCR: /readyz 200 = worker lên VÀ thấy dịch vụ OCR.
 if (Kiem $WorkerReady 20) { Tot "worker" } else {
   $n = Hong "worker"
   Ghi "worker /readyz không đạt (lần $n)"
@@ -88,7 +80,7 @@ if (Kiem $WorkerReady 20) { Tot "worker" } else {
   }
 }
 
-# 6. MinIO (task DigiText-MinIO tự chạy lại; chỉ ghi nhận).
+# 5. MinIO (task DigiText-MinIO tự chạy lại; chỉ ghi nhận).
 if (Kiem $MinioLive 10) { Tot "minio" } else { $n = Hong "minio"; Ghi "MinIO không trả lời (lần $n)" }
 
 $st | ConvertTo-Json -Compress | Set-Content -Path $trangThai -Encoding UTF8

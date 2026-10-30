@@ -12,7 +12,7 @@ ngoài repo; tài liệu này là bản rút gọn đủ để làm, kèm nhật
 | Ổ trên OCR PC | Kho MinIO trên **HDD** (kiểm CMR/SMR trước: `Get-PhysicalDisk \| ft FriendlyName,MediaType`; SMR thì giữ `MINIO_SCANNER_SPEED=slowest`), Docker/Postgres/image trên **SSD** |
 | Qwen | **Gộp lên OCR PC** (Alienware chạy OCR + Qwen trong 10,5/16 GB → 5070 Ti 16 GB vừa); Alienware giữ dự phòng 30 ngày |
 | Chuyển kho | **Bằng ổ F: cầm tay**: F: đã có 204.981 bản ký đúng kích thước → `dev/nap-ban-ky.py` nạp từ thư mục; phần còn lại (~1 GB) qua `dev/dong-goi-kho.py xuat --chi-khong-phai-ban-ky` |
-| Đường vào API | **Caddy + Let's Encrypt (DNS-01 Cloudflare), cổng 5005** (router đã NAT `113.190.254.219:5005 → 192.168.100.10:5005`; 5001 là n8n, 5002 là web KIE cũ, 80 IIS), tên **`kho.digitext.vn`** DNS-only; `api.digitext.vn` giữ Cloudflare tunnel (updater desktop + dự phòng). Máy trạm nhập `https://kho.digitext.vn:5005` |
+| Đường vào API | **Trực tiếp, không tunnel** (anh chốt lại 30/10): Caddy + Let's Encrypt (DNS-01 Cloudflare) ở **cổng 443**, một tên duy nhất **`api.digitext.vn`** (đã đóng cứng trong updater desktop) → bản ghi DNS chuyển DNS-only trỏ IP tĩnh; router **NAT thêm 443 → 192.168.100.10:443** (5005 đã NAT sẵn không dùng tới; 5001 n8n, 5002 web KIE cũ, 80 IIS). Máy trạm giữ nguyên `https://api.digitext.vn`. **Bỏ cloudflared hoàn toàn** — tắt service trên .127 ở GĐ2, xoá tunnel trên Cloudflare |
 | IP công cộng | **Đã tĩnh** `113.190.254.219` |
 | Vào OCR PC | **OpenSSH** anh bật, firewall chỉ mở từ Tailscale `100.64.0.0/10` (lệnh ở §4.1) |
 | Bỏ hẳn | Meilisearch, rustus, nginx trong compose; Vintern; SQL Server + web KIE cũ; Triton (chỉ giữ ONNX làm dự phòng) |
@@ -30,8 +30,8 @@ ngoài repo; tài liệu này là bản rút gọn đủ để làm, kèm nhật
 | `infra/compose/ocr/Dockerfile` | Kiểm phiên bản torch ngay sau pip (chặn lấy nhầm bản PyPI không có sm_120); symlink `libcudnn.so.9`, `libnvJitLink.so.12`; healthcheck start 600 s |
 | `ocr/ocr_fulltext.py` | **Warm-up** DBNet + VietOCR ngay khi nạp (lỗi kernel → health 503, không còn "xanh mà 500"); `_is_oom` thêm mẫu Paddle 3; `_release_cuda` dọn cả Paddle; health thêm `paddle_version`, `paddle_reserved_mb`, `det_backend`, `warmup`; **`OCR_DET_BACKEND=onnx`** → `det_onnx.py` |
 | `ocr/det_onnx.py` (mới) | Plan-B: DBNet qua ONNX Runtime, tái tạo đúng tiền/hậu xử lý PaddleOCR 2.x. **Parity 7/7 trang thật, IoU 1,000, cùng số hộp** (`ml/bench/harness/det_parity.py`, chạy trong container trên Alienware 30/10). Model: `ocr/models/det/en_PP-OCRv3_det.onnx` (SHA-256 `072ce94a…44eff`, gitignore — có trong bộ mang sang) |
-| `infra/caddy/Caddyfile` (mới) | `kho.digitext.vn:5005`, DNS-01 Cloudflare, body 2 GB, chờ 15 phút, log |
-| `dev/watchdog.ps1` (mới) | Mỗi phút: API tại chỗ / qua tên miền / qua tunnel, container unhealthy, worker `/readyz`, MinIO; hỏng 3 lần liền mới khởi động lại; `logs/watchdog.log` |
+| `infra/caddy/Caddyfile` (mới) | `api.digitext.vn` 443, DNS-01 Cloudflare, body 2 GB, chờ 15 phút, log |
+| `dev/watchdog.ps1` (mới) | Mỗi phút: API tại chỗ / qua tên miền, container unhealthy, worker `/readyz`, MinIO; hỏng 3 lần liền mới khởi động lại; `logs/watchdog.log` |
 | `dev/backup-csdl.ps1` (mới) | `pg_dump -Fc` trong container → tệp, kiểm `pg_restore --list`, giữ 14 bản. Đo 30/10: **1,6 GB / 348 s** |
 | `dev/nap-ban-ky.py` (mới) | `xuat` bảng `document_id,rel_path,filename,signed_key,size` (LTLSBN: 204.981 dòng, 0 thiếu trong kho); `nap` từ thư mục vào MinIO (ETag = MD5, bỏ qua khoá đã đúng cỡ); `kiem` (đếm + 300 mẫu MD5) |
 | `dev/dong-goi-kho.py` | cờ `--chi-khong-phai-ban-ky` |
@@ -63,7 +63,7 @@ CER phải trùng ±0,002); `pages_per_sec` ≥ 0,7× và p95 ≤ 1,4× số tr�
 
 | Thư mục | Nội dung |
 |---|---|
-| `bi-mat/` | `jwt-ed25519.pem`, `crates/digitext-api/.env`, `crates/digitext-ocr/.env` (+`.env.che-do-nhanh`, `.env.bak-20261021`), `infra/compose/.env`. **Thiếu `cloudflared/token`** — `C:\ProgramData\cloudflared-digitext\token` cần admin, anh chép tay |
+| `bi-mat/` | `jwt-ed25519.pem`, `crates/digitext-api/.env`, `crates/digitext-ocr/.env` (+`.env.che-do-nhanh`, `.env.bak-20261021`), `infra/compose/.env`. Không mang token cloudflared (bỏ tunnel). Cần thêm **token Cloudflare quyền Zone.DNS:Edit** cho Caddy — tạo mới trên dash.cloudflare.com |
 | `alienware/` | `compose/ocr/.env` + compose, `compose/vllm/.env` + compose (bản sống), `lenh-song.txt` (docker inspect), `vietocr/*.pth` (4 tệp, 580 MB, SHA-256 khớp), `onnx/en_PP-OCRv3_det.onnx`, `golden/golden-vlm_pseudo-520.tar.gz` (520 ảnh + manifest đường dẫn tương đối + gold), baseline reports |
 | `csdl/digitext-nhap-20261030-0859.dump` | dump nháp 1,6 GB (diễn tập restore ở GĐ1) |
 | `kho/ban-ky-LTLSBN.csv` | bảng 204.981 bản ký cho `nap-ban-ky.py` |
@@ -117,33 +117,37 @@ Cắm dây LAN. Cắm F:. Xác nhận ổ HDD cho kho (CMR?).
    `DIGITEXT_PDFTOPPM_BIN`, `DIGITEXT_CLAMD_ADDR=127.0.0.1:3310`; `crates/digitext-api/.env`: `DIGITEXT_BEHIND_PROXY=true`,
    `DIGITEXT_UPDATES_DIR`, `DIGITEXT_DATA_DIR`, `DIGITEXT_SIGN_TRUST_ROOTS` theo ổ mới. `cargo build --release`;
    `dev\install-services.ps1`; chạy thử với `DIGITEXT_WORKER_ENABLED=false` rồi OCR 1 dự án TEST.
-8. **Caddy + tunnel + watchdog + backup:** theo chú thích đầu `infra/caddy/Caddyfile`, `dev/watchdog.ps1`, `dev/backup-csdl.ps1`;
-   `cloudflared service install <token>` (chưa start tới GĐ2). DNS `kho.digitext.vn` A → `113.190.254.219`, đám mây xám.
+8. **Caddy + watchdog + backup:** theo chú thích đầu `infra/caddy/Caddyfile`, `dev/watchdog.ps1`, `dev/backup-csdl.ps1`.
+   Anh: router NAT **443 → 192.168.100.10:443**; firewall OCR PC mở 443. Chứng chỉ lấy trước qua DNS-01 (không cần DNS
+   trỏ về) → kiểm `curl --resolve api.digitext.vn:443:192.168.100.10 https://api.digitext.vn/healthz` từ máy trong LAN.
 
 ## 4. GĐ2 — cắt chuyển (ngoài giờ, 1–2 giờ gián đoạn)
 
 Trên .127: tắt task `DigiText-API`, `DigiText-Worker`; `dev\backup-csdl.ps1 -Dir F:\DigiText-ChuyenMay\csdl -Giu 0` (dump chốt);
 `dong-goi-kho.py xuat --chi-khong-phai-ban-ky` phần chênh; `nap-ban-ky.py xuat` lại nếu có ký thêm. Sang OCR PC: drop/restore CSDL
-chốt, `nap` phần chênh, áp 0006, bật API/Worker/Caddy, start cloudflared; kiểm §5; tắt `cloudflared-digitext` trên .127.
+chốt, `nap` phần chênh, áp 0006, bật API/Worker/Caddy; **đổi DNS `api.digitext.vn`**: bỏ bản ghi CNAME tunnel, thêm A →
+`113.190.254.219` đám mây xám (TTL ngắn trước đó 1 ngày); kiểm §5; tắt + gỡ service `cloudflared-digitext` trên .127, xoá tunnel
+`digitext` và bản ghi rác `api.digitext.vn.khodulieu.vn` trên Cloudflare.
 
 ## 5. Kiểm chứng sau chuyển
 
 - CSDL: `SELECT count(*) FROM documents` = 205.008 (LTLSBN) + các dự án khác như dump; `sign_sessions status='signed'` = 204.981;
   `ix_ocr_jobs_doc_kind_created` có; `roles` 5 dòng hệ thống.
 - Kho: `nap-ban-ky.py kiem` 0 sai; tổng lớp = 204.981 bản ký / 799,0 GB + 3 PDF/A + 43 khác; `GET /documents/{id}/signed` mở được.
-- API: `https://kho.digitext.vn:5005/healthz` 200 chứng chỉ hợp lệ; `https://api.digitext.vn/healthz` 200; đăng nhập desktop từ ngoài
-  văn phòng; tải tệp 150 MB qua đường mới.
+- API: `https://api.digitext.vn/healthz` 200 chứng chỉ Let's Encrypt hợp lệ, IP phân giải = 113.190.254.219 (không còn IP Cloudflare);
+  `https://api.digitext.vn/updates/latest.json` đọc được; đăng nhập desktop từ ngoài văn phòng; tải tệp 150 MB (vượt giới hạn tunnel cũ).
 - Worker: `127.0.0.1:9095/readyz` 200; OCR 1 tài liệu TEST → PDF/A đạt veraPDF; bóc trường v2 chạy; gate CER PASS.
 - Ký số 1 tài liệu thật từ máy trạm; đóng gói 1 hồ sơ (`virus_scan` ≠ `not_configured`).
 - Khởi động lại OCR PC: mọi task/service tự lên; rút mạng 2 phút → watchdog ghi log và tự hồi. Dump đêm xuất hiện trên F:.
 
 ## 6. Rollback (14 ngày)
 
-Trên .127 bật lại `DigiText-API` / `Worker` / `MinIO` / `cloudflared-digitext`; máy trạm về `api.digitext.vn`. Dữ liệu phát sinh trên
+Trên .127 bật lại `DigiText-API` / `Worker` / `MinIO` / `cloudflared-digitext` và trả DNS `api.digitext.vn` về CNAME tunnel
+(vì vậy **chưa xoá tunnel trên Cloudflare trong 14 ngày**). Dữ liệu phát sinh trên
 OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần đầu không xoá gì trên .127**.
 
 ## 7. Nhật ký
 
 - 27/10/2026: kế hoạch + quyết định; LTLSBN đủ trên F: (204.981 bản ký + 204.981 PDF/A + 27 bản gốc), xoá 572 bản trùng.
-- 30/10/2026: GĐ0 xong phần repo, baseline Alienware, ONNX + parity, dump nháp, bộ mang sang trên D:. Chờ: cắm F: (§2.4),
-  token cloudflared (admin), anh bật OpenSSH trên OCR PC (§3.1).
+- 30/10/2026: GĐ0 xong phần repo, baseline Alienware, ONNX + parity, dump nháp, bộ mang sang trên D:. Anh chốt lại: **bỏ
+  cloudflared hẳn**, đi thẳng `api.digitext.vn` 443 (NAT 443). Chờ: cắm F: (§2.4), anh bật OpenSSH trên OCR PC (§3.1), NAT 443.
