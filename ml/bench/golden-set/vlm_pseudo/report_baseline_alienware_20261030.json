@@ -1,0 +1,30 @@
+{
+  "overall": {
+    "cer": 0.175576,
+    "wer": 0.232367,
+    "cer_no_diac": 0.167821,
+    "delta_dau": 0.007755,
+    "n_lines": 520,
+    "ece": 0.267987,
+    "n_conf": 520
+  },
+  "by_stratum": {
+    "vlm_pseudo": {
+      "cer": 0.175576,
+      "wer": 0.232367,
+      "cer_no_diac": 0.167821,
+      "delta_dau": 0.007755,
+      "n_lines": 520,
+      "ece": 0.267987,
+      "n_conf": 520
+    }
+  },
+  "meta": {
+    "engine_version": "alienware-ft_v2b-paddle2.6.2-torch2.4.1-20261030",
+    "n_gold": 520,
+    "n_scored": 520,
+    "skipped_empty_ref": 0,
+    "missing_pred": 0,
+    "extra_pred": 0
+  }
+}
