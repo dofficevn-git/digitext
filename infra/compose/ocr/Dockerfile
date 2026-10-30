@@ -57,6 +57,13 @@ RUN python -c "import sys,torch; v=torch.__version__; w='${TORCH_VERSION}'; ok=(
 COPY requirements-ocr.txt requirements-ocr-gpu.txt requirements-ocr-gpu-cu128.txt ./
 RUN pip install --no-cache-dir -r ${OCR_REQS}
 
+# 30/10/2026 (image Blackwell): paddlepaddle-gpu 3.x kéo bộ wheel nvidia-*-cu12 12.9 đè lên bản 12.8 torch ghim;
+# torch chỉ preload theo danh sách cứng nên `import torch` chết "libcusparseLt.so.0: cannot open shared object".
+# Cho linker thấy MỌI thư mục nvidia/*/lib của pip (cả torch lẫn Paddle đều dùng được, ABI cùng CUDA 12).
+# Image CPU không có thư mục nvidia → tệp conf rỗng, vô hại.
+RUN find /usr/local/lib/python3.10/dist-packages/nvidia -maxdepth 2 -type d -name lib 2>/dev/null \
+      > /etc/ld.so.conf.d/zz-nvidia-pip.conf; ldconfig
+
 # vietocr cài RIÊNG với --no-deps.
 #
 # Lý do: paddleocr ghim albumentations==1.4.10 còn vietocr ghim ==1.4.2, pip
