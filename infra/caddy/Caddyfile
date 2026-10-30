@@ -1,0 +1,61 @@
+# Đường vào API DigiText trên OCR PC — Caddy + Let's Encrypt (DNS-01 qua Cloudflare), cổng 5005 (30/10/2026).
+#
+# Vì sao không đi Cloudflare tunnel cho đường chính: tunnel giới hạn 100 s / 100 MB mỗi yêu cầu (tải PDF lớn,
+# đóng gói AIP bị cắt); Cloudflare cũng không proxy cổng 5005 → bản ghi DNS kho.digitext.vn phải là DNS-only
+# (đám mây xám) trỏ thẳng IP tĩnh 113.190.254.219, router NAT 5005 → 192.168.100.10:5005.
+# api.digitext.vn vẫn qua tunnel (updater desktop + dự phòng).
+#
+# Cài: tải caddy có module dns.providers.cloudflare từ caddyserver.com/download (chọn "caddy-dns/cloudflare"),
+# đặt C:\DigiText-Caddy\caddy.exe; token Cloudflare chỉ quyền Zone.DNS:Edit của digitext.vn, đặt biến môi trường
+# CF_API_TOKEN cho service (sc.exe hoặc NSSM: AppEnvironmentExtra CF_API_TOKEN=...).
+#   caddy.exe validate --config D:\DigiText\infra\caddy\Caddyfile
+#   sc.exe create DigiText-Caddy binPath= "C:\DigiText-Caddy\caddy.exe run --config D:\DigiText\infra\caddy\Caddyfile" start= auto
+# Firewall: mở 5005 TCP inbound từ mọi nơi; 8080 chỉ loopback (API bind 127.0.0.1).
+# API: DIGITEXT_BEHIND_PROXY=true để audit_log ghi IP máy trạm từ X-Forwarded-For.
+
+{
+	# Thư mục chứng chỉ/trạng thái — tách khỏi hồ sơ người dùng để service SYSTEM đọc được.
+	storage file_system {
+		root C:\DigiText-Caddy\data
+	}
+	log {
+		output file C:\DigiText-Caddy\caddy.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+		level INFO
+	}
+}
+
+kho.digitext.vn:5005 {
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+		# Không mở 80/443 nên chỉ DNS-01; Let's Encrypt gia hạn tự động.
+		resolvers 1.1.1.1 8.8.8.8
+	}
+
+	encode zstd gzip
+
+	# Bỏ giới hạn kiểu Cloudflare: tải lên 2 GB, chờ API tới 15 phút (đóng gói, tải PDF ký lớn).
+	request_body {
+		max_size 2GB
+	}
+
+	reverse_proxy 127.0.0.1:8080 {
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 15m
+			read_timeout 15m
+			write_timeout 15m
+		}
+		# X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host được Caddy đặt sẵn.
+		flush_interval -1
+	}
+
+	log {
+		output file C:\DigiText-Caddy\access.log {
+			roll_size 100MiB
+			roll_keep 10
+		}
+	}
+}

@@ -141,3 +141,6 @@ updates/
 
 # Bộ cài đã build nhưng CHƯA phát hành (release-desktop.ps1 -UpdatesDir updates-staging)
 updates-staging/
+
+# MinIO Windows (build tay, SHA-256 a7ee0d09…44e2f1) — dev/minio-win.ps1; không vào repo
+infra/minio-win/*.exe

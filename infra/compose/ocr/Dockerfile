@@ -48,8 +48,13 @@ RUN pip install --no-cache-dir \
       --index-url ${TORCH_INDEX} \
       --extra-index-url https://pypi.org/simple
 
+# Chặn ngay lúc build nếu pip lấy nhầm torch từ PyPI (30/10/2026, chuẩn bị card Blackwell): yêu cầu
+# "2.7.1+cu128" mà về "2.7.1" (cu126, không có sm_120) thì bề ngoài vẫn chạy, tới request mới lỗi.
+# TORCH_VERSION không hậu tố (2.4.1 trên Alienware) thì chỉ so phần số.
+RUN python -c "import sys,torch; v=torch.__version__; w='${TORCH_VERSION}'; ok=(v==w) if '+' in w else (v.split('+')[0]==w); print('torch',v,'cuda',torch.version.cuda,'- yeu cau',w); sys.exit(0 if ok else 1)"
+
 # Cài phụ thuộc trước, tách khỏi mã nguồn — sửa code không phải cài lại từ đầu.
-COPY requirements-ocr.txt requirements-ocr-gpu.txt ./
+COPY requirements-ocr.txt requirements-ocr-gpu.txt requirements-ocr-gpu-cu128.txt ./
 RUN pip install --no-cache-dir -r ${OCR_REQS}
 
 # vietocr cài RIÊNG với --no-deps.
@@ -95,17 +100,20 @@ ENV OCR_HOST=0.0.0.0 \
 # nạp model xong nhưng mọi request trả 500 "Cannot load cudnn shared library".
 # Tạo symlink cho những lib thiếu; trên image CPU (python:3.10-slim) vòng lặp
 # không thấy file nào nên vô hại. Đặt cuối để không phá cache các layer pip.
-RUN cd /usr/lib/x86_64-linux-gnu 2>/dev/null && for f in libcudnn.so.8 libcublas.so.12 \
+# libcudnn.so.9 / libnvJitLink.so.12: image CUDA 12.9 + cuDNN 9 cho card Blackwell (30/10/2026); trên image
+# cuDNN 8 hai tên đó không có nên bỏ qua.
+RUN cd /usr/lib/x86_64-linux-gnu 2>/dev/null && for f in libcudnn.so.8 libcudnn.so.9 libcublas.so.12 \
       libcublasLt.so.12 libcurand.so.10 libcusolver.so.11 libcusparse.so.12 \
-      libcufft.so.11 libnvrtc.so.12; do \
+      libcufft.so.11 libnvrtc.so.12 libnvJitLink.so.12; do \
       if [ -e "$f" ] && [ ! -e "${f%%.so.*}.so" ]; then ln -s "$f" "${f%%.so.*}.so"; fi; \
     done; true
 
 EXPOSE 5002
 
 # python thay vì curl: image slim không có curl, thêm vào chỉ để healthcheck là thừa.
-# start-period dài vì lần chạy đầu phải tải cả trọng số PaddleOCR lẫn VietOCR.
-HEALTHCHECK --interval=15s --timeout=5s --retries=30 --start-period=420s \
+# start-period dài vì lần chạy đầu phải tải cả trọng số PaddleOCR lẫn VietOCR (+ warm-up GPU; trên WSL2
+# volume đi qua 9p và Defender quét → 600 s, 30/10/2026).
+HEALTHCHECK --interval=15s --timeout=5s --retries=30 --start-period=600s \
   CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5002/api/ocr/health', timeout=4).status==200 else 1)" \
       || exit 1
 

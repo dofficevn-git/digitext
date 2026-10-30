@@ -70,6 +70,9 @@ def xuat(a) -> int:
         for o in pg.get("Contents", []):
             co[o["Key"]] = o["Size"]
     viec = sorted(k for k, n in co.items() if da.get(k, (None,))[0] != n)
+    if a.chi_khong_phai_ban_ky:
+        # Bản ký (*.signed.pdf, ~800 GB) đã có trên ổ ngoài dạng tệp rời → nạp bằng dev/nap-ban-ky.py; chỉ đóng gói phần còn lại.
+        viec = [k for k in viec if not k.endswith(".signed.pdf")]
     if a.gioi_han:
         viec = viec[: a.gioi_han]
     tong = sum(co[k] for k in viec)
@@ -302,6 +305,8 @@ def main() -> int:
     ap.add_argument("--bucket", default="pages")
     ap.add_argument("--luong", type=int, default=4)
     ap.add_argument("--gioi-han", type=int, default=0, help="chỉ đóng gói N tệp đầu (thử)")
+    ap.add_argument("--chi-khong-phai-ban-ky", action="store_true",
+                    help="xuat: bỏ khoá *.signed.pdf (chuyển máy 30/10/2026: bản ký nạp từ thư mục bằng dev/nap-ban-ky.py)")
     ap.add_argument("--nghi-khi-cham", type=float, default=0, help="nap: tốc độ phút < X MB/s liền 3 phút thì nghỉ")
     ap.add_argument("--tep-khi-cham", type=int, default=10**9,
                     help="nap: chỉ coi là chậm khi số tệp/phút cũng dưới mức này (mặc định: không xét)")
