@@ -1,61 +1,58 @@
 name: digitext-dev
 
+# 30/10/2026 (chuẩn bị chuyển máy chủ sang OCR PC): chỉ còn Postgres + ClamAV.
+#   - MinIO chạy thẳng trên Windows từ 17/10 (dev\minio-win-task.ps1, cổng 9000) — không còn trong Docker.
+#   - Meilisearch, rustus, nginx: không crate nào dùng → bỏ. Volume meilidata/rustusdata cũ trên máy .127 vẫn
+#     nằm đó (docker volume ls), xoá tay khi dọn.
+#   - Postgres: tham số bộ nhớ đọc từ infra/compose/.env (mặc định = máy .127 hiện tại, WSL 24 GB).
+#     OCR PC (64 GB RAM, máy riêng): PG_SHARED_BUFFERS=6GB PG_EFFECTIVE_CACHE=16GB PG_WORK_MEM=64MB
+#     PG_MAINT_MEM=1GB PG_PARALLEL=4 PG_MAX_WAL=4GB.
+
 services:
   postgres:
     image: postgres:16
     restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-2GB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE:-8GB}
+      - -c
+      - work_mem=${PG_WORK_MEM:-16MB}
+      - -c
+      - maintenance_work_mem=${PG_MAINT_MEM:-256MB}
+      - -c
+      - max_parallel_workers_per_gather=${PG_PARALLEL:-2}
+      - -c
+      - max_wal_size=${PG_MAX_WAL:-1GB}
     environment:
       POSTGRES_USER: ${PG_USER:?dat PG_USER trong infra/compose/.env}
       POSTGRES_PASSWORD: ${PG_PASSWORD:?dat PG_PASSWORD trong infra/compose/.env}
       POSTGRES_DB: ${PG_DB:?dat PG_DB trong infra/compose/.env}
     ports: ["127.0.0.1:5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
-  minio:
-    # 17/10/2026: kho DigiText chuyển sang MinIO chạy thẳng trên Windows (E:\DigiText-KhoMayChu, cổng 9000 —
-    # dev\minio-win-task.ps1). Dịch vụ này chỉ còn để tham khảo; KHÔNG bật lại (trùng cổng 9000).
-    profiles: ["minio-docker-cu"]
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    # 16/10/2026: tạo lại container (14/10) bằng file này làm MẤT chính sách tự chạy → Windows Update khởi động
-    # lại máy, MinIO không lên, API/worker thoát — sập ~10 giờ. Giữ dòng này.
+  clamav:
+    # Quét virus khi đóng gói (worker: DIGITEXT_CLAMD_ADDR=127.0.0.1:3310, crates/digitext-ocr/src/package_worker.rs).
+    # Không đặt biến đó thì gói ghi virus_scan=not_configured. Lần đầu tải CSDL virus ~300 MB (start_period dài).
+    image: clamav/clamav:stable
     restart: unless-stopped
-    environment:
-      MINIO_ROOT_USER: ${MINIO_USER:?dat MINIO_USER trong infra/compose/.env}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?dat MINIO_PASSWORD trong infra/compose/.env}
-      # 14/10/2026: /data nằm trên HDD SMR — ghi liên tục có lúc khựng > 30 s, MinIO mặc định ngắt ổ (503 cho mọi
-      # yêu cầu). Cho chờ tới 2 phút thay vì ngắt.
-      MINIO_DRIVE_MAX_TIMEOUT: 2m
-      # Bộ quét nền mặc định quét lại toàn kho (hàng trăm nghìn tệp) mỗi phút → ổ SMR không lúc nào rảnh để tự dọn
-      # vùng đệm, ký số tụt từ ~6.000 xuống < 1.000 tệp/giờ (14/10/2026). Quét chậm nhất.
-      MINIO_SCANNER_SPEED: slowest
-    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
-    volumes: ["miniodata:/data"]
-
-  meilisearch:
-    image: getmeili/meilisearch:latest
-    restart: unless-stopped
-    environment:
-      MEILI_MASTER_KEY: ${MEILI_KEY:?dat MEILI_KEY trong infra/compose/.env}
-    ports: ["127.0.0.1:7700:7700"]
-    volumes: ["meilidata:/meili_data"]
-
-  rustus:
-    image: s3rius/rustus:latest
-    command: --hooks-http-urls http://ingest:8081/webhook/tus
-    ports: ["127.0.0.1:1080:1080"]
-    volumes: ["rustusdata:/data"]
-
-  nginx:
-    # Không chạy trên máy chủ hiện tại; phụ thuộc minio Docker cũ nên cùng profile (17/10/2026).
-    profiles: ["minio-docker-cu"]
-    image: nginx:stable
-    ports: ["127.0.0.1:8443:443"]
-    volumes: ["./nginx:/etc/nginx/conf.d:ro"]
-    depends_on: [minio, meilisearch, rustus]
+    ports: ["127.0.0.1:3310:3310"]
+    volumes: ["clamdb:/var/lib/clamav"]
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
 
 volumes:
   pgdata:
-  miniodata:
-  meilidata:
-  rustusdata:
+  clamdb:

@@ -1,6 +1,7 @@
 ﻿# Bảng theo dõi OCR: máy GPU (Alienware) + hàng đợi trên máy chủ này. Tự làm mới mỗi 5 giây.
 #   powershell -ExecutionPolicy Bypass -File dev\theo-doi-ocr.ps1
 # Cần: khoá SSH của máy này vào $GpuHost (đã có), Docker (Postgres) đang chạy. Chỉ ĐỌC, không sửa gì.
+# -GpuHost "" = GPU ở ngay máy này (OCR PC): chạy nvidia-smi / docker tại chỗ, không SSH (30/10/2026).
 param(
   [string]$GpuHost = "do@192.168.0.205",
   [string]$OcrContainer = "digitext-ocr-fulltext-ocr-1",
@@ -42,8 +43,14 @@ WHERE d.status IN ('to_sign','signing','signed') GROUP BY p.code ORDER BY 3 DESC
 
 while ($true) {
   # 6/10/2026: Alienware đi Wi-Fi (ping 11–470 ms) — 5 s hay hụt ở bước bắt tay SSH, báo lỗi giả.
-  $gpu = ssh -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 $GpuHost "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits; docker ps --format '{{.Names}}|{{.Status}}'; echo '@@LOG'; docker logs --tail 8 $OcrContainer 2>&1" 2>&1
-  $sshOk = ($LASTEXITCODE -eq 0)
+  if ($GpuHost) {
+    $gpu = ssh -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 $GpuHost "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits; docker ps --format '{{.Names}}|{{.Status}}'; echo '@@LOG'; docker logs --tail 8 $OcrContainer 2>&1" 2>&1
+    $sshOk = ($LASTEXITCODE -eq 0)
+  } else {
+    $gpu = @(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits 2>&1)
+    $sshOk = ($LASTEXITCODE -eq 0)
+    $gpu += @(docker ps --format '{{.Names}}|{{.Status}}' 2>&1) + @('@@LOG') + @(docker logs --tail 8 $OcrContainer 2>&1)
+  }
   $q = $sql | docker exec -i $PgContainer sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -At -F,' 2>&1
 
   Clear-Host
@@ -51,7 +58,8 @@ while ($true) {
   Write-Host ""
 
   if (-not $sshOk) {
-    Write-Host "Lần này không SSH được tới $GpuHost (mạng chập chờn?) — thử lại sau $Seconds giây. OCR vẫn chạy, xem hàng đợi bên dưới." -ForegroundColor DarkYellow
+    $noi = if ($GpuHost) { "không SSH được tới $GpuHost (mạng chập chờn?)" } else { "nvidia-smi tại máy này lỗi" }
+    Write-Host "Lần này $noi — thử lại sau $Seconds giây. OCR vẫn chạy, xem hàng đợi bên dưới." -ForegroundColor DarkYellow
     Write-Host "  $(@($gpu) | Select-Object -First 1)" -ForegroundColor DarkGray
   } else {
     $lines = @($gpu)

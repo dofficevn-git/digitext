@@ -4,15 +4,22 @@
 # Lần 9/10/2026 bị Windows Update tắt máy giữa chừng (63%) → bản này: tạm hoãn Windows Update 1 ngày,
 # không giới hạn thời gian, và LUÔN bật lại Docker kể cả khi compact lỗi/ngắt.
 # Chạy: Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File D:\DigiText\dev\thu-nho-docker.ps1"
-
+# Mặc định là đường dẫn trên máy .127; máy khác truyền -Vhdx / -DockerExe (30/10/2026).
+param(
+    [string]$Vhdx = "E:\Docker\wsl\disk\docker_data.vhdx",
+    [string]$DockerExe = "C:\Users\HieuPC\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe",
+    [string]$Log = (Join-Path (Split-Path -Parent $PSScriptRoot) "logs\thu-nho-docker.log")
+)
 $ErrorActionPreference = "Stop"
-$vhdx = "E:\Docker\wsl\disk\docker_data.vhdx"
-$dockerExe = "C:\Users\HieuPC\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe"
-$log = "D:\DigiText\logs\thu-nho-docker.log"
+$vhdx = $Vhdx
+$dockerExe = $DockerExe
+$log = $Log
+if (-not (Test-Path $vhdx)) { throw "Không thấy ổ ảo Docker $vhdx — truyền -Vhdx" }
+if (-not (Test-Path $dockerExe)) { throw "Không thấy Docker Desktop $dockerExe — truyền -DockerExe" }
 
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $admin) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Vhdx `"$vhdx`" -DockerExe `"$dockerExe`" -Log `"$log`""
     exit
 }
 

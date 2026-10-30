@@ -1,0 +1,28 @@
+# Phụ thuộc cho dịch vụ OCR toàn văn — BẢN GPU Blackwell (RTX 50xx, sm_120; CUDA 12.8/12.9, cuDNN 9).
+#
+# Vì sao tách file: paddlepaddle-gpu 2.6.2 (CUDA 12.0, cuDNN 8) và torch cu121 không có kernel sm_120 →
+# trên RTX 5070 Ti nạp model xong nhưng mọi request lỗi "no kernel image is available". Không có đường vá.
+# Giữ nguyên requirements-ocr-gpu.txt cho Alienware (RTX 40xx) để rollback.
+#
+# Chọn bằng infra/compose/ocr/.env (xem .env.rtx5070.example): OCR_REQS=requirements-ocr-gpu-cu128.txt
+# cùng OCR_CUDA_IMAGE / OCR_TORCH_* tương ứng. torch cài riêng trong Dockerfile (TORCH_INDEX), không khai ở đây.
+#
+# Phiên bản Paddle/paddleocr dưới đây là dự kiến (30/10/2026), PHẢI kiểm lúc build trên OCR PC:
+#   pip index versions paddlepaddle-gpu --index-url https://www.paddlepaddle.org.cn/packages/stable/cu129/
+# Nếu wheel cu129 chưa có bản 3.2.0 thì thử cu128 / cu126 (CUDA minor tương thích ngược trong cùng driver).
+# Không lên PaddleOCR 3.x ở bước này: nó kéo paddlex, đổi sang PP-OCRv5 → hộp phát hiện khác → golden set lệch.
+
+Flask==3.0.3
+Werkzeug==3.0.4
+waitress==3.0.0
+python-dotenv==1.0.1
+
+numpy==1.26.4               # PHẢI <2 — PaddleOCR 2.x build với numpy 1.x
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+
+--extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cu129/
+paddlepaddle-gpu==3.2.0
+paddleocr==2.10.0           # bản 2.x cuối, tương thích Paddle 3.x; API use_gpu/show_log/ocr(det=True,rec=False) giữ nguyên
+
+gdown==5.2.0

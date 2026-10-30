@@ -15,11 +15,13 @@ function Test-Port($p) {
 }
 
 # --- 1. Ha tang -------------------------------------------------------------
-Write-Host "[1/4] Postgres / MinIO / Meilisearch..." -ForegroundColor Cyan
+# Chi Postgres trong Docker. MinIO chay native Windows (Scheduled Task DigiText-MinIO, dev\minio-win-task.ps1),
+# Meilisearch khong crate nao dung — bo tu 30/10/2026.
+Write-Host "[1/4] Postgres..." -ForegroundColor Cyan
 $files = @("-f", (Join-Path $compose "docker-compose.yml"))
 $override = Join-Path $compose "docker-compose.override.yml"
 if (Test-Path $override) { $files += @("-f", $override) }
-docker compose @files up -d postgres minio meilisearch | Out-Null
+docker compose @files up -d postgres | Out-Null
 
 # doi Postgres san sang thay vi doan thoi gian
 $ok = $false

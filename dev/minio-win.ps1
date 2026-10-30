@@ -4,10 +4,11 @@
 # Scheduled Task "DigiText-MinIO" (SYSTEM, khi khởi động) gọi script này; log ở logs\minio.log.
 # minio.exe build từ mã nguồn RELEASE.2025-10-15T17-29-55Z (MinIO không còn phát hành bản Windows):
 #   go1.24.8, CGO_ENABLED=0, go build -trimpath → SHA-256 a7ee0d09a53bda6fcd8160963d0d80f8cbc22bcb76afd0d6113538808d44e2f1
+# Exe mặc định nằm trong repo: infra\minio-win\minio.exe (gitignore) — chép tay sang máy mới cùng checkout (30/10/2026).
 param(
   [Parameter(Mandatory = $true)][string]$DataDir,
   [int]$Port = 9000,
-  [string]$Exe = "C:\Users\HieuPC\tools\minio-build\minio.exe"
+  [string]$Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) "infra\minio-win\minio.exe")
 )
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot

@@ -4,9 +4,15 @@
 #     --env-file infra/compose/ocr/.env up -d --build
 #
 # Yêu cầu máy chủ: driver NVIDIA + nvidia-container-toolkit (scripts/setup-ai-node.sh
-# lo cả hai). Kiểm nhanh: docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+# lo cả hai; Docker Desktop WSL2 trên Windows có sẵn GPU-PV, không cần toolkit).
+# Kiểm nhanh: docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
 #
 # Rollback: bỏ `-f docker-compose.gpu.yml` và up -d --build lại → biến thể CPU.
+#
+# Hai thế hệ card, chọn bằng .env (30/10/2026):
+#   - Mặc định (Alienware, RTX 40xx trở xuống): CUDA 12.1 + torch 2.4.1 cu121 + Paddle 2.6.2 — đang chạy thật.
+#   - Blackwell (RTX 5070 Ti trên OCR PC, sm_120): Paddle 2.6 / cuDNN 8 / torch cu121 KHÔNG có kernel sm_120.
+#     Chép các dòng trong infra/compose/ocr/.env.rtx5070.example vào .env rồi up -d --build.
 #
 # VRAM (card 16 GB, chạy chung với vLLM): dịch vụ này giữ ≤ ~3 GB với
 # OCR_DET_GPU_MEM_MB=1024, OCR_REC_BATCH=32, OCR_GPU_CONCURRENCY=2. Đo bằng
@@ -18,10 +24,10 @@ services:
     build:
       args:
         BASE_IMAGE: "${OCR_CUDA_IMAGE:-nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04}"
-        TORCH_INDEX: "https://download.pytorch.org/whl/cu121"
-        TORCH_VERSION: "2.4.1"
-        TORCHVISION_VERSION: "0.19.1"
-        OCR_REQS: "requirements-ocr-gpu.txt"
+        TORCH_INDEX: "${OCR_TORCH_INDEX:-https://download.pytorch.org/whl/cu121}"
+        TORCH_VERSION: "${OCR_TORCH_VERSION:-2.4.1}"
+        TORCHVISION_VERSION: "${OCR_TORCHVISION_VERSION:-0.19.1}"
+        OCR_REQS: "${OCR_REQS:-requirements-ocr-gpu.txt}"
         OCR_USE_GPU: "true"
     environment:
       OCR_USE_GPU: "true"
@@ -35,5 +41,6 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              # Máy có iGPU: GPU_DEVICE_ID=GPU-<uuid> (nvidia-smi -L). Mặc định card đầu.
+              device_ids: ["${GPU_DEVICE_ID:-0}"]
               capabilities: [gpu]

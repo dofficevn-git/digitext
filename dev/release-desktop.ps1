@@ -14,6 +14,9 @@ param(
   [string]$Notes = "",
   [string]$UpdatesDir = "D:\DigiText\updates",
   [string]$BaseUrl = "https://api.digitext.vn/updates",
+  # Máy chủ API ở máy khác (OCR PC): chép bộ cài + .sig + latest.json sang thư mục phát hành của nó
+  # (UNC \\may\updates hoặc ổ mạng). Rỗng = API chạy ngay máy này (30/10/2026).
+  [string]$UpdatesRemote = "",
   [switch]$SkipBump
 )
 $ErrorActionPreference = "Stop"
@@ -80,5 +83,15 @@ $latest = [ordered]@{
 $json = $latest | ConvertTo-Json -Depth 5
 [IO.File]::WriteAllText((Join-Path $UpdatesDir "latest.json"), $json, (New-Object Text.UTF8Encoding $false))
 Write-Host "-> $UpdatesDir\latest.json → $Version ($name, $([math]::Round((Get-Item $setup).Length/1MB,1)) MB)" -ForegroundColor Green
+if ($UpdatesRemote) {
+  if (-not (Test-Path $UpdatesRemote)) { throw "Không tới được thư mục phát hành máy chủ $UpdatesRemote" }
+  # Bộ cài + .sig trước, latest.json sau cùng: app chỉ thấy bản mới khi tệp đã nằm đủ.
+  Copy-Item $setup $UpdatesRemote -Force
+  Copy-Item $sig $UpdatesRemote -Force
+  Copy-Item (Join-Path $UpdatesDir "latest.json") $UpdatesRemote -Force
+  $xa = Get-Item (Join-Path $UpdatesRemote $name)
+  if ($xa.Length -ne (Get-Item $setup).Length) { throw "Bộ cài chép sang $UpdatesRemote lệch kích thước" }
+  Write-Host "-> đã chép sang máy chủ: $UpdatesRemote" -ForegroundColor Green
+}
 Write-Host "   Kiểm: curl.exe $BaseUrl/latest.json" -ForegroundColor DarkGray
 Write-Host "   Nhớ: git commit 3 file version (+ tag v$Version)." -ForegroundColor DarkGray

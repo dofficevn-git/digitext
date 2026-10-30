@@ -29,15 +29,21 @@ services:
       - "${VLLM_GPU_FRACTION:-0.55}"
       - "--max-model-len"
       # 28/9/2026: 8192 để bóc trường kèm chữ OCR + ví dụ (dạy bằng ví dụ). Khớp DIGITEXT_VLM_MAX_LEN của worker.
-      - "${VLLM_MAX_MODEL_LEN:-4096}"
+      - "${VLLM_MAX_MODEL_LEN:-8192}"
       - "--limit-mm-per-prompt"
       # vLLM mới (≥0.10) nhận dạng JSON: VLLM_LIMIT_MM='{"image":1}'
       - "${VLLM_LIMIT_MM:-image=1}"
       - "--dtype"
       - "half"
-      - "--enforce-eager"
+      # 30/10/2026: đồng bộ với lệnh đang chạy thật trên Alienware (docker inspect): bỏ --enforce-eager
+      # (CUDA graph nhanh hơn), KV cache fp8 (tiết kiệm VRAM, card 16 GB chạy chung OCR), không cache
+      # bộ tiền xử lý ảnh (mỗi ảnh một prompt, cache chỉ tốn RAM). Mặc định 16 lượt / 8192 token như Alienware.
+      - "--kv-cache-dtype"
+      - "${VLLM_KV_DTYPE:-fp8}"
+      - "--mm-processor-cache-gb"
+      - "${VLLM_MM_CACHE_GB:-0}"
       - "--max-num-seqs"
-      - "${VLLM_MAX_NUM_SEQS:-4}"
+      - "${VLLM_MAX_NUM_SEQS:-16}"
     ports:
       # Mặc định loopback. Worker DigiText ở máy khác thì đặt VLLM_BIND=0.0.0.0
       # trong .env cạnh file này. vLLM KHÔNG có xác thực — chỉ mở trong LAN tin cậy.
@@ -54,14 +60,17 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              # Máy có iGPU (Ryzen 9950X trên OCR PC): chọn đúng card bằng UUID từ `nvidia-smi -L`
+              # (GPU_DEVICE_ID=GPU-xxxx trong .env). Mặc định "0" = card đầu, đúng với Alienware.
+              device_ids: ["${GPU_DEVICE_ID:-0}"]
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "bash", "-lc", "curl -sf localhost:8003/health || exit 1"]
       interval: 20s
       timeout: 5s
-      retries: 40
-      start_period: 600s
+      retries: 60
+      # Lần đầu trên máy mới: tải model ~6 GB + biên dịch CUDA graph → có thể quá 10 phút.
+      start_period: ${VLLM_START_PERIOD:-600s}
 
 volumes:
   hf_cache:

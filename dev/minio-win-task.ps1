@@ -8,7 +8,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$DataDir,
   [int]$Port = 9000,
-  [string]$Exe = "C:\Users\HieuPC\tools\minio-build\minio.exe",
+  [string]$Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) "infra\minio-win\minio.exe"),
   [string]$TaskName = "DigiText-MinIO"
 )
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

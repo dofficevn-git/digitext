@@ -45,7 +45,9 @@ class OcrNotReady(RuntimeError):
 
 def _is_oom(e: Exception) -> bool:
     m = str(e).lower()
-    return "out of memory" in m or ("cuda" in m and "memory" in m)
+    # Paddle 3.x báo ResourceExhaustedError / "failed to allocate" thay vì "out of memory" (30/10/2026).
+    return ("out of memory" in m or ("cuda" in m and "memory" in m)
+            or "resourceexhausted" in m or "failed to allocate" in m)
 
 
 def _env_flag(name: str, default: str = "false") -> bool:
@@ -72,6 +74,30 @@ def _release_cuda() -> None:
             torch.cuda.empty_cache()
     except Exception:  # noqa: BLE001
         pass
+    try:
+        import paddle
+
+        if paddle.device.is_compiled_with_cuda():
+            paddle.device.cuda.empty_cache()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+_WARMUP: dict[str, str] = {}
+
+
+def _warmup_det(engine) -> None:
+    """Chạy thử DBNet trên ảnh trắng ngay sau khi nạp. Card không có kernel (Blackwell với Paddle
+    cũ) chỉ lộ ở lời gọi đầu — không warm-up thì health xanh mà mọi request 500 (sự cố 17/9/2026)."""
+    engine.ocr(np.full((64, 256, 3), 255, np.uint8), det=True, rec=False, cls=False)
+    _WARMUP["det"] = "ok"
+
+
+def _warmup_rec(predictor) -> None:
+    from PIL import Image
+
+    predictor.predict(Image.new("RGB", (128, 32), "white"))
+    _WARMUP["rec"] = "ok"
 
 
 def handwriting_info() -> dict:
@@ -93,6 +119,17 @@ def device_info() -> dict:
             info["torch_reserved_mb"] = round(torch.cuda.memory_reserved(0) / 1e6, 1)
     except Exception as e:  # noqa: BLE001
         info["gpu_error"] = str(e)
+    # Paddle giữ VRAM riêng, torch không thấy; trên WSL2 nvidia-smi cũng không tách được theo tiến trình.
+    try:
+        import paddle
+
+        if use_gpu() and paddle.device.is_compiled_with_cuda():
+            info["paddle_version"] = paddle.__version__
+            info["paddle_reserved_mb"] = round(paddle.device.cuda.memory_reserved(0) / 1e6, 1)
+    except Exception:  # noqa: BLE001
+        pass
+    info["det_backend"] = "paddle"
+    info["warmup"] = dict(_WARMUP)
     info["infer_concurrency"] = int(os.getenv("OCR_GPU_CONCURRENCY", "2"))
     info["rec_batch"] = int(os.getenv("OCR_REC_BATCH", "8"))
     return info
@@ -139,10 +176,14 @@ class DetectorManager:
                             kwargs["device"] = "gpu" if gpu else "cpu"
                         else:
                             raise
+                _warmup_det(cls._engine)
                 cls._error = None
                 print(f"✅ Đã nạp PaddleOCR (chỉ dùng để PHÁT HIỆN vùng chữ, "
                       f"{'GPU' if gpu else 'CPU'})", flush=True)
             except Exception as e:  # noqa: BLE001
+                # Warm-up lỗi (vd "no kernel image is available" trên card mới) → coi như chưa nạp,
+                # health trả 503 thay vì xanh giả.
+                cls._engine = None
                 cls._error = str(e)
                 print(f"❌ Không nạp được PaddleOCR: {e}")
         return cls._engine
@@ -208,10 +249,12 @@ class RecognizerManager:
                     # Giải mã có KV cache — cùng kết quả, nhanh hơn nhiều. Xem vietocr_fast.py.
                     import vietocr_fast
                     decode = "KV cache" if vietocr_fast.install(cls._predictor) else                         "gốc (kiến trúc lạ, không bật KV cache)"
+                _warmup_rec(cls._predictor)
                 cls._error = None
                 print(f"✅ Đã nạp VietOCR ({os.path.basename(cfg_path)}, {cfg['device']}, "
                       f"trọng số {os.path.basename(weights)}, giải mã {decode})", flush=True)
             except Exception as e:  # noqa: BLE001
+                cls._predictor = None
                 cls._error = str(e)
                 print(f"❌ Không nạp được VietOCR: {e}")
         return cls._predictor
