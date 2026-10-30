@@ -1,16 +1,16 @@
-# Đường vào API DigiText trên OCR PC — Caddy + Let's Encrypt (DNS-01 qua Cloudflare), cổng 5005 (30/10/2026).
+# Đường vào API DigiText trên OCR PC — Caddy + Let's Encrypt (DNS-01 qua Cloudflare), cổng 443 trực tiếp (30/10/2026).
 #
-# Vì sao không đi Cloudflare tunnel cho đường chính: tunnel giới hạn 100 s / 100 MB mỗi yêu cầu (tải PDF lớn,
-# đóng gói AIP bị cắt); Cloudflare cũng không proxy cổng 5005 → bản ghi DNS kho.digitext.vn phải là DNS-only
-# (đám mây xám) trỏ thẳng IP tĩnh 113.190.254.219, router NAT 5005 → 192.168.100.10:5005.
-# api.digitext.vn vẫn qua tunnel (updater desktop + dự phòng).
+# Anh Hiếu chốt: đi THẲNG qua cổng mở trên router, KHÔNG dùng Cloudflare tunnel nữa (tunnel giới hạn 100 s / 100 MB
+# mỗi yêu cầu, thêm một tầng có thể rớt). Một tên duy nhất `api.digitext.vn` (đã đóng cứng trong updater của mọi bản
+# desktop đã cài) → bản ghi DNS chuyển sang DNS-only (đám mây xám) trỏ IP tĩnh 113.190.254.219; router NAT
+# 443 → 192.168.100.10:443. Cloudflare chỉ còn làm DNS (và cấp token DNS-01 cho chứng chỉ).
 #
 # Cài: tải caddy có module dns.providers.cloudflare từ caddyserver.com/download (chọn "caddy-dns/cloudflare"),
 # đặt C:\DigiText-Caddy\caddy.exe; token Cloudflare chỉ quyền Zone.DNS:Edit của digitext.vn, đặt biến môi trường
 # CF_API_TOKEN cho service (sc.exe hoặc NSSM: AppEnvironmentExtra CF_API_TOKEN=...).
 #   caddy.exe validate --config D:\DigiText\infra\caddy\Caddyfile
 #   sc.exe create DigiText-Caddy binPath= "C:\DigiText-Caddy\caddy.exe run --config D:\DigiText\infra\caddy\Caddyfile" start= auto
-# Firewall: mở 5005 TCP inbound từ mọi nơi; 8080 chỉ loopback (API bind 127.0.0.1).
+# Firewall: mở 443 TCP inbound từ mọi nơi; 8080 chỉ loopback (API bind 127.0.0.1). Không cần 80 (DNS-01, không redirect).
 # API: DIGITEXT_BEHIND_PROXY=true để audit_log ghi IP máy trạm từ X-Forwarded-For.
 
 {
@@ -18,6 +18,8 @@
 	storage file_system {
 		root C:\DigiText-Caddy\data
 	}
+	# Không mở 80 → tắt redirect HTTP→HTTPS tự động.
+	auto_https disable_redirects
 	log {
 		output file C:\DigiText-Caddy\caddy.log {
 			roll_size 50MiB
@@ -27,16 +29,15 @@
 	}
 }
 
-kho.digitext.vn:5005 {
+api.digitext.vn {
 	tls {
 		dns cloudflare {env.CF_API_TOKEN}
-		# Không mở 80/443 nên chỉ DNS-01; Let's Encrypt gia hạn tự động.
 		resolvers 1.1.1.1 8.8.8.8
 	}
 
 	encode zstd gzip
 
-	# Bỏ giới hạn kiểu Cloudflare: tải lên 2 GB, chờ API tới 15 phút (đóng gói, tải PDF ký lớn).
+	# Không còn giới hạn kiểu tunnel: tải lên 2 GB, chờ API tới 15 phút (đóng gói, tải PDF ký lớn).
 	request_body {
 		max_size 2GB
 	}
