@@ -150,4 +150,16 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
 
 - 27/10/2026: kế hoạch + quyết định; LTLSBN đủ trên F: (204.981 bản ký + 204.981 PDF/A + 27 bản gốc), xoá 572 bản trùng.
 - 30/10/2026: GĐ0 xong phần repo, baseline Alienware, ONNX + parity, dump nháp, bộ mang sang trên D:. Anh chốt lại: **bỏ
-  cloudflared hẳn**, đi thẳng `api.digitext.vn` 443 (NAT 443). Chờ: cắm F: (§2.4), anh bật OpenSSH trên OCR PC (§3.1), NAT 443.
+  cloudflared hẳn**, đi thẳng `api.digitext.vn` 443 (NAT 443).
+- 30/10/2026 chiều — **GĐ1 trên OCR PC** (SSH `ADMIN@100.122.226.63`, chỉ qua Tailscale relay ~350 ms; LAN hai dải chưa route,
+  máy .127 không được mở dịch vụ chia sẻ → chuyển lớn bằng F:). Hiện trạng: Win11 Pro 26300, 62 GB, **HDD HGST Ultrastar 8 TB CMR**
+  (D:, kho), NVMe 1,8 TB (C:), driver 610.88, Docker 29.6.1. **Máy đang chạy hệ thống khác** (`ct5d_*` 3020/3021/5444/9030,
+  `vllm-vnkie` chiếm 15,7/16 GB VRAM, mssql 1433, web KIE 5002, n8n 5001, IIS 80) — anh: *chưa dừng gì*, chỉ chuẩn bị.
+  Đã làm: cài Poppler/Rust/MSVC/Caddy (có module cloudflare); clone repo `C:\DigiText`; `.wslconfig` 40 GB; Postgres (tuning) +
+  ClamAV lên; **restore dump 123 s** (205.008 tài liệu, 204.981 đã ký, 63 bảng như .127, 0006 có); `cargo build --release`
+  2 phút (lần đầu chết vì build script bị quét thời gian thực — chạy lại là được); **image OCR Blackwell build 20 phút, kiểm đạt:
+  torch 2.7.1+cu128 + Paddle 3.2.0 đều chạy GPU trên 5070 Ti** (sửa Dockerfile: ldconfig `nvidia/*/lib` vì Paddle đè wheel 12.9);
+  MinIO tạm trong phiên SSH (không task) đang nạp 204.981 bản ký từ F: ~40 MB/s (~5,5 giờ). Bẫy: Docker CLI dưới SSH/SYSTEM
+  lỗi "error getting credentials" → bỏ thư mục Docker khỏi PATH + `DOCKER_CONFIG=C:\DigiText-docker` (script bật đã có sẵn mẹo này).
+  Script bật một lần: `dev/ocr-pc-bat-dich-vu.ps1`. Còn chờ anh: dừng `vllm-vnkie` (mới chạy được OCR/Qwen + bench), NAT 443,
+  token Cloudflare DNS.
