@@ -8,9 +8,10 @@
 param(
     [string]$Vhdx = "E:\Docker\wsl\disk\docker_data.vhdx",
     [string]$DockerExe = "C:\Users\HieuPC\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe",
-    [string]$Log = (Join-Path (Split-Path -Parent $PSScriptRoot) "logs\thu-nho-docker.log")
+    [string]$Log = ""
 )
 $ErrorActionPreference = "Stop"
+if (-not $Log) { $Log = Join-Path (Split-Path -Parent $PSScriptRoot) "logs\thu-nho-docker.log" }
 $vhdx = $Vhdx
 $dockerExe = $DockerExe
 $log = $Log
