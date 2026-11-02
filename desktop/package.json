@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "kiem:mucluc": "node scripts/kiem-muc-luc.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
