@@ -6,10 +6,10 @@
 import { useMemo, useRef, useState } from "react";
 import { clRemote, clSyncNow, str, type ClCatalog, type ClRow } from "@/api/chinhly";
 import { useProject } from "@/state/project";
-import { Badge, Banner, Button, Checkbox, Dialog, Help, KpiTile, notifyError, Stepper, Table, toast, type Column } from "@/ui";
+import { Badge, Banner, Button, Checkbox, Dialog, Field, Help, KpiTile, notifyError, Select, Stepper, Table, toast, Toolbar, type Column } from "@/ui";
 import type { V3y0 } from "@/domain/types";
 import { n } from "./common";
-import { coLoiChan, docMucLucHoSo, dongMau, soChuan, soTamCua, TEN_LOAI, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
+import { coLoiChan, docMucLucHoSo, dongMau, phanTichLaiMucLuc, soChuan, soTamCua, TEN_LOAI, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
 import { KET_LUAN_LABEL } from "./thoiGianHoSo";
 
 const BUOC = [
@@ -44,7 +44,10 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   const [tienDo, setTienDo] = useState("");
   const [kq, setKq] = useState<KetQuaNhap | null>(null);
   const [loiDoc, setLoiDoc] = useState<unknown>(null);
+  const [tenTep, setTenTep] = useState("");
+  const [thbqMacDinh, setThbqMacDinh] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const tenThbq = useMemo(() => cat.thbq.map((t) => str(t, "ten")).filter(Boolean), [cat.thbq]);
 
   const maPhong = str(phong, "ma_du_an");
   const soTam = useMemo(() => (pt ? soTamCua(pt) : new Map<number, string>()), [pt]);
@@ -69,13 +72,28 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     setLoiDoc(null);
     setKq(null);
     try {
-      const r = await docMucLucHoSo(f, cat.thbq);
+      const r = await docMucLucHoSo(f, cat.thbq, { thbqMacDinh: thbqMacDinh || undefined });
+      setTenTep(f.name);
       setPt(r);
       setTrang(1);
       setChiVanDe(false);
       setBuoc(1);
     } catch (e) {
       setLoiDoc(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  /** Đổi sheet / THBQ mặc định → phân tích lại từ nội dung đã đọc (không chọn lại tệp). */
+  const phanTichLai = async (tuyChon: { sheet?: string; thbqMacDinh?: string }) => {
+    if (!pt?.buf) return;
+    setBusy(true);
+    try {
+      const r = await phanTichLaiMucLuc(pt.buf, tenTep, cat.thbq, { sheet: tuyChon.sheet ?? pt.sheet, thbqMacDinh: (tuyChon.thbqMacDinh ?? thbqMacDinh) || undefined });
+      setPt(r);
+      setTrang(1);
+    } catch (e) {
+      notifyError(e, "phân tích lại");
     } finally {
       setBusy(false);
     }
@@ -122,7 +140,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
 
   const rowsHien = useMemo(() => {
     if (!pt) return [] as DongHoSo[];
-    return chiVanDe ? pt.rows.filter((r) => r.loi.length > 0 || r.tg.ketLuan !== "dung") : pt.rows;
+    return chiVanDe ? pt.rows.filter((r) => r.loi.length > 0 || r.canhBao.length > 0 || r.tg.ketLuan !== "dung") : pt.rows;
   }, [pt, chiVanDe]);
   const rowsTrang = rowsHien.slice((trang - 1) * TRANG, trang * TRANG);
 
@@ -141,9 +159,9 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
       key: "kl",
       header: "Kết luận",
       width: 96,
-      cell: (r) => (r.loi.length ? <Badge tone="err">Lỗi</Badge> : <Badge tone={TONE[r.tg.ketLuan]}>{KET_LUAN_LABEL[r.tg.ketLuan]}</Badge>),
+      cell: (r) => (r.loi.length ? <Badge tone="err">Lỗi</Badge> : r.canhBao.length ? <Badge tone="warn">Cảnh báo</Badge> : <Badge tone={TONE[r.tg.ketLuan]}>{KET_LUAN_LABEL[r.tg.ketLuan]}</Badge>),
     },
-    { key: "ghi", header: "Ghi chú kiểm tra", className: "max-w-[320px] whitespace-normal text-sm", cell: (r) => [...r.loi, ...r.tg.ghiChu].join("; ") },
+    { key: "ghi", header: "Ghi chú kiểm tra", className: "max-w-[320px] whitespace-normal text-sm", cell: (r) => [...r.loi, ...r.canhBao, ...r.tg.ghiChu].join("; ") },
   ];
 
   const taiDanhDau = async () => {
@@ -247,11 +265,12 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
           {loiDoc !== null && <Banner tone="danger">Không đọc được tệp. Kiểm tra tệp có phải Excel (.xlsx) và không bị khoá.</Banner>}
           <Help title="Hệ thống làm gì với tệp">
             <ul className="list-disc space-y-1 pl-5 text-sm">
-              <li>Tự nhận phòng ban (I., II.…) và mảng công việc (1., 2.…); chưa có trong Danh mục thì tạo mới với mã 01, 02… theo thứ tự.</li>
-              <li>Kiểm cột thời gian: ô trống, sai định dạng, ngày đầu sau ngày cuối, năm không khớp năm ghi ở tiêu đề. Tự điền: chỉ năm → cả năm, chỉ tháng → cả tháng, một ngày → lặp lại, mốc sai → suy từ năm trong ô hoặc tiêu đề.</li>
-              <li>Số tạm = tiền tố theo THBQ + hồ sơ số (VV.001, 20N.001…) để các tệp của cùng phông không trùng nhau.</li>
-              <li>Hộp số không nhập (gán ở bước Hệ thống hoá), chỉ giữ ở sheet Kiểm tra của tệp đã chuyển.</li>
-              <li>Số tờ chỉ nhận số tự nhiên (vd. 12). Ghi kèm chữ như &quot;01 quyển&quot; là lỗi phải sửa — ô đó tô đỏ trong tệp đánh dấu.</li>
+              <li>Tự chọn sheet có dòng tiêu đề cột (bỏ qua sheet bìa); đổi sheet được ở bước Kiểm tra. Nhận cột theo tên: Hộp số / Cặp số, Hồ sơ số / Số HS / Hồ sơ mới, Tiêu đề / Nội dung / Trích yếu, Thời gian hoặc hai cột BĐ – KT, Số tờ / SỐ, THBQ / Thời hạn, Ghi chú.</li>
+              <li>Tự nhận phòng ban (I., II.…) và mảng công việc (1., 2.…); chưa có trong Danh mục thì tạo mới với mã 01, 02… theo thứ tự. Tệp không có dòng I. nào → cả tệp vào phòng ban "Chung" (00).</li>
+              <li>Kiểm cột thời gian: ô trống, sai định dạng, ngày đầu sau ngày cuối, năm không khớp năm ghi ở tiêu đề. Tự điền: chỉ năm → cả năm, chỉ tháng → cả tháng, một ngày → lặp lại, mốc sai → suy từ năm trong ô hoặc tiêu đề. Không có cột thời gian thì suy từ năm trong tiêu đề.</li>
+              <li>Số tạm = Hồ sơ số trong tệp. Hộp số và Hồ sơ số ghi vào hồ sơ; có quyền Hệ thống hoá thì xếp hộp ngay (hộp chỉ ghi ở dòng đầu hộp cũng được — mang xuống).</li>
+              <li>Số tờ chỉ nhận số tự nhiên (vd. 12 hoặc 12 tờ). Ghi kèm chữ như &quot;01 quyển&quot; là cảnh báo: vẫn nhập, số tờ để trống, giá trị gốc ghi vào Ghi chú — ô đó tô vàng trong tệp đánh dấu.</li>
+              <li>Ô THBQ trống: chọn "THBQ khi ô trống" ở bước Kiểm tra để dùng chung cho cả tệp; không chọn thì là lỗi dòng.</li>
               <li>Dòng nhóm không có I. hoặc 1. ở đầu (vd. "Sổ chứng thực") là mục nhỏ trong mảng — bỏ qua khi nhập, hồ sơ bên dưới vẫn thuộc mảng đang có.</li>
               <li>
                 "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) chỉ đánh dấu ô cần chú ý, kèm ghi chú: xanh nhạt = đã sửa (Cũ → Mới), vàng = cần xem lại, ĐỎ chữ trắng = lỗi
@@ -264,6 +283,30 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
 
       {buoc === 1 && pt && (
         <div className="space-y-4">
+          <Toolbar>
+            <Field label="Sheet" className="w-64" hint={pt.sheets.length > 1 ? `${n(pt.sheets.length)} sheet — tự chọn sheet có dòng tiêu đề cột` : undefined}>
+              <Select size="sm" value={pt.sheet} disabled={busy || pt.sheets.length <= 1} onChange={(v) => void phanTichLai({ sheet: v })} options={pt.sheets.map((s) => ({ value: s, label: s }))} />
+            </Field>
+            <Field label="THBQ khi ô trống" className="w-56" hint="Dùng cho các dòng không ghi thời hạn bảo quản">
+              <Select
+                size="sm"
+                value={thbqMacDinh}
+                disabled={busy}
+                placeholder="— báo lỗi dòng —"
+                onChange={(v) => {
+                  setThbqMacDinh(v);
+                  void phanTichLai({ thbqMacDinh: v });
+                }}
+                options={[{ value: "", label: "— báo lỗi dòng —" }, ...tenThbq.map((t) => ({ value: t, label: t }))]}
+              />
+            </Field>
+            <span className="text-sm text-fg-subtle">Tệp: {tenTep}</span>
+          </Toolbar>
+          {pt.khongChiaPhongBan && (
+            <Banner tone="info">
+              Tệp không có dòng phòng ban "I. …" — toàn bộ hồ sơ vào phòng ban <b>Chung</b> (mã 00){pt.phongBans[0]?.mangs.some((m) => !m.tuDong) ? ", mảng theo các dòng \"1. …\" trong tệp" : ", mảng \"Vấn đề chung\""}. Hộp vẫn xếp theo số hộp trong tệp.
+            </Banner>
+          )}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">
             <KpiTile label="Phòng ban" value={pt.phongBans.length} />
             <KpiTile label="Mảng" value={pt.phongBans.reduce((a, p) => a + p.mangs.length, 0)} />
@@ -293,7 +336,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
             <div className="rounded-md border border-border-subtle bg-gray-25 p-3">
               <div className="mb-1 text-sm font-medium text-fg-muted">Phòng ban và mảng công việc nhận được</div>
               {pt.phongBans.length === 0 ? (
-                <div className="text-sm text-fg-subtle">Chưa nhận được phòng ban nào (cần dòng "I. …" trong cột Tiêu đề).</div>
+                <div className="text-sm text-fg-subtle">Chưa nhận được phòng ban nào.</div>
               ) : (
                 <ul className="space-y-1 text-sm">
                   {pt.phongBans.map((p) => (
@@ -347,7 +390,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
             getRowId={(r) => String(r.dong)}
             dense
             maxHeight={380}
-            rowClassName={(r) => (r.loi.length ? "bg-danger-50" : r.tg.ketLuan === "canh_bao" ? "bg-warning-50" : r.tg.ketLuan === "loi" ? "bg-danger-50" : undefined)}
+            rowClassName={(r) => (r.loi.length ? "bg-danger-50" : r.canhBao.length || r.tg.ketLuan === "canh_bao" ? "bg-warning-50" : r.tg.ketLuan === "loi" ? "bg-danger-50" : undefined)}
             pagination={{ page: trang, pageSize: TRANG, total: rowsHien.length, onChange: setTrang }}
             state={{ empty: { title: chiVanDe ? "Không có dòng nào có vấn đề" : "Tệp không có dòng hồ sơ" } }}
           />

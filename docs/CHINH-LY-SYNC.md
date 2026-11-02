@@ -116,7 +116,15 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
   `04/2020` → cả tháng, một ngày → lặp lại, mốc sai → giữ mốc đúng + suy từ năm trong ô, ô trống → năm trong tiêu đề
   (cụm năm sau chữ "năm", không có thì cụm cuối; bỏ "nhiệm kỳ"); đầu > cuối → đảo. Kiểm: sai định dạng, năm ngoài dải năm
   tiêu đề, tiêu đề không có năm → cảnh báo (vẫn nhập); không suy được năm → ngày để trống.
-- **Hộp số** không nhập (hệ thống cũ cũng gán hộp ở Hệ thống hoá), chỉ giữ ở sheet "Kiểm tra" của tệp đã chuyển.
+- **Hộp số** và **Hồ sơ số** gửi lên máy chủ; có quyền Hệ thống hoá thì máy chủ xếp hộp ngay (`hth::boxing`, hộp theo
+  (phòng ban, loại, số hộp)); không có quyền thì bỏ qua và ghi `notes`. (Trước 2/11/2026 tài liệu ghi "không nhập" — sai.)
+- **2/11/2026 — mục lục thật của Bắc Giang** (23 tệp ở `test/MLHS`, 10.171 hồ sơ, kiểm bằng `npm run kiem:mucluc -- <thư mục> [THBQ mặc định]`
+  trong `desktop/`): tên cột so sau khi bỏ dấu + bỏ mọi khoảng trắng (`chuanTenCot`), bí danh ngắn so bằng đúng (`BĐ`, `KT`,
+  `SỐ`, `Năm`); thời gian không bắt buộc có cột (suy từ năm trong tiêu đề); tự chọn sheet có dòng tiêu đề (sheet 1 thường
+  là bìa), đổi sheet trong hộp thoại; tệp không có dòng `I.` → phòng ban "Chung" (00); số tờ không phải số / thiếu số tờ /
+  hộp lẫn hai loại / chưa có hộp số → **cảnh báo** (vẫn nhập; số tờ gốc ghi vào Ghi chú); ô THBQ trống → "THBQ khi ô trống"
+  chọn cho cả tệp. Vẫn chặn: hồ sơ số trùng cùng loại, thiếu tiêu đề, thời gian không suy được (quyết định 12/10).
+  Kết quả: 16/23 tệp nhập ngay; 7 tệp còn 96 dòng phải sửa tay (92 thiếu thời gian, 3 trùng số, 1 THBQ "Xóa").
 - **Nhập**: `POST /cl/ho-so/import` với `createMissing: true` (+ `ten_phong_ban`, `ten_mang`): máy chủ khớp phòng ban / mảng
   **chỉ theo tên** (mã I/II…, 1/2… là số thứ tự riêng của từng tệp — hai tệp cùng phông có thể cùng ghi "II." cho hai
   phòng ban khác nhau), chưa có thì tạo qua `apply_op` (`so_tt` = mã) rồi dùng cho các dòng sau; mã đã bị mục khác
