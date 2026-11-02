@@ -12,7 +12,7 @@ ngoài repo; tài liệu này là bản rút gọn đủ để làm, kèm nhật
 | Ổ trên OCR PC | Kho MinIO trên **HDD** (kiểm CMR/SMR trước: `Get-PhysicalDisk \| ft FriendlyName,MediaType`; SMR thì giữ `MINIO_SCANNER_SPEED=slowest`), Docker/Postgres/image trên **SSD** |
 | Qwen | **Gộp lên OCR PC** (Alienware chạy OCR + Qwen trong 10,5/16 GB → 5070 Ti 16 GB vừa); Alienware giữ dự phòng 30 ngày |
 | Chuyển kho | **Bằng ổ F: cầm tay**: F: đã có 204.981 bản ký đúng kích thước → `dev/nap-ban-ky.py` nạp từ thư mục; phần còn lại (~1 GB) qua `dev/dong-goi-kho.py xuat --chi-khong-phai-ban-ky` |
-| Đường vào API | **Trực tiếp, không tunnel** (anh chốt lại 30/10): Caddy + Let's Encrypt (DNS-01 Cloudflare) ở **cổng 443**, một tên duy nhất **`api.digitext.vn`** (đã đóng cứng trong updater desktop) → bản ghi DNS chuyển DNS-only trỏ IP tĩnh; router **NAT thêm 443 → 192.168.100.10:443** (5005 đã NAT sẵn không dùng tới; 5001 n8n, 5002 web KIE cũ, 80 IIS). Máy trạm giữ nguyên `https://api.digitext.vn`. **Bỏ cloudflared hoàn toàn** — tắt service trên .127 ở GĐ2, xoá tunnel trên Cloudflare |
+| Đường vào API | **Trực tiếp, không tunnel** (anh chốt lại 30/10): Caddy + Let's Encrypt ở **cổng 443**, một tên duy nhất **`api.digitext.vn`** (đã đóng cứng trong updater desktop); router **NAT thêm 443 → 192.168.100.10:443** (5005 đã NAT sẵn không dùng tới; 5001 n8n, 5002 web KIE cũ, 80 IIS). Máy trạm giữ nguyên `https://api.digitext.vn`. **DNS quản lý THẲNG ở iNET, KHÔNG Cloudflare gì nữa** (anh chốt rõ 2/11 — em từng ghi nhầm "Cloudflare chỉ còn làm DNS"): đổi nameserver về iNET, bản ghi A → 113.190.254.219, chứng chỉ **TLS-ALPN-01 qua 443**, không token. Tắt cloudflared trên .127 ở GĐ2; tên miền **hết hạn 24/11/2026**, phải gia hạn |
 | IP công cộng | **Đã tĩnh** `113.190.254.219` |
 | Vào OCR PC | **OpenSSH** anh bật, firewall chỉ mở từ Tailscale `100.64.0.0/10` (lệnh ở §4.1) |
 | Bỏ hẳn | Meilisearch, rustus, nginx trong compose; Vintern; SQL Server + web KIE cũ; Triton (chỉ giữ ONNX làm dự phòng) |
@@ -109,7 +109,7 @@ Cắm dây LAN. Cắm F:. Xác nhận ổ HDD cho kho (CMR?).
    theo trình tự trong file example. Paddle không chạy sm_120 → `OCR_DET_BACKEND=onnx` + thêm `onnxruntime-gpu==1.22.0`
    vào requirements cu128 (plan-B, parity đã chứng minh).
 5. **vLLM:** `infra/compose/vllm/.env` = bản Alienware + `VLLM_IMAGE=vllm/vllm-openai:v0.15.1` (`ocr/.env.vllm.rtx5070.example`),
-   `VLLM_GPU_FRACTION=0.55`, `GPU_DEVICE_ID`, `VLLM_MEM_LIMIT=20g`, `VLLM_START_PERIOD=1200s`. Không có FlashAttention
+   `VLLM_GPU_FRACTION=0.70` (0.55 như Alienware **không đủ** trên 5070 Ti: mô hình 7,37 GB + đo đỉnh → KV cache âm, engine sập — 2/11), `GPU_DEVICE_ID`, `VLLM_MEM_LIMIT=20g`, `VLLM_START_PERIOD=1200s`. Không có FlashAttention
    cho sm_120 → `VLLM_ATTENTION_BACKEND=FLASHINFER`. Kiểm `host.docker.internal:8003/v1/models` từ container OCR.
 6. **Chấp nhận:** giải nén `golden-vlm_pseudo-520.tar.gz`, `run_bench.py --endpoint http://127.0.0.1:5012` → `score.py` →
    `gate.py --baseline report_baseline_alienware_20261030.json --tol 0.01`; `loadtest.py` c4/c8 so §2.2.
@@ -174,3 +174,44 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   build release phải đổi `CARGO_TARGET_DIR`); bản thử desktop (chưa ký) ở `C:\DigiText-ChuyenMay\DigiText_0.19.8-mlhs-thu_x64-setup.exe`.
   Bẫy: lần đầu chép nhầm exe cũ 22/10 (build chết vì AV mà vẫn exit 0 qua pipe) → đã khôi phục từ `.bak-20261102-1031` rồi
   mới thay đúng. Script dùng: `C:\DigiText-ChuyenMay\{ap-0023,thay-api,khoi-phuc-api}.ps1`.
+- 2/11/2026 (chiều, tiếp): **sao lưu + tắt nền tảng cũ `doc_extract_pla`** (vllm-vnkie + mssql_container, compose
+  `D:\doc_extract_pla`) theo yêu cầu anh → `D:\doc_extract_pla-backup\2026-11-02` (anh đổi ý từ F: sang D:; bản F: bị xoá):
+  46 `.bak` COPY_ONLY + VERIFYONLY (7,6 GB, 43 CSDL người dùng, `pla_kie` là CSDL ứng dụng), `app\` (exe/.env/compose/models,
+  11,1 GB; `uploads` 1,03 TB + `static` 443 GB giữ nguyên tại D:), `docker save` 2 ảnh (lớp nén OCI vì containerd store:
+  vllm 8,7 GB, mssql 505 MB), `cau-hinh\` inspect + compose resolved, `volumes\` tar 3 volume, `README-KHOI-PHUC.md`.
+  Rồi `docker stop` + `--restart=no` hai container (14:26). **GPU rảnh** → bật `digitext-vllm` + `digitext-ocr-fulltext` (OCR 5012
+  healthy, worker readyz 200, vLLM 8003 healthy sau khi nâng `VLLM_GPU_FRACTION` 0.55→0.70; VRAM 11,3/16 GB). Chưa bench §3.2.6.
+  Bẫy: (1) `sqlcmd` tua lại stdin khi chạy trong `while read` → vòng lặp lặp mãi `master`; thêm `< /dev/null`. (2) Tiến trình
+  con của phiên SSH (kể cả `Start-Process`) chết khi phiên đóng → chạy nền bằng `schtasks /SC ONCE` hoặc
+  `Invoke-WmiMethod Win32_Process Create` (schtasks có lúc "Access is denied"). (3) Ghi tar qua bind mount D: của Docker Desktop
+  treo → stream `docker run … tar cf - > tệp` qua `cmd /c`. (4) **`/var/opt/mssql/data/pla_kie_log.ldf` (11,6 GB) treo khi đọc
+  ở offset ~1,3 GB** trong đĩa ảo WSL (D state `folio_wait_bit_common`, lặp lại 3 lần cùng chỗ) → tar volume mssql **trừ tệp này**
+  (`…mssql_data.tru-pla_kie_log.tar`); `pla_kie` khôi phục từ `.bak`. Chỉ `wsl --shutdown`/khởi động lại Docker Desktop mới gỡ
+  được trang treo — làm vào cửa sổ cắt chuyển, không làm lúc `ct5d_*` đang chạy. Script: `C:\DigiText-ChuyenMay\{bk-docext-D,
+  tar-volume-3,bat-ocr-vllm,sua-vllm}.ps1`, `mssql-bak.sh`.
+- 2/11/2026 15:40: anh muốn **chạy song song hệ cũ** để người dùng vẫn xác nhận trên OCR cũ → bật lại `mssql_container`
+  (phục hồi 30 s, `pla_kie` ONLINE, không chạm vùng ldf treo), web KIE `doc_extract_pla.exe` :5002 (bật qua WMI, trước đó không
+  chạy), `vllm-vnkie` hạ `--gpu-memory-utilization` 0.90→**0.75** (KV 8,75 GiB, 186× ở 4096); DigiText trên OCR PC: `digitext-vllm`
+  **stop** (16 GB không đủ hai vLLM), OCR 5012 + worker giữ. Alienware ở tailnet khác (`dangdat234678@`) nên không trỏ qua Tailscale
+  được → anh **cắm Alienware vào LAN OCR PC: 192.168.100.11** (quét LAN tìm ra, không phải .16 như báo) → worker
+  `DIGITEXT_FIELDS_ENGINE=v2`, `DIGITEXT_VLM_ENDPOINT=http://192.168.100.11:8003/…`, OCR `OCR_HW_VLM_URL` cùng chỗ; readyz 200.
+  VRAM 14,0/16,3 GB. **Hệ quả: máy .127 mất Alienware (192.168.0.205 không còn)** → bản chính hết OCR/Qwen cho tới cắt chuyển
+  (hàng đợi lúc đó trống). Lúc cắt chuyển hoặc hệ cũ nghỉ: `docker compose … vllm up -d` tại chỗ (0.70) và trỏ lại 127.0.0.1:8003.
+  Script: `C:\DigiText-ChuyenMay\{bat-lai-C,bat-lai-A2,quet-lan}.ps1`; `.env` gốc có bản `.bak-20261102`.
+- **2/11/2026 16:00–17:05 — GĐ2 CẮT CHUYỂN XONG, OCR PC là máy chủ bản chính.** Anh: "bản ở máy này coi như đã tắt hẳn".
+  Dump chốt `.127` 1,6 GB (SHA ghi ở nhật ký) → chép 9 khúc 200 MB qua Tailscale relay (~2 MB/s, 33 phút; http.server tạm bị
+  bộ lọc chặn) → `phuc-hoi-csdl-chot.ps1`: drop/restore 382 s, số khớp (205.008/204.981/1.910 hồ sơ/6 user/5 vai trò, 0023 + 0006).
+  Kho MinIO hai bên đã giống hệt (205.027 đối tượng, 799,9 GB) → không chuyển. **DNS: iNET** (anh đổi NS Cloudflare → ns1/ns2.inet.vn,
+  bản ghi A `@`/`api` → 113.190.254.219, `www` CNAME `@`; lan xong 16:33). **FortiGate 300D** (`pla-fw`, 192.168.100.1): VIP
+  `113.190.254.219-192.168.100.10_httpss` (443) + policy `Public web OCR` đã có sẵn; chỉ phải mở Windows Firewall 443 trên OCR PC.
+  **Caddy** service `DigiText-Caddy` chạy, chứng chỉ Let's Encrypt TLS-ALPN-01 cho `api`, `digitext.vn`, `www` (hết hạn 31/1/2027,
+  tự gia hạn); `www`/gốc → IIS :80 trên OCR PC (thay tunnel `ocr-pc`). Watchdog + backup 01:00 (`C:\DigiText-Backup\csdl`) đã đăng ký.
+  Kiểm từ ngoài: healthz 200, `updates/latest.json` 200, tải bộ cài 13 MB 2,6 s (5 MB/s). Chưa kiểm: đăng nhập desktop, OCR 1
+  tài liệu, ký số, đóng gói, khởi động lại máy (§5). Bẫy: (1) `ocr-pc-bat-dich-vu.ps1` chết im lặng sau "dừng minio tạm" vì
+  `2>&1` dưới `Stop` → đã đổi sang Continue; nó cũng kill MinIO của task → MinIO treo (6 MB RSS, không mở 9000) phải kill lại cho
+  supervisor chạy lại; API thoát 2 lần vì chưa có bucket. (2) 5 phút đầu sau khởi động API tải tệp `updates` chỉ 4–25 KB/s
+  (dashboard_rollup + việc nền), sau đó 200 MB/s — đừng kết luận mạng. (3) Máy có **360 Total Security** cạnh Defender —
+  nghi là nguồn "Access is denied" của schtasks/cargo. Máy .127: anh tự chạy `dev/dung-dich-vu-127.ps1`; cloudflared trên .127
+  không còn tác dụng (NS đã rời Cloudflare) — rollback giờ = trỏ A về .127 không được (không NAT), nên rollback thực tế chỉ còn
+  dump ngược từ OCR PC; .127 giữ Postgres/MinIO 14 ngày.
+
