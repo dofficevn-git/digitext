@@ -169,3 +169,8 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   đã đăng ký và chạy (MinIO/API/worker healthz 200; worker readyz chưa 200 vì chưa có OCR). Bẫy: `$PSScriptRoot` rỗng lúc
   đánh giá tham số mặc định khi gọi `-File` → 3 script đổi sang tính trong thân. CSDL trên OCR PC vẫn là bản chụp 30/10 09:00 —
   lúc cắt chuyển phải dump lại từ .127. Chưa bật: OCR/vLLM (VRAM bị vnkie), Caddy (token + NAT 443), watchdog, backup.
+- 2/11/2026 (chiều): nhánh `feat/mlhs-tt05-mot-luong` (xem `docs/CHINH-LY-SYNC.md` mục 2/11): **áp 0023** lên Postgres nội bộ
+  OCR PC, thay `digitext-api.exe` bằng bản build `target-mlhs/release` (máy .127 đang chạy `target/release` nên khoá tệp —
+  build release phải đổi `CARGO_TARGET_DIR`); bản thử desktop (chưa ký) ở `C:\DigiText-ChuyenMay\DigiText_0.19.8-mlhs-thu_x64-setup.exe`.
+  Bẫy: lần đầu chép nhầm exe cũ 22/10 (build chết vì AV mà vẫn exit 0 qua pipe) → đã khôi phục từ `.bak-20261102-1031` rồi
+  mới thay đúng. Script dùng: `C:\DigiText-ChuyenMay\{ap-0023,thay-api,khoi-phuc-api}.ps1`.
