@@ -209,7 +209,7 @@ pub fn normalize(table: &str, row: &mut Row, full: bool) -> Vec<FieldErr> {
         }
     }
     for f in ["khoi_id", "phong_id", "phong_ban_id", "mang_id", "thbq_id", "hop_id", "bo_id", "tap_id", "gia_id", "kho_id", "ho_so_id",
-        "van_ban_id", "document_id", "nguoi_lap_phieu"]
+        "van_ban_id", "document_id", "nguoi_lap_phieu", "duyet_boi"]
     {
         check_uuid(row, f, &mut errs);
     }
@@ -335,6 +335,18 @@ pub fn normalize(table: &str, row: &mut Row, full: bool) -> Vec<FieldErr> {
             check_code(row, "che_do_su_dung", codes::TIEP_CAN, &mut errs);
             check_code(row, "tinh_trang_vat_ly", codes::TINH_TRANG_VAT_LY, &mut errs);
             check_code(row, "do_tin_cay", codes::TIN_CAY, &mut errs);
+            // 0023: nguon chỉ 'ocr' (hoặc trống); duyet_luc phải là mốc giờ RFC 3339 — kiểm ở đây để trả `Rejected`
+            // thay vì lỗi kiểu ở jsonb_populate_record (500).
+            if let Some(n) = str_of(row, "nguon") {
+                if n != "ocr" {
+                    errs.push(FieldErr::new("nguon", "nguồn văn bản chỉ nhận 'ocr'"));
+                }
+            }
+            if let Some(t) = str_of(row, "duyet_luc") {
+                if chrono::DateTime::parse_from_rfc3339(&t).is_err() {
+                    errs.push(FieldErr::new("duyet_luc", "mốc duyệt phải là giờ RFC 3339"));
+                }
+            }
         }
         "cl_van_ban_file" => {
             if full {
