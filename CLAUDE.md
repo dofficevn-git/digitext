@@ -77,7 +77,8 @@ liên quan tới dịch vụ OCR, web KIE, hay fine-tune VietOCR.
 
 ## Bẫy đã biết
 
-- **Không có migrations Postgres trong repo** — clone về không dựng lại được CSDL.
+- **Migrations Postgres ở `migrations/0001`–`0023`**, áp tay theo thứ tự (không có `_sqlx_migrations`
+  tự động, không có cache `.sqlx/`). Ghi chú cũ "không có migrations" là sai (sửa 2/11/2026).
 - **Không có `query!` macro** — SQL chỉ nổ lúc chạy, không nổ lúc biên dịch.
 - **Quyền cài đặt hai nơi**: `digitext-core/src/permission.rs` và
   `desktop/src/domain/permissions.ts`. Sửa một bên phải sửa bên kia. Từ 22/10/2026 bộ quyền

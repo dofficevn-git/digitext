@@ -195,7 +195,20 @@ export default function LapHoSoView() {
                 { label: sel.size > 0 ? `Xoá ${n(sel.size)} hồ sơ đã chọn` : "Xoá hồ sơ đã chọn", icon: "xoa", danger: true, disabled: !canDelete || sel.size === 0, onSelect: () => void xoaChon() },
                 "-",
                 { label: "Tải mẫu Excel lập hồ sơ", icon: "tepExcel", disabled: !phong, onSelect: () => void xuatMauLapHoSo(str(phong, "ma_du_an"), cat.thbq).catch((e) => notifyError(e, "tải mẫu")) },
-                { label: "Nhập mục lục hồ sơ", icon: "nhapTep", hint: "Tự nhận phòng ban, mảng; kiểm và điền thời gian", disabled: !canCreate || !phong, onSelect: () => setMucLuc(true) },
+                {
+                  label: "Nhập mục lục hồ sơ",
+                  icon: "nhapTep",
+                  // Kiểm đầu luồng (2/11/2026): mã hồ sơ TT05 cần số phông + số mục lục; xếp hộp cần quyền Hệ thống hoá.
+                  hint: !phong
+                    ? "Chọn phông"
+                    : !str(phong, "phong_so") || !str(phong, "muc_luc_so")
+                      ? "Phông chưa có số phông / số mục lục → mã hồ sơ sẽ thiếu (sửa ở Danh mục › Phông)"
+                      : !perms.includes("dossier.systematize")
+                        ? "Tài khoản không có quyền Hệ thống hoá → hộp số, hồ sơ số sẽ không được xếp"
+                        : "Tự nhận phòng ban, mảng, sheet; kiểm và điền thời gian; xếp hộp ngay",
+                  disabled: !canCreate || !phong,
+                  onSelect: () => setMucLuc(true),
+                },
                 { label: "Nhập hồ sơ từ Excel (mẫu 14 cột)", icon: "nhapTep", hint: "Cần máy chủ", disabled: !canCreate || !phongId || sync?.phase === "offline", onSelect: () => fileRef.current?.click() },
                 "-",
                 ...Object.entries(TEN_COT).map(([k, l]) => ({ label: `${anCot.has(k) ? "Hiện" : "Ẩn"} cột ${l}`, onSelect: () => setAnCot((s) => { const x = new Set(s); if (!x.delete(k)) x.add(k); return x; }) })),

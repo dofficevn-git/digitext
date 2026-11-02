@@ -356,14 +356,12 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Thiếu: schema Postgres không có trong repo
+### Schema Postgres: `migrations/0001`–`0023` (sửa 2/11/2026)
 
-`digitext-db` dùng sqlx truy vấn 28 nhóm bảng, `digitext-wipe` nhắc tới bảng
-`_sqlx_migrations` — nhưng **không có thư mục `migrations/` nào trong repo**,
-`.gitignore` cũng không chặn nó, và không có cache `.sqlx/` offline.
-
-Nghĩa là: clone repo về **không dựng lại được CSDL**. Cần tìm lại migrations hoặc
-sinh lại từ đầu.
+`digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
+(0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR) — ghi chú cũ "không có migrations"
+là sai. Không có cache `.sqlx/` offline và không có `_sqlx_migrations` tự động: áp tay theo
+thứ tự (xem `docs/CHUYEN-MAY-OCR-PC.md` cách áp bằng `docker exec psql`).
 
 ### Truy vấn không được kiểm tại thời điểm biên dịch
 
