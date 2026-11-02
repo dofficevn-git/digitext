@@ -7,12 +7,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
-import { clHoSoList, clRows, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
+import { clHoSoList, clRows, clSyncNow, clTaoVanBanTuOcr, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClListFilter, type ClRow, type ClTuOcrResp } from "@/api/chinhly";
+import { useProject } from "@/state/project";
 import { Chip, ChuaChonDuAn, n, Select, tenPhong, THBQ_BADGE, useClCatalog } from "./common";
 import { inHtml, inMucLucHoSo, inMucLucVanBan, inNhanHop, inPhuLuc, inSanPham } from "./print";
 import { KIEU_MLHS, xuatLichSu, xuatMucLucHoanThien, xuatMucLucVanBan, xuatPhuLuc, xuatTT02, xuatTT05, type KieuMLHS } from "./excelXuat";
 import VanBanPanel from "./VanBanPanel";
-import { Badge, Button, Card, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type MenuEntry } from "@/ui";
+import { Badge, Banner, Button, Card, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type MenuEntry } from "@/ui";
 
 const PAGE = 100;
 const AN_MAC_DINH = ["bo_so", "tap_so", "trung_thua"];
@@ -37,6 +38,8 @@ export default function KhaiThacView() {
   const [kieu, setKieu] = useState<KieuMLHS | 0>(0);
   const [busy, setBusy] = useState(false);
   const [anCot, setAnCot] = useState<Set<string>>(() => new Set(AN_MAC_DINH));
+  const [ocrKq, setOcrKq] = useState<ClTuOcrResp | null>(null);
+  const { projectId } = useProject();
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -65,12 +68,22 @@ export default function KhaiThacView() {
 
   /** Toàn bộ hồ sơ khớp bộ lọc (không phân trang), dùng cho kết xuất. */
   const layTatCa = async (): Promise<ClRow[]> => (await clHoSoList({ ...locGoc, limit: 200000 })).rows;
+  /** Đọc hết một bảng của bản sao theo trang (mirror kẹp 200.000 dòng / lần; phông lớn × nhiều tệp vượt mức đó). */
+  const layHetBang = async (table: "van_ban" | "van_ban_file", f: Omit<ClListFilter, "limit" | "offset">): Promise<ClRow[]> => {
+    const out: ClRow[] = [];
+    const LO = 100000;
+    for (let offset = 0; ; offset += LO) {
+      const r = await clRows(table, { ...f, limit: LO, offset });
+      out.push(...r.rows);
+      if (r.rows.length < LO) return out;
+    }
+  };
   const vanBanCua = async (hs: ClRow[]): Promise<Map<string, ClRow[]>> => {
     const ids = new Set(hs.map((h) => h.id));
-    const all = await clRows("van_ban", { limit: 200000, order: "so_thu_tu" });
+    const all = await layHetBang("van_ban", { order: "so_thu_tu" });
     const m = new Map<string, ClRow[]>();
     const loai = new Map(cat.loai_van_ban.map((l) => [str(l, "ma"), str(l, "ten")]));
-    for (const v of all.rows) {
+    for (const v of all) {
       const k = str(v, "ho_so_id");
       if (!ids.has(k)) continue;
       v.ten_loai_vb = loai.get(str(v, "loai_vb")) ?? "";
@@ -78,6 +91,43 @@ export default function KhaiThacView() {
       m.get(k)!.push(v);
     }
     return m;
+  };
+  /** Văn bản id → tên tệp quét thật (cl_van_ban_file, dòng đầu theo so_tt) của các hồ sơ đã chọn. */
+  const tepCuaVanBan = async (vbs: Map<string, ClRow[]>): Promise<Map<string, string>> => {
+    const ids = new Set<string>();
+    for (const xs of vbs.values()) for (const v of xs) ids.add(v.id);
+    const m = new Map<string, string>();
+    if (ids.size === 0) return m;
+    for (const f of await layHetBang("van_ban_file", { order: "so_tt" })) {
+      const vb = str(f, "van_ban_id");
+      const ten = str(f, "name");
+      if (ids.has(vb) && ten && !m.has(vb)) m.set(vb, ten);
+    }
+    return m;
+  };
+  const taoTuOcr = async () => {
+    if (!phongId || !projectId) return;
+    setBusy(true);
+    setOcrKq(null);
+    let tid = toast.info("Tạo văn bản từ OCR: đang ghép tài liệu với hồ sơ…");
+    try {
+      const kq = await clTaoVanBanTuOcr(projectId, phongId, undefined, (t, lan) => {
+        toast.dismiss(tid);
+        tid = toast.info(`Tạo văn bản từ OCR: lô ${lan} — ${n(t.taiLieuXet)} tài liệu, thêm ${n(t.created)}, cập nhật ${n(t.updated)}…`);
+      });
+      try {
+        await clSyncNow();
+      } catch {
+        /* đồng bộ nền sẽ kéo sau */
+      }
+      setOcrKq(kq);
+      reload();
+    } catch (e) {
+      notifyError(e, "tạo văn bản từ OCR");
+    } finally {
+      toast.dismiss(tid);
+      setBusy(false);
+    }
   };
   const chay = async (ten: string, f: (all: ClRow[]) => Promise<unknown>) => {
     if (total === 0) {
@@ -102,7 +152,15 @@ export default function KhaiThacView() {
   const coThoiHan = status === "GL" || status === "HET" || (thbqId !== "" && str(cat.thbq.find((t) => t.id === thbqId), "trang_thai") !== "1");
 
   const ketXuat: MenuEntry[] = [
-    { label: "Metadata TT05 (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất metadata TT05", async (all) => xuatTT05(all, await vanBanCua(all), phong)) },
+    {
+      label: "Tạo văn bản từ OCR (phông đang chọn)",
+      icon: "taiLieu",
+      disabled: busy || !phongId || !projectId || !canEdit,
+      hint: !phongId ? "Chọn phông" : "Cần máy chủ; văn bản máy tạo đánh dấu chưa duyệt",
+      onSelect: () => void taoTuOcr(),
+    },
+    "-",
+    { label: "Metadata TT05 (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất metadata TT05", async (all) => { const vbs = await vanBanCua(all); return xuatTT05(all, vbs, phong, await tepCuaVanBan(vbs)); }) },
     { label: "Metadata TT02 (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất metadata TT02", async (all) => xuatTT02(all, await vanBanCua(all), tenPhongHien)) },
     "-",
     { label: "Mục lục hồ sơ (Excel)", icon: "tepExcel", hint: kieu === 0 ? "Theo số hồ sơ" : `Kiểu ${kieu}`, onSelect: () => void chay("Xuất mục lục hồ sơ", (all) => xuatMucLucHoanThien(all, kieu, status === "HET" || trungThua, tenPhongHien)) },
@@ -173,6 +231,18 @@ export default function KhaiThacView() {
         }
       />
       <ChuaChonDuAn />
+      {ocrKq && (
+        <Banner
+          tone={ocrKq.errors.length ? "warning" : "success"}
+          className="mb-4"
+          onClose={() => setOcrKq(null)}
+          detail={[...ocrKq.errors.map((e) => `Lỗi: ${e.message}`), ...ocrKq.taiLieuKhongKhop.map((t) => `Không ghép: ${t.filename} — ${t.lyDo}`), ...(ocrKq.notes ?? [])].join("\n") || undefined}
+        >
+          Tạo văn bản từ OCR: {n(ocrKq.hoSoXet)} hồ sơ xét, {n(ocrKq.hoSoKhop)} có tài liệu · {n(ocrKq.taiLieuXet)} tài liệu → thêm {n(ocrKq.created)}, cập nhật {n(ocrKq.updated)}, chỉ nối tệp {n(ocrKq.daLienKetTep)} (nhập tay / đã duyệt), không đổi {n(ocrKq.giuNguyen)}
+          {ocrKq.taiLieuKhongKhop.length ? ` · ${n(ocrKq.taiLieuKhongKhop.length)} tài liệu không ghép được hồ sơ` : ""}
+          {ocrKq.errors.length ? ` · ${n(ocrKq.errors.length)} lỗi` : ""}. Văn bản máy tạo ở trạng thái "chưa duyệt" — mở hồ sơ để soát và bấm Đã duyệt.
+        </Banner>
+      )}
       <Card className="mb-4" padding="sm">
         <FormGrid cols={4}>
           <Field label="Phông">

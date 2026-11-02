@@ -4,8 +4,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
-import { clDelete, clNextStt, clRemote, clSave, clVanBanList, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
+import { clDelete, clNextStt, clRemote, clSave, clSyncNow, clTaoVanBanTuOcr, clVanBanList, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
 import { useProject } from "@/state/project";
+import { V460 } from "@/state";
 import { errText, n, SyncBadgeRow } from "./common";
 import { docMauMlvb, xuatMauMlvb } from "./excel";
 import { Badge, Banner, Button, Card, confirm, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, Menu, notifyError, Select, Table, Textarea, toast, type Column } from "@/ui";
@@ -133,7 +134,55 @@ export default function VanBanPanel({ cat, hoSo, canEdit, onClose }: { cat: ClCa
   const { reload } = V41p(load, { topics: ["chinhLy"], enabled: isTauri() });
   const tenLoai = useMemo(() => new Map(cat.loai_van_ban.map((l) => [str(l, "ma"), str(l, "ten")])), [cat.loai_van_ban]);
   const duAnDangChon = useProject().projectId; // không dùng session.projectId: super admin không gắn dự án
+  const userId = V460().session?.userId ?? null;
   const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Văn bản máy tạo từ OCR (0023): chưa duyệt tới khi người soát bấm "Đã duyệt" (hoặc Lưu ở màn soát OCR).
+  const chuaDuyet = (r: ClRow) => str(r, "nguon") === "ocr" && !str(r, "duyet_luc");
+  const duyet = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    setBusy(true);
+    try {
+      const luc = new Date().toISOString();
+      let loi = 0;
+      for (const id of ids) {
+        const r = await clSave("van_ban", id, { duyet_luc: luc, duyet_boi: userId });
+        if (!r.ok) loi += 1;
+      }
+      if (loi) toast.warning(`Đã duyệt ${n(ids.length - loi)}, ${n(loi)} văn bản không lưu được.`);
+      else toast.success(`Đã duyệt ${n(ids.length)} văn bản.`);
+      reload();
+    } catch (e) {
+      notifyError(e, "duyệt văn bản");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const taoTuOcrHoSo = async () => {
+    const phongId = str(hoSo, "phong_id");
+    if (!duAnDangChon || !phongId) return;
+    setBusy(true);
+    setNhapKq(null);
+    try {
+      const kq = await clTaoVanBanTuOcr(duAnDangChon, phongId, [hoSoId]);
+      try {
+        await clSyncNow();
+      } catch {
+        /* đồng bộ nền sẽ kéo sau */
+      }
+      const errs = [...kq.errors.map((e) => e.message), ...kq.taiLieuKhongKhop.map((t) => `${t.filename}: ${t.lyDo}`), ...(kq.notes ?? [])];
+      setNhapKq({
+        text: kq.taiLieuXet === 0 ? "Hồ sơ này chưa có tài liệu quét nào trên máy chủ (gắn theo hộp / hồ sơ số)." : `Từ ${n(kq.taiLieuXet)} tài liệu: thêm ${n(kq.created)}, cập nhật ${n(kq.updated)}, chỉ nối tệp ${n(kq.daLienKetTep)}, không đổi ${n(kq.giuNguyen)}.`,
+        errors: errs,
+      });
+      reload();
+    } catch (e) {
+      notifyError(e, "tạo văn bản từ OCR");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const nhapMlvb = async (f: File) => {
     setNhapKq(null);
@@ -169,6 +218,12 @@ export default function VanBanPanel({ cat, hoSo, canEdit, onClose }: { cat: ClCa
 
   const cols: Column<ClRow>[] = [
     { key: "_s", header: "", width: 80, cell: (r) => <SyncBadgeRow sync={r._sync?.dirty ? "pending" : "clean"} /> },
+    {
+      key: "nguon",
+      header: "Nguồn",
+      width: 110,
+      cell: (r) => (str(r, "nguon") === "ocr" ? <Badge tone={chuaDuyet(r) ? "warn" : "ok"}>{chuaDuyet(r) ? "OCR · chưa duyệt" : "OCR · đã duyệt"}</Badge> : <span className="text-fg-subtle">Nhập tay</span>),
+    },
     { key: "so_thu_tu", header: "STT", align: "right", width: 60, cell: (r) => str(r, "so_thu_tu"), sortable: true, sortValue: (r) => Number(str(r, "so_thu_tu")) || 0 },
     { key: "ma_van_ban", header: "Mã văn bản", className: "text-xs text-fg-subtle", cell: (r) => str(r, "ma_van_ban"), hideBelow: 1400 },
     { key: "loai_vb", header: "Loại", cell: (r) => tenLoai.get(str(r, "loai_vb")) ?? str(r, "loai_vb") },
@@ -203,6 +258,9 @@ export default function VanBanPanel({ cat, hoSo, canEdit, onClose }: { cat: ClCa
             items={[
               { label: "Tải mẫu Excel mục lục văn bản", icon: "tepExcel", onSelect: () => void xuatMauMlvb(hoSoId, str(hoSo, "ma_ho_so"), str(hoSo, "tieu_de")).catch((e) => notifyError(e, "tải mẫu")) },
               { label: "Nhập mục lục văn bản từ Excel", icon: "nhapTep", disabled: !canEdit, hint: "Cần máy chủ", onSelect: () => fileRef.current?.click() },
+              "-",
+              { label: "Tạo văn bản từ OCR cho hồ sơ này", icon: "taiLieu", disabled: !canEdit || busy || !duAnDangChon, hint: "Cần máy chủ; tài liệu quét gắn theo hộp / hồ sơ số", onSelect: () => void taoTuOcrHoSo() },
+              { label: `Duyệt cả hồ sơ (${n(rows.filter(chuaDuyet).length)} văn bản OCR chưa duyệt)`, icon: "duyet", disabled: !canEdit || busy || !rows.some(chuaDuyet), onSelect: () => void duyet(rows.filter(chuaDuyet).map((r) => r.id)) },
             ]}
           />
           <input
@@ -233,7 +291,7 @@ export default function VanBanPanel({ cat, hoSo, canEdit, onClose }: { cat: ClCa
         getRowId={(r) => r.id}
         dense
         maxHeight={420}
-        rowActions={canEdit ? (r) => <Menu size="sm" items={[{ label: "Sửa", icon: "sua", onSelect: () => setForm({ row: r }) }, { label: "Xoá", icon: "xoa", danger: true, onSelect: () => void xoa(r) }]} /> : undefined}
+        rowActions={canEdit ? (r) => <Menu size="sm" items={[...(chuaDuyet(r) ? [{ label: "Đã duyệt", icon: "duyet" as const, disabled: busy, onSelect: () => void duyet([r.id]) }] : []), { label: "Sửa", icon: "sua" as const, onSelect: () => setForm({ row: r }) }, { label: "Xoá", icon: "xoa" as const, danger: true, onSelect: () => void xoa(r) }]} /> : undefined}
         state={{ empty: { title: "Chưa có văn bản", description: "Thêm từng văn bản hoặc nhập mục lục văn bản từ Excel." } }}
       />
       {form && (
