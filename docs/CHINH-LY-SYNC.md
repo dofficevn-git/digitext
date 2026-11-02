@@ -135,6 +135,31 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
   `<tên>_DADIEN.xlsx` đã điền thời gian, tô màu + ghi chú như DienThoiGian (thay cho CSV danh sách kiểm tra cũ).
 - Tệp thử: `test/chinhly/` (gốc, báo lỗi dòng nhóm) và `test/chinhly/da-sua/` (đã thêm `I.`, xoá dòng con): 104 / 352 hồ sơ.
 
+## Văn bản từ OCR (2/11/2026)
+
+Luồng "một đường": nhập mục lục hồ sơ (trên) → Cây thư mục › Lấy hồ sơ từ mục lục chỉnh lý → Tạo cây → quét
+(`{maDA}.{phongSo}.{năm}.{hsSố}[.{mlSố}].{seq:07}.pdf`) → Kho đẩy lên máy chủ (`ho_so_ref` = "hộp/hồ sơ số") → OCR
+18 trường → **Khai thác › Kết xuất › Tạo văn bản từ OCR** → Khai thác › Metadata TT05.
+
+- Route `POST /cl/van-ban/tu-ocr` `{projectId, phongId, hoSoIds?, after?}` (`routes/chinh_ly/tu_ocr.rs`): ghép tài liệu
+  vào hồ sơ theo (hộp, hồ sơ số) chuẩn hoá (bỏ tiền tố HỘP / HỒ SƠ, số 0 đầu; `documents::list_for_project_refs` suy
+  từ `ho_so_ref` hoặc `rel_path` như màn Soát & duyệt). Hai hồ sơ (VV / có thời hạn) cùng khoá → tài liệu bị bỏ, báo lý do.
+  Số thứ tự = đuôi tên tệp quét, không có → `thuTu` OCR → số kế tiếp trống. Trường tốt nhất mỗi tài liệu
+  (`ocr_fields::best_fields_for_docs`: verified → ocr_corrected → trang đầu → mới nhất). "Số/KH" tách ở `/` đầu thành
+  `so_van_ban` + `so_ky_hieu`; loại VB tên → mã, không khớp → 32 + ghi chú. Dòng đã có: nối theo `cl_van_ban_file.document_id`
+  trước, rồi (hồ sơ, stt); dòng nhập tay / đã duyệt / có người sửa chỉ được nối tệp. Tối đa 2.000 tài liệu một lần
+  (`conTiep` + `after`, desktop lặp — `clTaoVanBanTuOcr`). Cần `DossierCreate` + `DossierUpdate`.
+- Migration 0023: `cl_van_ban.nguon` ('ocr'), `duyet_luc`, `duyet_boi`; chỉ mục (văn bản, tài liệu) ở `cl_van_ban_file`;
+  `cl_lich_su` nhận nguồn / hành động **`ocr`** (nguồn op thứ tư: `online | sync | import | ocr`) → `dashboard_daily` 4.10
+  không cộng văn bản máy tạo cho người bấm nút. Hai cột mới chỉ nằm trong `row_json` của mirror (không có cột sinh).
+  **Phát hành: áp 0023 + đổi `digitext-api.exe` trước, rồi mới phát desktop** (desktop mới đẩy `duyet_luc` lên máy chủ cũ
+  bị `unknown_field`).
+- Duyệt: VanBanPanel "Đã duyệt" / "Duyệt cả hồ sơ" (`clSave` `duyet_luc`, `duyet_boi`); Lưu ở màn soát OCR từng tệp
+  (`forward_van_ban`) trên dòng `nguon='ocr'` cũng đặt `duyet_luc`. `forward_van_ban` tách "số/ký hiệu" cũ thành hai cột
+  (chiếu ngược ghép lại — không nhân đôi).
+- Xuất TT05: mã định danh / mã lưu trữ tài liệu = tên tệp quét bỏ `.pdf`, "Tệp tin tài liệu" = đường dẫn tới tệp thật
+  (từ `cl_van_ban_file`); **cột 52 "Duyệt"** ngoài 51 cột chuẩn: `Đã duyệt` / `Chưa duyệt (OCR)` / `Nhập tay`.
+
 ## Kiểm thử
 
 `cargo test -p digitext-core chinh_ly` (thuần), `DIGITEXT_TEST_DATABASE_URL=… cargo test -p digitext-db chinh_ly`
