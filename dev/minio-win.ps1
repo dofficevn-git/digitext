@@ -8,10 +8,12 @@
 param(
   [Parameter(Mandatory = $true)][string]$DataDir,
   [int]$Port = 9000,
-  [string]$Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) "infra\minio-win\minio.exe")
+  [string]$Exe = ""
 )
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
+# Mặc định tính trong thân script: $PSScriptRoot chưa có lúc đánh giá tham số khi gọi bằng -File (2/11/2026).
+if (-not $Exe) { $Exe = Join-Path $repo "infra\minio-win\minio.exe" }
 # Mỗi cổng một tệp log: MinIO đang chạy giữ tệp của nó, MinIO thứ hai ghi chung sẽ lỗi và thoát (17/10/2026).
 $log = Join-Path $repo "logs\minio-$Port.log"
 if (-not (Test-Path $Exe)) { throw "Không thấy $Exe" }
