@@ -3,13 +3,13 @@
 //! (nguồn của "Tạo cây thư mục" / "Phát cho dự án"). Giữ dòng đã có theo khoá (hộp, hồ sơ số).
 
 use super::store::{self, HoSoFilter, ListFilter};
-use crate::archive::types::{PhongIn, T97, T9p};
+use crate::archive::types::{PhongIn, T97};
 use crate::auth::AuthState;
 use crate::db::Db;
 use crate::error::AppError;
 use digitext_core::Permission;
 use rusqlite::params;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 use tauri::State;
@@ -18,6 +18,18 @@ use tauri::State;
 #[serde(rename_all = "camelCase")]
 pub struct SeedArgs {
     pub ma_du_an: String,
+}
+
+/// Kết quả lấy hồ sơ từ mục lục chỉnh lý. 2/11/2026: báo rõ hai trường hợp trước đây chỉ ghi log —
+/// `thieu_ho_so_so` (hồ sơ chưa có hồ sơ số vì người nhập mục lục không có quyền Hệ thống hoá → tạm dùng số tạm)
+/// và `trung` (hồ sơ có thời hạn trùng (hộp, số) với hồ sơ vĩnh viễn → bỏ qua).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SeedResult {
+    pub ho_so: usize,
+    pub dossier: usize,
+    pub thieu_ho_so_so: usize,
+    pub trung: usize,
 }
 
 fn text(v: Option<&Value>) -> Option<String> {
@@ -29,7 +41,7 @@ fn text(v: Option<&Value>) -> Option<String> {
 }
 
 #[tauri::command]
-pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: SeedArgs) -> Result<T9p, AppError> {
+pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: SeedArgs) -> Result<SeedResult, AppError> {
     let who = auth.require_perm(Permission::DossierCreate)?;
     let (project, _) = super::project::resolve(&db, &auth)?;
     let ma = args.ma_du_an.trim().to_owned();
@@ -68,10 +80,18 @@ pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: Se
     // nên có thể trùng: ưu tiên vĩnh viễn, hồ sơ trùng khoá bỏ qua (ghi log) thay vì làm hỏng cả lần tạo cây.
     let mut seen = existing.clone();
     let mut trung = 0usize;
+    let mut thieu_ho_so_so = 0usize;
     let mut rows = rows;
     rows.sort_by_key(|r| !r.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false));
     for r in &rows {
-        let Some(ho_so_so) = text(r.get("ho_so_so")).or_else(|| text(r.get("so_tam"))) else { continue };
+        let ho_so_so = match text(r.get("ho_so_so")) {
+            Some(s) => s,
+            None => {
+                let Some(s) = text(r.get("so_tam")) else { continue };
+                thieu_ho_so_so += 1;
+                s
+            }
+        };
         let hop_so = text(r.get("hop_so")).unwrap_or_default();
         if existing.contains(&(hop_so.clone(), ho_so_so.clone())) {
             continue;
@@ -88,7 +108,8 @@ pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: Se
             so_to: text(r.get("so_to")),
             thbq: text(r.get("ten_thbq")),
             ghi_chu: text(r.get("ghi_chu")),
-            nhom: text(r.get("ten_phong_ban")),
+            // Nhóm hiển thị trên cây: mảng công việc nếu có, không thì phòng ban.
+            nhom: text(r.get("ten_mang")).or_else(|| text(r.get("ten_phong_ban"))),
             nam: text(r.get("nam_ket_thuc")),
             ngay_bat_dau: text(r.get("ngay_bat_dau")),
             ngay_ket_thuc: text(r.get("ngay_ket_thuc")),
@@ -97,12 +118,15 @@ pub fn tree_seed_from_cl(auth: State<'_, AuthState>, db: State<'_, Db>, args: Se
     if trung > 0 {
         tracing::warn!(phong = %ma, trung, "tree_seed_from_cl: bỏ qua hồ sơ trùng (hộp, hồ sơ số) giữa vĩnh viễn và có thời hạn");
     }
+    if thieu_ho_so_so > 0 {
+        tracing::warn!(phong = %ma, thieu_ho_so_so, "tree_seed_from_cl: hồ sơ chưa có hồ sơ số, tạm dùng số tạm");
+    }
     if items.is_empty() {
-        return Ok(T9p { ho_so: 0, dossier: 0 });
+        return Ok(SeedResult { ho_so: 0, dossier: 0, thieu_ho_so_so, trung });
     }
     let tx = g.transaction()?;
     let (ho_so, dossier) = crate::archive::commands::f_225(&tx, &phong, &items, None, &who.user_id)?;
     tx.commit()?;
     tracing::info!(phong = %ma, ho_so, "tree_seed_from_cl");
-    Ok(T9p { ho_so, dossier })
+    Ok(SeedResult { ho_so, dossier, thieu_ho_so_so, trung })
 }
