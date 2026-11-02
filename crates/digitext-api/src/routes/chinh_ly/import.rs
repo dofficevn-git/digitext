@@ -44,11 +44,11 @@ fn default_mode() -> String {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct RowError {
-    row: usize,
+pub(super) struct RowError {
+    pub(super) row: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
-    field: Option<String>,
-    message: String,
+    pub(super) field: Option<String>,
+    pub(super) message: String,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -70,14 +70,14 @@ struct ImportResp {
 }
 
 /// Bảng tra danh mục của dự án: (bảng → [(id, mã, tên, cha)]).
-struct Lookup {
-    thbq: Vec<(Uuid, String)>,
+pub(super) struct Lookup {
+    pub(super) thbq: Vec<(Uuid, String)>,
     /// THBQ vĩnh viễn (trang_thai = 1) — để biết loại của dòng (số tạm / hộp duy nhất theo loại, migration 0015).
-    thbq_vv: HashSet<Uuid>,
-    phong_ban: Vec<(Uuid, String, String)>,          // id, ma_don_vi, ten
-    mang: Vec<(Uuid, Uuid, String, String)>,         // id, phong_ban_id, ma_mang, ten
-    ngon_ngu: Vec<(String, String)>,                 // ma, ten
-    loai_vb: Vec<(String, String)>,
+    pub(super) thbq_vv: HashSet<Uuid>,
+    pub(super) phong_ban: Vec<(Uuid, String, String)>,          // id, ma_don_vi, ten
+    pub(super) mang: Vec<(Uuid, Uuid, String, String)>,         // id, phong_ban_id, ma_mang, ten
+    pub(super) ngon_ngu: Vec<(String, String)>,                 // ma, ten
+    pub(super) loai_vb: Vec<(String, String)>,
 }
 
 fn s<'a>(v: &'a Value, k: &str) -> Option<&'a str> {
@@ -86,12 +86,12 @@ fn s<'a>(v: &'a Value, k: &str) -> Option<&'a str> {
 fn u(v: &Value, k: &str) -> Option<Uuid> {
     s(v, k).and_then(|x| Uuid::parse_str(x).ok())
 }
-fn eq_ci(a: &str, b: &str) -> bool {
+pub(super) fn eq_ci(a: &str, b: &str) -> bool {
     let norm = |s: &str| s.trim().to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ");
     norm(a) == norm(b)
 }
 
-async fn lookup(st: &AppState, project: Uuid, phong: Uuid) -> Result<Lookup, ApiError> {
+pub(super) async fn lookup(st: &AppState, project: Uuid, phong: Uuid) -> Result<Lookup, ApiError> {
     let c = cl::danh_muc::catalog(&st.pool, project).await?;
     let arr = |k: &str| c.get(k).and_then(Value::as_array).cloned().unwrap_or_default();
     let thbq = arr("thbq").iter().filter_map(|v| Some((u(v, "id")?, s(v, "ten")?.to_owned()))).collect();
@@ -284,7 +284,7 @@ async fn resolve_ho_so(st: &AppState, ctx: &OpCtx<'_>, phong: Uuid, lk: &mut Loo
     Ok(Ok(()))
 }
 
-fn resolve_van_ban(lk: &Lookup, row: &mut Row) {
+pub(super) fn resolve_van_ban(lk: &Lookup, row: &mut Row) {
     let v = Value::Object(row.clone());
     if let Some(t) = s(&v, "loai_vb").or(s(&v, "ten_loai_vb")) {
         if let Some((ma, _)) = lk.loai_vb.iter().find(|(ma, ten)| ma == t || eq_ci(ten, t)) {
@@ -299,7 +299,7 @@ fn resolve_van_ban(lk: &Lookup, row: &mut Row) {
     }
 }
 
-fn op_err(i: usize, r: &OpResult) -> Option<RowError> {
+pub(super) fn op_err(i: usize, r: &OpResult) -> Option<RowError> {
     match r {
         OpResult::Rejected { message, errors, .. } => Some(RowError { row: i, field: errors.first().map(|e| e.field.clone()), message: message.clone() }),
         OpResult::Conflict { conflict_fields, .. } => Some(RowError { row: i, field: conflict_fields.first().cloned(), message: "Dữ liệu đã bị người khác sửa".into() }),

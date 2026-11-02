@@ -615,3 +615,20 @@ pub async fn mark_source_purged(pool: &PgPool, id: Uuid) -> sqlx::Result<()> {
         .await?;
     Ok(())
 }
+
+/// Tài liệu của dự án kèm hộp / hồ sơ suy từ `ho_so_ref` (hoặc `rel_path`) — cùng cách tính với màn Soát & duyệt
+/// (`REVIEW_DERIVED_CTE`). Dùng cho "Tạo văn bản từ OCR" (2/11/2026): ghép tài liệu vào hồ sơ chỉnh lý theo (hộp, hồ sơ).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DocRefRow {
+    pub id: Uuid,
+    pub filename: String,
+    pub phong: String,
+    pub hop: String,
+    pub ho_so: String,
+    pub page_count: Option<i32>,
+    pub status: String,
+}
+pub async fn list_for_project_refs(pool: &PgPool, project: Uuid) -> sqlx::Result<Vec<DocRefRow>> {
+    let sql = format!("{REVIEW_DERIVED_CTE} SELECT id, filename, phong, hop, ho_so, page_count, status FROM derived ORDER BY filename, id");
+    sqlx::query_as::<_, DocRefRow>(&sql).bind(Some(vec![project])).fetch_all(pool).await
+}

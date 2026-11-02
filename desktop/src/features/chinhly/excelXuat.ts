@@ -179,7 +179,7 @@ export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, ph
 
 /** Lịch sử hồ sơ / văn bản (Excel): STT · Thao tác · Ngày · Giờ · Người · Tóm tắt · Nội dung · Số trường mới · Số trường sửa. */
 export async function xuatLichSu(rows: ClRow[], ten: string): Promise<void> {
-  const HD: Record<string, string> = { add: "Thêm mới", edit: "Sửa", delete: "Xoá", restore: "Khôi phục", import: "Nhập Excel", systematize: "Đánh số", boxing: "Gán hộp/bó/tập", assign_gia: "Xếp giá" };
+  const HD: Record<string, string> = { add: "Thêm mới", edit: "Sửa", delete: "Xoá", restore: "Khôi phục", import: "Nhập Excel", systematize: "Đánh số", boxing: "Gán hộp/bó/tập", assign_gia: "Xếp giá", ocr: "Máy tạo từ OCR" };
   const aoa: Cell[][] = [["STT", "Thao tác", "Ngày thực hiện", "Giờ thực hiện", "Người thực hiện", "Đối tượng", "Tóm tắt", "Nội dung", "Số trường mới", "Số trường sửa"]];
   let tong = 0;
   rows.forEach((r, i) => {

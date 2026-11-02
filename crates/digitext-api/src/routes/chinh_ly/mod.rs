@@ -11,6 +11,7 @@
 //! - `POST /cl/rows/{table}/{id}/restore?projectId`     — khôi phục
 //! - `GET  /cl/ho-so?…`, `GET /cl/ho-so/{id}`, `GET /cl/ho-so/{id}/van-ban`, `GET /cl/van-ban?…`
 //! - `POST /cl/ho-so/import`, `POST /cl/ho-so/{id}/van-ban/import` — nhập theo dòng, lỗi từng dòng
+//! - `POST /cl/van-ban/tu-ocr` `{projectId, phongId, hoSoIds?, after?}` — tạo văn bản hàng loạt từ trường OCR (2/11/2026)
 //! - `GET  /cl/lich-su?…`
 //! - `GET  /cl/sync?projectId&since&limit`, `POST /cl/sync/push` — đồng bộ offline
 
@@ -20,6 +21,7 @@ pub mod read;
 pub mod rows;
 pub mod sync;
 pub mod thong_ke;
+pub mod tu_ocr;
 
 use crate::app::AppState;
 use crate::error::ApiError;
@@ -33,7 +35,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router())
+    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(tu_ocr::router())
 }
 
 /// Người gọi phải thuộc dự án (admin quản dự án, thành viên, hoặc tài khoản gắn dự án).

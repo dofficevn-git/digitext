@@ -201,6 +201,9 @@ async fn write_history(conn: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec,
     if action == "edit" && diffs.is_empty() {
         return Ok(());
     }
+    // 0023: văn bản máy tạo / cập nhật từ OCR ghi hành động 'ocr' — dashboard_daily 4.10 chỉ đếm add/import/edit
+    // nên người bấm nút không được cộng hàng nghìn văn bản vào tổng kết nhân viên.
+    let action = if ctx.source == "ocr" && matches!(action, "add" | "edit") { "ocr" } else { action };
     let entity = sp.name.trim_start_matches("cl_");
     let entity_id = rows::uuid_of(after, "id").unwrap_or_default();
     let (ho_so_id, phong_id, title) = if sp.name == "cl_van_ban" {
