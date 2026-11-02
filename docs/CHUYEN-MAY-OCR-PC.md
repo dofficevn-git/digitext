@@ -163,3 +163,9 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   lỗi "error getting credentials" → bỏ thư mục Docker khỏi PATH + `DOCKER_CONFIG=C:\DigiText-docker` (script bật đã có sẵn mẹo này).
   Script bật một lần: `dev/ocr-pc-bat-dich-vu.ps1`. Còn chờ anh: dừng `vllm-vnkie` (mới chạy được OCR/Qwen + bench), NAT 443,
   token Cloudflare DNS.
+- 30/10 15:20: **nạp kho xong** 204.981 bản ký / 799,0 GB, 0 lỗi, 309 phút (43,5 MB/s từ USB); `nap-ban-ky.py kiem`: khớp
+  204.981 khoá, 300 mẫu MD5 lệch 0. Qwen3-VL-8B AWQ (7,1 GB) đã tải vào volume `digitext-vllm_hf_cache`.
+- 2/11/2026: anh đồng ý **bật nội bộ** (chạy thử, chưa cắt chuyển): task `DigiText-MinIO`, `DigiText-API`, `DigiText-Worker`
+  đã đăng ký và chạy (MinIO/API/worker healthz 200; worker readyz chưa 200 vì chưa có OCR). Bẫy: `$PSScriptRoot` rỗng lúc
+  đánh giá tham số mặc định khi gọi `-File` → 3 script đổi sang tính trong thân. CSDL trên OCR PC vẫn là bản chụp 30/10 09:00 —
+  lúc cắt chuyển phải dump lại từ .127. Chưa bật: OCR/vLLM (VRAM bị vnkie), Caddy (token + NAT 443), watchdog, backup.
