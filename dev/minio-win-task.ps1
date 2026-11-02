@@ -8,9 +8,11 @@
 param(
   [Parameter(Mandatory = $true)][string]$DataDir,
   [int]$Port = 9000,
-  [string]$Exe = (Join-Path (Split-Path -Parent $PSScriptRoot) "infra\minio-win\minio.exe"),
+  [string]$Exe = "",
   [string]$TaskName = "DigiText-MinIO"
 )
+# Mặc định tính trong thân script: $PSScriptRoot chưa có lúc đánh giá tham số khi gọi bằng -File (2/11/2026).
+if (-not $Exe) { $Exe = Join-Path (Split-Path -Parent $PSScriptRoot) "infra\minio-win\minio.exe" }
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
   Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -DataDir `"$DataDir`" -Port $Port -Exe `"$Exe`" -TaskName `"$TaskName`""
