@@ -636,7 +636,29 @@ pub fn forward_van_ban(conn: &Connection, legacy_id_: i64, who: &store::Who) -> 
     row.insert("ho_so_id".into(), json!(ho_so_id));
     row.insert("so_thu_tu".into(), json!(thu_tu.max(1)));
     row.insert("loai_vb".into(), json!(code_of(conn, "cl_loai_van_ban", loai)));
-    row.insert("so_ky_hieu".into(), json!(skh));
+    // Bảng cũ gộp "số/ký hiệu" một ô; cl_van_ban (TT05) tách so_van_ban + so_ky_hieu. Chiếu cl → cũ ghép lại
+    // "so_van_ban/so_ky_hieu" (project_van_ban) nên ở đây PHẢI tách ngược và ghi cả hai (kể cả null), nếu không
+    // mỗi vòng chiếu / chuyển tiếp lại nhân đôi: "123/123/QĐ-UBND" (2/11/2026).
+    let (so_vb, ky_hieu) = match skh.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        None => (None, None),
+        Some(s) => match s.split_once('/') {
+            Some((a, b)) if !a.trim().is_empty() && !b.trim().is_empty() => (Some(a.trim().to_owned()), Some(b.trim().to_owned())),
+            _ => (None, Some(s.to_owned())),
+        },
+    };
+    row.insert("so_van_ban".into(), json!(so_vb));
+    row.insert("so_ky_hieu".into(), json!(ky_hieu));
+    // Dòng cl do máy tạo từ OCR (nguon = 'ocr') mà người soát lưu ở màn soát OCR → coi là đã duyệt.
+    if let Some(cl) = cl_id.as_deref() {
+        if let Some(cu) = store::get(conn, "cl_van_ban", cl)? {
+            let nguon_ocr = cu.row.get("nguon").and_then(Value::as_str) == Some("ocr");
+            let chua_duyet = cu.row.get("duyet_luc").map_or(true, Value::is_null);
+            if nguon_ocr && chua_duyet {
+                row.insert("duyet_luc".into(), json!(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)));
+                row.insert("duyet_boi".into(), json!(who.user_id));
+            }
+        }
+    }
     row.insert("ngay_thang".into(), json!(ngay.and_then(|t| digitext_core::chinh_ly::normalize_date(&t).ok().flatten())));
     row.insert("co_quan_ban_hanh".into(), json!(cq));
     row.insert("trich_yeu".into(), json!(ty));
@@ -804,7 +826,9 @@ mod tests {
         assert_eq!(e.dirty, 2);
         let vb = store::get(&c, "cl_van_ban", &c.query_row::<String, _, _>("SELECT cl_id FROM van_ban", [], |r| r.get(0)).unwrap()).unwrap().unwrap();
         assert_eq!(vb.row["loai_vb"], json!("22"), "tên loại → mã TT05");
-        assert_eq!(vb.row["so_ky_hieu"], json!("12/CV"));
+        // "12/CV" của bảng cũ tách thành số + ký hiệu (TT05), chiếu ngược ghép lại — không nhân đôi (2/11/2026).
+        assert_eq!(vb.row["so_van_ban"], json!("12"));
+        assert_eq!(vb.row["so_ky_hieu"], json!("CV"));
         // chạy lại: không tạo thêm
         let rep2 = push_unmigrated(&c, &who).unwrap();
         assert_eq!((rep2.ho_so, rep2.van_ban), (0, 0));
