@@ -122,83 +122,9 @@ export function V4b9(Vqv: string[][]): V4b8 {
   return Vqw;
 }
 
-export interface V4ba {
-  records: V3yr[];
-  skipped: number;
-  groups: number;
-}
-
-const V4bb = /n[aă]m\s+\d{4}|^\s*\d+\.\s*n[aă]m/i;
-
-function V4bc(s: string): boolean | undefined {
-  const v = V4b3(s);
-  if (!v) return undefined;
-  if (["1", "x", "true", "yes", "co", "c", "checked"].includes(v)) return true;
-  if (["0", "false", "no", "khong", "k"].includes(v)) return false;
-  return undefined;
-}
-
-function V4bd(s: string): number | undefined {
-  const n = Number.parseInt(s.trim(), 10);
-  return Number.isNaN(n) ? undefined : n;
-}
-
-export function V4be(Vr2: string[][], m: V4b8, Vr3: string, Vr4: number): V4ba {
-  const Vr5 = (r: string[], Vr6: string) => {
-    const c = m.map[Vr6];
-    return c == null ? "" : (r[c] ?? "").trim();
-  };
-  let Vr7 = "";
-  let Vr8 = "";
-  let Vr9 = Vr4;
-  let Vra = 0;
-  let Vrb = 0;
-  const records: V3yr[] = [];
-  const from = m.headerRow >= 0 ? m.headerRow + 1 : 0;
-
-  for (let i = from; i < Vr2.length; i++) {
-    const r = Vr2[i];
-    const Vrc = Vr5(r, "hopSo");
-    const Vrd = Vr5(r, "hoSoSo");
-    const Vre = Vr5(r, "soTam");
-    const Vrf = Vr5(r, "tieuDe");
-
-    if (!Vrc && !Vrd && !Vre) {
-      if (Vrf) {
-        if (V4bb.test(Vrf)) Vr8 = Vrf;
-        else Vr7 = Vrf;
-        Vrb++;
-      } else {
-        Vra++;
-      }
-      continue;
-    }
-
-    records.push({
-      id: Vr9++,
-      mang: Vr5(r, "mang") || undefined,
-      dossierId: V4bd(Vr5(r, "dossierId")),
-      hopSo: Vrc,
-      hoSoSo: Vrd,
-      soTam: Vre || undefined,
-      maHoSo: Vr5(r, "maHoSo") || undefined,
-      tieuDe: Vrf,
-      thoiGian: Vr5(r, "thoiGian"),
-      ngayBatDau: Vr5(r, "ngayBatDau") || undefined,
-      ngayKetThuc: Vr5(r, "ngayKetThuc") || undefined,
-      soTo: Vr5(r, "soTo"),
-      thbq: Vr5(r, "thbq"),
-      trungThua: V4bc(Vr5(r, "trungThua")),
-      trangThai: Vr5(r, "trangThai") || undefined,
-      tongSoVanBan: V4bd(Vr5(r, "tongSoVanBan")),
-      ghiChu: Vr5(r, "ghiChu") || undefined,
-      nhom: Vr7 || undefined,
-      nam: Vr8 || undefined,
-      nguon: Vr3,
-    });
-  }
-  return { records, skipped: Vra, groups: Vrb };
-}
+// 2/11/2026: bỏ `V4be` (dựng hồ sơ từ ma trận ô) cùng hộp thoại nhập Excel ở Cây thư mục — hồ sơ chỉ còn lấy từ mục lục
+// chỉnh lý (features/chinhly/mucLucImport.ts). Giữ đọc tệp (`V4b7`), chấm điểm dòng tiêu đề (`V4b9`) và chọn sheet
+// (`V4bf`) vì chinhly/excel.ts và dossier/excel.ts còn dùng.
 
 export function V4bf(Vrg: V4b2): string {
   let name = Vrg.sheets[0]?.name ?? "";

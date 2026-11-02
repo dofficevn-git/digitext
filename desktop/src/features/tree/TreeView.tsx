@@ -19,7 +19,6 @@ import { Icon } from "@/components/Icon";
 import { Banner, Button, Card, confirm, Dialog, EmptyState, Field, FormGrid, Help, IconButton, Input, Menu, notifyError, PageHeader, Select, Table, toast, Toolbar, type Column } from "@/ui";
 import { chuaChonPhong } from "@/features/dossier/phongScope";
 import { useProject } from "@/state/project";
-import ImportExcelDialog from "./ImportExcelDialog";
 import { V48w } from "./hoSoMapping";
 import { V4a6, V4a7 } from "./treePeerAddr";
 
@@ -49,7 +48,6 @@ export default function TreeView() {
   const [loaded, setLoaded] = useState(false);
   const [lan, setLan] = useState<V49y | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
   const [publish, setPublish] = useState<{ projects: V4a9[]; projectId: string } | null>(null);
   const [lanRecv, setLanRecv] = useState<{ peers: V49z[]; peer: string; addr: string; code: string; scanning: boolean } | null>(null);
 
@@ -143,6 +141,8 @@ export default function TreeView() {
       const r = await treeSeedFromCl(phong.maDuAn);
       reload();
       toast.success(r.hoSo > 0 ? `Đã lấy ${n(r.hoSo)} hồ sơ từ mục lục chỉnh lý.` : "Cây thư mục đã có đủ hồ sơ của mục lục chỉnh lý.");
+      if (r.thieuHoSoSo > 0) toast.warning(`${n(r.thieuHoSoSo)} hồ sơ chưa có hồ sơ số (người nhập mục lục không có quyền Hệ thống hoá) — tạm dùng số tạm. Xếp hộp ở Chỉnh lý › Hệ thống hoá rồi lấy lại.`);
+      if (r.trung > 0) toast.warning(`${n(r.trung)} hồ sơ có thời hạn trùng (hộp, số) với hồ sơ vĩnh viễn nên bị bỏ qua — cây thư mục chỉ có một bộ số.`);
     });
 
   // ---- hành động nhân viên
@@ -249,14 +249,6 @@ export default function TreeView() {
       toast.success(`Đã xoá ${n(ids.length)} hồ sơ.`);
     });
   };
-  const nhapExcel = (records: V3yr[]) =>
-    run("nhập Excel", async () => {
-      if (!phong) return;
-      const r = await V40f(phongIn(phong), records.map(hoSoIn));
-      setImportOpen(false);
-      reload();
-      toast.success(`Đã nhập ${n(r.hoSo)} hồ sơ.`);
-    });
   const quet = (h: V3yr) => {
     if (!phong) return;
     setScanTarget({ phong: phongIn(phong), hoSo: hoSoIn(h), label: `${phong.tenDuAn} · Hộp ${h.hopSo} · HS ${h.hoSoSo}` });
@@ -301,7 +293,6 @@ export default function TreeView() {
               <Menu
                 items={[
                   { label: "Lấy hồ sơ từ mục lục chỉnh lý", icon: "chinhly", onSelect: () => void layTuChinhLy(), disabled: !phong || !project.projectId, hint: !project.projectId ? "Chọn dự án đang làm ở thanh trên" : undefined },
-                  { label: "Nhập từ Excel", icon: "nhapTep", onSelect: () => setImportOpen(true), disabled: !phong },
                   { label: "Thêm hồ sơ", icon: "them", onSelect: () => setDraft({ mode: "add", draft: { id: nextId(), hopSo: "", hoSoSo: "", tieuDe: "", thoiGian: "", soTo: "", thbq: "" } }), disabled: !phong },
                 ]}
               />
@@ -362,7 +353,7 @@ export default function TreeView() {
             loading: !loaded,
             empty: chuaChonPhong(maDa)
               ? { title: "Chưa có phông", description: "Phông xuất hiện ở đây sau khi tạo trong Chỉnh lý › Danh mục hoặc khi nhận cây thư mục." }
-              : { title: q ? "Không có hồ sơ khớp tìm kiếm" : "Chưa có hồ sơ trong phông này", description: canCreate ? "Lấy từ mục lục chỉnh lý, nhập Excel hoặc thêm tay." : undefined },
+              : { title: q ? "Không có hồ sơ khớp tìm kiếm" : "Chưa có hồ sơ trong phông này", description: canCreate ? "Lấy từ mục lục chỉnh lý (nhập mục lục ở Chỉnh lý › Lập hồ sơ) hoặc thêm tay." : undefined },
           }}
           maxHeight="calc(100dvh - 340px)"
           rowActions={(h) => {
@@ -381,7 +372,7 @@ export default function TreeView() {
 
       <Help className="mt-4">
         <p>Cây thư mục trên máy dùng để quét đúng vào thư mục Cơ quan › Hộp › Hồ sơ và để gom tệp theo hồ sơ.</p>
-        <p>Quản trị lấy hồ sơ từ mục lục chỉnh lý (hoặc Excel), tạo cây, rồi phát cho dự án qua máy chủ; nơi không có máy chủ thì phát qua mạng nội bộ với mã ghép nối 6 số.</p>
+        <p>Hồ sơ lấy từ mục lục chỉnh lý (nhập tệp mục lục ở Chỉnh lý › Lập hồ sơ › Nhập mục lục hồ sơ — đủ hộp số, hồ sơ số, THBQ, mã hồ sơ). Quản trị lấy về, tạo cây, rồi phát cho dự án qua máy chủ; nơi không có máy chủ thì phát qua mạng nội bộ với mã ghép nối 6 số.</p>
       </Help>
 
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)} title={draft?.mode === "add" ? "Thêm hồ sơ" : "Sửa hồ sơ"} size="md" footer={<><Button onClick={() => setDraft(null)}>Huỷ</Button><Button variant="primary" loading={busy} onClick={() => void luu()}>Lưu</Button></>}>
@@ -454,7 +445,6 @@ export default function TreeView() {
         )}
       </Dialog>
 
-      {importOpen && <ImportExcelDialog startId={nextId()} onClose={() => setImportOpen(false)} onImport={(rs) => void nhapExcel(rs)} />}
       {!isTauri() && <EmptyState title="Chỉ dùng trong ứng dụng" compact />}
       <span className="sr-only">
         <Icon name="cayThuMuc" />
