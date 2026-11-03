@@ -437,6 +437,8 @@ const V3z7: Record<V3xt, V3yx> = {
   work: "work.execute",
 
   workManage: "work.manage",
+  // Hub Tiện ích mở cho mọi người đã đăng nhập; từng tab tự kiểm quyền thật (package.view, document.review, dossier.read).
+  tienich: "drive.view",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

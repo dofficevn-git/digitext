@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { V3xu, V3xw, V3xx, V3xt } from "@/domain/types";
+import type { V3xu, V3xw, V3xx, V3xt, V3xTienIch } from "@/domain/types";
 import { confirm } from "@/ui/dialogs/confirmStore";
 import type { V40m, V409, V408 } from "@/api/archive";
 
@@ -29,6 +29,9 @@ interface V41c {
   khoGiaTab: V3xw;
 
   gotoKhoGia: (t: V3xw) => void;
+
+  tienIchTab: V3xTienIch;
+  gotoTienIch: (t: V3xTienIch) => void;
 
   reportTab: V3xx;
 
@@ -59,7 +62,8 @@ const V3c0 = import.meta.env.DEV ? new URLSearchParams(window.location.search) :
 export function V41h({ children: V2s }: { children: ReactNode }) {
   const [view, V2t] = useState<V3xt>(() => (V3c0?.get("view") as V3xt | null) ?? "home");
   const [V2u, V2v] = useState<V3xu>(() => (V3c0?.get("cl") as V3xu | null) ?? "laphoso");
-  const [V2y, V2z] = useState<V3xw>("khogia");
+  const [V2y, V2z] = useState<V3xw>(() => (V3c0?.get("view") === "khogia" ? (V3c0.get("kg") as V3xw | null) : null) ?? "khogia");
+  const [tienIchTab, setTienIchTab] = useState<V3xTienIch>(() => (V3c0?.get("view") === "tienich" ? (V3c0.get("tab") as V3xTienIch | null) : null) ?? "pdfa");
   const [V30, V31] = useState<V3xx>("sohoa");
   const [V32, V33] = useState<V41b | null>(null);
   const [V34, V35] = useState<V41a | null>(null);
@@ -122,6 +126,18 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
     [V3e],
   );
 
+  const gotoTienIch = useCallback(
+    (t: V3xTienIch) => {
+      if (!V3e()) return;
+      setTienIchTab(t);
+      V2t("tienich");
+      V37(null);
+      V39(null);
+      V3b();
+    },
+    [V3e],
+  );
+
   const V3j = useCallback(
     (t: V3xx) => {
       if (!V3e()) return;
@@ -163,6 +179,8 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
       gotoHoSo: V3g,
       khoGiaTab: V2y,
       gotoKhoGia: V3i,
+      tienIchTab,
+      gotoTienIch,
       reportTab: V30,
       gotoReport: V3j,
       scanTarget: V32,
@@ -175,7 +193,7 @@ export function V41h({ children: V2s }: { children: ReactNode }) {
       openEditor: V3m,
       setEditorDirty: V3c,
     }),
-    [view, goto, V2u, V3g, V2y, V3i, V30, V3j, V32, V34, V3k, V3l, V36, V38, V3m, V3c],
+    [view, goto, V2u, V3g, V2y, V3i, tienIchTab, gotoTienIch, V30, V3j, V32, V34, V3k, V3l, V36, V38, V3m, V3c],
   );
   return <V41g.Provider value={V3p}>{V2s}</V41g.Provider>;
 }

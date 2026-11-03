@@ -19,6 +19,7 @@ import V4ra from "@/features/users/UsersView";
 import RolesView from "@/features/users/RolesView";
 import V4rs from "@/features/settings/SettingsView";
 import DongGoiView from "@/features/package/DongGoiView";
+import TienIchHub from "@/features/shell/TienIchHub";
 import WorkManageView from "@/features/work/WorkManageView";
 import MyWorkView from "@/features/work/MyWorkView";
 import V4t9 from "@/features/submission/SubmissionView";
@@ -73,6 +74,7 @@ export default function V4wx() {
         {V382 && view === "server" && <V4wh />}
         {V382 && view === "workManage" && <WorkManageView />}
         {V382 && view === "work" && <MyWorkView />}
+        {V382 && view === "tienich" && <TienIchHub />}
       </main>
 
       <V47t />

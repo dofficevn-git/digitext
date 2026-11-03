@@ -139,7 +139,8 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
 
 Luồng "một đường": nhập mục lục hồ sơ (trên) → Cây thư mục › Lấy hồ sơ từ mục lục chỉnh lý → Tạo cây → quét
 (`{maDA}.{phongSo}.{năm}.{hsSố}[.{mlSố}].{seq:07}.pdf`) → Kho đẩy lên máy chủ (`ho_so_ref` = "hộp/hồ sơ số") → OCR
-18 trường → **Khai thác › Kết xuất › Tạo văn bản từ OCR** → Khai thác › Metadata TT05.
+18 trường → **Số hoá › Kết nối dữ liệu chủ › Kết xuất › Tạo văn bản từ OCR** → cùng menu › Metadata TT05
+(từ desktop 0.20.0, 3/11/2026; trước đó hai mục này nằm ở Chỉnh lý › Tra cứu và kết xuất).
 
 - Route `POST /cl/van-ban/tu-ocr` `{projectId, phongId, hoSoIds?, after?}` (`routes/chinh_ly/tu_ocr.rs`): ghép tài liệu
   vào hồ sơ theo (hộp, hồ sơ số) chuẩn hoá (bỏ tiền tố HỘP / HỒ SƠ, số 0 đầu; `documents::list_for_project_refs` suy

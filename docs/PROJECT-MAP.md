@@ -302,7 +302,17 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   `digitext.css`: `--side-*` (menu trái nền trắng), `.topbar` tím chạy suốt + ghi đè token
   trong phạm vi, luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
-- `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
+- `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`. **Từ 3/11/2026 (desktop 0.20.0) menu
+  xếp theo công đoạn thi công Điều 9 TT 05/2025/TT-BNV:** Tổng quan · Dữ liệu chủ (Bước 3: Danh mục, Lập hồ sơ, Hệ thống
+  hoá, Mục lục và kết xuất, Đồng bộ) · Số hoá (Bước 4: Cây thư mục, Quét, Kho tài liệu, Tài liệu đã quét, Đưa lên máy
+  chủ, Kho máy chủ, OCR và bóc tách, Giao việc, Việc của tôi, **Kết nối dữ liệu chủ** = `KhaiThacView` chế độ `ketnoi`
+  chỉ còn Tạo văn bản từ OCR + Metadata TT05/TT02) · Ký số, đóng gói (Bước 6–7: Ký số, Đóng gói 3 tab, Thu nộp) ·
+  Nghiệm thu (Bước 8: Sổ biên bản) — rồi dưới đường chia: Lưu trữ số (giữ cho bản khách hàng) · Báo cáo · **Tiện ích**
+  (`view:tienich`, hub `shell/TienIchHub.tsx`, tab `V3xTienIch`: Kiểm PDF/A, Kiểm tra gói tin, Từ kho ngoài, Đóng gói
+  nhanh, Ví dụ dạy máy, Chuyển dữ liệu cũ; cộng Tách TIFF, Kho và giá, Mượn – trả) · Quản trị. Id mục con giữ nguyên;
+  `Sidebar.QUY_TRINH` định nghĩa trục; xem trước `?view=tienich&tab=…`, `?view=khogia&kg=ketnoi`. Các nhóm Giao nhận
+  tài liệu (Bước 1–2), Kiểm tra sản phẩm (Bước 5) và màn Nhật ký, Nghiệm thu khối lượng sẽ thêm ở các bản sau (kế hoạch
+  4 bản, migration 0024). Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
