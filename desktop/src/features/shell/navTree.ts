@@ -100,9 +100,12 @@ export const NAV_TREE: V46s[] = [
     id: "nghiemthu",
     label: "Nghiệm thu",
     icon: "bienBan",
-    step: "Bước 8 · biên bản, bàn giao",
+    step: "Bước 8 · khối lượng, bàn giao",
     gate: "records",
-    children: [{ id: "bienban", label: "Sổ biên bản", gate: "records", leaf: { kind: "view", view: "records" }, keywords: "phu luc vii bien ban" }],
+    children: [
+      { id: "nghiemthukl", label: "Nghiệm thu, bàn giao", gate: "acceptance", leaf: { kind: "view", view: "acceptance" }, keywords: "khoi luong hop dong ban giao goi aip bo ho so nghiem thu" },
+      { id: "bienban", label: "Sổ biên bản", gate: "records", leaf: { kind: "view", view: "records" }, keywords: "phu luc vii bien ban" },
+    ],
   },
   {
     id: "luutruso",

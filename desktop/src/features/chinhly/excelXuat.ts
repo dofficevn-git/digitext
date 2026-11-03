@@ -154,7 +154,7 @@ export function trangThaiDuyet(v: ClRow): string {
  * `tepCua`: văn bản id → tên tệp quét thật (cl_van_ban_file, 2/11/2026) → "Mã định danh / Mã lưu trữ tài liệu" = tên tệp bỏ
  * .pdf, "Tệp tin tài liệu" = đường dẫn tới tệp thật; không có thì ghép như cũ. Cột 52 "Duyệt" thêm ngoài 51 cột chuẩn.
  */
-export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, phong: ClRow | undefined, tepCua: Map<string, string> = new Map()): Promise<void> {
+export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, phong: ClRow | undefined, tepCua: Map<string, string> = new Map(), luuVao?: string): Promise<void> {
   const head = [
     "Mã Phông", "Tên Phông", "Lịch sử đơn vị hình thành phông", "Thời gian tài liệu", "Tổng số tài liệu", "Phương án phân loại", "Ngôn ngữ", "Chế độ dự phòng", "Ghi chú",
     "Mã hồ sơ", "Tiêu đề hồ sơ", "Thời hạn lưu trữ", "Mức độ tiếp cận", "Ngôn ngữ", "Thời gian bắt đầu", "Thời gian kết thúc", "Từ khóa", "Tổng số tài liệu trong hồ sơ", "Số lượng tờ", "Số lượng trang", "Tình trạng vật lý", "Ký hiệu thông tin", "Mức độ tin cậy", "Mã hồ sơ gốc giấy", "Chế độ lập tài liệu dự phòng", "Tình trạng lập tài liệu dự phòng", "Tệp tin hồ sơ", "Ghi chú",
@@ -193,7 +193,7 @@ export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, ph
       ]);
     }
   }
-  await writeXlsx([{ name: "HỒ SƠ DỮ LIỆU (TT05)", aoa, merges: ["A1:AZ1", "A2:I2", "J2:AB2", "AC2:AZ2"], cols: head.map((c) => ({ wch: Math.min(28, Math.max(10, c.length + 2)) })) }], `TrichXuatDuLieu_TT05_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  await writeXlsx([{ name: "HỒ SƠ DỮ LIỆU (TT05)", aoa, merges: ["A1:AZ1", "A2:I2", "J2:AB2", "AC2:AZ2"], cols: head.map((c) => ({ wch: Math.min(28, Math.max(10, c.length + 2)) })) }], luuVao ? `MLHS-TT05-${(str(phong, "ma_du_an") || "phong").replace(/[\\/:*?"<>|]+/g, "-")}.xlsx` : `TrichXuatDuLieu_TT05_${new Date().toISOString().slice(0, 10)}.xlsx`, luuVao);
 }
 
 /** Lịch sử hồ sơ / văn bản (Excel): STT · Thao tác · Ngày · Giờ · Người · Tóm tắt · Nội dung · Số trường mới · Số trường sửa. */

@@ -36,8 +36,8 @@ export function V4t0(V2ra: {
   return invoke<V4sy>("record_create", { args: V2ra });
 }
 
-export function V4t1(V2rb: string, V2rc: string): Promise<string> {
-  return invoke<string>("record_download", { args: { id: V2rb, fileName: V2rc } });
+export function V4t1(V2rb: string, V2rc: string, dir?: string): Promise<string> {
+  return invoke<string>("record_download", { args: { id: V2rb, fileName: V2rc, dir: dir ?? null } });
 }
 
 export type V4t2 = "thu_nop" | "giao_nhan" | "tra_lai";

@@ -12,6 +12,10 @@ pub struct Contract {
     pub deadline_on: Option<NaiveDate>,
     pub contract_pages: Option<i64>,
     pub contract_files: Option<i64>,
+    /// Khối lượng hợp đồng theo TT05 (0024, 3/11/2026): hộp, hồ sơ, tờ — để nghiệm thu đối chiếu với mục lục.
+    pub contract_boxes: Option<i64>,
+    pub contract_dossiers: Option<i64>,
+    pub contract_sheets: Option<i64>,
     pub manager_name: Option<String>,
     pub note: Option<String>,
 }
@@ -26,6 +30,9 @@ pub struct ProgressRow {
     pub deadline_on: Option<NaiveDate>,
     pub contract_pages: Option<i64>,
     pub contract_files: Option<i64>,
+    pub contract_boxes: Option<i64>,
+    pub contract_dossiers: Option<i64>,
+    pub contract_sheets: Option<i64>,
     pub manager_name: Option<String>,
     pub note: Option<String>,
     pub files: i64,
@@ -48,7 +55,7 @@ pub async fn project_progress(
     sqlx::query_as::<_, ProgressRow>(
         "SELECT p.id AS project_id, p.code, p.name, \
                 c.signed_on, c.end_on, c.deadline_on, c.contract_pages, c.contract_files, \
-                c.manager_name, c.note, \
+                c.contract_boxes, c.contract_dossiers, c.contract_sheets, c.manager_name, c.note, \
                 count(d.id) AS files, \
                 COALESCE(sum(d.page_count), 0)::bigint AS pages, \
                 count(d.id) FILTER (WHERE d.pdfa_key IS NOT NULL) AS pdfa_files, \
@@ -75,11 +82,13 @@ pub async fn project_progress(
 pub async fn upsert_contract(pool: &PgPool, project_id: Uuid, c: &Contract, by: Uuid) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO project_contracts \
-           (project_id, signed_on, end_on, deadline_on, contract_pages, contract_files, manager_name, note, updated_by, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now()) \
+           (project_id, signed_on, end_on, deadline_on, contract_pages, contract_files, manager_name, note, updated_by, updated_at, \
+            contract_boxes, contract_dossiers, contract_sheets) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), $10, $11, $12) \
          ON CONFLICT (project_id) DO UPDATE SET \
            signed_on = EXCLUDED.signed_on, end_on = EXCLUDED.end_on, deadline_on = EXCLUDED.deadline_on, \
            contract_pages = EXCLUDED.contract_pages, contract_files = EXCLUDED.contract_files, \
+           contract_boxes = EXCLUDED.contract_boxes, contract_dossiers = EXCLUDED.contract_dossiers, contract_sheets = EXCLUDED.contract_sheets, \
            manager_name = EXCLUDED.manager_name, note = EXCLUDED.note, \
            updated_by = EXCLUDED.updated_by, updated_at = now()",
     )
@@ -92,6 +101,9 @@ pub async fn upsert_contract(pool: &PgPool, project_id: Uuid, c: &Contract, by: 
     .bind(c.manager_name.as_deref())
     .bind(c.note.as_deref())
     .bind(by)
+    .bind(c.contract_boxes)
+    .bind(c.contract_dossiers)
+    .bind(c.contract_sheets)
     .execute(pool)
     .await?;
     Ok(())

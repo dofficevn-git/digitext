@@ -50,6 +50,12 @@ struct ContractDto {
     deadline_on: Option<NaiveDate>,
     contract_pages: Option<i64>,
     contract_files: Option<i64>,
+    #[serde(default)]
+    contract_boxes: Option<i64>,
+    #[serde(default)]
+    contract_dossiers: Option<i64>,
+    #[serde(default)]
+    contract_sheets: Option<i64>,
     manager_name: Option<String>,
     note: Option<String>,
 }
@@ -101,6 +107,9 @@ async fn project_progress(
                     deadline_on: r.deadline_on,
                     contract_pages: r.contract_pages,
                     contract_files: r.contract_files,
+                    contract_boxes: r.contract_boxes,
+                    contract_dossiers: r.contract_dossiers,
+                    contract_sheets: r.contract_sheets,
                     manager_name: r.manager_name,
                     note: r.note,
                 },
@@ -131,7 +140,7 @@ async fn put_contract(
             return Err(ApiError::bad_request("ngày kết thúc hợp đồng phải sau ngày ký"));
         }
     }
-    if c.contract_pages.is_some_and(|n| n < 0) || c.contract_files.is_some_and(|n| n < 0) {
+    if [c.contract_pages, c.contract_files, c.contract_boxes, c.contract_dossiers, c.contract_sheets].iter().any(|v| v.is_some_and(|n| n < 0)) {
         return Err(ApiError::bad_request("khối lượng hợp đồng không được âm"));
     }
     let clean = |s: Option<String>| s.map(|x| x.trim().to_string()).filter(|x| !x.is_empty());
@@ -145,6 +154,9 @@ async fn put_contract(
             deadline_on: c.deadline_on,
             contract_pages: c.contract_pages,
             contract_files: c.contract_files,
+            contract_boxes: c.contract_boxes,
+            contract_dossiers: c.contract_dossiers,
+            contract_sheets: c.contract_sheets,
             manager_name: c.manager_name.clone(),
             note: c.note.clone(),
         },

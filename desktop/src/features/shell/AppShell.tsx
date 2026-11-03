@@ -23,6 +23,7 @@ import TienIchHub from "@/features/shell/TienIchHub";
 import HandoverView from "@/features/records/HandoverView";
 import NhatKyView from "@/features/report/NhatKyView";
 import QcView from "@/features/qc/QcView";
+import NghiemThuView from "@/features/acceptance/NghiemThuView";
 import WorkManageView from "@/features/work/WorkManageView";
 import MyWorkView from "@/features/work/MyWorkView";
 import V4t9 from "@/features/submission/SubmissionView";
@@ -81,6 +82,7 @@ export default function V4wx() {
         {V382 && view === "handover" && <HandoverView />}
         {V382 && view === "nhatky" && <NhatKyView />}
         {V382 && view === "qc" && <QcView />}
+        {V382 && view === "acceptance" && <NghiemThuView />}
       </main>
 
       <V47t />

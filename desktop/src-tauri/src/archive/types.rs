@@ -212,6 +212,9 @@ pub struct Tkk {
     pub default_name: Option<String>,
     #[serde(default)]
     pub open: bool,
+    /// Có `dir` → ghi thẳng `dir/default_name` (tạo thư mục nếu thiếu), không mở hộp thoại (bộ hồ sơ nghiệm thu, 3/11/2026).
+    #[serde(default)]
+    pub dir: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
