@@ -628,6 +628,24 @@ pub struct DocRefRow {
     pub page_count: Option<i32>,
     pub status: String,
 }
+/// Dòng tài liệu cho đối soát sản phẩm (kiểm tra theo phông, 3/11/2026): thêm PDF/A, loại PDF/A, trạng thái soát.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DocQcRow {
+    pub id: Uuid,
+    pub filename: String,
+    pub phong: String,
+    pub hop: String,
+    pub ho_so: String,
+    pub page_count: Option<i32>,
+    pub status: String,
+    pub pdfa_pages: Option<i32>,
+    pub pdfa_2b: Option<bool>,
+    pub review_status: Option<String>,
+}
+pub async fn list_for_project_qc(pool: &PgPool, project: Uuid) -> sqlx::Result<Vec<DocQcRow>> {
+    let sql = format!("{REVIEW_DERIVED_CTE} SELECT id, filename, phong, hop, ho_so, page_count, status, pdfa_pages, pdfa_2b, review_status FROM derived ORDER BY filename, id");
+    sqlx::query_as::<_, DocQcRow>(&sql).bind(Some(vec![project])).fetch_all(pool).await
+}
 pub async fn list_for_project_refs(pool: &PgPool, project: Uuid) -> sqlx::Result<Vec<DocRefRow>> {
     let sql = format!("{REVIEW_DERIVED_CTE} SELECT id, filename, phong, hop, ho_so, page_count, status FROM derived ORDER BY filename, id");
     sqlx::query_as::<_, DocRefRow>(&sql).bind(Some(vec![project])).fetch_all(pool).await

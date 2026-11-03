@@ -267,3 +267,29 @@ export async function clTaoVanBanTuOcr(projectId: string, phongId: string, hoSoI
   }
   return tong;
 }
+
+// ---- Kiểm tra sản phẩm (Bước 5 Điều 9, 3/11/2026): GET /cl/doi-soat — máy chủ ghép MLHS ↔ tài liệu và kết luận từng hồ sơ.
+export type DoiSoatKetLuan = "dat" | "chua_quet" | "thieu_trang" | "thua_trang" | "khong_pdfa" | "pdfa_cu" | "bi_tu_choi";
+export interface DoiSoatHoSo {
+  hoSoId: string;
+  hopSo: string;
+  hoSoSo: string;
+  maHoSo: string | null;
+  tieuDe: string;
+  vinhVien: boolean;
+  soTo: number | null;
+  files: number;
+  pages: number;
+  pdfaDocs: number;
+  pdfaCu: number;
+  signedDocs: number;
+  rejectedDocs: number;
+  ketLuan: DoiSoatKetLuan;
+}
+export interface DoiSoatResp {
+  tongKet: { hoSoMucLuc: number; hoSoCoTep: number; dat: number; chuaQuet: number; lechSoTo: number; khongPdfa: number; pdfaCu: number; biTuChoi: number; tep: number; trang: number; soToMucLuc: number; tepKhongKhop: number };
+  hoSo: DoiSoatHoSo[];
+  khongKhop: { documentId: string; filename: string; hop: string; hoSo: string; lyDo: string }[];
+  thuMucCo: string[];
+}
+export const clDoiSoat = (projectId: string, phongId: string, thuMuc?: string) => clRemote<DoiSoatResp>("GET", `/cl/doi-soat${qs({ projectId, phongId, thuMuc })}`);

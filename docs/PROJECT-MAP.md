@@ -316,7 +316,12 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   giao nhận / trả tài liệu giấy, điền sẵn từ mục lục chỉnh lý) và Số hoá › Nhật ký số hoá (`view:nhatky` →
   `report/NhatKyView.tsx`: dự án × người × ngày từ `/dashboard/project`, chốt ngày = biên bản `nhat_ky_so_hoa`). Biên bản
   "generic" (Điều 9): mẫu ở `records/recordForms.ts` (`generic`, `taoPayloadGeneric`), máy chủ `bienban.rs::render_generic`
-  chỉ in PDF; `GET /records?kind=&ref=&projectId=`, `GET /records/{id}` (payload). Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
+  chỉ in PDF; `GET /records?kind=&ref=&projectId=`, `GET /records/{id}` (payload). **R3 (3/11):** nhóm Kiểm tra sản phẩm
+  (Bước 5, `view:qc` → `qc/QcView.tsx`): `GET /cl/doi-soat?projectId&phongId[&thuMuc]` (`routes/chinh_ly/doi_soat.rs`, chỉ đọc,
+  không migration) ghép mục lục `cl_ho_so_v` với tài liệu máy chủ qua `khoa(hộp, hồ sơ)` như `tu_ocr.rs`, kết luận từng hồ sơ
+  (`dat | chua_quet | thieu_trang | thua_trang | khong_pdfa | pdfa_cu | bi_tu_choi`; trang < số tờ = thiếu, trang > 2×số tờ =
+  nghi thừa), tệp không khớp mục lục, `thuMucCo` để lọc khi dự án nhiều phông; màn thêm bảng Quét lại (`docs_pdfa_rejected`),
+  Xuất Excel, biên bản `kiem_tra_san_pham` điền sẵn. Chỉ cảnh báo, không chặn ký số/đóng gói. Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
