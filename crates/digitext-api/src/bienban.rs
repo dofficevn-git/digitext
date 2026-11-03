@@ -576,8 +576,63 @@ fn f_27r(r_1b: &Tob) -> (String, Vec<FormBlock>) {
         b,
     )
 }
+/// Biên bản "generic" (0024, 3/11/2026): máy trạm gửi sẵn tiêu đề + các khối, máy chủ chỉ dựng PDF. Mọi mẫu thi công
+/// số hoá (giao nhận giấy, nhật ký, kiểm tra sản phẩm, nghiệm thu, bàn giao) đi đường này — thêm mẫu mới không cần sửa
+/// máy chủ, chỉ cần kind có trong CHECK của bảng records và mẫu ở desktop/src/features/records/recordForms.ts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "t", rename_all = "camelCase")]
+pub enum GenericBlock {
+    Heading { text: String },
+    Paragraph { text: String },
+    Field { label: String, value: String },
+    Bullets { items: Vec<String> },
+    /// Bảng: dựng thành dòng tiêu đề + mỗi hàng một gạch đầu dòng, cột nối bằng " | " (digitext_pdf chưa có bảng thật).
+    Table { columns: Vec<String>, rows: Vec<Vec<String>> },
+    Signatures { left: Vec<String>, right: Vec<String> },
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenericForm {
+    pub title: String,
+    pub blocks: Vec<GenericBlock>,
+}
+pub const GENERIC_KINDS: [&str; 6] = ["giao_nhan_giay", "tra_tai_lieu_giay", "nhat_ky_so_hoa", "kiem_tra_san_pham", "nghiem_thu", "ban_giao_lan"];
+pub fn is_generic(kind: &str) -> bool {
+    GENERIC_KINDS.contains(&kind)
+}
+fn render_generic(f: &GenericForm) -> Result<(String, Vec<FormBlock>), String> {
+    if f.title.trim().is_empty() {
+        return Err("biên bản thiếu tiêu đề".into());
+    }
+    if f.blocks.is_empty() {
+        return Err("biên bản không có nội dung".into());
+    }
+    let mut out = Vec::with_capacity(f.blocks.len() + 4);
+    for b in &f.blocks {
+        match b {
+            GenericBlock::Heading { text } => out.push(FormBlock::SectionHeading(text.clone())),
+            GenericBlock::Paragraph { text } => out.push(FormBlock::Paragraph(text.clone())),
+            GenericBlock::Field { label, value } => out.push(field(label, value.clone())),
+            GenericBlock::Bullets { items } => out.push(FormBlock::Bullets(items.clone())),
+            GenericBlock::Table { columns, rows } => {
+                if !columns.is_empty() {
+                    out.push(FormBlock::Paragraph(columns.join(" | ")));
+                }
+                out.push(FormBlock::Bullets(rows.iter().map(|r| r.join(" | ")).collect()));
+            }
+            GenericBlock::Signatures { left, right } => out.push(FormBlock::Signatures { left: left.clone(), right: right.clone() }),
+        }
+    }
+    Ok((f.title.trim().to_string(), out))
+}
 pub fn f_2i2(r_1e: &str) -> &'static str {
     match r_1e {
+        "giao_nhan_giay" => "(Theo khoản 1 Điều 9 — Thông tư 05/2025/TT-BNV: khảo sát, bàn giao tài liệu)",
+        "tra_tai_lieu_giay" => "(Theo điểm đ khoản 4 Điều 9 — Thông tư 05/2025/TT-BNV: trả tài liệu gốc về kho)",
+        "nhat_ky_so_hoa" => "(Theo khoản 4 Điều 9 — Thông tư 05/2025/TT-BNV: nhật ký số hoá)",
+        "kiem_tra_san_pham" => "(Theo khoản 5 Điều 9 — Thông tư 05/2025/TT-BNV: kiểm tra sản phẩm số hoá)",
+        "nghiem_thu" => "(Theo khoản 8 Điều 9 — Thông tư 05/2025/TT-BNV: nghiệm thu)",
+        "ban_giao_lan" => "(Theo khoản 8 Điều 9 — Thông tư 05/2025/TT-BNV: bàn giao sản phẩm)",
         "kiem_tra" => {
             "(Mẫu theo Mục 1 Phụ lục VII — Thông tư 05/2025/TT-BNV, Điều 29)"
         }
@@ -619,8 +674,32 @@ pub fn render(r_1f: &str, payload: &serde_json::Value) -> Result<(String, Vec<Fo
         "thu_nop_truc_tiep" => Ok(f_27p(&de::<To5>(payload)?)),
         "giao_nhan" => Ok(f_27f(&de::<T8q>(payload)?)),
         "tra_lai" => Ok(f_27r(&de::<Tob>(payload)?)),
+        k if is_generic(k) => render_generic(&de::<GenericForm>(payload)?),
         other => Err(format!(
             "loại biên bản không hợp lệ: {other}"
         )),
+    }
+}
+#[cfg(test)]
+mod generic_tests {
+    use super::*;
+    #[test]
+    fn generic_render_va_tu_choi_rong() {
+        let v = serde_json::json!({
+            "title": "Biên bản giao nhận tài liệu giấy",
+            "blocks": [
+                {"t": "paragraph", "text": "Hôm nay…"},
+                {"t": "field", "label": "Phông", "value": "UBND xã A"},
+                {"t": "table", "columns": ["Hộp", "Số HS"], "rows": [["01", "12"], ["02", "9"]]},
+                {"t": "signatures", "left": ["BÊN GIAO"], "right": ["BÊN NHẬN"]}
+            ],
+            "fields": {"bo_qua": true}
+        });
+        let (title, blocks) = render("giao_nhan_giay", &v).expect("render");
+        assert_eq!(title, "Biên bản giao nhận tài liệu giấy");
+        assert_eq!(blocks.len(), 5);
+        assert!(render("giao_nhan_giay", &serde_json::json!({"title": "x", "blocks": []})).is_err());
+        assert!(render("kiem_tra", &v).is_err());
+        assert!(!f_2i2("nghiem_thu").is_empty());
     }
 }

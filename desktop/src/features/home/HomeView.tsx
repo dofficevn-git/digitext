@@ -40,6 +40,7 @@ export default function HomeView() {
 
   type LoiTat = { label: string; icon: IconName; run: () => void; show: boolean };
   const nhomGoc: { nhom: string; items: LoiTat[] }[] = [
+    { nhom: "Giao nhận", items: [{ label: "Biên bản giao nhận", icon: "nhapKho", run: () => goto("handover"), show: has("record.view") }] },
     { nhom: "Dữ liệu chủ", items: [{ label: "Lập hồ sơ", icon: "hoSo", run: () => gotoHoSo("laphoso"), show: has("dossier.read") }] },
     {
       nhom: "Số hoá",
@@ -48,6 +49,7 @@ export default function HomeView() {
         { label: "Đưa lên máy chủ", icon: "taiLen", run: () => goto("upload"), show: has("upload.execute") },
         { label: "OCR và bóc tách", icon: "xuLy", run: () => gotoHoSo("ocr"), show: has("dossier.read") },
         { label: "Kết nối dữ liệu chủ", icon: "chuyenDoi", run: () => gotoKhoGia("ketnoi"), show: has("dossier.read") },
+        { label: "Nhật ký số hoá", icon: "lichSu", run: () => goto("nhatky"), show: has("drive.view") },
       ],
     },
     {

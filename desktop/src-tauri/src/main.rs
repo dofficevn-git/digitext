@@ -146,6 +146,7 @@ fn main() {
             submission::submission_report,
             submission::submission_dossier,
             records::records_list,
+            records::record_get,
             records::record_create,
             records::record_download,
             access::access_list,

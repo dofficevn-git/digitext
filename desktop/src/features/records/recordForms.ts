@@ -1,7 +1,10 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Mẫu biên bản theo Phụ lục VII Thông tư 05/2025/TT-BNV. Nhãn ô là tên thường; căn cứ pháp lý để riêng ở `legal`.
+// 3/11/2026: thêm mẫu THI CÔNG SỐ HOÁ theo Điều 9 (giao nhận / trả tài liệu giấy, nhật ký số hoá…). Các mẫu này là
+// "generic": máy trạm dựng sẵn các khối (đoạn, ô, bảng, chữ ký) trong payload, máy chủ chỉ in PDF — thêm mẫu mới chỉ cần
+// thêm object ở đây (kind phải có trong CHECK của bảng records, migration 0024).
 
-export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep";
+export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa";
 
 export interface V4tb {
   key: string;
@@ -38,6 +41,8 @@ export interface V4te {
   legal: string;
   fields: V4tb[];
   lists: V4td[];
+  /** Mẫu generic (Điều 9): máy trạm dựng khối PDF; `refKey` = ô làm khoá phụ `ref` (mã phông, ngày…). */
+  generic?: { refKey?: string; signLeft: string; signRight: string; tieuDe: string };
 }
 
 const t = (key: string, label: string, optional = false, extra: Partial<V4tb> = {}): V4tb => ({ key, label, kind: "text", optional, ...extra });
@@ -172,7 +177,151 @@ export const V4tf: V4te[] = [
       },
     ],
   },
+  {
+    kind: "giao_nhan_giay",
+    label: "Biên bản giao nhận tài liệu giấy",
+    description: "Đơn vị bàn giao tài liệu giấy cho nhà thầu số hoá: kiểm đếm hộp, hồ sơ, tờ và tình trạng.",
+    legal: "Khoản 1 Điều 9",
+    fields: [
+      t("benGiao", "Bên giao (cơ quan, tổ chức)"),
+      t("benNhan", "Bên nhận (đơn vị số hoá)"),
+      t("phong", "Phông tài liệu"),
+      t("maPhong", "Mã phông", true, { hint: "Dùng để lọc sổ biên bản theo phông" }),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày giao nhận", false, { hint: NGAY }),
+      n("tongHop", "Tổng số hộp"),
+      n("tongHoSo", "Tổng số hồ sơ"),
+      t("tongTo", "Tổng số tờ", true),
+      t("tinhTrang", "Tình trạng vật lý chung", false, { hint: "Ví dụ: tốt; 3 hộp có tài liệu rách, mờ chữ" }),
+      t("nguoiGiao", "Người giao"),
+      t("nguoiNhan", "Người nhận"),
+      t("ghiChu", "Ghi chú", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "danhMucHop",
+        label: "Danh mục hộp bàn giao",
+        legal: "Điều 9.1: kiểm đếm hộp, hồ sơ, tờ",
+        columns: [
+          { key: "hopSo", label: "Hộp số" },
+          { key: "tuHoSo", label: "Từ hồ sơ", optional: true },
+          { key: "denHoSo", label: "Đến hồ sơ", optional: true },
+          { key: "soHoSo", label: "Số hồ sơ" },
+          { key: "soTo", label: "Số tờ", optional: true },
+          { key: "tinhTrang", label: "Tình trạng", optional: true },
+          { key: "ghiChu", label: "Ghi chú", optional: true },
+        ],
+        minRows: 0,
+      },
+    ],
+    generic: { refKey: "maPhong", signLeft: "ĐẠI DIỆN BÊN GIAO", signRight: "ĐẠI DIỆN BÊN NHẬN", tieuDe: "Biên bản giao nhận tài liệu giấy để số hoá" },
+  },
+  {
+    kind: "tra_tai_lieu_giay",
+    label: "Biên bản trả tài liệu gốc",
+    description: "Nhà thầu trả tài liệu giấy về kho sau khi số hoá xong: kiểm đếm lại hộp, hồ sơ, tờ.",
+    legal: "Điểm đ khoản 4 Điều 9",
+    fields: [
+      t("benTra", "Bên trả (đơn vị số hoá)"),
+      t("benNhan", "Bên nhận lại (cơ quan, tổ chức)"),
+      t("phong", "Phông tài liệu"),
+      t("maPhong", "Mã phông", true, { hint: "Dùng để lọc sổ biên bản theo phông" }),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày trả", false, { hint: NGAY }),
+      n("tongHop", "Tổng số hộp"),
+      n("tongHoSo", "Tổng số hồ sơ"),
+      t("tongTo", "Tổng số tờ", true),
+      t("tinhTrang", "Tình trạng sau số hoá", false, { hint: "Đối chiếu với biên bản giao nhận" }),
+      t("soBienBanGiaoNhan", "Số biên bản giao nhận đối ứng", true),
+      t("nguoiTra", "Người trả"),
+      t("nguoiNhan", "Người nhận"),
+      t("ghiChu", "Ghi chú", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "danhMucHop",
+        label: "Danh mục hộp trả lại",
+        columns: [
+          { key: "hopSo", label: "Hộp số" },
+          { key: "soHoSo", label: "Số hồ sơ" },
+          { key: "soTo", label: "Số tờ", optional: true },
+          { key: "tinhTrang", label: "Tình trạng", optional: true },
+          { key: "ghiChu", label: "Ghi chú", optional: true },
+        ],
+        minRows: 0,
+      },
+    ],
+    generic: { refKey: "maPhong", signLeft: "ĐẠI DIỆN BÊN TRẢ", signRight: "ĐẠI DIỆN BÊN NHẬN LẠI", tieuDe: "Biên bản trả tài liệu gốc sau số hoá" },
+  },
+  {
+    kind: "nhat_ky_so_hoa",
+    label: "Nhật ký số hoá",
+    description: "Chốt một ngày thi công: sản lượng từng người (quét, đưa lên, OCR, PDF/A, ký, duyệt) và sự việc trong ngày.",
+    legal: "Khoản 4 Điều 9",
+    fields: [
+      t("donVi", "Đơn vị số hoá"),
+      t("duAn", "Dự án"),
+      t("ngay", "Ngày", false, { hint: "Ghi dạng YYYY-MM-DD để lọc theo ngày" }),
+      t("nguoiLap", "Người lập"),
+      t("phuTrach", "Phụ trách thi công", true),
+      t("suViec", "Sự việc, ghi chú trong ngày", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "sanLuong",
+        label: "Sản lượng theo người",
+        columns: [
+          { key: "nguoi", label: "Người" },
+          { key: "trangQuet", label: "Trang quét" },
+          { key: "tepDuaLen", label: "Tệp đưa lên", optional: true },
+          { key: "trangOcr", label: "Trang OCR", optional: true },
+          { key: "tepPdfa", label: "PDF/A", optional: true },
+          { key: "tepKy", label: "Ký số", optional: true },
+          { key: "tepDuyet", label: "Duyệt", optional: true },
+          { key: "ghiChu", label: "Ghi chú", optional: true },
+        ],
+        minRows: 0,
+      },
+    ],
+    generic: { refKey: "ngay", signLeft: "NGƯỜI LẬP NHẬT KÝ", signRight: "PHỤ TRÁCH THI CÔNG", tieuDe: "Nhật ký số hoá tài liệu" },
+  },
 ];
+
+/** Khối PDF của biên bản generic (khớp `GenericBlock` ở crates/digitext-api/src/bienban.rs). */
+export type KhoiGeneric =
+  | { t: "heading"; text: string }
+  | { t: "paragraph"; text: string }
+  | { t: "field"; label: string; value: string }
+  | { t: "bullets"; items: string[] }
+  | { t: "table"; columns: string[]; rows: string[][] }
+  | { t: "signatures"; left: string[]; right: string[] };
+
+/** Dựng payload cho mẫu generic từ ô + bảng đã kiểm: giữ cả `fields`/`lists` thô để xem lại, nhân bản, cộng dồn. */
+export function taoPayloadGeneric(template: V4te, fields: Record<string, string>, lists: Record<string, Record<string, string>[]>): { payload: Record<string, unknown>; ref: string | null } {
+  const g = template.generic;
+  if (!g) throw new Error(`mẫu ${template.kind} không phải generic`);
+  const gia = (k: string) => (fields[k] ?? "").trim();
+  const blocks: KhoiGeneric[] = [];
+  const diaDiem = gia("diaDiem");
+  const ngay = gia("ngay");
+  if (ngay || diaDiem) blocks.push({ t: "paragraph", text: `Hôm nay, ngày ${ngay || "…"}${diaDiem ? `, tại ${diaDiem}` : ""}, các bên tiến hành lập biên bản với nội dung sau:` });
+  blocks.push({ t: "heading", text: "I. NỘI DUNG" });
+  for (const f of template.fields) {
+    if (f.key === "diaDiem" || f.key === "ngay") continue;
+    const v = gia(f.key);
+    if (v) blocks.push({ t: "field", label: f.label, value: v });
+  }
+  for (const l of template.lists) {
+    const rows = (lists[l.key] ?? []).filter((r) => Object.values(r).some((v) => (v ?? "").trim()));
+    if (rows.length === 0) continue;
+    blocks.push({ t: "heading", text: `II. ${l.label.toUpperCase()}` });
+    if (l.simple) blocks.push({ t: "bullets", items: rows.map((r) => (r.value ?? "").trim()) });
+    else blocks.push({ t: "table", columns: l.columns.map((c) => c.label), rows: rows.map((r) => l.columns.map((c) => (r[c.key] ?? "").trim())) });
+  }
+  blocks.push({ t: "signatures", left: [g.signLeft, "(Ký, ghi rõ họ tên)"], right: [g.signRight, "(Ký, ghi rõ họ tên, đóng dấu)"] });
+  const ref = g.refKey ? gia(g.refKey) || null : null;
+  return { payload: { title: g.tieuDe, blocks, fields, lists }, ref };
+}
 
 export function V4tg(kind: V4ta): V4te {
   const t = V4tf.find((x) => x.kind === kind);

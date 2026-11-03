@@ -312,7 +312,11 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   nhanh, Ví dụ dạy máy, Chuyển dữ liệu cũ; cộng Tách TIFF, Kho và giá, Mượn – trả) · Quản trị. Id mục con giữ nguyên;
   `Sidebar.QUY_TRINH` định nghĩa trục; xem trước `?view=tienich&tab=…`, `?view=khogia&kg=ketnoi`. Các nhóm Giao nhận
   tài liệu (Bước 1–2), Kiểm tra sản phẩm (Bước 5) và màn Nhật ký, Nghiệm thu khối lượng sẽ thêm ở các bản sau (kế hoạch
-  4 bản, migration 0024). Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
+  4 bản, migration 0024). **R2 (3/11):** nhóm Giao nhận tài liệu (`view:handover` → `records/HandoverView.tsx`: biên bản
+  giao nhận / trả tài liệu giấy, điền sẵn từ mục lục chỉnh lý) và Số hoá › Nhật ký số hoá (`view:nhatky` →
+  `report/NhatKyView.tsx`: dự án × người × ngày từ `/dashboard/project`, chốt ngày = biên bản `nhat_ky_so_hoa`). Biên bản
+  "generic" (Điều 9): mẫu ở `records/recordForms.ts` (`generic`, `taoPayloadGeneric`), máy chủ `bienban.rs::render_generic`
+  chỉ in PDF; `GET /records?kind=&ref=&projectId=`, `GET /records/{id}` (payload). Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
@@ -366,10 +370,11 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0023` (sửa 2/11/2026)
+### Schema Postgres: `migrations/0001`–`0024` (sửa 3/11/2026)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
-(0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR) — ghi chú cũ "không có migrations"
+(0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05: mở CHECK `records.kind` + cột `ref`,
+`project_contracts.contract_boxes/dossiers/sheets`) — ghi chú cũ "không có migrations"
 là sai. Không có cache `.sqlx/` offline và không có `_sqlx_migrations` tự động: áp tay theo
 thứ tự (xem `docs/CHUYEN-MAY-OCR-PC.md` cách áp bằng `docker exec psql`).
 

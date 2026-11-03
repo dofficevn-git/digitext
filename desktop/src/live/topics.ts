@@ -124,6 +124,7 @@ export const V3xc: readonly string[] = [
   "submission_dossier",
   "notifications_list",
   "records_list",
+  "record_get",
   "record_download",
   "access_list",
   "access_get",
