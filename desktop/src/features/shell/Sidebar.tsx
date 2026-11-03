@@ -19,7 +19,7 @@ import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
 // nên xếp trên một "trục quy trình" (đường dọc nối các nút tròn), mỗi nhóm ghi "Bước n" dưới tên; nhóm đang làm
 // sáng tím. Báo cáo / Quản trị nằm dưới đường chia, không thuộc trục. Mục đang mở: nền tím nhạt + vạch tím (0.19, kiểu
 // Teams / DO365; logo + tên đã chuyển lên thanh trên).
-const QUY_TRINH = new Set(["chinhly", "sohoa", "xuly", "luutruso"]);
+const QUY_TRINH = new Set(["giaonhan", "dulieuchu", "sohoa", "kiemtra", "kyso", "nghiemthu"]);
 
 /** Nút tròn mang icon nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. */
 function NutNhom({ icon, lit, size = "md" }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg" }) {

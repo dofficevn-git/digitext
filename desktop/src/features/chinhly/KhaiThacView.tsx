@@ -19,7 +19,10 @@ const PAGE = 100;
 const AN_MAC_DINH = ["bo_so", "tap_so", "trung_thua"];
 
 export default function KhaiThacView() {
-  const { session } = V460();
+  const { session, khoGiaTab } = V460();
+  // 3/11/2026: cùng một màn phục vụ hai mục menu — "Mục lục và kết xuất" (bước 3, dữ liệu chủ) và "Kết nối dữ liệu chủ"
+  // (bước 4, sau OCR): chỉ khác tiêu đề và danh sách Kết xuất.
+  const ketNoi = khoGiaTab === "ketnoi";
   const canEdit = (session?.permissions ?? []).includes("dossier.update");
   const { cat } = useClCatalog();
   const [phongId, setPhongId] = useState("");
@@ -216,16 +219,18 @@ export default function KhaiThacView() {
   const TEN_COT: Record<string, string> = { ten_kho: "Kho", ten_gia: "Giá", ma_ho_so: "Mã hồ sơ", bo_so: "Bó", tap_so: "Tập", trung_thua: "Trùng thừa", so_van_ban: "Văn bản" };
   const colsHien = cols.filter((c) => !anCot.has(c.key));
   const soLocThem = [mangId, thbqId, khoId, giaId, trungThua ? "1" : ""].filter(Boolean).length;
+  // Kết xuất: 4 mục đầu (Tạo văn bản từ OCR · — · TT05 · TT02) thuộc "Kết nối dữ liệu chủ"; phần còn lại thuộc mục lục.
+  const ketXuatHien = ketNoi ? ketXuat.slice(0, 4) : ketXuat.slice(5);
 
   return (
     <section className="view active">
       <PageHeader
-        title="Tra cứu và kết xuất"
-        description="Tìm hồ sơ chỉnh lý theo phông, phòng ban, mảng, THBQ, kho, giá. Kết xuất mục lục, nhãn hộp, sản phẩm, phụ lục, metadata."
+        title={ketNoi ? "Kết nối dữ liệu chủ" : "Mục lục và kết xuất"}
+        description={ketNoi ? "Bước 4 Điều 9 TT 05/2025: ghép tài liệu đã quét và OCR với hồ sơ trong mục lục, tạo văn bản, duyệt rồi xuất metadata TT05." : "Bước 3 Điều 9 TT 05/2025: tra cứu hồ sơ theo phông, phòng ban, mảng, THBQ, kho, giá; kết xuất mục lục, nhãn hộp, sản phẩm, phụ lục."}
         actions={
           <>
             <UiSelect size="sm" className="w-64" value={String(kieu)} onChange={(v) => setKieu(Number(v) as KieuMLHS | 0)} aria-label="Kiểu mục lục hồ sơ" options={[{ value: "0", label: "Mục lục theo số hồ sơ (mẫu kho)" }, ...KIEU_MLHS.map(([k, l]) => ({ value: String(k), label: `${k}. ${l}` }))]} />
-            <Menu trigger="button" label={busy ? "Đang kết xuất…" : "Kết xuất"} items={ketXuat} />
+            <Menu trigger="button" label={busy ? "Đang kết xuất…" : "Kết xuất"} items={ketXuatHien} />
             <Menu label="Cột hiển thị" items={Object.entries(TEN_COT).map(([k, l]) => ({ label: `${anCot.has(k) ? "Hiện" : "Ẩn"} cột ${l}`, onSelect: () => setAnCot((s) => { const x = new Set(s); if (!x.delete(k)) x.add(k); return x; }) }))} />
           </>
         }
