@@ -226,5 +226,10 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   `vllm-vnkie` + `mssql_container` lúc ~16:32) nên API mất ~45–50 s mới nghe cổng; tiến trình r3 đầu tiên tự thoát sau 184 s
   (chưa rõ mã thoát, `api.err.log` rỗng). Thay lại lần hai + chờ bằng vòng lặp: healthz 200 sau 48 s, `/cl/doi-soat` và
   `/records/{id}` đều 401 (route có). **Bài học:** sau `restart-api.ps1` phải chờ ≥ 60 s hoặc poll healthz, đừng kết luận
-  sau 15 s; script mẫu `C:\DigiText-ChuyenMay	rien-khai-r3.ps1` (thay exe → restart → poll 240 s → thử route).
+  sau 15 s; script mẫu `C:\DigiText-ChuyenMay\trien-khai-r3.ps1` (thay exe → restart → poll 240 s → thử route).
+- 3/11/2026 17:26 — **API R4** (hợp đồng thêm hộp/hồ sơ/tờ trong `ContractDto`, cột đã có từ 0024; không migration):
+  `C:\DigiText-ChuyenMay\digitext-api-r4.exe` (SHA-256 `26F4977FBE8F04B7…`), bản R3 giữ `.bak-20261103-1725`; chạy
+  `trien-khai-r4.ps1`: healthz 200 sau 28 s, `/cl/doi-soat` 401, `information_schema` có đủ `contract_boxes/dossiers/sheets`.
+  Chép thêm bộ cài desktop 0.20.0–0.22.0 vào `C:\DigiText\updates` (trước đó `latest.json` công khai kẹt ở 0.19.8 vì script
+  phát hành chỉ ghi ở .127); từ nay `release-desktop.ps1 -UpdatesScp` tự chép.
 

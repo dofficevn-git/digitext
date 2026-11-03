@@ -321,7 +321,13 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   không migration) ghép mục lục `cl_ho_so_v` với tài liệu máy chủ qua `khoa(hộp, hồ sơ)` như `tu_ocr.rs`, kết luận từng hồ sơ
   (`dat | chua_quet | thieu_trang | thua_trang | khong_pdfa | pdfa_cu | bi_tu_choi`; trang < số tờ = thiếu, trang > 2×số tờ =
   nghi thừa), tệp không khớp mục lục, `thuMucCo` để lọc khi dự án nhiều phông; màn thêm bảng Quét lại (`docs_pdfa_rejected`),
-  Xuất Excel, biên bản `kiem_tra_san_pham` điền sẵn. Chỉ cảnh báo, không chặn ký số/đóng gói. Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
+  Xuất Excel, biên bản `kiem_tra_san_pham` điền sẵn. Chỉ cảnh báo, không chặn ký số/đóng gói. **R4 (3/11):** Nghiệm thu ›
+  Nghiệm thu, bàn giao (`view:acceptance` → `acceptance/NghiemThuView.tsx`): khối lượng theo phông = mục lục chỉnh lý (hộp,
+  hồ sơ, Σ số tờ) ⨝ kho máy chủ (`docs_review_summary` gộp theo thư mục phông, ghép tên bỏ dấu, sửa tay) so với hợp đồng
+  (`project_contracts.contract_boxes/dossiers/sheets`, nhập ở Tiến độ dự án › Hợp đồng); biên bản `nghiem_thu` /
+  `ban_giao_lan` điền sẵn; "Tạo bộ hồ sơ nghiệm thu" ghi vào thư mục chọn: Excel khối lượng, PDF mọi biên bản của dự án,
+  MLHS TT05 từng phông (Tauri `save_export`/`record_download` nhận `dir`; `writeXlsx`/`xuatTT05` nhận thư mục đích). Mô tả
+  cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
