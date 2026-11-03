@@ -214,4 +214,10 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   nghi là nguồn "Access is denied" của schtasks/cargo. Máy .127: anh tự chạy `dev/dung-dich-vu-127.ps1`; cloudflared trên .127
   không còn tác dụng (NS đã rời Cloudflare) — rollback giờ = trỏ A về .127 không được (không NAT), nên rollback thực tế chỉ còn
   dump ngược từ OCR PC; .127 giữ Postgres/MinIO 14 ngày.
+- 3/11/2026 16:00 — **áp 0024** (`records` kind thi công TT05 + cột `ref`, `project_contracts` hộp/hồ sơ/tờ) qua
+  `docker exec -i digitext-dev-postgres-1 psql` như `ap-0023.ps1`; thay `C:\DigiText\target\release\digitext-api.exe` bằng bản
+  build trên .127 (nhánh `feat/mlhs-tt05-mot-luong`, SHA-256 `9E630EE18A7AD5A1…`; bản cũ giữ `.bak-20261103-1601`); khởi động lại
+  bằng `dev\restart-api.ps1` (pid 129224, healthz 200; `GET /api/v1/records/{id}` trả 401 thay vì 404 = route mới đã có).
+  Tệp mang sang: `C:\DigiText-ChuyenMay\{digitext-api-0024.exe,0024_records_tt05_thi_cong.sql}`. Repo `C:\DigiText` trên OCR PC
+  vẫn ở `main` (39fc34a), chưa checkout nhánh mới — khi build tại chỗ phải nhớ.
 
