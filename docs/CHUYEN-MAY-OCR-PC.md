@@ -220,4 +220,11 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   bằng `dev\restart-api.ps1` (pid 129224, healthz 200; `GET /api/v1/records/{id}` trả 401 thay vì 404 = route mới đã có).
   Tệp mang sang: `C:\DigiText-ChuyenMay\{digitext-api-0024.exe,0024_records_tt05_thi_cong.sql}`. Repo `C:\DigiText` trên OCR PC
   vẫn ở `main` (39fc34a), chưa checkout nhánh mới — khi build tại chỗ phải nhớ.
+- 3/11/2026 16:52 — **API R3** (`GET /cl/doi-soat`, không migration): `C:\DigiText-ChuyenMay\digitext-api-r3.exe`
+  (SHA-256 `7B3B5A0EAFCC8FD1…`) thay vào `target\release\digitext-api.exe`; bản 0024 giữ `.bak-20261103-1652`. Lần thay đầu
+  (16:46) tưởng treo: healthz không lên sau 15 s, rollback về 0024 cũng "không lên" → thật ra máy đang nặng (ai đó bật
+  `vllm-vnkie` + `mssql_container` lúc ~16:32) nên API mất ~45–50 s mới nghe cổng; tiến trình r3 đầu tiên tự thoát sau 184 s
+  (chưa rõ mã thoát, `api.err.log` rỗng). Thay lại lần hai + chờ bằng vòng lặp: healthz 200 sau 48 s, `/cl/doi-soat` và
+  `/records/{id}` đều 401 (route có). **Bài học:** sau `restart-api.ps1` phải chờ ≥ 60 s hoặc poll healthz, đừng kết luận
+  sau 15 s; script mẫu `C:\DigiText-ChuyenMay	rien-khai-r3.ps1` (thay exe → restart → poll 240 s → thử route).
 
