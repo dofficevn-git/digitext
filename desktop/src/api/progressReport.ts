@@ -9,6 +9,10 @@ export interface ProjectContract {
   deadlineOn: string | null;
   contractPages: number | null;
   contractFiles: number | null;
+  /** Khối lượng theo TT05 (0024): hộp, hồ sơ, tờ. */
+  contractBoxes: number | null;
+  contractDossiers: number | null;
+  contractSheets: number | null;
   managerName: string | null;
   note: string | null;
 }

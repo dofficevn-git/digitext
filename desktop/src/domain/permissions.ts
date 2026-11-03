@@ -443,6 +443,7 @@ const V3z7: Record<V3xt, V3yx> = {
   handover: "record.view",
   nhatky: "drive.view",
   qc: "document.list",
+  acceptance: "stats.view_project",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

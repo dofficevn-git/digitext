@@ -120,6 +120,9 @@ pub async fn record_create(
 pub struct T58 {
     pub id: String,
     pub file_name: String,
+    /// Thư mục đích tuỳ chọn (bộ hồ sơ nghiệm thu); trống = `<kho>/_bien_ban`.
+    #[serde(default)]
+    pub dir: Option<String>,
 }
 #[tauri::command]
 pub async fn record_download(
@@ -134,8 +137,10 @@ pub async fn record_download(
         async move { client::f_1ei(&r_2ah, &r_2ap, &format!("/records/{id}/download")).await }
     })
     .await?;
-    let r_2am = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
-    let r_2aj = r_2am.join("_bien_ban");
+    let r_2aj = match args.dir.as_deref().map(str::trim).filter(|d| !d.is_empty()) {
+        Some(d) => std::path::PathBuf::from(d),
+        None => crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?.join("_bien_ban"),
+    };
     let file_name = args.file_name.clone();
     let r_2al = tauri::async_runtime::spawn_blocking(move || -> std::io::Result<String> {
         std::fs::create_dir_all(&r_2aj)?;

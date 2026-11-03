@@ -16,7 +16,7 @@ export interface Sheet {
   merges?: string[];
 }
 
-export async function writeXlsx(sheets: Sheet[], fileName: string): Promise<void> {
+export async function writeXlsx(sheets: Sheet[], fileName: string, dir?: string): Promise<void> {
   const X = await import("xlsx");
   const wb = X.utils.book_new();
   for (const s of sheets) {
@@ -27,7 +27,7 @@ export async function writeXlsx(sheets: Sheet[], fileName: string): Promise<void
   }
   if (isTauri()) {
     const buf = X.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
-    await V4dz(new Uint8Array(buf), fileName, "xlsx");
+    await V4dz(new Uint8Array(buf), fileName, "xlsx", dir);
   } else {
     X.writeFile(wb, fileName);
   }

@@ -96,6 +96,15 @@ function HopDongDialog({ p, onSaved, onClose }: { p: ProjectProgress; onSaved: (
         <Field label="Số tệp hợp đồng">
           <Input type="number" min={0} value={c.contractFiles ?? ""} onChange={(e) => setC({ ...c, contractFiles: so(e.target.value) })} />
         </Field>
+        <Field label="Số hộp hợp đồng" hint="Khối lượng TT05 để nghiệm thu">
+          <Input type="number" min={0} value={c.contractBoxes ?? ""} onChange={(e) => setC({ ...c, contractBoxes: so(e.target.value) })} />
+        </Field>
+        <Field label="Số hồ sơ hợp đồng">
+          <Input type="number" min={0} value={c.contractDossiers ?? ""} onChange={(e) => setC({ ...c, contractDossiers: so(e.target.value) })} />
+        </Field>
+        <Field label="Số tờ hợp đồng">
+          <Input type="number" min={0} value={c.contractSheets ?? ""} onChange={(e) => setC({ ...c, contractSheets: so(e.target.value) })} />
+        </Field>
       </FormGrid>
       <Field label="Ghi chú" className="mt-3">
         <Input value={c.note ?? ""} onChange={(e) => setC({ ...c, note: e.target.value })} />

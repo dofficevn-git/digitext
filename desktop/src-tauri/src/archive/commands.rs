@@ -405,6 +405,11 @@ pub async fn save_export(
         static CTR: AtomicU64 = AtomicU64::new(0);
         let n = CTR.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!("digitext-export-{}-{n}.{ext}", std::process::id()))
+    } else if let Some(dir) = args.dir.as_deref().map(str::trim).filter(|d| !d.is_empty()) {
+        let dir = std::path::PathBuf::from(dir);
+        std::fs::create_dir_all(&dir).map_err(|e| AppError::validation(format!("không tạo được thư mục {}: {e}", dir.display())))?;
+        let name = args.default_name.as_deref().map(|n| f_2bp(n, &ext)).unwrap_or_else(|| format!("digitext-export.{ext}"));
+        dir.join(name)
     } else {
         let r_4e = args
             .default_name

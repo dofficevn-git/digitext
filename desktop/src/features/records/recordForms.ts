@@ -4,7 +4,7 @@
 // "generic": máy trạm dựng sẵn các khối (đoạn, ô, bảng, chữ ký) trong payload, máy chủ chỉ in PDF — thêm mẫu mới chỉ cần
 // thêm object ở đây (kind phải có trong CHECK của bảng records, migration 0024).
 
-export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa" | "kiem_tra_san_pham";
+export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa" | "kiem_tra_san_pham" | "nghiem_thu" | "ban_giao_lan";
 
 export interface V4tb {
   key: string;
@@ -337,6 +337,92 @@ export const V4tf: V4te[] = [
       },
     ],
     generic: { refKey: "maPhong", signLeft: "NGƯỜI KIỂM TRA", signRight: "ĐẠI DIỆN ĐƠN VỊ THI CÔNG", tieuDe: "Biên bản kiểm tra sản phẩm số hoá tài liệu" },
+  },
+  {
+    kind: "nghiem_thu",
+    label: "Biên bản nghiệm thu sản phẩm số hoá",
+    description: "Khối lượng nghiệm thu theo hợp đồng và mục lục (hộp, hồ sơ, tờ, trang, tệp PDF/A, ký số, gói AIP) với kết quả kiểm tra.",
+    legal: "Khoản 8 Điều 9",
+    fields: [
+      t("benA", "Bên A (chủ đầu tư)"),
+      t("benB", "Bên B (đơn vị thi công)"),
+      t("duAn", "Dự án / hợp đồng"),
+      t("phamVi", "Phạm vi nghiệm thu", false, { hint: "Toàn dự án hoặc tên phông" }),
+      t("ngay", "Ngày nghiệm thu", false, { hint: NGAY }),
+      t("diaDiem", "Địa điểm", true),
+      t("daiDienA", "Đại diện bên A"),
+      t("daiDienB", "Đại diện bên B"),
+      t("hopHd", "Hộp theo hợp đồng", true),
+      t("hoSoHd", "Hồ sơ theo hợp đồng", true),
+      t("toHd", "Tờ theo hợp đồng", true),
+      t("trangHd", "Trang theo hợp đồng", true),
+      t("hopTt", "Hộp thực tế (mục lục)"),
+      t("hoSoTt", "Hồ sơ thực tế (mục lục)"),
+      t("toTt", "Tờ thực tế (mục lục)"),
+      t("trangTt", "Trang đã quét"),
+      t("tepTt", "Tệp đã quét"),
+      t("tepPdfa", "Tệp PDF/A-2b", true),
+      t("tepKy", "Tệp đã ký số", true),
+      t("goiAip", "Gói AIP đã dựng", true),
+      t("bienBanKiemTra", "Số các biên bản kiểm tra sản phẩm", true),
+      t("ketLuan", "Kết luận nghiệm thu", false, { multiline: true }),
+      t("tonTai", "Tồn tại, yêu cầu khắc phục", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "khoiLuong",
+        label: "Khối lượng theo phông",
+        columns: [
+          { key: "maPhong", label: "Mã phông" },
+          { key: "tenPhong", label: "Tên phông" },
+          { key: "hop", label: "Hộp" },
+          { key: "hoSo", label: "Hồ sơ" },
+          { key: "to", label: "Tờ" },
+          { key: "trang", label: "Trang quét", optional: true },
+          { key: "tep", label: "Tệp", optional: true },
+          { key: "pdfa", label: "PDF/A", optional: true },
+          { key: "ky", label: "Ký số", optional: true },
+        ],
+        minRows: 0,
+      },
+    ],
+    generic: { refKey: "phamVi", signLeft: "ĐẠI DIỆN BÊN B", signRight: "ĐẠI DIỆN BÊN A", tieuDe: "Biên bản nghiệm thu sản phẩm số hoá tài liệu lưu trữ" },
+  },
+  {
+    kind: "ban_giao_lan",
+    label: "Biên bản bàn giao sản phẩm",
+    description: "Một lần bàn giao sản phẩm số hoá: gói AIP, bộ mục lục, biên bản kèm theo; tổng số lần bàn giao lũy kế.",
+    legal: "Khoản 8 Điều 9",
+    fields: [
+      t("benGiao", "Bên giao (đơn vị thi công)"),
+      t("benNhan", "Bên nhận"),
+      t("duAn", "Dự án / hợp đồng"),
+      t("lan", "Lần bàn giao", false, { hint: "Ví dụ: Lần 1" }),
+      t("ngay", "Ngày bàn giao", false, { hint: NGAY }),
+      t("diaDiem", "Địa điểm", true),
+      t("daiDienGiao", "Đại diện bên giao"),
+      t("daiDienNhan", "Đại diện bên nhận"),
+      t("soGoi", "Số gói AIP bàn giao"),
+      t("soTaiLieu", "Số tài liệu trong các gói", true),
+      t("vatMang", "Vật mang tin / cách bàn giao", true, { hint: "Ổ cứng, nhập trực tiếp vào Hệ thống…" }),
+      t("kemTheo", "Tài liệu kèm theo", true, { multiline: true, hint: "Mục lục TT05, biên bản kiểm tra, nghiệm thu…" }),
+      t("ghiChu", "Ghi chú", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "goiTin",
+        label: "Danh mục gói bàn giao",
+        columns: [
+          { key: "nhan", label: "Gói" },
+          { key: "taiLieu", label: "Tài liệu" },
+          { key: "tep", label: "Tệp zip", optional: true },
+          { key: "sha", label: "SHA-256 (8 ký tự đầu)", optional: true },
+          { key: "kichThuoc", label: "Kích thước", optional: true },
+        ],
+        minRows: 0,
+      },
+    ],
+    generic: { refKey: "lan", signLeft: "ĐẠI DIỆN BÊN GIAO", signRight: "ĐẠI DIỆN BÊN NHẬN", tieuDe: "Biên bản bàn giao sản phẩm số hoá tài liệu lưu trữ" },
   },
 ];
 
