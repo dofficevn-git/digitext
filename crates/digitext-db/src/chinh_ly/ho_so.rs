@@ -196,6 +196,31 @@ pub async fn khoa_ho_so_cua_phong(pool: &PgPool, project: Uuid, phong: Uuid) -> 
     .await
 }
 
+/// Hồ sơ của phông cho đối soát sản phẩm (3/11/2026): khoá ghép + số tờ kê khai + tiêu đề.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HoSoDoiSoatRow {
+    pub id: Uuid,
+    pub hop_so: Option<String>,
+    pub ho_so_so: Option<String>,
+    pub so_tam: String,
+    pub vinh_vien: bool,
+    pub ma_ho_so: Option<String>,
+    pub tieu_de: String,
+    pub so_to: Option<String>,
+}
+pub async fn doi_soat_ho_so_cua_phong(pool: &PgPool, project: Uuid, phong: Uuid) -> sqlx::Result<Vec<HoSoDoiSoatRow>> {
+    sqlx::query_as::<_, HoSoDoiSoatRow>(
+        "SELECT v.id, v.hop_so, v.ho_so_so, v.so_tam, COALESCE(v.vinh_vien, false) AS vinh_vien, v.ma_ho_so, \
+                COALESCE(v.tieu_de, '') AS tieu_de, v.so_to \
+         FROM cl_ho_so_v v WHERE v.project_id = $1 AND v.phong_id = $2 AND v.deleted_at IS NULL \
+         ORDER BY v.hop_so_int NULLS LAST, v.hop_so, v.ho_so_so COLLATE vi_so NULLS LAST, v.so_tam COLLATE vi_so, v.id",
+    )
+    .bind(project)
+    .bind(phong)
+    .fetch_all(pool)
+    .await
+}
+
 /// Văn bản đã có của cả phông (nạp một lần trước vòng lặp) — để biết số thứ tự đã dùng và dòng nào người đã chạm.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct VanBanTomTat {

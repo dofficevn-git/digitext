@@ -53,6 +53,10 @@ export default function HomeView() {
       ],
     },
     {
+      nhom: "Kiểm tra sản phẩm",
+      items: [{ label: "Kiểm tra theo phông", icon: "kiemTra", run: () => goto("qc"), show: has("document.list") }],
+    },
+    {
       nhom: "Ký số, đóng gói",
       items: [
         { label: "Ký số", icon: "kySo", run: () => goto("sign"), show: has("sign.view") },

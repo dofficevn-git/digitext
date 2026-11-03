@@ -442,6 +442,7 @@ const V3z7: Record<V3xt, V3yx> = {
   // Thi công Điều 9 TT05 (3/11/2026): giao nhận giấy = sổ biên bản; nhật ký = số liệu dashboard của dự án.
   handover: "record.view",
   nhatky: "drive.view",
+  qc: "document.list",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

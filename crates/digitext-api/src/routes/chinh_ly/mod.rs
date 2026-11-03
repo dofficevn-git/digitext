@@ -22,6 +22,7 @@ pub mod rows;
 pub mod sync;
 pub mod thong_ke;
 pub mod tu_ocr;
+pub mod doi_soat;
 
 use crate::app::AppState;
 use crate::error::ApiError;
@@ -35,7 +36,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(tu_ocr::router())
+    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(tu_ocr::router()).merge(doi_soat::router())
 }
 
 /// Người gọi phải thuộc dự án (admin quản dự án, thành viên, hoặc tài khoản gắn dự án).

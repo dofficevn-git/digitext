@@ -4,7 +4,7 @@
 // "generic": máy trạm dựng sẵn các khối (đoạn, ô, bảng, chữ ký) trong payload, máy chủ chỉ in PDF — thêm mẫu mới chỉ cần
 // thêm object ở đây (kind phải có trong CHECK của bảng records, migration 0024).
 
-export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa";
+export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa" | "kiem_tra_san_pham";
 
 export interface V4tb {
   key: string;
@@ -284,6 +284,59 @@ export const V4tf: V4te[] = [
       },
     ],
     generic: { refKey: "ngay", signLeft: "NGƯỜI LẬP NHẬT KÝ", signRight: "PHỤ TRÁCH THI CÔNG", tieuDe: "Nhật ký số hoá tài liệu" },
+  },
+  {
+    kind: "kiem_tra_san_pham",
+    label: "Biên bản kiểm tra sản phẩm số hoá",
+    description: "Kết quả kiểm tra một phông theo Điều 8: số hồ sơ đạt, lỗi ảnh (PDF/A, dpi, bị từ chối), lỗi biên mục (lệch số tờ, tệp không khớp mục lục).",
+    legal: "Khoản 5 Điều 9, Điều 8",
+    fields: [
+      t("donVi", "Đơn vị số hoá"),
+      t("duAn", "Dự án"),
+      t("maPhong", "Mã phông", false, { hint: "Dùng làm khoá lọc biên bản theo phông" }),
+      t("tenPhong", "Tên phông"),
+      t("ngay", "Ngày kiểm tra", false, { hint: NGAY }),
+      t("diaDiem", "Địa điểm", true),
+      t("nguoiKiemTra", "Người kiểm tra"),
+      t("daiDienThiCong", "Đại diện đơn vị thi công", true),
+      t("tongHoSo", "Tổng hồ sơ trong mục lục"),
+      t("hoSoDaQuet", "Hồ sơ đã có tệp quét"),
+      t("tongTep", "Tổng tệp", true),
+      t("tongTrang", "Tổng trang quét", true),
+      t("soToMucLuc", "Tổng số tờ theo mục lục", true),
+      t("hoSoDat", "Hồ sơ đạt"),
+      t("loiAnh", "Lỗi ảnh (PDF/A, dpi, bị từ chối)"),
+      t("loiBienMuc", "Lỗi biên mục (lệch số tờ, không khớp mục lục)"),
+      t("tepKhongKhop", "Tệp không khớp mục lục", true),
+      t("tepQuetLai", "Tệp phải quét lại", true),
+      t("ketLuan", "Kết luận", false, { multiline: true }),
+      t("yeuCau", "Yêu cầu khắc phục, thời hạn", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "loi",
+        label: "Hồ sơ chưa đạt (tối đa 50 dòng, đủ xem trong màn Kiểm tra sản phẩm)",
+        columns: [
+          { key: "hop", label: "Hộp" },
+          { key: "hoSo", label: "Hồ sơ" },
+          { key: "tieuDe", label: "Tiêu đề", optional: true },
+          { key: "soTo", label: "Số tờ MLHS", optional: true },
+          { key: "trang", label: "Trang quét", optional: true },
+          { key: "loi", label: "Lỗi" },
+        ],
+        minRows: 0,
+      },
+      {
+        key: "quetLai",
+        label: "Tệp phải quét lại",
+        columns: [
+          { key: "tep", label: "Tệp" },
+          { key: "lyDo", label: "Lý do", optional: true },
+        ],
+        minRows: 0,
+      },
+    ],
+    generic: { refKey: "maPhong", signLeft: "NGƯỜI KIỂM TRA", signRight: "ĐẠI DIỆN ĐƠN VỊ THI CÔNG", tieuDe: "Biên bản kiểm tra sản phẩm số hoá tài liệu" },
   },
 ];
 

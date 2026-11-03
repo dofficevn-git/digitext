@@ -77,6 +77,14 @@ export const NAV_TREE: V46s[] = [
     ],
   },
   {
+    id: "kiemtra",
+    label: "Kiểm tra sản phẩm",
+    icon: "kiemTra",
+    step: "Bước 5 · Điều 8, đối soát",
+    gate: "qc",
+    children: [{ id: "doisoat", label: "Kiểm tra theo phông", gate: "qc", leaf: { kind: "view", view: "qc" }, keywords: "doi soat so to trang quet pdf/a quet lai bien ban kiem tra qc" }],
+  },
+  {
     id: "kyso",
     label: "Ký số, đóng gói",
     icon: "kySo",
