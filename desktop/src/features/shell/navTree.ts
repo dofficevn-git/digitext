@@ -1,7 +1,7 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Cây menu 2 cấp theo công đoạn thi công số hoá của Điều 9 Thông tư 05/2025/TT-BNV (3/11/2026): Dữ liệu chủ (bước 3) →
 // Số hoá (bước 4: quét, đối chiếu, OCR, kết nối dữ liệu chủ) → Ký số, đóng gói (bước 6–7) → Nghiệm thu, bàn giao (bước 8);
-// các nhóm Giao nhận tài liệu (bước 1–2) và Kiểm tra sản phẩm (bước 5) thêm khi màn tương ứng ra đời. Dưới đường chia:
+// Giao nhận tài liệu (bước 1–2) đứng đầu trục; nhóm Kiểm tra sản phẩm (bước 5) thêm khi màn tương ứng ra đời. Dưới đường chia:
 // Lưu trữ số (nghiệp vụ của lưu trữ lịch sử, sẽ tách bản riêng), Báo cáo, Tiện ích (mọi công cụ ngoài trục), Quản trị.
 // Id mục con GIỮ NGUYÊN qua các lần sắp xếp để sidebarPrefs / tìm nhanh / deep link không gãy. Mỗi nút có `gate` = màn
 // dùng để kiểm quyền (domain/permissions.ts V3z7). `badge` là số đếm nhỏ cạnh mục, lấy từ useNotifications.
@@ -35,6 +35,14 @@ export interface V46s {
 export const NAV_TREE: V46s[] = [
   { id: "home", label: "Tổng quan", icon: "trangChu", gate: "home", leaf: { kind: "view", view: "home" }, keywords: "trang chu dashboard" },
   {
+    id: "giaonhan",
+    label: "Giao nhận tài liệu",
+    icon: "nhapKho",
+    step: "Bước 1–2 · khảo sát, kiểm đếm",
+    gate: "handover",
+    children: [{ id: "giaonhangiay", label: "Biên bản giao nhận", gate: "handover", leaf: { kind: "view", view: "handover" }, keywords: "ban giao tai lieu giay tra tai lieu goc hop ho so to" }],
+  },
+  {
     id: "dulieuchu",
     label: "Dữ liệu chủ",
     icon: "chinhly",
@@ -65,6 +73,7 @@ export const NAV_TREE: V46s[] = [
       { id: "giaoviec", label: "Giao việc", gate: "workManage", leaf: { kind: "view", view: "workManage" }, keywords: "goi viec xac nhan" },
       { id: "viec", label: "Việc của tôi", gate: "work", leaf: { kind: "view", view: "work" }, badge: "myWork" },
       { id: "ketnoi", label: "Kết nối dữ liệu chủ", gate: "khogia", leaf: { kind: "khogia", tab: "ketnoi" }, keywords: "tao van ban tu ocr metadata tt05 tt02 du lieu chu" },
+      { id: "nhatky", label: "Nhật ký số hoá", gate: "nhatky", leaf: { kind: "view", view: "nhatky" }, keywords: "san luong theo ngay nguoi chot nhat ky" },
     ],
   },
   {

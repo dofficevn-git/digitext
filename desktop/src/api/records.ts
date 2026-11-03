@@ -11,16 +11,27 @@ export interface V4sy {
   title: string;
   submissionId: string | null;
   createdAt: string;
+  /** Khoá phụ (0024): mã phông / ngày YYYY-MM-DD / "lần n". Máy chủ cũ không trả. */
+  ref?: string | null;
 }
 
-export function V4sz(): Promise<V4sy[]> {
-  return invoke<V4sy[]>("records_list");
+/** Sổ biên bản; lọc theo loại / khoá phụ / dự án (máy chủ từ 0024, máy chủ cũ trả toàn bộ). */
+export function V4sz(filter?: { kinds?: string[]; ref?: string; projectId?: string | null; limit?: number }): Promise<V4sy[]> {
+  return invoke<V4sy[]>("records_list", { args: filter ? { kinds: filter.kinds ?? [], ref: filter.ref ?? null, projectId: filter.projectId ?? null, limit: filter.limit ?? null } : null });
+}
+
+export interface RecordDetail extends V4sy {
+  payload: Record<string, unknown>;
+}
+export function recordGet(id: string): Promise<RecordDetail> {
+  return invoke<RecordDetail>("record_get", { id });
 }
 
 export function V4t0(V2ra: {
   projectId?: string | null;
   kind: string;
   payload: unknown;
+  ref?: string | null;
 }): Promise<V4sy> {
   return invoke<V4sy>("record_create", { args: V2ra });
 }

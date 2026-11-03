@@ -27,7 +27,9 @@ export type V3xt =
   | "report"
   | "work"
   | "workManage"
-  | "tienich";
+  | "tienich"
+  | "handover"
+  | "nhatky";
 
 /** Tab trong màn Tiện ích (3/11/2026). */
 export type V3xTienIch = "pdfa" | "kiemgoi" | "khongoai" | "nhanh" | "vidu" | "chuyendulieu";
