@@ -1,8 +1,8 @@
 # Bàn giao — tiếp tục công việc trên máy khác
 
-> **Cách dùng:** mở công cụ AI ở gốc repo và bảo *"đọc docs/HANDOFF.md rồi tiếp tục"*.
+> **Cách dùng:** đọc file này trước khi làm tiếp phần việc đang dở.
 > File này nêu **trạng thái đang dở**, không nêu kiến trúc — kiến trúc ở
-> [PROJECT-MAP.md](PROJECT-MAP.md), quy ước bắt buộc ở [../ghi chú quy ước](../ghi chú quy ước).
+> [PROJECT-MAP.md](PROJECT-MAP.md), quy ước bắt buộc ghi trong ghi chú quy ước ở gốc repo (không đưa lên git).
 
 Chốt tại commit `bbf551e`, cây làm việc sạch.
 

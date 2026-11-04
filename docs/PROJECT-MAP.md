@@ -1,7 +1,7 @@
 # DigiText — Bản đồ dự án
 
-> Tài liệu này do công cụ AI khảo sát và sinh ra ngày 2026-08-27 tại commit `3634dc6`.
-> Mục đích: cho người (và AI) mới vào hiểu dự án mà không phải đọc lại 98k dòng.
+> Tài liệu này được khảo sát và sinh tự động ngày 2026-08-27 tại commit `3634dc6`.
+> Mục đích: cho người mới vào hiểu dự án mà không phải đọc lại 98k dòng.
 > Khi cấu trúc thay đổi lớn, cập nhật lại file này.
 
 ---

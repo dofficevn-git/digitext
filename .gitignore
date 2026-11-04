@@ -27,8 +27,6 @@ target
 # Local scratch / draft documents
 dirty-docs/
 
-# công cụ AI personal per-project overrides (permissions, etc.) — không commit
-.claude/settings.local.json
 
 # OCR output = derived sensitive data (never commit)
 ocr_output/
