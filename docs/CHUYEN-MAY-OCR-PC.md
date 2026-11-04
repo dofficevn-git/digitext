@@ -232,6 +232,10 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   `trien-khai-r4.ps1`: healthz 200 sau 28 s, `/cl/doi-soat` 401, `information_schema` có đủ `contract_boxes/dossiers/sheets`.
   Chép thêm bộ cài desktop 0.20.0–0.22.0 vào `C:\DigiText\updates` (trước đó `latest.json` công khai kẹt ở 0.19.8 vì script
   phát hành chỉ ghi ở .127); từ nay `release-desktop.ps1 -UpdatesScp` tự chép.
+- 4/11/2026 14:56 — **API R5** (biên bản Word `GET /records/{id}/docx`, ghép mục lục thiếu hộp `BoGhep`; không migration):
+  `C:\DigiText-ChuyenMay\digitext-api-r5.exe` (SHA-256 `50A63732EF0A37B7…`), bản R4 giữ `.bak-20261104-1456`; `trien-khai-r5.ps1`:
+  healthz 200, `/records/{id}/docx` 401, `/cl/doi-soat` 401. Chạy thử đối soát Bắc Giang chỉ đọc qua `docker exec psql`
+  (xuất JSON vào `C:\DigiText-ChuyenMay\thu-*.json`), kết quả ở `docs/CHAY-THU-DOI-SOAT-BAC-GIANG.md`.
 
 - 4/11/2026 09:00 — **Ổ C: (NVMe Kingston SNV3S2000G) có 2 sector hỏng** trong `docker_data.vhdx` (LBA 2385502240/2385515328);
   Event `disk` Id 7 ~100 lần/giây, C: bận 100 %, hàng đợi 15, 90 ms/đọc; trong VM docker-desktop `hv_storvsc … cmd 0x28 scsi 0x2`
