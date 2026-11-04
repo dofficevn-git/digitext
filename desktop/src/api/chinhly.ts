@@ -224,3 +224,72 @@ export const num = (r: ClRow | null | undefined, k: string): number | null => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
+
+// ------------------------------------------------------------------ văn bản từ OCR (2/11/2026)
+
+/** Kết quả một lần gọi `POST /cl/van-ban/tu-ocr` (máy chủ xử lý tối đa 2.000 tài liệu / lần, `conTiep` + `after` để gọi tiếp). */
+export interface ClTuOcrResp {
+  hoSoXet: number;
+  hoSoKhop: number;
+  hoSoKhongTep: number;
+  taiLieuXet: number;
+  taiLieuKhongKhop: { documentId: string; filename: string; lyDo: string }[];
+  created: number;
+  updated: number;
+  daLienKetTep: number;
+  giuNguyen: number;
+  notes?: string[];
+  errors: { row: number; field?: string; message: string }[];
+  conTiep: boolean;
+  after?: string;
+}
+
+/** Gọi máy chủ tạo văn bản từ trường OCR cho cả phông (hoặc các hồ sơ chỉ định), lặp tới khi hết; `onLo` báo tiến độ. */
+export async function clTaoVanBanTuOcr(projectId: string, phongId: string, hoSoIds?: string[], onLo?: (tong: ClTuOcrResp, lan: number) => void): Promise<ClTuOcrResp> {
+  const tong: ClTuOcrResp = { hoSoXet: 0, hoSoKhop: 0, hoSoKhongTep: 0, taiLieuXet: 0, taiLieuKhongKhop: [], created: 0, updated: 0, daLienKetTep: 0, giuNguyen: 0, notes: [], errors: [], conTiep: false };
+  let after: string | undefined;
+  for (let lan = 1; lan <= 1000; lan++) {
+    const r = await clRemote<ClTuOcrResp>("POST", "/cl/van-ban/tu-ocr", { projectId, phongId, hoSoIds: hoSoIds ?? [], after });
+    tong.hoSoXet += r.hoSoXet;
+    tong.hoSoKhop += r.hoSoKhop;
+    tong.hoSoKhongTep += r.hoSoKhongTep;
+    tong.taiLieuXet += r.taiLieuXet;
+    tong.created += r.created;
+    tong.updated += r.updated;
+    tong.daLienKetTep += r.daLienKetTep;
+    tong.giuNguyen += r.giuNguyen;
+    tong.taiLieuKhongKhop.push(...(r.taiLieuKhongKhop ?? []));
+    tong.notes!.push(...(r.notes ?? []));
+    tong.errors.push(...(r.errors ?? []));
+    onLo?.(tong, lan);
+    if (!r.conTiep || !r.after || r.after === after) break;
+    after = r.after;
+  }
+  return tong;
+}
+
+// ---- Kiểm tra sản phẩm (Bước 5 Điều 9, 3/11/2026): GET /cl/doi-soat — máy chủ ghép MLHS ↔ tài liệu và kết luận từng hồ sơ.
+export type DoiSoatKetLuan = "dat" | "chua_quet" | "thieu_trang" | "thua_trang" | "khong_pdfa" | "pdfa_cu" | "bi_tu_choi";
+export interface DoiSoatHoSo {
+  hoSoId: string;
+  hopSo: string;
+  hoSoSo: string;
+  maHoSo: string | null;
+  tieuDe: string;
+  vinhVien: boolean;
+  soTo: number | null;
+  files: number;
+  pages: number;
+  pdfaDocs: number;
+  pdfaCu: number;
+  signedDocs: number;
+  rejectedDocs: number;
+  ketLuan: DoiSoatKetLuan;
+}
+export interface DoiSoatResp {
+  tongKet: { hoSoMucLuc: number; hoSoCoTep: number; dat: number; chuaQuet: number; lechSoTo: number; khongPdfa: number; pdfaCu: number; biTuChoi: number; tep: number; trang: number; soToMucLuc: number; tepKhongKhop: number };
+  hoSo: DoiSoatHoSo[];
+  khongKhop: { documentId: string; filename: string; hop: string; hoSo: string; lyDo: string }[];
+  thuMucCo: string[];
+}
+export const clDoiSoat = (projectId: string, phongId: string, thuMuc?: string) => clRemote<DoiSoatResp>("GET", `/cl/doi-soat${qs({ projectId, phongId, thuMuc })}`);

@@ -1,15 +1,18 @@
 ﻿# BẬT toàn bộ dịch vụ DigiText trên OCR PC — chạy MỘT LẦN lúc cắt chuyển (GĐ2), PowerShell admin (30/10/2026).
-#   powershell -ExecutionPolicy Bypass -File C:\DigiText\dev\ocr-pc-bat-dich-vu.ps1 -CfToken <token Zone.DNS:Edit> [-KhoDir D:\DigiText-KhoMayChu]
+#   powershell -ExecutionPolicy Bypass -File C:\DigiText\dev\ocr-pc-bat-dich-vu.ps1 [-KhoDir D:\DigiText-KhoMayChu] [-KhongGpu]
+#   (-CfToken chỉ còn cho trường hợp quay lại DNS-01 Cloudflare; mặc định TLS-ALPN-01, không token — 2/11/2026)
 # Điều kiện trước: dữ liệu đã nạp (kho MinIO, CSDL), target\release đã build, image OCR/vLLM đã build/pull,
 # .env đã sửa cho máy này (docs/CHUYEN-MAY-OCR-PC.md §3.2). Script chỉ đăng ký + khởi động, không chép dữ liệu.
 # Thứ tự: MinIO → API + worker → Docker OCR + vLLM → Caddy (443) → watchdog → backup đêm. Dừng ở bước đầu lỗi.
 param(
-  [Parameter(Mandatory = $true)][string]$CfToken,
+  [string]$CfToken = "",   # 2/11/2026: DNS ở iNET, Caddy dùng TLS-ALPN-01 → không cần token; để trống
   [string]$KhoDir = "D:\DigiText-KhoMayChu",
   [string]$BackupDir = "C:\DigiText-Backup\csdl",
   [switch]$KhongGpu   # chưa có GPU (vllm-vnkie còn chạy) → bỏ qua bước OCR/vLLM
 )
-$ErrorActionPreference = "Stop"
+# 2/11/2026: KHÔNG dùng "Stop" — PowerShell 5.1 coi mỗi dòng stderr của docker/compose (cảnh báo) qua 2>&1 là lỗi
+# dừng script (bước 1 chết im lặng lúc cắt chuyển). Các điều kiện bắt buộc đã có throw/Cho riêng.
+$ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $log = Join-Path $repo "logs\ocr-pc-bat-dich-vu.log"
 function Ghi($m) { $l = "{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $m; Write-Host $l; Add-Content -Path $log -Value $l -Encoding UTF8 }
@@ -60,7 +63,7 @@ if ($KhongGpu) { Ghi "4. bỏ qua OCR/vLLM (-KhongGpu)" } else {
 
 # 5. Caddy (service, cổng 443, chứng chỉ DNS-01)
 Ghi "5. Caddy"
-[Environment]::SetEnvironmentVariable("CF_API_TOKEN", $CfToken, "Machine")
+if ($CfToken) { [Environment]::SetEnvironmentVariable("CF_API_TOKEN", $CfToken, "Machine") }
 & C:\DigiText-Caddy\caddy.exe validate --config (Join-Path $repo "infra\caddy\Caddyfile") 2>&1 | Out-Null
 if (-not (Get-Service DigiText-Caddy -ErrorAction SilentlyContinue)) {
   sc.exe create DigiText-Caddy binPath= "C:\DigiText-Caddy\caddy.exe run --config $repo\infra\caddy\Caddyfile" start= auto DisplayName= "DigiText Caddy (api.digitext.vn:443)" | Out-Null

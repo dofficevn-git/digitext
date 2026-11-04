@@ -1,16 +1,14 @@
-# Đường vào API DigiText trên OCR PC — Caddy + Let's Encrypt (DNS-01 qua Cloudflare), cổng 443 trực tiếp (30/10/2026).
+# Đường vào API DigiText trên OCR PC — Caddy + Let's Encrypt (TLS-ALPN-01 qua cổng 443), cổng 443 trực tiếp (30/10, sửa 2/11/2026).
 #
 # Anh Hiếu chốt: đi THẲNG qua cổng mở trên router, KHÔNG dùng Cloudflare tunnel nữa (tunnel giới hạn 100 s / 100 MB
 # mỗi yêu cầu, thêm một tầng có thể rớt). Một tên duy nhất `api.digitext.vn` (đã đóng cứng trong updater của mọi bản
-# desktop đã cài) → bản ghi DNS chuyển sang DNS-only (đám mây xám) trỏ IP tĩnh 113.190.254.219; router NAT
-# 443 → 192.168.100.10:443. Cloudflare chỉ còn làm DNS (và cấp token DNS-01 cho chứng chỉ).
+# desktop đã cài) → bản ghi A ở DNS của iNET (nameserver iNET, KHÔNG Cloudflare — anh chốt lại 2/11/2026) trỏ IP tĩnh
+# 113.190.254.219; router NAT 443 → 192.168.100.10:443.
 #
-# Cài: tải caddy có module dns.providers.cloudflare từ caddyserver.com/download (chọn "caddy-dns/cloudflare"),
-# đặt C:\DigiText-Caddy\caddy.exe; token Cloudflare chỉ quyền Zone.DNS:Edit của digitext.vn, đặt biến môi trường
-# CF_API_TOKEN cho service (sc.exe hoặc NSSM: AppEnvironmentExtra CF_API_TOKEN=...).
+# Cài: caddy.exe chuẩn (không cần module dns) đặt C:\DigiText-Caddy\caddy.exe; không có bí mật nào trên máy chủ.
 #   caddy.exe validate --config D:\DigiText\infra\caddy\Caddyfile
 #   sc.exe create DigiText-Caddy binPath= "C:\DigiText-Caddy\caddy.exe run --config D:\DigiText\infra\caddy\Caddyfile" start= auto
-# Firewall: mở 443 TCP inbound từ mọi nơi; 8080 chỉ loopback (API bind 127.0.0.1). Không cần 80 (DNS-01, không redirect).
+# Firewall: mở 443 TCP inbound từ mọi nơi; 8080 chỉ loopback (API bind 127.0.0.1). Không cần 80 (TLS-ALPN-01, không redirect).
 # API: DIGITEXT_BEHIND_PROXY=true để audit_log ghi IP máy trạm từ X-Forwarded-For.
 
 {
@@ -30,9 +28,13 @@
 }
 
 api.digitext.vn {
+	# 2/11/2026: DNS quản lý thẳng ở iNET (anh chốt, KHÔNG Cloudflare) → chứng chỉ xin bằng TLS-ALPN-01 qua chính cổng 443
+	# đã NAT; không cần token, không cần cổng 80 (80 đang là IIS). Điều kiện: bản ghi A api.digitext.vn → 113.190.254.219
+	# đã có hiệu lực TRƯỚC khi Caddy chạy; gia hạn tự động cũng qua 443.
 	tls {
-		dns cloudflare {env.CF_API_TOKEN}
-		resolvers 1.1.1.1 8.8.8.8
+		issuer acme {
+			disable_http_challenge
+		}
 	}
 
 	encode zstd gzip
@@ -58,5 +60,18 @@ api.digitext.vn {
 			roll_size 100MiB
 			roll_keep 10
 		}
+	}
+}
+
+# Trang web digitext.vn / www: trước đi tunnel Cloudflare `ocr-pc` → IIS cổng 80 trên chính OCR PC (2/11/2026).
+# Bỏ tunnel: A @/www → 113.190.254.219; HTTP 80 vẫn do IIS trả thẳng (NAT 80 sẵn), HTTPS 443 Caddy nhận rồi chuyển vào IIS.
+digitext.vn, www.digitext.vn {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+	reverse_proxy 127.0.0.1:80 {
+		header_up Host digitext.vn
 	}
 }

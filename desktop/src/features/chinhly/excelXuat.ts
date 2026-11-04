@@ -143,17 +143,33 @@ export async function xuatTT02(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, te
   await writeXlsx([{ name: "XUẤT HỒ SƠ SỐ HÓA", aoa, merges: ["A1:C1", "D1:Q1", "R1:AF1"] }], `TrichXuat_TT02_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-/** TT 05/2025/TT-BNV: 51 cột theo "Mẫu metadata chuẩn 05.xlsx" (9 phông · 19 hồ sơ · 23 văn bản), mã THBQ 01–07. */
-export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, phong: ClRow | undefined): Promise<void> {
+/** Trạng thái duyệt của một văn bản (cột 52 ngoài chuẩn TT05, 2/11/2026): máy tạo từ OCR đã / chưa có người duyệt, hay nhập tay. */
+export function trangThaiDuyet(v: ClRow): string {
+  if (str(v, "nguon") !== "ocr") return "Nhập tay";
+  return str(v, "duyet_luc") ? "Đã duyệt" : "Chưa duyệt (OCR)";
+}
+
+/**
+ * TT 05/2025/TT-BNV: 51 cột theo "Mẫu metadata chuẩn 05.xlsx" (9 phông · 19 hồ sơ · 23 văn bản), mã THBQ 01–07.
+ * `tepCua`: văn bản id → tên tệp quét thật (cl_van_ban_file, 2/11/2026) → "Mã định danh / Mã lưu trữ tài liệu" = tên tệp bỏ
+ * .pdf, "Tệp tin tài liệu" = đường dẫn tới tệp thật; không có thì ghép như cũ. Cột 52 "Duyệt" thêm ngoài 51 cột chuẩn.
+ */
+export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, phong: ClRow | undefined, tepCua: Map<string, string> = new Map(), luuVao?: string): Promise<void> {
   const head = [
     "Mã Phông", "Tên Phông", "Lịch sử đơn vị hình thành phông", "Thời gian tài liệu", "Tổng số tài liệu", "Phương án phân loại", "Ngôn ngữ", "Chế độ dự phòng", "Ghi chú",
     "Mã hồ sơ", "Tiêu đề hồ sơ", "Thời hạn lưu trữ", "Mức độ tiếp cận", "Ngôn ngữ", "Thời gian bắt đầu", "Thời gian kết thúc", "Từ khóa", "Tổng số tài liệu trong hồ sơ", "Số lượng tờ", "Số lượng trang", "Tình trạng vật lý", "Ký hiệu thông tin", "Mức độ tin cậy", "Mã hồ sơ gốc giấy", "Chế độ lập tài liệu dự phòng", "Tình trạng lập tài liệu dự phòng", "Tệp tin hồ sơ", "Ghi chú",
     "Mã định danh tài liệu", "Mã lưu trữ tài liệu", "Thời hạn lưu trữ", "Tên loại tài liệu", "Số của tài liệu", "Ký hiệu của tài liệu", "Ngày tháng năm", "Cơ quan ban hành", "Trích yếu", "Ngôn ngữ", "Số lượng trang", "Số lượng tờ", "Ký hiệu thông tin", "Từ khóa", "Mức độ tiếp cận", "Mức độ tin cậy", "Bút tích", "Tình trạng vật lý", "Quy trình xử lý", "Chế độ dự phòng", "Tình trạng dự phòng", "Tệp tin tài liệu", "Ghi chú",
+    "Duyệt",
   ];
   const rs = sapXepHoSo(hoSos);
   const y = namTuDen(rs);
   const ma = str(phong, "ma_du_an");
-  const aoa: Cell[][] = [["FILE METADATA NHẬP VÀO PHẦN MỀM (CÁC TRƯỜNG THÔNG TIN ĐẦY ĐỦ THEO THÔNG TƯ 05/2025/TT-BNV)"], ["MÔ TẢ PHÔNG", ...Array(8).fill(""), "MÔ TẢ HỒ SƠ", ...Array(18).fill(""), "MÔ TẢ VĂN BẢN"], head, head.map((_, i) => i + 1)];
+  const aoa: Cell[][] = [
+    ["FILE METADATA NHẬP VÀO PHẦN MỀM (CÁC TRƯỜNG THÔNG TIN ĐẦY ĐỦ THEO THÔNG TƯ 05/2025/TT-BNV) — cột 52 \"Duyệt\" ngoài chuẩn: trạng thái duyệt văn bản máy tạo từ OCR"],
+    ["MÔ TẢ PHÔNG", ...Array(8).fill(""), "MÔ TẢ HỒ SƠ", ...Array(18).fill(""), "MÔ TẢ VĂN BẢN"],
+    head,
+    head.map((_, i) => i + 1),
+  ];
   const phongPart: Cell[] = [ma, str(phong, "ten"), "", y.tu ? `${y.tu}-${y.den}` : "", "", "", "01", "1", str(phong, "ghi_chu")];
   for (const h of rs) {
     const maHs = str(h, "ma_ho_so");
@@ -163,23 +179,26 @@ export async function xuatTT05(hoSos: ClRow[], vanBans: Map<string, ClRow[]>, ph
       maHs, str(h, "tieu_de"), str(h, "thbq_ma_tt05") || "07", str(h, "che_do_su_dung") || "01", str(h, "ngon_ngu") || "01", str(h, "ngay_bat_dau"), str(h, "ngay_ket_thuc"), str(h, "tu_khoa"), vbs.length, str(h, "so_to"), num(h, "so_luong_trang") ?? "",
       str(h, "tinh_trang_vat_ly") || "02", str(h, "ky_hieu_thong_tin"), str(h, "muc_do_tin_cay") || "03", str(h, "ma_ho_so_giay") || [ma, str(h, "hop_so"), str(h, "ho_so_so")].filter(Boolean).join("."), "1", "01", tepHs, str(h, "ghi_chu"),
     ];
-    if (vbs.length === 0) aoa.push([...phongPart, ...hsPart, ...Array(23).fill("")]);
+    if (vbs.length === 0) aoa.push([...phongPart, ...hsPart, ...Array(24).fill("")]);
     for (const v of vbs) {
       const stt = num(v, "so_thu_tu");
-      const maVb = maHs ? `${maHs}.${pad7(stt)}` : "";
+      const tenTep = tepCua.get(v.id);
+      const maVb = tenTep ? tenTep.replace(/\.pdf$/i, "") : maHs ? `${maHs}.${pad7(stt)}` : "";
+      const tepVb = tenTep ? (tepHs ? `${tepHs}\\${tenTep}` : tenTep) : tepHs ? `${tepHs}\\${pad7(stt)}.pdf` : "";
       aoa.push([
         ...phongPart, ...hsPart,
         maVb, maVb, str(h, "thbq_ma_tt05") || "07", str(v, "loai_vb") || "32", str(v, "so_van_ban"), str(v, "so_ky_hieu"), str(v, "ngay_thang"), str(v, "co_quan_ban_hanh"), str(v, "trich_yeu"), str(v, "ngon_ngu") || "01", num(v, "so_trang") ?? "", num(v, "to_so") ?? "",
-        str(v, "ky_hieu_thong_tin"), str(v, "tu_khoa"), str(v, "che_do_su_dung") || "01", str(v, "do_tin_cay") || "03", str(v, "but_tich"), str(v, "tinh_trang_vat_ly") || "02", "1", "1", "01", tepHs ? `${tepHs}\\${pad7(stt)}.pdf` : "", str(v, "ghi_chu"),
+        str(v, "ky_hieu_thong_tin"), str(v, "tu_khoa"), str(v, "che_do_su_dung") || "01", str(v, "do_tin_cay") || "03", str(v, "but_tich"), str(v, "tinh_trang_vat_ly") || "02", "1", "1", "01", tepVb, str(v, "ghi_chu"),
+        trangThaiDuyet(v),
       ]);
     }
   }
-  await writeXlsx([{ name: "HỒ SƠ DỮ LIỆU (TT05)", aoa, merges: ["A1:AY1", "A2:I2", "J2:AB2", "AC2:AY2"], cols: head.map((c) => ({ wch: Math.min(28, Math.max(10, c.length + 2)) })) }], `TrichXuatDuLieu_TT05_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  await writeXlsx([{ name: "HỒ SƠ DỮ LIỆU (TT05)", aoa, merges: ["A1:AZ1", "A2:I2", "J2:AB2", "AC2:AZ2"], cols: head.map((c) => ({ wch: Math.min(28, Math.max(10, c.length + 2)) })) }], luuVao ? `MLHS-TT05-${(str(phong, "ma_du_an") || "phong").replace(/[\\/:*?"<>|]+/g, "-")}.xlsx` : `TrichXuatDuLieu_TT05_${new Date().toISOString().slice(0, 10)}.xlsx`, luuVao);
 }
 
 /** Lịch sử hồ sơ / văn bản (Excel): STT · Thao tác · Ngày · Giờ · Người · Tóm tắt · Nội dung · Số trường mới · Số trường sửa. */
 export async function xuatLichSu(rows: ClRow[], ten: string): Promise<void> {
-  const HD: Record<string, string> = { add: "Thêm mới", edit: "Sửa", delete: "Xoá", restore: "Khôi phục", import: "Nhập Excel", systematize: "Đánh số", boxing: "Gán hộp/bó/tập", assign_gia: "Xếp giá" };
+  const HD: Record<string, string> = { add: "Thêm mới", edit: "Sửa", delete: "Xoá", restore: "Khôi phục", import: "Nhập Excel", systematize: "Đánh số", boxing: "Gán hộp/bó/tập", assign_gia: "Xếp giá", ocr: "Máy tạo từ OCR" };
   const aoa: Cell[][] = [["STT", "Thao tác", "Ngày thực hiện", "Giờ thực hiện", "Người thực hiện", "Đối tượng", "Tóm tắt", "Nội dung", "Số trường mới", "Số trường sửa"]];
   let tong = 0;
   rows.forEach((r, i) => {

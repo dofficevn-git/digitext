@@ -1,7 +1,7 @@
 {
   "name": "digitext-desktop-ui",
   "private": true,
-  "version": "0.19.8",
+  "version": "0.23.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "kiem:mucluc": "node scripts/kiem-muc-luc.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

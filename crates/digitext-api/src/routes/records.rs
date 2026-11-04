@@ -11,12 +11,13 @@ use axum::routing::get;
 use axum::{Json, Router};
 use chrono::{DateTime, Utc};
 use digitext_core::Permission;
-use digitext_db::records::{self, RecordRow, Tdz};
+use digitext_db::records::{self, ListFilter, RecordRow, Tdz};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/records", get(f_1o9).post(f_12d))
+        .route("/records/{id}", get(get_record))
         .route("/records/{id}/download", get(f_17e))
 }
 #[derive(Debug, Deserialize)]
@@ -26,6 +27,9 @@ pub struct T3g {
     pub kind: String,
     pub payload: serde_json::Value,
     pub submission_id: Option<Uuid>,
+    /// Khoá phụ (0024): mã phông / ngày / lần bàn giao.
+    #[serde(default, rename = "ref")]
+    pub ref_: Option<String>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +41,8 @@ pub struct RecordDto {
     pub title: String,
     pub submission_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
+    #[serde(rename = "ref")]
+    pub ref_: Option<String>,
 }
 impl From<RecordRow> for RecordDto {
     fn from(r_pa: RecordRow) -> Self {
@@ -48,8 +54,17 @@ impl From<RecordRow> for RecordDto {
             title: r_pa.title,
             submission_id: r_pa.submission_id,
             created_at: r_pa.created_at,
+            ref_: r_pa.ref_,
         }
     }
+}
+/// Chi tiết một biên bản kèm payload (xem lại, nhân bản, tính tổng ở máy trạm).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordDetailDto {
+    #[serde(flatten)]
+    pub row: RecordDto,
+    pub payload: serde_json::Value,
 }
 fn can_touch_project(r_pb: &Ts, r_pd: &Scope, r_pc: Uuid) -> bool {
     r_pb.can_touch_project(r_pd, r_pc)
@@ -64,6 +79,17 @@ pub async fn f_12e(
     kind: &str,
     payload: &serde_json::Value,
     submission_id: Option<Uuid>,
+) -> Result<RecordDto, ApiError> {
+    f_12e_ref(r_pj, r_pe, project_id, kind, payload, submission_id, None).await
+}
+pub async fn f_12e_ref(
+    r_pj: &AppState,
+    r_pe: &Ts,
+    project_id: Uuid,
+    kind: &str,
+    payload: &serde_json::Value,
+    submission_id: Option<Uuid>,
+    ref_: Option<&str>,
 ) -> Result<RecordDto, ApiError> {
     let (title, r_pf) = bienban::render(kind, payload).map_err(ApiError::bad_request)?;
     let r_pk = r_pj
@@ -105,6 +131,7 @@ pub async fn f_12e(
             submission_id,
             payload,
             pdf_key: &r_ph,
+            ref_: ref_.map(str::trim).filter(|s| !s.is_empty()),
         },
     )
     .await?;
@@ -125,13 +152,14 @@ async fn f_12d(
     if !can_touch_project(&r_pl, &r_po, project_id) {
         return Err(ApiError::forbidden());
     }
-    let r_pm = f_12e(
+    let r_pm = f_12e_ref(
         &r_pp,
         &r_pl,
         project_id,
         &r_pn.kind,
         &r_pn.payload,
         r_pn.submission_id,
+        r_pn.ref_.as_deref(),
     )
     .await?;
     Ok((StatusCode::CREATED, Json(r_pm)))
@@ -141,6 +169,11 @@ async fn f_12d(
 pub struct ListQuery {
     pub limit: Option<i64>,
     pub offset: Option<i64>,
+    /// Lọc (0024): `kind` = một hay nhiều loại cách nhau bằng dấu phẩy; `ref` = đúng khoá phụ; `projectId` = một dự án.
+    pub kind: Option<String>,
+    #[serde(rename = "ref")]
+    pub ref_: Option<String>,
+    pub project_id: Option<Uuid>,
 }
 async fn f_1o9(
     State(r_pv): State<AppState>,
@@ -151,9 +184,38 @@ async fn f_1o9(
     let limit = r_ps.limit.unwrap_or(50).clamp(1, 200);
     let offset = r_ps.offset.unwrap_or(0).max(0);
     let r_pu = f_29a(&r_pv.pool, &r_pq.user).await?;
+    if let Some(p) = r_ps.project_id {
+        if !can_touch_project(&r_pq, &r_pu, p) {
+            return Err(ApiError::forbidden());
+        }
+    }
     let r_pr = r_pq.list_projects(r_pu);
-    let r_pt = records::list(&r_pv.pool, r_pr.as_deref(), limit, offset).await?;
+    let kinds: Vec<String> = r_ps
+        .kind
+        .as_deref()
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(str::to_string)
+        .collect();
+    let f = ListFilter { kinds: &kinds, ref_: r_ps.ref_.as_deref().map(str::trim).filter(|s| !s.is_empty()), project: r_ps.project_id };
+    let r_pt = records::list_filtered(&r_pv.pool, r_pr.as_deref(), &f, limit, offset).await?;
     Ok(Json(r_pt.into_iter().map(RecordDto::from).collect()))
+}
+async fn get_record(
+    State(st): State<AppState>,
+    ts: Ts,
+    Path(id): Path<Uuid>,
+) -> Result<Json<RecordDetailDto>, ApiError> {
+    ts.require_perm(Permission::RecordView)?;
+    let row = records::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
+    let scope = f_29a(&st.pool, &ts.user).await?;
+    if !can_touch_project(&ts, &scope, row.project_id) {
+        return Err(ApiError::forbidden());
+    }
+    let payload = row.payload.clone();
+    Ok(Json(RecordDetailDto { row: row.into(), payload }))
 }
 async fn f_17e(
     State(r_q0): State<AppState>,

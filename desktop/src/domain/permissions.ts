@@ -437,6 +437,13 @@ const V3z7: Record<V3xt, V3yx> = {
   work: "work.execute",
 
   workManage: "work.manage",
+  // Hub Tiện ích mở cho mọi người đã đăng nhập; từng tab tự kiểm quyền thật (package.view, document.review, dossier.read).
+  tienich: "drive.view",
+  // Thi công Điều 9 TT05 (3/11/2026): giao nhận giấy = sổ biên bản; nhật ký = số liệu dashboard của dự án.
+  handover: "record.view",
+  nhatky: "drive.view",
+  qc: "document.list",
+  acceptance: "stats.view_project",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

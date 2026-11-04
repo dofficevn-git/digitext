@@ -26,11 +26,21 @@ export type V3xt =
   | "server"
   | "report"
   | "work"
-  | "workManage";
+  | "workManage"
+  | "tienich"
+  | "handover"
+  | "nhatky"
+  | "qc"
+  | "acceptance";
+
+/** Tab trong màn Tiện ích (3/11/2026). */
+export type V3xTienIch = "pdfa" | "kiemgoi" | "khongoai" | "nhanh" | "vidu" | "chuyendulieu";
 
 export type V3xu = "danhmuccl" | "laphoso" | "hethonghoa" | "dongbo" | "sohoa" | "ocr";
 
-export type V3xw = "khogia" | "khaithac" | "muontra";
+/** Tab của hub Chỉnh lý: kho/giá, mượn trả, tra cứu – kết xuất mục lục, và "ketnoi" = Kết nối dữ liệu chủ
+ *  (cùng màn KhaiThacView nhưng chỉ còn Tạo văn bản từ OCR + Metadata TT05, 3/11/2026). */
+export type V3xw = "khogia" | "khaithac" | "muontra" | "ketnoi";
 
 export type V3xx = "sohoa" | "chinhly" | "nhanvien" | "phanmem" | "muontra";
 

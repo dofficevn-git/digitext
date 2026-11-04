@@ -6,6 +6,10 @@ import { invoke } from "@/api/ipc";
 export interface TreeSeedResult {
   hoSo: number;
   dossier: number;
+  /** Hồ sơ chưa có hồ sơ số (người nhập mục lục không có quyền Hệ thống hoá) → tạm lấy số tạm. */
+  thieuHoSoSo: number;
+  /** Hồ sơ có thời hạn trùng (hộp, số) với hồ sơ vĩnh viễn → bỏ qua. */
+  trung: number;
 }
 
 export function treeSeedFromCl(maDuAn: string): Promise<TreeSeedResult> {

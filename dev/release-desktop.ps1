@@ -17,6 +17,9 @@ param(
   # Máy chủ API ở máy khác (OCR PC): chép bộ cài + .sig + latest.json sang thư mục phát hành của nó
   # (UNC \\may\updates hoặc ổ mạng). Rỗng = API chạy ngay máy này (30/10/2026).
   [string]$UpdatesRemote = "",
+  # Máy chủ API là OCR PC (từ 2/11/2026): chép qua scp (SSH Tailscale). Rỗng = không chép. Thư mục đích là
+  # C:\DigiText\updates trên OCR PC — API đọc thẳng (DIGITEXT_UPDATES_DIR / cwd C:\DigiText).
+  [string]$UpdatesScp = "ADMIN@100.122.226.63:C:/DigiText/updates",
   [switch]$SkipBump
 )
 $ErrorActionPreference = "Stop"
@@ -92,6 +95,18 @@ if ($UpdatesRemote) {
   $xa = Get-Item (Join-Path $UpdatesRemote $name)
   if ($xa.Length -ne (Get-Item $setup).Length) { throw "Bộ cài chép sang $UpdatesRemote lệch kích thước" }
   Write-Host "-> đã chép sang máy chủ: $UpdatesRemote" -ForegroundColor Green
+}
+if ($UpdatesScp) {
+  # Bộ cài + .sig trước, latest.json sau cùng (như trên). scp.exe có sẵn trên Windows 10+/OpenSSH.
+  & scp.exe -q $setup $sig "$UpdatesScp/"
+  if ($LASTEXITCODE -ne 0) { throw "scp bộ cài sang $UpdatesScp lỗi (mã $LASTEXITCODE) — máy chủ chưa có bản mới, latest.json chưa đổi" }
+  & scp.exe -q (Join-Path $UpdatesDir "latest.json") "$UpdatesScp/latest.json"
+  if ($LASTEXITCODE -ne 0) { throw "scp latest.json sang $UpdatesScp lỗi (mã $LASTEXITCODE)" }
+  try {
+    $xa = (Invoke-RestMethod -Uri "$BaseUrl/latest.json?t=$(Get-Date -Format HHmmss)" -TimeoutSec 30).version
+    if ($xa -ne $Version) { Write-Warning "latest.json công khai đang là $xa, chưa phải $Version — kiểm lại thư mục phát hành trên OCR PC" }
+    else { Write-Host "-> máy chủ đã phát $Version qua $BaseUrl" -ForegroundColor Green }
+  } catch { Write-Warning "không kiểm được $BaseUrl/latest.json: $($_.Exception.Message)" }
 }
 Write-Host "   Kiểm: curl.exe $BaseUrl/latest.json" -ForegroundColor DarkGray
 Write-Host "   Nhớ: git commit 3 file version (+ tag v$Version)." -ForegroundColor DarkGray

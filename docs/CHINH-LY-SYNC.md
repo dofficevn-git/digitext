@@ -116,7 +116,15 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
   `04/2020` → cả tháng, một ngày → lặp lại, mốc sai → giữ mốc đúng + suy từ năm trong ô, ô trống → năm trong tiêu đề
   (cụm năm sau chữ "năm", không có thì cụm cuối; bỏ "nhiệm kỳ"); đầu > cuối → đảo. Kiểm: sai định dạng, năm ngoài dải năm
   tiêu đề, tiêu đề không có năm → cảnh báo (vẫn nhập); không suy được năm → ngày để trống.
-- **Hộp số** không nhập (hệ thống cũ cũng gán hộp ở Hệ thống hoá), chỉ giữ ở sheet "Kiểm tra" của tệp đã chuyển.
+- **Hộp số** và **Hồ sơ số** gửi lên máy chủ; có quyền Hệ thống hoá thì máy chủ xếp hộp ngay (`hth::boxing`, hộp theo
+  (phòng ban, loại, số hộp)); không có quyền thì bỏ qua và ghi `notes`. (Trước 2/11/2026 tài liệu ghi "không nhập" — sai.)
+- **2/11/2026 — mục lục thật của Bắc Giang** (23 tệp ở `test/MLHS`, 10.171 hồ sơ, kiểm bằng `npm run kiem:mucluc -- <thư mục> [THBQ mặc định]`
+  trong `desktop/`): tên cột so sau khi bỏ dấu + bỏ mọi khoảng trắng (`chuanTenCot`), bí danh ngắn so bằng đúng (`BĐ`, `KT`,
+  `SỐ`, `Năm`); thời gian không bắt buộc có cột (suy từ năm trong tiêu đề); tự chọn sheet có dòng tiêu đề (sheet 1 thường
+  là bìa), đổi sheet trong hộp thoại; tệp không có dòng `I.` → phòng ban "Chung" (00); số tờ không phải số / thiếu số tờ /
+  hộp lẫn hai loại / chưa có hộp số → **cảnh báo** (vẫn nhập; số tờ gốc ghi vào Ghi chú); ô THBQ trống → "THBQ khi ô trống"
+  chọn cho cả tệp. Vẫn chặn: hồ sơ số trùng cùng loại, thiếu tiêu đề, thời gian không suy được (quyết định 12/10).
+  Kết quả: 16/23 tệp nhập ngay; 7 tệp còn 96 dòng phải sửa tay (92 thiếu thời gian, 3 trùng số, 1 THBQ "Xóa").
 - **Nhập**: `POST /cl/ho-so/import` với `createMissing: true` (+ `ten_phong_ban`, `ten_mang`): máy chủ khớp phòng ban / mảng
   **chỉ theo tên** (mã I/II…, 1/2… là số thứ tự riêng của từng tệp — hai tệp cùng phông có thể cùng ghi "II." cho hai
   phòng ban khác nhau), chưa có thì tạo qua `apply_op` (`so_tt` = mã) rồi dùng cho các dòng sau; mã đã bị mục khác
@@ -126,6 +134,32 @@ Số tờ · THBQ · Ghi chú` (một tệp / THBQ của phông), dòng nhóm n�
   hộp số, số tạm, thời gian gốc → mới, kết luận, ghi chú), sheet 3 danh mục THBQ. "Tải tệp gốc đã đánh dấu" (`xuatTepDanhDau`, ExcelJS) trả lại chính tệp gốc
   `<tên>_DADIEN.xlsx` đã điền thời gian, tô màu + ghi chú như DienThoiGian (thay cho CSV danh sách kiểm tra cũ).
 - Tệp thử: `test/chinhly/` (gốc, báo lỗi dòng nhóm) và `test/chinhly/da-sua/` (đã thêm `I.`, xoá dòng con): 104 / 352 hồ sơ.
+
+## Văn bản từ OCR (2/11/2026)
+
+Luồng "một đường": nhập mục lục hồ sơ (trên) → Cây thư mục › Lấy hồ sơ từ mục lục chỉnh lý → Tạo cây → quét
+(`{maDA}.{phongSo}.{năm}.{hsSố}[.{mlSố}].{seq:07}.pdf`) → Kho đẩy lên máy chủ (`ho_so_ref` = "hộp/hồ sơ số") → OCR
+18 trường → **Số hoá › Kết nối dữ liệu chủ › Kết xuất › Tạo văn bản từ OCR** → cùng menu › Metadata TT05
+(từ desktop 0.20.0, 3/11/2026; trước đó hai mục này nằm ở Chỉnh lý › Tra cứu và kết xuất).
+
+- Route `POST /cl/van-ban/tu-ocr` `{projectId, phongId, hoSoIds?, after?}` (`routes/chinh_ly/tu_ocr.rs`): ghép tài liệu
+  vào hồ sơ theo (hộp, hồ sơ số) chuẩn hoá (bỏ tiền tố HỘP / HỒ SƠ, số 0 đầu; `documents::list_for_project_refs` suy
+  từ `ho_so_ref` hoặc `rel_path` như màn Soát & duyệt). Hai hồ sơ (VV / có thời hạn) cùng khoá → tài liệu bị bỏ, báo lý do.
+  Số thứ tự = đuôi tên tệp quét, không có → `thuTu` OCR → số kế tiếp trống. Trường tốt nhất mỗi tài liệu
+  (`ocr_fields::best_fields_for_docs`: verified → ocr_corrected → trang đầu → mới nhất). "Số/KH" tách ở `/` đầu thành
+  `so_van_ban` + `so_ky_hieu`; loại VB tên → mã, không khớp → 32 + ghi chú. Dòng đã có: nối theo `cl_van_ban_file.document_id`
+  trước, rồi (hồ sơ, stt); dòng nhập tay / đã duyệt / có người sửa chỉ được nối tệp. Tối đa 2.000 tài liệu một lần
+  (`conTiep` + `after`, desktop lặp — `clTaoVanBanTuOcr`). Cần `DossierCreate` + `DossierUpdate`.
+- Migration 0023: `cl_van_ban.nguon` ('ocr'), `duyet_luc`, `duyet_boi`; chỉ mục (văn bản, tài liệu) ở `cl_van_ban_file`;
+  `cl_lich_su` nhận nguồn / hành động **`ocr`** (nguồn op thứ tư: `online | sync | import | ocr`) → `dashboard_daily` 4.10
+  không cộng văn bản máy tạo cho người bấm nút. Hai cột mới chỉ nằm trong `row_json` của mirror (không có cột sinh).
+  **Phát hành: áp 0023 + đổi `digitext-api.exe` trước, rồi mới phát desktop** (desktop mới đẩy `duyet_luc` lên máy chủ cũ
+  bị `unknown_field`).
+- Duyệt: VanBanPanel "Đã duyệt" / "Duyệt cả hồ sơ" (`clSave` `duyet_luc`, `duyet_boi`); Lưu ở màn soát OCR từng tệp
+  (`forward_van_ban`) trên dòng `nguon='ocr'` cũng đặt `duyet_luc`. `forward_van_ban` tách "số/ký hiệu" cũ thành hai cột
+  (chiếu ngược ghép lại — không nhân đôi).
+- Xuất TT05: mã định danh / mã lưu trữ tài liệu = tên tệp quét bỏ `.pdf`, "Tệp tin tài liệu" = đường dẫn tới tệp thật
+  (từ `cl_van_ban_file`); **cột 52 "Duyệt"** ngoài 51 cột chuẩn: `Đã duyệt` / `Chưa duyệt (OCR)` / `Nhập tay`.
 
 ## Kiểm thử
 

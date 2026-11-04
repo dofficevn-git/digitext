@@ -197,6 +197,8 @@ pub const VAN_BAN_COLS: &[&str] = &[
     "ho_so_id", "so_thu_tu", "loai_vb", "so_van_ban", "so_ky_hieu", "ngay_thang", "co_quan_ban_hanh", "co_quan_chu_quan",
     "nguoi_ky", "trich_yeu", "to_so", "so_trang", "trang_so", "ngon_ngu", "che_do_su_dung", "do_tin_cay", "but_tich",
     "tinh_trang_vat_ly", "tai_lieu_so", "tu_khoa", "ky_hieu_thong_tin", "ghi_chu",
+    // 0023 (2/11/2026): văn bản máy tạo từ OCR — nguon = 'ocr' | null; duyet_luc / duyet_boi = người soát xác nhận.
+    "nguon", "duyet_luc", "duyet_boi",
 ];
 
 /// Tên bảng sync (kể cả lịch sử) theo thứ tự cha → con, dùng cho pull.

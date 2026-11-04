@@ -152,3 +152,28 @@ pub async fn f_1ak(
     .fetch_all(r_26x)
     .await
 }
+
+/// Giá trị "tốt nhất" của từng trường cho nhiều tài liệu, một truy vấn: ưu tiên dòng đã có người xác nhận, rồi bản
+/// `ocr_corrected` (Qwen / người sửa) hơn `ocr_raw`, rồi trang đầu, rồi bản mới nhất. Chỉ lấy giá trị không rỗng.
+/// Dùng cho "Tạo văn bản từ OCR" (2/11/2026); gọi theo lô ≤ 1.000 id.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct BestField {
+    pub document_id: Uuid,
+    pub field_key: String,
+    pub value: String,
+    pub verified: bool,
+}
+pub async fn best_fields_for_docs(pool: &PgPool, ids: &[Uuid]) -> sqlx::Result<Vec<BestField>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    sqlx::query_as::<_, BestField>(
+        "SELECT DISTINCT ON (f.document_id, f.field_key) f.document_id, f.field_key, f.value, f.verified \
+         FROM ocr_fields f \
+         WHERE f.document_id = ANY($1) AND length(btrim(f.value)) > 0 \
+         ORDER BY f.document_id, f.field_key, f.verified DESC, (f.text_source = 'ocr_corrected') DESC, f.page_no ASC, f.updated_at DESC",
+    )
+    .bind(ids.to_vec())
+    .fetch_all(pool)
+    .await
+}

@@ -1,7 +1,7 @@
 # DigiText — Bản đồ dự án
 
-> Tài liệu này do công cụ AI khảo sát và sinh ra ngày 2026-08-27 tại commit `3634dc6`.
-> Mục đích: cho người (và AI) mới vào hiểu dự án mà không phải đọc lại 98k dòng.
+> Tài liệu này được khảo sát và sinh tự động ngày 2026-08-27 tại commit `3634dc6`.
+> Mục đích: cho người mới vào hiểu dự án mà không phải đọc lại 98k dòng.
 > Khi cấu trúc thay đổi lớn, cập nhật lại file này.
 
 ---
@@ -302,7 +302,32 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   `digitext.css`: `--side-*` (menu trái nền trắng), `.topbar` tím chạy suốt + ghi đè token
   trong phạm vi, luật cho các màn chưa chuyển hẳn (Quét, Trình xử lý ảnh, Kho, đăng nhập).
 - `api/` — 30 module, mỗi module bọc một nhóm lệnh Tauri
-- `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`:
+- `features/` — 22 nhóm màn theo vòng đời. Menu 2 cấp ở `shell/navTree.ts`. **Từ 3/11/2026 (desktop 0.20.0) menu
+  xếp theo công đoạn thi công Điều 9 TT 05/2025/TT-BNV:** Tổng quan · Dữ liệu chủ (Bước 3: Danh mục, Lập hồ sơ, Hệ thống
+  hoá, Mục lục và kết xuất, Đồng bộ) · Số hoá (Bước 4: Cây thư mục, Quét, Kho tài liệu, Tài liệu đã quét, Đưa lên máy
+  chủ, Kho máy chủ, OCR và bóc tách, Giao việc, Việc của tôi, **Kết nối dữ liệu chủ** = `KhaiThacView` chế độ `ketnoi`
+  chỉ còn Tạo văn bản từ OCR + Metadata TT05/TT02) · Ký số, đóng gói (Bước 6–7: Ký số, Đóng gói 3 tab, Thu nộp) ·
+  Nghiệm thu (Bước 8: Sổ biên bản) — rồi dưới đường chia: Lưu trữ số (giữ cho bản khách hàng) · Báo cáo · **Tiện ích**
+  (`view:tienich`, hub `shell/TienIchHub.tsx`, tab `V3xTienIch`: Kiểm PDF/A, Kiểm tra gói tin, Từ kho ngoài, Đóng gói
+  nhanh, Ví dụ dạy máy, Chuyển dữ liệu cũ; cộng Tách TIFF, Kho và giá, Mượn – trả) · Quản trị. Id mục con giữ nguyên;
+  `Sidebar.QUY_TRINH` định nghĩa trục; xem trước `?view=tienich&tab=…`, `?view=khogia&kg=ketnoi`. Các nhóm Giao nhận
+  tài liệu (Bước 1–2), Kiểm tra sản phẩm (Bước 5) và màn Nhật ký, Nghiệm thu khối lượng sẽ thêm ở các bản sau (kế hoạch
+  4 bản, migration 0024). **R2 (3/11):** nhóm Giao nhận tài liệu (`view:handover` → `records/HandoverView.tsx`: biên bản
+  giao nhận / trả tài liệu giấy, điền sẵn từ mục lục chỉnh lý) và Số hoá › Nhật ký số hoá (`view:nhatky` →
+  `report/NhatKyView.tsx`: dự án × người × ngày từ `/dashboard/project`, chốt ngày = biên bản `nhat_ky_so_hoa`). Biên bản
+  "generic" (Điều 9): mẫu ở `records/recordForms.ts` (`generic`, `taoPayloadGeneric`), máy chủ `bienban.rs::render_generic`
+  chỉ in PDF; `GET /records?kind=&ref=&projectId=`, `GET /records/{id}` (payload). **R3 (3/11):** nhóm Kiểm tra sản phẩm
+  (Bước 5, `view:qc` → `qc/QcView.tsx`): `GET /cl/doi-soat?projectId&phongId[&thuMuc]` (`routes/chinh_ly/doi_soat.rs`, chỉ đọc,
+  không migration) ghép mục lục `cl_ho_so_v` với tài liệu máy chủ qua `khoa(hộp, hồ sơ)` như `tu_ocr.rs`, kết luận từng hồ sơ
+  (`dat | chua_quet | thieu_trang | thua_trang | khong_pdfa | pdfa_cu | bi_tu_choi`; trang < số tờ = thiếu, trang > 2×số tờ =
+  nghi thừa), tệp không khớp mục lục, `thuMucCo` để lọc khi dự án nhiều phông; màn thêm bảng Quét lại (`docs_pdfa_rejected`),
+  Xuất Excel, biên bản `kiem_tra_san_pham` điền sẵn. Chỉ cảnh báo, không chặn ký số/đóng gói. **R4 (3/11):** Nghiệm thu ›
+  Nghiệm thu, bàn giao (`view:acceptance` → `acceptance/NghiemThuView.tsx`): khối lượng theo phông = mục lục chỉnh lý (hộp,
+  hồ sơ, Σ số tờ) ⨝ kho máy chủ (`docs_review_summary` gộp theo thư mục phông, ghép tên bỏ dấu, sửa tay) so với hợp đồng
+  (`project_contracts.contract_boxes/dossiers/sheets`, nhập ở Tiến độ dự án › Hợp đồng); biên bản `nghiem_thu` /
+  `ban_giao_lan` điền sẵn; "Tạo bộ hồ sơ nghiệm thu" ghi vào thư mục chọn: Excel khối lượng, PDF mọi biên bản của dự án,
+  MLHS TT05 từng phông (Tauri `save_export`/`record_download` nhận `dir`; `writeXlsx`/`xuatTT05` nhận thư mục đích). Mô tả
+  cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;
@@ -356,14 +381,13 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Thiếu: schema Postgres không có trong repo
+### Schema Postgres: `migrations/0001`–`0024` (sửa 3/11/2026)
 
-`digitext-db` dùng sqlx truy vấn 28 nhóm bảng, `digitext-wipe` nhắc tới bảng
-`_sqlx_migrations` — nhưng **không có thư mục `migrations/` nào trong repo**,
-`.gitignore` cũng không chặn nó, và không có cache `.sqlx/` offline.
-
-Nghĩa là: clone repo về **không dựng lại được CSDL**. Cần tìm lại migrations hoặc
-sinh lại từ đầu.
+`digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
+(0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05: mở CHECK `records.kind` + cột `ref`,
+`project_contracts.contract_boxes/dossiers/sheets`) — ghi chú cũ "không có migrations"
+là sai. Không có cache `.sqlx/` offline và không có `_sqlx_migrations` tự động: áp tay theo
+thứ tự (xem `docs/CHUYEN-MAY-OCR-PC.md` cách áp bằng `docker exec psql`).
 
 ### Truy vấn không được kiểm tại thời điểm biên dịch
 

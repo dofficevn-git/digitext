@@ -172,3 +172,91 @@ pub async fn search_van_ban(pool: &PgPool, f: &VanBanFilter) -> sqlx::Result<(Ve
     let total: i64 = bind(sqlx::query(&count_sql), f).fetch_one(pool).await?.try_get(0)?;
     Ok((rows.into_iter().filter_map(|r| r.try_get::<Value, _>("row").ok()).collect(), total))
 }
+
+// ------------------------------------------------------------------ tạo văn bản từ OCR (2/11/2026)
+
+/// Khoá ghép tài liệu quét vào hồ sơ: (hộp, hồ sơ số) của mọi hồ sơ trong phông, kèm loại và mã hồ sơ.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HoSoKhoa {
+    pub id: Uuid,
+    pub hop_so: Option<String>,
+    pub ho_so_so: Option<String>,
+    pub so_tam: String,
+    pub vinh_vien: bool,
+    pub ma_ho_so: Option<String>,
+}
+pub async fn khoa_ho_so_cua_phong(pool: &PgPool, project: Uuid, phong: Uuid) -> sqlx::Result<Vec<HoSoKhoa>> {
+    sqlx::query_as::<_, HoSoKhoa>(
+        "SELECT v.id, v.hop_so, v.ho_so_so, v.so_tam, COALESCE(v.vinh_vien, false) AS vinh_vien, v.ma_ho_so \
+         FROM cl_ho_so_v v WHERE v.project_id = $1 AND v.phong_id = $2 AND v.deleted_at IS NULL ORDER BY v.id",
+    )
+    .bind(project)
+    .bind(phong)
+    .fetch_all(pool)
+    .await
+}
+
+/// Hồ sơ của phông cho đối soát sản phẩm (3/11/2026): khoá ghép + số tờ kê khai + tiêu đề.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct HoSoDoiSoatRow {
+    pub id: Uuid,
+    pub hop_so: Option<String>,
+    pub ho_so_so: Option<String>,
+    pub so_tam: String,
+    pub vinh_vien: bool,
+    pub ma_ho_so: Option<String>,
+    pub tieu_de: String,
+    pub so_to: Option<String>,
+}
+pub async fn doi_soat_ho_so_cua_phong(pool: &PgPool, project: Uuid, phong: Uuid) -> sqlx::Result<Vec<HoSoDoiSoatRow>> {
+    sqlx::query_as::<_, HoSoDoiSoatRow>(
+        "SELECT v.id, v.hop_so, v.ho_so_so, v.so_tam, COALESCE(v.vinh_vien, false) AS vinh_vien, v.ma_ho_so, \
+                COALESCE(v.tieu_de, '') AS tieu_de, v.so_to \
+         FROM cl_ho_so_v v WHERE v.project_id = $1 AND v.phong_id = $2 AND v.deleted_at IS NULL \
+         ORDER BY v.hop_so_int NULLS LAST, v.hop_so, v.ho_so_so COLLATE vi_so NULLS LAST, v.so_tam COLLATE vi_so, v.id",
+    )
+    .bind(project)
+    .bind(phong)
+    .fetch_all(pool)
+    .await
+}
+
+/// Văn bản đã có của cả phông (nạp một lần trước vòng lặp) — để biết số thứ tự đã dùng và dòng nào người đã chạm.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct VanBanTomTat {
+    pub id: Uuid,
+    pub ho_so_id: Uuid,
+    pub so_thu_tu: i32,
+    pub nguon: Option<String>,
+    pub duyet_luc: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_by: Option<Uuid>,
+    pub updated_by: Option<Uuid>,
+}
+pub async fn van_ban_cua_phong(pool: &PgPool, phong: Uuid) -> sqlx::Result<Vec<VanBanTomTat>> {
+    sqlx::query_as::<_, VanBanTomTat>(
+        "SELECT v.id, v.ho_so_id, v.so_thu_tu, v.nguon, v.duyet_luc, v.created_by, v.updated_by \
+         FROM cl_van_ban v JOIN cl_ho_so h ON h.id = v.ho_so_id \
+         WHERE h.phong_id = $1 AND v.deleted_at IS NULL AND h.deleted_at IS NULL",
+    )
+    .bind(phong)
+    .fetch_all(pool)
+    .await
+}
+
+/// (văn bản, tài liệu máy chủ) đã nối trong phông.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct VanBanTep {
+    pub id: Uuid,
+    pub van_ban_id: Uuid,
+    pub document_id: Uuid,
+}
+pub async fn van_ban_tep_cua_phong(pool: &PgPool, phong: Uuid) -> sqlx::Result<Vec<VanBanTep>> {
+    sqlx::query_as::<_, VanBanTep>(
+        "SELECT f.id, f.van_ban_id, f.document_id \
+         FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id JOIN cl_ho_so h ON h.id = v.ho_so_id \
+         WHERE h.phong_id = $1 AND f.document_id IS NOT NULL AND f.deleted_at IS NULL AND v.deleted_at IS NULL",
+    )
+    .bind(phong)
+    .fetch_all(pool)
+    .await
+}

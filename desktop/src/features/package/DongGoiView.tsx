@@ -1,24 +1,21 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Đóng gói theo tiêu chuẩn: Từ hồ sơ (phông / hộp / hồ sơ của dự án đang chọn trên máy chủ → SIP / AIP / DIP) ·
-// Gói tin (theo dõi, tải về) · Nâng cao (form đầy đủ trường) · Từ kho ngoài (thư mục PDF + Excel) · Kiểm PDF/A.
-// 26/10/2026: tab Từ hồ sơ thôi dùng danh mục hồ sơ cục bộ (không phân dự án) — xem PackFromServer.
+// Đóng gói theo tiêu chuẩn (bước 7 Điều 9 TT05): Từ hồ sơ (phông / hộp / hồ sơ của dự án đang chọn trên máy chủ →
+// SIP / AIP / DIP) · Gói tin (theo dõi, tải về) · Nâng cao (form đầy đủ trường). 3/11/2026: Từ kho ngoài, Đóng gói nhanh,
+// Kiểm PDF/A, Kiểm tra gói tin chuyển sang màn Tiện ích (shell/TienIchHub). 26/10: Từ hồ sơ thôi dùng danh mục cục bộ.
 
 import { useState } from "react";
 import PackFromServer from "./PackFromServer";
 import { PackageList } from "./PackFromDossiers";
 import V4sx from "./PackageView";
-import ExternalImportPanel from "./ExternalImportPanel";
-import PdfaCheckPanel from "./PdfaCheckPanel";
-import PackageCheckPanel from "./PackageCheckPanel";
 import { PageHeader, Tabs } from "@/ui";
 
-type Tab = "hoso" | "goi" | "nangcao" | "ngoai" | "nhanh" | "pdfa" | "kiemgoi";
+type Tab = "hoso" | "goi" | "nangcao";
 
 export default function DongGoiView() {
   const [tab, setTab] = useState<Tab>("hoso");
   return (
     <section className="view active">
-      <PageHeader title="Đóng gói" description="Tạo gói SIP, AIP, DIP theo bố cục E-ARK từ hồ sơ đã số hoá hoặc từ kho tài liệu bên ngoài." />
+      <PageHeader title="Đóng gói" description="Bước 7 Điều 9 TT 05/2025: tạo gói SIP, AIP, DIP theo bố cục E-ARK từ hồ sơ đã số hoá trên máy chủ. Kiểm PDF/A, kiểm gói, đóng gói từ kho ngoài nằm ở Tiện ích." />
       <Tabs<Tab>
         value={tab}
         onChange={setTab}
@@ -26,20 +23,12 @@ export default function DongGoiView() {
           { value: "hoso", label: "Từ hồ sơ", icon: "hoSo" },
           { value: "goi", label: "Gói tin", icon: "goi" },
           { value: "nangcao", label: "Nâng cao", icon: "caiDat" },
-          { value: "ngoai", label: "Từ kho ngoài", icon: "nhapKho" },
-          { value: "nhanh", label: "Đóng gói nhanh", icon: "chay" },
-          { value: "pdfa", label: "Kiểm PDF/A", icon: "kiemTraPdfa" },
-          { value: "kiemgoi", label: "Kiểm tra gói tin", icon: "kiemTra" },
         ]}
       />
       <div className="mt-3">
         {tab === "hoso" && <PackFromServer />}
         {tab === "goi" && <PackageList />}
         {tab === "nangcao" && <V4sx />}
-        {tab === "ngoai" && <ExternalImportPanel />}
-        {tab === "nhanh" && <ExternalImportPanel nhanh />}
-        {tab === "pdfa" && <PdfaCheckPanel />}
-        {tab === "kiemgoi" && <PackageCheckPanel />}
       </div>
     </section>
   );

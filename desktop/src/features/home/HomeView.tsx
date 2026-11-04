@@ -20,7 +20,7 @@ type Mode = "leader" | "project";
 
 export default function HomeView() {
   const nav = V460();
-  const { session, goto, gotoHoSo, gotoReport } = nav;
+  const { session, goto, gotoHoSo, gotoKhoGia, gotoReport } = nav;
   const proj = useProject();
   const has = (p: Parameters<typeof V3z9>[1]) => V3z9(session?.permissions, p);
   const role = session?.role ?? "user";
@@ -40,29 +40,36 @@ export default function HomeView() {
 
   type LoiTat = { label: string; icon: IconName; run: () => void; show: boolean };
   const nhomGoc: { nhom: string; items: LoiTat[] }[] = [
-    { nhom: "Chỉnh lý", items: [{ label: "Lập hồ sơ", icon: "hoSo", run: () => gotoHoSo("laphoso"), show: has("dossier.read") }] },
+    { nhom: "Giao nhận", items: [{ label: "Biên bản giao nhận", icon: "nhapKho", run: () => goto("handover"), show: has("record.view") }] },
+    { nhom: "Dữ liệu chủ", items: [{ label: "Lập hồ sơ", icon: "hoSo", run: () => gotoHoSo("laphoso"), show: has("dossier.read") }] },
     {
       nhom: "Số hoá",
       items: [
         { label: "Quét", icon: "quet", run: () => goto("scan"), show: has("scan.view") },
         { label: "Đưa lên máy chủ", icon: "taiLen", run: () => goto("upload"), show: has("upload.execute") },
+        { label: "OCR và bóc tách", icon: "xuLy", run: () => gotoHoSo("ocr"), show: has("dossier.read") },
+        { label: "Kết nối dữ liệu chủ", icon: "chuyenDoi", run: () => gotoKhoGia("ketnoi"), show: has("dossier.read") },
+        { label: "Nhật ký số hoá", icon: "lichSu", run: () => goto("nhatky"), show: has("drive.view") },
       ],
     },
     {
-      nhom: "Xử lý",
+      nhom: "Kiểm tra sản phẩm",
+      items: [{ label: "Kiểm tra theo phông", icon: "kiemTra", run: () => goto("qc"), show: has("document.list") }],
+    },
+    {
+      nhom: "Nghiệm thu",
+      items: [{ label: "Nghiệm thu, bàn giao", icon: "bienBan", run: () => goto("acceptance"), show: has("stats.view_project") }],
+    },
+    {
+      nhom: "Ký số, đóng gói",
       items: [
-        { label: "OCR và bóc tách", icon: "xuLy", run: () => gotoHoSo("ocr"), show: has("dossier.read") },
         { label: "Ký số", icon: "kySo", run: () => goto("sign"), show: has("sign.view") },
         { label: "Đóng gói", icon: "goi", run: () => goto("package"), show: has("package.view") },
-      ],
-    },
-    {
-      nhom: "Lưu trữ số",
-      items: [
         { label: "Thu nộp", icon: "nhapKho", run: () => goto("submission"), show: has("submission.view") },
-        { label: "Khai thác", icon: "tim", run: () => goto("access"), show: has("access.view") },
       ],
     },
+    { nhom: "Nghiệm thu", items: [{ label: "Sổ biên bản", icon: "bienBan", run: () => goto("records"), show: has("record.view") }] },
+    { nhom: "Lưu trữ số", items: [{ label: "Khai thác", icon: "tim", run: () => goto("access"), show: has("access.view") }] },
     { nhom: "Báo cáo", items: [{ label: "Tiến độ dự án", icon: "baoCao", run: () => gotoReport("sohoa"), show: has("stats.view_project") }] },
   ];
   const nhomLoiTat = nhomGoc.map((g) => ({ ...g, items: g.items.filter((i) => i.show) })).filter((g) => g.items.length > 0);
