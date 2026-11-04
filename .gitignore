@@ -144,3 +144,11 @@ updates-staging/
 
 # MinIO Windows (build tay, SHA-256 a7ee0d09…44e2f1) — dev/minio-win.ps1; không vào repo
 infra/minio-win/*.exe
+
+# Dữ liệu/tạm cục bộ — không đưa lên git (4/11/2026)
+logs/
+target-mlhs/
+test/
+bao-cao/
+ml/bench/golden-set/target_heldout/
+*.bak-may-cu
