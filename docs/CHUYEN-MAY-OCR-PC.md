@@ -233,3 +233,12 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   Chép thêm bộ cài desktop 0.20.0–0.22.0 vào `C:\DigiText\updates` (trước đó `latest.json` công khai kẹt ở 0.19.8 vì script
   phát hành chỉ ghi ở .127); từ nay `release-desktop.ps1 -UpdatesScp` tự chép.
 
+- 4/11/2026 09:00 — **Ổ C: (NVMe Kingston SNV3S2000G) có 2 sector hỏng** trong `docker_data.vhdx` (LBA 2385502240/2385515328);
+  Event `disk` Id 7 ~100 lần/giây, C: bận 100 %, hàng đợi 15, 90 ms/đọc; trong VM docker-desktop `hv_storvsc … cmd 0x28 scsi 0x2`
+  lặp cho 2 tag, không còn tiến trình D (yêu cầu đọc của tar `pla_kie_log.ldf` hôm 2/11 vẫn thử lại). SMART: 194/270 lần tắt không
+  an toàn, 31,8 triệu lỗi đọc, ô dự phòng 90 % → ổ phải thay; nguyên nhân khả dĩ mất điện đột ngột, không do phần mềm.
+  Đã làm: pg_dump khẩn ra `D:\DigiText-Backup\csdl\digitext-khancap-20261104.dump` (đọc trọn, 125 s → dữ liệu Postgres không nằm
+  trên sector hỏng), chép dump đêm sang D:, cài smartmontools, **sao lưu toàn bộ C: → `D:\OCRPC-Backup-20261104`**
+  (`bk-toan-bo.ps1` + `bk-sqlexpress.ps1`, xem `docs/CAI-LAI-OCR-PC.md` §2). Kiểm kê thêm trên máy: IIS 6 site (D:\DULIEU_66),
+  SQL Express 2025 (chỉ CSDL hệ thống), 3 service cloudflared (chính/ct5d/n8n), n8n qua pm2. Chưa `wsl --shutdown` (chờ giờ vắng).
+  Việc tiếp: thay NVMe + cài lại theo `docs/CAI-LAI-OCR-PC.md` §3; tắt máy đúng cách, UPS.
