@@ -36,6 +36,16 @@ export function devMock(cmd: string, args?: Record<string, unknown>): unknown {
     // Kiểm tra sản phẩm (0.22): phông mẫu + kết quả đối soát để xem trước `?view=qc`.
     case "cl_catalog_list":
       return { khoi_phong: [], phong: [{ id: "p1", ma_du_an: "CCVTLT", ten: "Chi cục Văn thư – Lưu trữ tỉnh Bắc Giang" }, { id: "p2", ma_du_an: "UBND", ten: "UBND tỉnh Bắc Giang (1997 – 2017)" }], phong_ban: [], mang: [], thbq: [], ngon_ngu: [], loai_van_ban: [], kho: [], gia: [], hop: [] };
+    // Bản Lưu trữ (GĐ1): việc chờ của cán bộ lưu trữ để xem trước `?edition=luu_tru&view=home`.
+    case "access_list": {
+      const t = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
+      const yc = (id: string, mucDich: string, status: string, d: number) => ({ id, projectId: "dev-ltlsbn", requester: "u1", kind: "ban_sao", mucDich, phuongThuc: null, uuTien: null, nguoiNhan: null, status, reviewNote: null, phi: null, paidAt: null, hanSuDung: null, approvedAt: null, createdAt: t(d), updatedAt: t(d) });
+      return [yc("a1", "Nghiên cứu lịch sử Đảng bộ tỉnh giai đoạn 1997–2005", "submitted", 0), yc("a2", "Xác minh quyết định giao đất cho hộ gia đình", "submitted", 2), yc("a3", "Biên soạn địa chí", "approved", 5)];
+    }
+    case "info_list":
+      return [{ id: "i1", projectId: "dev-ltlsbn", requester: "u2", hinhThuc: "danh_muc", chuDe: "Danh mục hồ sơ quy hoạch đô thị 2001–2010", mucDich: "Phục vụ quy hoạch", phuongThuc: null, status: "approved", reviewNote: null, phi: 0, paidAt: null, coKetQua: false, bienTap: null, approvedAt: null, fulfilledAt: null, createdAt: new Date(Date.now() - 86_400_000).toISOString(), updatedAt: new Date().toISOString() }];
+    case "ops_integrity_report":
+      return { tongTaiLieu: 205_007, daKiem3Nam: 41_200, soLoi: 0, tepLoi: [] };
     case "records_list":
       return [{ id: "rec1", projectId: "dev-ltlsbn", kind: "kiem_tra_san_pham", soBienBan: "01/BB-KTS.2026", title: "Biên bản kiểm tra sản phẩm số hoá tài liệu", submissionId: null, createdAt: new Date().toISOString(), ref: "CCVTLT" }];
     // Nghiệm thu (0.23): hợp đồng, gói, mục lục mẫu để xem trước `?view=acceptance`.

@@ -9,6 +9,7 @@ import { isTauri, V3xq } from "@/api/ipc";
 import { V3zt, V3zs } from "@/state/sessionCore";
 import { V3za } from "@/domain/permissions";
 import BrandLogo from "./BrandLogo";
+import { LUU_TRU } from "@/config";
 import V4x3 from "./CaptchaField";
 import { V4x2 } from "./useCaptcha";
 import { Banner, Button, Field, Input, notifyError, toast } from "@/ui";
@@ -62,12 +63,12 @@ export default function V4x4() {
       <aside className="login-side" aria-hidden>
         <div className="flex items-center gap-2.5 text-md font-semibold tracking-wide text-white">
           <BrandLogo className="size-9 rounded-md bg-white p-0.5" />
-          DIGITEXT
+          {LUU_TRU ? "DIGITEXT LƯU TRỮ" : "DIGITEXT"}
         </div>
         <div>
-          <p className="login-side-title">Số hoá và lưu trữ tài liệu</p>
+          <p className="login-side-title">{LUU_TRU ? "Quản lý tài liệu lưu trữ số" : "Số hoá và lưu trữ tài liệu"}</p>
           <ol className="login-steps">
-            {["Quét", "OCR", "PDF/A", "Ký số", "Nộp lưu"].map((b) => (
+            {(LUU_TRU ? ["Nhập Hệ thống", "Tra cứu", "Khai thác", "Bảo quản", "Tiêu huỷ"] : ["Quét", "OCR", "PDF/A", "Ký số", "Nộp lưu"]).map((b) => (
               <li key={b}>{b}</li>
             ))}
           </ol>
@@ -142,7 +143,7 @@ export default function V4x4() {
           <div className="server-config space-y-3">
             <Field label="Địa chỉ máy chủ">
               <div className="flex gap-2">
-                <Input type="text" value={serverUrl} placeholder="http://may-chu:8080" spellCheck={false} onChange={(e) => setServerUrl(e.target.value)} />
+                <Input type="text" value={serverUrl} placeholder="https://may-chu.co-quan.vn" spellCheck={false} onChange={(e) => setServerUrl(e.target.value)} />
                 <Button onClick={() => void luuMayChu()}>Lưu</Button>
               </div>
             </Field>

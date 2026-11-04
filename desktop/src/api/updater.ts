@@ -2,8 +2,9 @@
 //
 // TỰ CẬP NHẬT — kênh tự phục vụ của DigiText.
 //
-// Endpoint và khoá công khai khai ở src-tauri/tauri.conf.json → plugins.updater:
-//   https://api.digitext.vn/updates/latest.json  (API phát từ DIGITEXT_UPDATES_DIR)
+// Từ 4/11/2026 app kiểm `<máy chủ đang kết nối>/updates/latest.json` (lệnh Tauri `update_check`,
+// src-tauri/src/update.rs); bản thi công dự phòng thêm endpoint trong tauri.conf.json → plugins.updater,
+// bản Lưu trữ chỉ tin máy chủ của cơ quan. Máy chủ phát từ DIGITEXT_UPDATES_DIR.
 // Khoá riêng để ký bộ cài nằm NGOÀI repo (~/.tauri/digitext.key) — xem docs/DEPLOY-DESKTOP.md.
 // App chỉ cài bản được ký đúng khoá đó; máy chủ bị chiếm cũng không đẩy được bản lạ.
 //
@@ -11,10 +12,21 @@
 // thoại với mọi phase "error", nên báo lỗi ở đây là bật hộp thoại vô cớ mỗi lần mở).
 // Lượt THỦ CÔNG (nút "Kiểm tra cập nhật"): nói thật mọi kết quả.
 
-import { check } from "@tauri-apps/plugin-updater";
+import { Channel } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { isTauri } from "@/api/ipc";
+import { invoke, isTauri } from "@/api/ipc";
 import { V42s } from "@/api/version";
+
+interface V42z {
+  version: string;
+  currentVersion: string;
+  notes?: string | null;
+}
+
+type V430 =
+  | { event: "Started"; data: { contentLength?: number | null } }
+  | { event: "Progress"; data: { chunkLength: number } }
+  | { event: "Finished" };
 
 export type V42t =
   | { phase: "idle" }
@@ -45,7 +57,7 @@ export async function V42u(V73: (s: V42t) => void, V74: { manual?: boolean } = {
   V73({ phase: "checking", manual: V75 });
   let update;
   try {
-    update = await check({ timeout: 15_000 });
+    update = await invoke<V42z | null>("update_check");
   } catch (e) {
     if (V75) {
       V73({
@@ -67,17 +79,19 @@ export async function V42u(V73: (s: V42t) => void, V74: { manual?: boolean } = {
   try {
     let downloaded = 0;
     let total = 0;
-    await update.downloadAndInstall((ev) => {
+    const V76 = new Channel<V430>();
+    V76.onmessage = (ev) => {
       if (ev.event === "Started") {
         total = ev.data.contentLength ?? 0;
         V73({ phase: "downloading", version, downloaded: 0, total });
       } else if (ev.event === "Progress") {
         downloaded += ev.data.chunkLength;
         V73({ phase: "downloading", version, downloaded, total });
-      } else if (ev.event === "Finished") {
+      } else {
         V73({ phase: "installing", version });
       }
-    });
+    };
+    await invoke("update_install", { onEvent: V76 });
     V73({ phase: "relaunching", version });
     await relaunch();
   } catch (e) {

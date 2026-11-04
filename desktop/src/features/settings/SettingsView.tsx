@@ -15,6 +15,7 @@ import type { V3y6 } from "@/domain/types";
 import { isTauri } from "@/api/ipc";
 import { V3z9 } from "@/domain/permissions";
 import { V3zr } from "@/state/sessionCore";
+import { V3wu } from "@/config";
 import type { V42t } from "@/api/updater";
 import ChuyenDuLieuCu from "@/features/chinhly/ChuyenDuLieuCu";
 import { Icon, type V41v as IconName } from "@/components/Icon";
@@ -300,9 +301,9 @@ function MucUngDung() {
   return (
     <div className="space-y-6">
       <Field label="Phiên bản">
-        <p className="text-sm">DigiText v{appVersion || "…"}</p>
+        <p className="text-sm">{V3wu.appName} v{appVersion || "…"}</p>
       </Field>
-      <Field label="Cập nhật phần mềm" hint="Tự kiểm tra khi mở ứng dụng, tải từ GitHub Releases.">
+      <Field label="Cập nhật phần mềm" hint="Tự kiểm tra khi mở ứng dụng, tải từ máy chủ đang kết nối.">
         <div className="flex flex-wrap items-center gap-3">
           <Button icon="lamMoi" loading={dangChay} onClick={checkForUpdates}>
             Kiểm tra cập nhật

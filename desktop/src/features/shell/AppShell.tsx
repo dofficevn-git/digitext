@@ -37,11 +37,15 @@ import V4ws from "@/features/upload/TransferDock";
 import V4wu from "@/features/shell/dialogs/CreateProjectDialog";
 import V4wv from "@/features/shell/dialogs/MembersDialog";
 import V4ww from "@/features/shell/dialogs/PreviewLightbox";
+import LuuTruHome from "@/features/home/LuuTruHome";
+import { LUU_TRU, V3wu } from "@/config";
+import { VIEW_CUA_BAN } from "@/features/shell/navTree";
 
 export default function V4wx() {
   const { view, dialog, previewDoc: V380, session: V381 } = V460();
 
-  const V382 = !V381 || V3z8(V381.permissions, view);
+  const trongBan = !LUU_TRU || VIEW_CUA_BAN.has(view);
+  const V382 = trongBan && (!V381 || V3z8(V381.permissions, view));
 
   return (
     <div className="app-shell">
@@ -51,10 +55,10 @@ export default function V4wx() {
       <main className="content">
         {!V382 && (
           <section className="view active">
-            <p className="muted p-6">Tài khoản của bạn không có quyền truy cập màn hình này.</p>
+            <p className="muted p-6">{trongBan ? "Tài khoản của bạn không có quyền truy cập màn hình này." : `Màn hình này thuộc bản thi công số hoá, không có trong ${V3wu.appName}.`}</p>
           </section>
         )}
-        {V382 && view === "home" && <HomeView />}
+        {V382 && view === "home" && (LUU_TRU ? <LuuTruHome /> : <HomeView />)}
         {V382 && view === "drive" && <DriveView />}
         {V382 && view === "tree" && <TreeView />}
         {V382 && view === "dossier" && <V4lc />}

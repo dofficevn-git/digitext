@@ -123,29 +123,34 @@ pub fn router(r_b: AppState) -> Router {
         .with_state(r_b)
 }
 fn f_rv() -> Router<AppState> {
-    crate::routes::auth::router()
+    let chung = crate::routes::auth::router()
         .merge(crate::routes::users::router())
         .merge(crate::routes::roles::router())
         .merge(crate::routes::projects::router())
         .merge(crate::routes::project_purge::router())
         .merge(crate::routes::devices::router())
         .merge(crate::routes::stats::router())
-        .merge(crate::routes::progress::router())
-        .merge(crate::routes::work::router())
         .merge(crate::routes::documents::router())
-        .merge(crate::routes::ocr_fields::router())
-        .merge(crate::routes::kie_examples::router())
-        .merge(crate::routes::dashboard::router())
         .merge(crate::routes::packages::router())
-        .merge(crate::routes::submissions::router())
         .merge(crate::routes::notifications::router())
         .merge(crate::routes::records::router())
-        .merge(crate::routes::sign::router())
         .merge(crate::routes::access::router())
         .merge(crate::routes::disposal::router())
         .merge(crate::routes::info::router())
         .merge(crate::routes::ops::router())
-        .merge(crate::routes::upload_batches::router())
         .merge(crate::routes::changes::router())
-        .merge(crate::routes::chinh_ly::router())
+        .merge(crate::routes::chinh_ly::router());
+    // Bản Lưu trữ (máy chủ cơ quan chủ đầu tư) không gắn các route chỉ dùng khi thi công số hoá.
+    if crate::config::edition_luu_tru() {
+        return chung;
+    }
+    chung
+        .merge(crate::routes::progress::router())
+        .merge(crate::routes::work::router())
+        .merge(crate::routes::ocr_fields::router())
+        .merge(crate::routes::kie_examples::router())
+        .merge(crate::routes::dashboard::router())
+        .merge(crate::routes::submissions::router())
+        .merge(crate::routes::sign::router())
+        .merge(crate::routes::upload_batches::router())
 }

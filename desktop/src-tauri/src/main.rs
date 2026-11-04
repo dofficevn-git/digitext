@@ -42,6 +42,8 @@ mod sync;
 mod telemetry;
 mod pkgcheck;
 mod bundle;
+mod edition;
+mod update;
 mod tiff;
 use tauri::Manager;
 fn main() {
@@ -59,6 +61,7 @@ fn main() {
         .manage(forward_progress::ForwardControl::default())
         .manage(forward_progress::CollectControl::default())
         .manage(chinhly::sync::SyncState::default())
+        .manage(update::UpdateState::default())
         .setup(|r_29j| {
             if let Ok(r_29m) = r_29j.path().app_log_dir() {
                 telemetry::init(&r_29m);
@@ -87,6 +90,8 @@ fn main() {
             auth::commands::auth_get_server_url,
             auth::commands::server_ping,
             auth::commands::auth_set_server_url,
+            update::update_check,
+            update::update_install,
             auth::commands::auth_validate_online,
             auth::admin::users_list,
             auth::admin::user_create,

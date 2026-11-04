@@ -9,6 +9,12 @@
 # Cần: cargo + node trên máy này; khoá ở $env:USERPROFILE\.tauri\digitext.key (tạo bằng
 # `npx tauri signer generate`); API đang chạy ở máy này (không cần khởi động lại —
 # route /updates đọc thẳng từ đĩa).
+#
+# Bản Lưu trữ (cài tại máy chủ chủ đầu tư, docs/KE-HOACH-BAN-LUU-TRU.md):
+#   powershell -ExecutionPolicy Bypass -File dev\release-desktop.ps1 -Edition luutru -Version 0.25.0 -SkipBump -Notes "…"
+# build lớp phủ src-tauri\tauri.luutru.conf.json + VITE_EDITION=luu_tru, ra thư mục updates-luutru\ và
+# phat-hanh-luutru-<ver>.zip (bộ cài + .sig + latest.json) để chép vào thư mục updates của từng máy chủ cơ quan;
+# không scp sang OCR PC. URL trong latest.json là tạm — API của máy chủ cơ quan viết lại theo địa chỉ của nó.
 param(
   [Parameter(Mandatory = $true)][string]$Version,
   [string]$Notes = "",
@@ -20,7 +26,8 @@ param(
   # Máy chủ API là OCR PC (từ 2/11/2026): chép qua scp (SSH Tailscale). Rỗng = không chép. Thư mục đích là
   # C:\DigiText\updates trên OCR PC — API đọc thẳng (DIGITEXT_UPDATES_DIR / cwd C:\DigiText).
   [string]$UpdatesScp = "ADMIN@100.122.226.63:C:/DigiText/updates",
-  [switch]$SkipBump
+  [switch]$SkipBump,
+  [ValidateSet("", "luutru")][string]$Edition = ""
 )
 $ErrorActionPreference = "Stop"
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version phải dạng x.y.z (vd 0.16.0)" }
@@ -29,6 +36,15 @@ $desktop = Join-Path $repo "desktop"
 $key = Join-Path $env:USERPROFILE ".tauri\digitext.key"
 if (-not (Test-Path $key)) { throw "Thiếu khoá ký $key — chạy: cd desktop; npx tauri signer generate -w `"$key`" -p <mật khẩu>; lưu mật khẩu vào $key.pw" }
 $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+$luuTru = $Edition -eq "luutru"
+if ($luuTru) {
+  if (-not $PSBoundParameters.ContainsKey("UpdatesDir")) { $UpdatesDir = Join-Path $repo "updates-luutru" }
+  if (-not $PSBoundParameters.ContainsKey("BaseUrl")) { $BaseUrl = "https://may-chu-luu-tru/updates" }
+  if (-not $PSBoundParameters.ContainsKey("UpdatesScp")) { $UpdatesScp = "" }
+  $env:VITE_EDITION = "luu_tru"
+} else {
+  Remove-Item Env:VITE_EDITION -ErrorAction SilentlyContinue
+}
 
 function Set-Version($path, $pattern, $replacement) {
   $txt = [IO.File]::ReadAllText($path)
@@ -56,22 +72,37 @@ try {
   # Không bọc 2>&1: tauri CLI ghi Info ra stderr, PowerShell 5.1 + ErrorActionPreference=Stop
   # sẽ coi là lỗi và dừng. Để nguyên luồng, chỉ xét exit code.
   $ErrorActionPreference = "Continue"
-  & cmd.exe /c "npm run tauri build"
+  if ($luuTru) { & cmd.exe /c "npm run tauri build -- --config src-tauri/tauri.luutru.conf.json" }
+  else { & cmd.exe /c "npm run tauri build" }
   $rc = $LASTEXITCODE
   $ErrorActionPreference = "Stop"
   if ($rc -ne 0) { throw "tauri build thất bại (exit $rc)" }
 } finally { Pop-Location }
 
 $nsis = Join-Path $desktop "src-tauri\target\release\bundle\nsis"
-$setup = Join-Path $nsis "DigiText_${Version}_x64-setup.exe"
-$sig = "$setup.sig"
-if (-not (Test-Path $setup)) { throw "Không thấy $setup" }
-if (-not (Test-Path $sig)) { throw "Không thấy chữ ký $sig — createUpdaterArtifacts chưa bật hoặc khoá sai" }
+if ($luuTru) {
+  # productName có dấu ("DigiText Lưu trữ") → NSIS đặt tên tệp có dấu và dấu cách; đổi sang tên ASCII khi chép
+  # (chữ ký .sig ký nội dung, không ký tên tệp).
+  $goc = Get-ChildItem $nsis -Filter "*_${Version}_x64-setup.exe" | Where-Object { $_.Name -notlike "DigiText_*" } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  if (-not $goc) { throw "Không thấy bộ cài bản Lưu trữ $Version trong $nsis" }
+  if (-not (Test-Path "$($goc.FullName).sig")) { throw "Không thấy chữ ký $($goc.FullName).sig — createUpdaterArtifacts chưa bật hoặc khoá sai" }
+  $name = "DigiText-LuuTru_${Version}_x64-setup.exe"
+  New-Item -ItemType Directory -Force $UpdatesDir | Out-Null
+  $setup = Join-Path $UpdatesDir $name
+  $sig = "$setup.sig"
+  Copy-Item $goc.FullName $setup -Force
+  Copy-Item "$($goc.FullName).sig" $sig -Force
+} else {
+  $setup = Join-Path $nsis "DigiText_${Version}_x64-setup.exe"
+  $sig = "$setup.sig"
+  if (-not (Test-Path $setup)) { throw "Không thấy $setup" }
+  if (-not (Test-Path $sig)) { throw "Không thấy chữ ký $sig — createUpdaterArtifacts chưa bật hoặc khoá sai" }
 
-New-Item -ItemType Directory -Force $UpdatesDir | Out-Null
-Copy-Item $setup $UpdatesDir -Force
-Copy-Item $sig $UpdatesDir -Force
-$name = Split-Path -Leaf $setup
+  New-Item -ItemType Directory -Force $UpdatesDir | Out-Null
+  Copy-Item $setup $UpdatesDir -Force
+  Copy-Item $sig $UpdatesDir -Force
+  $name = Split-Path -Leaf $setup
+}
 $latest = [ordered]@{
   version = $Version
   notes = $Notes
@@ -86,6 +117,11 @@ $latest = [ordered]@{
 $json = $latest | ConvertTo-Json -Depth 5
 [IO.File]::WriteAllText((Join-Path $UpdatesDir "latest.json"), $json, (New-Object Text.UTF8Encoding $false))
 Write-Host "-> $UpdatesDir\latest.json → $Version ($name, $([math]::Round((Get-Item $setup).Length/1MB,1)) MB)" -ForegroundColor Green
+if ($luuTru) {
+  $zip = Join-Path $UpdatesDir "phat-hanh-luutru-$Version.zip"
+  Compress-Archive -Path $setup, $sig, (Join-Path $UpdatesDir "latest.json") -DestinationPath $zip -Force
+  Write-Host "-> $zip — giải nén vào thư mục updates (DIGITEXT_UPDATES_DIR) của máy chủ cơ quan" -ForegroundColor Green
+}
 if ($UpdatesRemote) {
   if (-not (Test-Path $UpdatesRemote)) { throw "Không tới được thư mục phát hành máy chủ $UpdatesRemote" }
   # Bộ cài + .sig trước, latest.json sau cùng: app chỉ thấy bản mới khi tệp đã nằm đủ.

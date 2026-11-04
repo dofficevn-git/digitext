@@ -3,6 +3,7 @@
 
 import type { V42t } from "@/api/updater";
 import { Button, describeError, Dialog } from "@/ui";
+import { V3wu } from "@/config";
 
 const mb = (n: number) => (n / 1_000_000).toFixed(1).replace(".", ",");
 
@@ -13,7 +14,7 @@ export default function V4x7({ status, onDismiss }: { status: V42t; onDismiss: (
 
   if (status.phase === "uptodate") {
     return (
-      <Dialog open onOpenChange={(o) => !o && onDismiss()} title="Đã là bản mới nhất" description={`DigiText v${status.version ?? "?"}`} size="sm" footer={<Button variant="primary" onClick={onDismiss}>Đóng</Button>} />
+      <Dialog open onOpenChange={(o) => !o && onDismiss()} title="Đã là bản mới nhất" description={`${V3wu.appName} v${status.version ?? "?"}`} size="sm" footer={<Button variant="primary" onClick={onDismiss}>Đóng</Button>} />
     );
   }
 
@@ -32,7 +33,7 @@ export default function V4x7({ status, onDismiss }: { status: V42t; onDismiss: (
   const text = status.phase === "checking" ? "Đang kiểm tra cập nhật…" : status.phase === "available" ? "Đang chuẩn bị cập nhật…" : dangTai ? `Đang tải bản ${status.version}…${pt != null ? ` ${pt}%` : ""}` : status.phase === "installing" ? "Đang cài đặt bản mới…" : "Đang khởi động lại…";
 
   return (
-    <Dialog open onOpenChange={() => {}} closable={false} title="Cập nhật DigiText" size="sm">
+    <Dialog open onOpenChange={() => {}} closable={false} title={`Cập nhật ${V3wu.appName}`} size="sm">
       <p className="text-sm text-fg-muted">{text}</p>
       <div className="mt-3 h-2 overflow-hidden rounded bg-border-subtle" role="progressbar" aria-label="Tiến độ cập nhật" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pt ?? undefined}>
         <div className={`h-2 rounded bg-accent ${pt == null ? "animate-pulse" : "transition-[width]"}`} style={{ width: pt == null ? "100%" : `${pt}%` }} />

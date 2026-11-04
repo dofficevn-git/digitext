@@ -8,6 +8,7 @@
 
 import type { V3xu, V3xw, V3xx, V3xt, V3xTienIch } from "@/domain/types";
 import type { V41v } from "@/components/Icon";
+import { LUU_TRU } from "@/config";
 
 export type V46r =
   | { kind: "view"; view: V3xt }
@@ -32,7 +33,7 @@ export interface V46s {
   step?: string;
 }
 
-export const NAV_TREE: V46s[] = [
+const NAV_THI_CONG: V46s[] = [
   { id: "home", label: "Tổng quan", icon: "trangChu", gate: "home", leaf: { kind: "view", view: "home" }, keywords: "trang chu dashboard" },
   {
     id: "giaonhan",
@@ -161,6 +162,41 @@ export const NAV_TREE: V46s[] = [
     ],
   },
 ];
+
+function mucCon(id: string): V46s {
+  for (const g of NAV_THI_CONG) for (const c of g.children ?? []) if (c.id === id) return c;
+  throw new Error(`navTree: không có mục ${id}`);
+}
+
+function nhom(id: string): V46s {
+  const g = NAV_THI_CONG.find((n) => n.id === id);
+  if (!g) throw new Error(`navTree: không có nhóm ${id}`);
+  return g;
+}
+
+// Bản Lưu trữ (docs/KE-HOACH-BAN-LUU-TRU.md): phần mềm lưu trữ của cơ quan chủ đầu tư — không có trục thi công.
+// Dùng lại đúng các mục của bản thi công (cùng id) để quyền, tìm nhanh và deep link giữ nguyên.
+const NAV_LUU_TRU: V46s[] = [
+  nhom("home"),
+  {
+    id: "tracuu",
+    label: "Tra cứu",
+    icon: "tim",
+    gate: "khogia",
+    children: [{ ...mucCon("khaithac"), label: "Mục lục hồ sơ" }],
+  },
+  nhom("luutruso"),
+  { id: "kholuutru", label: "Kho lưu trữ", icon: "kho", gate: "khogia", children: [mucCon("khogia"), mucCon("muontra")] },
+  { id: "tienich", label: "Tiện ích", icon: "ketXuat", gate: "tienich", children: [mucCon("ti:kiemgoi"), mucCon("ti:pdfa")] },
+  nhom("quantri"),
+];
+
+export const NAV_TREE: V46s[] = LUU_TRU ? NAV_LUU_TRU : NAV_THI_CONG;
+
+/** Màn có trong menu của bản đang chạy (AppShell chặn màn ngoài danh sách ở bản Lưu trữ). */
+export const VIEW_CUA_BAN: ReadonlySet<V3xt> = new Set(
+  V46t(NAV_TREE).map((l) => (l.kind === "view" ? l.view : l.kind === "hoso" ? "dossier" : l.kind)),
+);
 
 /** Mọi lá theo thứ tự hiển thị. */
 export function V46t(tree: V46s[] = NAV_TREE): V46r[] {

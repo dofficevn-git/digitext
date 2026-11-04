@@ -7,6 +7,7 @@ import { V460 } from "@/state";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConfirmHost, Toaster } from "@/ui";
 import BrandLogo from "@/features/shell/BrandLogo";
+import { V3wu } from "@/config";
 
 export default function V4x8() {
   const { status, update: V3aa, dismissUpdate: V3ab } = V460();
@@ -17,7 +18,7 @@ export default function V4x8() {
         <div className="login-screen">
           <div className="login-card">
             <BrandLogo className="login-logo" />
-            <h1>DigiText</h1>
+            <h1>{V3wu.appName}</h1>
             <div className="sub">Đang khởi động…</div>
           </div>
         </div>

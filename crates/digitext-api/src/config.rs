@@ -103,3 +103,23 @@ impl Config {
         })
     }
 }
+
+/// Bản Lưu trữ (`DIGITEXT_EDITION=luu_tru`, docs/KE-HOACH-BAN-LUU-TRU.md): máy chủ đặt tại cơ quan chủ đầu tư, chỉ chạy
+/// nhóm Lưu trữ số — các route thi công (giao việc, OCR, ký số, thu nộp, bảng điều hành) không gắn vào router.
+pub fn edition_luu_tru() -> bool {
+    static V: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *V.get_or_init(|| std::env::var("DIGITEXT_EDITION").map(|v| v.trim().eq_ignore_ascii_case("luu_tru")).unwrap_or(false))
+}
+
+/// Địa chỉ công khai của máy chủ (`DIGITEXT_PUBLIC_URL`, vd `https://luutru.co-quan.vn`) — dùng viết lại URL bộ cài trong
+/// `latest.json` và hiện trên trang tải về.
+pub fn public_url() -> Option<&'static str> {
+    static V: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    V.get_or_init(|| {
+        std::env::var("DIGITEXT_PUBLIC_URL")
+            .ok()
+            .map(|s| s.trim().trim_end_matches('/').to_string())
+            .filter(|s| !s.is_empty())
+    })
+    .as_deref()
+}

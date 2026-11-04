@@ -334,6 +334,11 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   lật trang `recordsAll` (máy chủ trả ≤ 200 dòng/lần). Ghép mục lục ↔ tài liệu dùng chung `tu_ocr::BoGhep`: khớp (hộp, hồ sơ)
   trước, rồi theo riêng số hồ sơ khi mục lục không kê hộp (cả Tạo văn bản từ OCR lẫn đối soát); đối soát tách `tinh` (đọc CSDL)
   + `ghep` (hàm thuần) — test `chay_that_json` (bỏ qua mặc định) chạy trên JSON xuất từ máy chủ + `kiem:mucluc` `KIEM_XUAT_JSON`.
+  **Bản Lưu trữ GĐ1 (4/11, nhánh `feat/ban-luu-tru`, docs/KE-HOACH-BAN-LUU-TRU.md):** `config.ts` `LUU_TRU`
+  (`VITE_EDITION=luu_tru`, DEV `?edition=luu_tru`), `navTree.ts` `NAV_LUU_TRU` + `VIEW_CUA_BAN` (AppShell chặn màn ngoài
+  bản), `home/LuuTruHome.tsx`; Tauri `edition.rs` (`cfg(luu_tru)` từ `build.rs`), `update.rs` (cập nhật theo máy chủ đang
+  kết nối); lớp phủ `tauri.luutru.conf.json`; API `config::edition_luu_tru()` (bỏ route thi công trong `app.rs`),
+  `config::public_url()`, `routes/updates.rs` viết lại `latest.json` + `GET /tai-ve`. Phát hành: DEPLOY-DESKTOP §3b.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,

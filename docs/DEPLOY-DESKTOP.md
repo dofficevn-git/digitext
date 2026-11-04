@@ -128,6 +128,35 @@ Quy tắc an toàn đã cài:
 Trước v0.15.1 (bản gửi tay đầu tiên): quy trình thủ công là gửi `-setup.exe` cài đè;
 vẫn dùng được cho máy không có internet.
 
+**Từ 4/11/2026 app kiểm cập nhật theo máy chủ đang kết nối** (lệnh Tauri `update_check`/`update_install`,
+`desktop/src-tauri/src/update.rs`): thử `<địa chỉ máy chủ>/updates/latest.json` trước, bản thi công dự phòng thêm
+endpoint trong `tauri.conf.json`. Máy chủ phải là `https` (bản release từ chối `http`).
+
+### 3b. Bản DigiText Lưu trữ (máy chủ đặt tại cơ quan chủ đầu tư)
+
+Kế hoạch: `docs/KE-HOACH-BAN-LUU-TRU.md`. Cùng mã nguồn, khác ở lúc build:
+
+- Lớp phủ `desktop/src-tauri/tauri.luutru.conf.json`: tên "DigiText Lưu trữ", tệp chạy `digitext-luutru.exe`,
+  identifier `vn.digitext.luutru` (cài song song bản thi công, dữ liệu máy riêng ở `%APPDATA%\vn.digitext.luutru`),
+  bỏ hook tường lửa LAN, chỉ đóng gói NSIS (WiX/MSI lỗi với tên có dấu), không có endpoint cập nhật cố định (chỉ tin máy chủ của cơ quan).
+- `VITE_EDITION=luu_tru` (cả Vite lẫn `build.rs` → `cfg(luu_tru)` đọc): menu chỉ Tổng quan lưu trữ, Tra cứu, Lưu trữ số,
+  Kho lưu trữ, Tiện ích (kiểm gói, kiểm PDF/A), Quản trị (`navTree.ts` `NAV_LUU_TRU`); AppShell chặn màn ngoài menu.
+  Xem trước trên trình duyệt: `?edition=luu_tru`.
+
+Phát hành:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File dev\release-desktop.ps1 -Edition luutru -Version 0.25.0 -SkipBump -Notes "…"
+```
+
+Ra `updates-luutru\DigiText-LuuTru_<ver>_x64-setup.exe` + `.sig` + `latest.json` và `phat-hanh-luutru-<ver>.zip`; không
+scp sang OCR PC. Giải nén zip vào `DIGITEXT_UPDATES_DIR` của máy chủ cơ quan. Cùng khoá ký `digitext.key`.
+
+Máy chủ cơ quan đặt `DIGITEXT_EDITION=luu_tru` (không gắn route thi công: giao việc, OCR, ký số, thu nộp, bảng điều hành,
+tiến độ, lô tải lên) và `DIGITEXT_PUBLIC_URL=https://<địa chỉ>`: API viết lại URL bộ cài trong `latest.json` theo địa chỉ
+đó (không đặt thì lấy Host + X-Forwarded-Proto), `GET /tai-ve` là trang tải bộ cài + hướng dẫn nhập địa chỉ máy chủ,
+`GET /` chuyển sang `/tai-ve`.
+
 ## 4. Khi dự án lên git mới (GitHub): phát hành bằng tag (thay cho chạy script tay)
 
 Đây là đường đi gọn nhất cho "mỗi lần có bản mới": **đẩy một tag → GitHub Actions dựng

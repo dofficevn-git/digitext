@@ -12,6 +12,7 @@ import { IconButton, Kbd, Tip } from "@/ui";
 import CommandPalette from "./CommandPalette";
 import ProjectSwitch from "./ProjectSwitch";
 import BrandLogo from "./BrandLogo";
+import { V3wu } from "@/config";
 import { navPath } from "./navTree";
 import { useNotifications } from "./useNotifications";
 
@@ -50,7 +51,7 @@ export default function Topbar() {
     <header className="topbar">
       <div className="brand">
         <BrandLogo className="size-8 flex-none" />
-        <span>DigiText</span>
+        <span>{V3wu.appName}</span>
       </div>
       <nav aria-label="Vị trí" className="flex min-w-0 items-center gap-1 text-sm text-fg-subtle">
         {path.map((n, i) => (
