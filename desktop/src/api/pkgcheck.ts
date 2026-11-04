@@ -82,9 +82,18 @@ export function pkgcheckCancel(): Promise<void> {
   return invoke<void>("pkgcheck_cancel");
 }
 /** Dựng báo cáo PDF rồi mở hộp thoại lưu; trả đường dẫn đã lưu (null = người dùng huỷ). */
-export async function pkgcheckReport(results: PkgResult[], header: PkgReportHeader, defaultName: string): Promise<string | null> {
+export async function pkgcheckReport(results: PkgResult[], header: PkgReportHeader, defaultName: string, dir?: string): Promise<string | null> {
   const bytes = await invoke<number[]>("pkgcheck_report", { args: { results, header } });
-  return V4dz(Uint8Array.from(bytes), defaultName, "pdf");
+  return V4dz(Uint8Array.from(bytes), defaultName, "pdf", dir);
+}
+/** Phần đầu báo cáo đã nhập ở Tiện ích › Kiểm tra gói tin (localStorage `pkgcheck.header`). */
+export function pkgcheckHeaderDaNho(): PkgReportHeader {
+  const h0: PkgReportHeader = { parentOrg: "", org: "", place: "", inspector: "", inspectorTitle: "", approver: "", approverTitle: "" };
+  try {
+    return { ...h0, ...(JSON.parse(localStorage.getItem("pkgcheck.header") ?? "{}") as Partial<PkgReportHeader>) };
+  } catch {
+    return h0;
+  }
 }
 export async function onPkgcheckProgress(cb: (p: PkgProgress) => void): Promise<UnlistenFn> {
   if (!isTauri()) return () => {};

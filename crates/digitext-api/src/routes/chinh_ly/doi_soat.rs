@@ -7,7 +7,7 @@
 //! `GET /cl/doi-soat?projectId&phongId[&thuMuc]` → `DoiSoatResp`.
 
 use super::project_access;
-use super::tu_ocr::khoa;
+use super::tu_ocr::BoGhep;
 use crate::app::AppState;
 use crate::error::ApiError;
 use crate::extract::Ts;
@@ -140,21 +140,27 @@ async fn doi_soat(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
     if !ts.has_perm(Permission::DossierRead) || !ts.has_perm(Permission::DocumentList) {
         return Err(ApiError::forbidden());
     }
-    let ho_sos = cl::ho_so::doi_soat_ho_so_cua_phong(&st.pool, q.project_id, q.phong_id).await?;
-    let mut theo_khoa: HashMap<(String, String), Vec<usize>> = HashMap::new();
-    for (i, h) in ho_sos.iter().enumerate() {
-        let hs = h.ho_so_so.as_deref().filter(|s| !s.trim().is_empty()).unwrap_or(h.so_tam.as_str());
-        theo_khoa.entry((khoa(h.hop_so.as_deref().unwrap_or("")), khoa(hs))).or_default().push(i);
-    }
-    let docs = documents::list_for_project_qc(&st.pool, q.project_id).await?;
+    Ok(Json(tinh(&st.pool, q.project_id, q.phong_id, q.thu_muc.as_deref()).await?))
+}
+
+/// Phần tính (không kiểm quyền): đọc hai bảng rồi ghép.
+pub async fn tinh(pool: &sqlx::PgPool, project_id: Uuid, phong_id: Uuid, thu_muc: Option<&str>) -> Result<DoiSoatResp, ApiError> {
+    let ho_sos = cl::ho_so::doi_soat_ho_so_cua_phong(pool, project_id, phong_id).await?;
+    let docs = documents::list_for_project_qc(pool, project_id).await?;
+    Ok(ghep(&ho_sos, &docs, thu_muc))
+}
+
+/// Ghép mục lục với tài liệu máy chủ — hàm thuần, chạy thử được trên dữ liệu xuất ra (test `chay_that_json`).
+pub fn ghep(ho_sos: &[cl::ho_so::HoSoDoiSoatRow], docs: &[documents::DocQcRow], thu_muc: Option<&str>) -> DoiSoatResp {
+    let bo_ghep = BoGhep::new(ho_sos.iter().map(|h| (h.hop_so.as_deref(), h.ho_so_so.as_deref().filter(|s| !s.trim().is_empty()).unwrap_or(h.so_tam.as_str()))));
     let mut thu_muc_co: Vec<String> = Vec::new();
-    for d in &docs {
+    for d in docs {
         if !d.phong.is_empty() && !thu_muc_co.iter().any(|t| t == &d.phong) {
             thu_muc_co.push(d.phong.clone());
         }
     }
     thu_muc_co.sort();
-    let loc = q.thu_muc.as_deref().map(str::trim).filter(|s| !s.is_empty()).map(str::to_lowercase);
+    let loc = thu_muc.map(str::trim).filter(|s| !s.is_empty()).map(str::to_lowercase);
 
     #[derive(Default)]
     struct Gop {
@@ -167,7 +173,7 @@ async fn doi_soat(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
     }
     let mut gop: HashMap<usize, Gop> = HashMap::new();
     let mut khong_khop: Vec<KhongKhop> = Vec::new();
-    for d in &docs {
+    for d in docs {
         if d.status == "disposed" {
             continue;
         }
@@ -176,10 +182,9 @@ async fn doi_soat(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
                 continue;
             }
         }
-        let k = (khoa(&d.hop), khoa(&d.ho_so));
-        match theo_khoa.get(&k) {
-            Some(v) if v.len() == 1 => {
-                let g = gop.entry(v[0]).or_default();
+        match bo_ghep.tim(&d.hop, &d.ho_so) {
+            [i] => {
+                let g = gop.entry(*i).or_default();
                 g.files += 1;
                 g.pages += i64::from(d.page_count.unwrap_or(0));
                 if d.pdfa_pages.unwrap_or(0) > 0 {
@@ -195,15 +200,17 @@ async fn doi_soat(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
                     g.rejected += 1;
                 }
             }
-            Some(_) => khong_khop.push(KhongKhop { document_id: d.id, filename: d.filename.clone(), hop: d.hop.clone(), ho_so: d.ho_so.clone(), ly_do: "hộp/hồ sơ trùng giữa hồ sơ vĩnh viễn và có thời hạn".into() }),
-            None => khong_khop.push(KhongKhop { document_id: d.id, filename: d.filename.clone(), hop: d.hop.clone(), ho_so: d.ho_so.clone(), ly_do: "không có hồ sơ này trong mục lục".into() }),
+            [_, _, ..] => khong_khop.push(KhongKhop { document_id: d.id, filename: d.filename.clone(), hop: d.hop.clone(), ho_so: d.ho_so.clone(), ly_do: "hộp/hồ sơ trùng giữa hồ sơ vĩnh viễn và có thời hạn".into() }),
+            [] => khong_khop.push(KhongKhop { document_id: d.id, filename: d.filename.clone(), hop: d.hop.clone(), ho_so: d.ho_so.clone(), ly_do: "không có hồ sơ này trong mục lục".into() }),
         }
     }
+    // Đếm trước khi cắt danh sách (4/11/2026: trước đây tổng kết báo đúng 2.000 khi phông có nhiều tệp lệch hơn).
+    let so_khong_khop = khong_khop.len();
     if khong_khop.len() > 2000 {
         khong_khop.truncate(2000);
     }
 
-    let mut tk = TongKet { ho_so_muc_luc: ho_sos.len(), tep_khong_khop: khong_khop.len(), ..Default::default() };
+    let mut tk = TongKet { ho_so_muc_luc: ho_sos.len(), tep_khong_khop: so_khong_khop, ..Default::default() };
     let mut out = Vec::with_capacity(ho_sos.len());
     for (i, h) in ho_sos.iter().enumerate() {
         let g = gop.remove(&i).unwrap_or_default();
@@ -240,7 +247,7 @@ async fn doi_soat(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
             ket_luan: kl,
         });
     }
-    Ok(Json(DoiSoatResp { tong_ket: tk, ho_so: out, khong_khop, thu_muc_co }))
+    DoiSoatResp { tong_ket: tk, ho_so: out, khong_khop, thu_muc_co }
 }
 
 #[cfg(test)]
@@ -257,5 +264,88 @@ mod tests {
         assert_eq!(ket_luan(Some(10), 2, 12, 2, 0, 0), KetLuan::Dat);
         assert_eq!(so_to_tu_chuoi(Some(" 0215 tờ")), Some(215));
         assert_eq!(so_to_tu_chuoi(Some("-")), None);
+    }
+
+    /// Chạy thử trên dữ liệu thật đã xuất (chỉ đọc, 4/11/2026):
+    ///   DIGITEXT_THU_DOCS = JSON các dòng `list_for_project_qc` (psql json_agg trên máy chủ)
+    ///   DIGITEXT_THU_CAP  = JSON `[{"hoSo": "<tệp JSON hồ sơ>", "thuMuc": "<thư mục phông>"}]` (hồ sơ từ kiem:mucluc KIEM_XUAT_JSON)
+    ///   cargo test -p digitext-api --lib chay_that_json -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn chay_that_json() {
+        use serde_json::Value;
+        let doc_txt = std::fs::read_to_string(std::env::var("DIGITEXT_THU_DOCS").expect("DOCS")).unwrap();
+        let docs_v: Vec<Value> = serde_json::from_str(doc_txt.trim_start_matches('\u{feff}')).unwrap();
+        let s = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+        let i = |v: &Value, k: &str| v.get(k).and_then(Value::as_i64).map(|n| n as i32);
+        let docs: Vec<documents::DocQcRow> = docs_v
+            .iter()
+            .map(|v| documents::DocQcRow {
+                id: s(v, "id").parse().unwrap_or(Uuid::nil()),
+                filename: s(v, "filename"),
+                phong: s(v, "phong"),
+                hop: s(v, "hop"),
+                ho_so: s(v, "ho_so"),
+                page_count: i(v, "page_count"),
+                status: s(v, "status"),
+                pdfa_pages: i(v, "pdfa_pages"),
+                pdfa_2b: v.get("pdfa_2b").and_then(Value::as_bool),
+                review_status: v.get("review_status").and_then(Value::as_str).map(str::to_string),
+            })
+            .collect();
+        let cap: Vec<Value> = serde_json::from_str(&std::fs::read_to_string(std::env::var("DIGITEXT_THU_CAP").expect("CAP")).unwrap()).unwrap();
+        println!("TAI_LIEU={}", docs.len());
+        for c in &cap {
+            let tep = s(c, "hoSo");
+            let thu_muc = s(c, "thuMuc");
+            let hs_v: Vec<Value> = serde_json::from_str(&std::fs::read_to_string(&tep).unwrap()).unwrap();
+            let ho_sos: Vec<cl::ho_so::HoSoDoiSoatRow> = hs_v
+                .iter()
+                .enumerate()
+                .map(|(k, v)| cl::ho_so::HoSoDoiSoatRow {
+                    id: Uuid::from_u128(k as u128 + 1),
+                    hop_so: v.get("hop_so").and_then(Value::as_str).map(str::to_string),
+                    ho_so_so: v.get("ho_so_so").and_then(Value::as_str).map(str::to_string),
+                    so_tam: s(v, "so_tam"),
+                    vinh_vien: v.get("vinh_vien").and_then(Value::as_bool).unwrap_or(false),
+                    ma_ho_so: None,
+                    tieu_de: s(v, "tieu_de"),
+                    so_to: v.get("so_to").and_then(Value::as_str).map(str::to_string),
+                })
+                .collect();
+            let t0 = std::time::Instant::now();
+            let r = ghep(&ho_sos, &docs, Some(&thu_muc));
+            let ms = t0.elapsed().as_millis();
+            let mut kl: std::collections::BTreeMap<String, usize> = Default::default();
+            for h in &r.ho_so {
+                *kl.entry(serde_json::to_string(&h.ket_luan).unwrap().trim_matches('"').to_string()).or_default() += 1;
+            }
+            let mut ly_do: std::collections::BTreeMap<&str, usize> = Default::default();
+            for k in &r.khong_khop {
+                *ly_do.entry(k.ly_do.as_str()).or_default() += 1;
+            }
+            let tk = &r.tong_ket;
+            println!(
+                "CAP|{}|{}|hs={}|coTep={}|dat={}|tep={}|trang={}|soTo={}|khongKhop={}|{}ms|{:?}|{:?}",
+                std::path::Path::new(&tep).file_stem().unwrap().to_string_lossy(),
+                thu_muc,
+                tk.ho_so_muc_luc,
+                tk.ho_so_co_tep,
+                tk.dat,
+                tk.tep,
+                tk.trang,
+                tk.so_to_muc_luc,
+                tk.tep_khong_khop,
+                ms,
+                kl,
+                ly_do
+            );
+            for h in r.ho_so.iter().filter(|h| h.files > 0).take(3) {
+                println!("  HS hop={} hs={} soTo={:?} tep={} trang={} pdfa={} -> {:?}", h.hop_so, h.ho_so_so, h.so_to, h.files, h.pages, h.pdfa_docs, h.ket_luan);
+            }
+            for k in r.khong_khop.iter().take(3) {
+                println!("  KK hop={:?} hs={:?} {}", k.hop, k.ho_so, k.filename);
+            }
+        }
     }
 }

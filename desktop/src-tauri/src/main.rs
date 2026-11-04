@@ -41,6 +41,7 @@ mod submission;
 mod sync;
 mod telemetry;
 mod pkgcheck;
+mod bundle;
 mod tiff;
 use tauri::Manager;
 fn main() {
@@ -193,6 +194,7 @@ fn main() {
             pkgcheck::pkgcheck_run,
             pkgcheck::pkgcheck_cancel,
             pkgcheck::pkgcheck_report,
+            bundle::zip_dir,
             tiff::tiff_scan_local,
             tiff::tiff_preview,
             tiff::tiff_run,

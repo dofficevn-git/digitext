@@ -33,6 +33,12 @@ for (const f of fs.readdirSync(dir).sort()) {
   }
   const trong = (f2: (r: (typeof pt.rows)[number]) => boolean) => pt.rows.filter(f2).length;
   const chan = coLoiChan(pt);
+  // KIEM_XUAT_JSON=<thư mục>: ghi hồ sơ đã đọc (hộp, hồ sơ số, số tờ, vĩnh viễn) để chạy thử đối soát với kho máy chủ.
+  if (process.env.KIEM_XUAT_JSON) {
+    fs.mkdirSync(process.env.KIEM_XUAT_JSON, { recursive: true });
+    const hs = pt.rows.map((r) => ({ hop_so: r.hopSo || null, ho_so_so: r.hoSoSo || null, so_tam: r.hoSoSo || String(r.dong), vinh_vien: r.vinhVien === true, so_to: r.soTo || null, tieu_de: r.tieuDe }));
+    fs.writeFileSync(path.join(process.env.KIEM_XUAT_JSON, f.replace(/\.[^.]+$/, ".json")), JSON.stringify(hs));
+  }
   console.log(
     `## ${f.slice(0, 60)}  [sheet '${pt.sheet}' /${pt.sheets.length}] → ${pt.rows.length} hồ sơ, PB ${pt.phongBans.length}${pt.khongChiaPhongBan ? " (Chung)" : ""}, cột ${Object.keys(pt.cot).join(",")} | lỗi ${pt.soLoi} cảnh báo ${pt.soCanhBao} | hộp trống ${trong((r) => !r.hopSo)} THBQ trống ${trong((r) => !r.thbq)} TG trống ${trong((r) => !r.tg.batDau)} | ${chan ? "CHẶN" : "nhập được"}`,
   );

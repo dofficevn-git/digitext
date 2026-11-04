@@ -87,6 +87,9 @@ pub async fn package_create(
 pub struct T56 {
     pub id: String,
     pub zip_name: String,
+    /// Thư mục đích tuỳ chọn (bộ hồ sơ nghiệm thu); trống = `<kho>/_goi_tin`.
+    #[serde(default)]
+    pub dir: Option<String>,
 }
 #[tauri::command]
 pub async fn package_download(
@@ -106,8 +109,10 @@ pub async fn package_download(
         },
     )
     .await?;
-    let r_2a9 = crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?;
-    let r_2a6 = r_2a9.join("_goi_tin");
+    let r_2a6 = match args.dir.as_deref().map(str::trim).filter(|d| !d.is_empty()) {
+        Some(d) => std::path::PathBuf::from(d),
+        None => crate::archive::paths::f_29d(&app, crate::archive::paths::f_112(&db).as_deref())?.join("_goi_tin"),
+    };
     let zip_name = args.zip_name.clone();
     let r_2a8 = tauri::async_runtime::spawn_blocking(move || -> std::io::Result<String> {
         std::fs::create_dir_all(&r_2a6)?;

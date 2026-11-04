@@ -1,5 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Biên bản theo Thông tư 05/2025: sổ biên bản (lọc theo loại, tải PDF) và hộp thoại lập biên bản hai bước (chọn mẫu bằng
+// Biên bản theo Thông tư 05/2025: sổ biên bản (lọc theo loại, tải PDF hoặc Word) và hộp thoại lập biên bản hai bước (chọn mẫu bằng
 // thẻ → điền nội dung, bảng dòng nhập tại chỗ). 3/11/2026: `SoBienBan` nhúng được vào màn khác (Giao nhận, Nhật ký,
 // Nghiệm thu) với `kinds`, `projectId`, `prefill`; mẫu generic (Điều 9) gửi khối PDF dựng sẵn + khoá phụ `ref`.
 
@@ -248,7 +248,12 @@ export function SoBienBan({ kinds, projectId, title = "Sổ biên bản", descri
   const { session } = V460();
   const perms = session?.permissions ?? [];
   const pid = projectId ?? session?.projectId ?? null;
-  const loader = useCallback(() => (isTauri() ? V4sz({ kinds, projectId: pid }) : Promise.resolve([] as V4sy[])), [kinds, pid]);
+  // Khoá theo nội dung: màn cha hay truyền mảng `kinds` viết tại chỗ → danh tính đổi mỗi lần vẽ, hàm tải không được đổi theo.
+  const kindsKey = kinds?.join(",") ?? "";
+  const loader = useCallback(
+    () => (isTauri() || import.meta.env.DEV ? V4sz({ kinds: kindsKey ? kindsKey.split(",") : undefined, projectId: pid }) : Promise.resolve([] as V4sy[])),
+    [kindsKey, pid],
+  );
   const { data, error, loading, reload } = V41t(loader, { topics: ["records"], errorText: () => "Không tải được sổ biên bản." });
   const rows = useMemo(() => {
     const all = data ?? [];
@@ -259,11 +264,11 @@ export function SoBienBan({ kinds, projectId, title = "Sổ biên bản", descri
   const [moLap, setMoLap] = useState(false);
   const [dangTai, setDangTai] = useState<string | null>(null);
 
-  const taiPdf = async (row: V4sy) => {
+  const taiPdf = async (row: V4sy, format: "pdf" | "docx" = "pdf") => {
     setDangTai(row.id);
     try {
-      const path = await V4t1(row.id, `${row.soBienBan.split("/").join("-")}.pdf`);
-      toast.success("Đã lưu biên bản.", { description: path });
+      const path = await V4t1(row.id, `${row.soBienBan.split("/").join("-")}.${format}`, undefined, format);
+      toast.success(format === "docx" ? "Đã lưu bản Word của biên bản." : "Đã lưu biên bản.", { description: path });
     } catch (e) {
       notifyError(e, "tải biên bản");
     } finally {
@@ -307,9 +312,14 @@ export function SoBienBan({ kinds, projectId, title = "Sổ biên bản", descri
           dense
           maxHeight={embedded ? 360 : undefined}
           rowActions={(r) => (
-            <Button size="sm" icon="taiVe" loading={dangTai === r.id} disabled={dangTai !== null} onClick={() => void taiPdf(r)}>
-              Tải PDF
-            </Button>
+            <span className="flex items-center gap-1">
+              <Button size="sm" icon="tepPdf" loading={dangTai === r.id} disabled={dangTai !== null} onClick={() => void taiPdf(r)}>
+                PDF
+              </Button>
+              <Button size="sm" variant="ghost" icon="tepWord" disabled={dangTai !== null} onClick={() => void taiPdf(r, "docx")} title="Bản Word để chỉnh sửa, in ký tay">
+                Word
+              </Button>
+            </span>
           )}
           state={{ loading: loading && !data, error, onRetry: reload, empty: { title: loai ? "Không có biên bản loại này" : "Chưa có biên bản nào", icon: "bienBan", action: coTao ? <Button size="sm" icon="bienBan" onClick={() => setMoLap(true)}>{nutLap}</Button> : undefined } }}
         />

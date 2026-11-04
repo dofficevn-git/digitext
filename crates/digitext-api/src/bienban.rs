@@ -680,6 +680,18 @@ pub fn render(r_1f: &str, payload: &serde_json::Value) -> Result<(String, Vec<Fo
         )),
     }
 }
+/// Biên bản dạng Word (4/11/2026): mẫu generic dựng thẳng từ khối (bảng thật), mẫu cũ từ khối PDF.
+pub fn render_docx(kind: &str, payload: &serde_json::Value, so: Option<&str>) -> Result<Vec<u8>, String> {
+    let (title, blocks) = if is_generic(kind) {
+        let f: GenericForm = serde_json::from_value(payload.clone()).map_err(|e| format!("payload không hợp lệ: {e}"))?;
+        render_generic(&f)?;
+        (f.title.trim().to_string(), crate::docx::from_generic(&f))
+    } else {
+        let (t, b) = render(kind, payload)?;
+        (t, crate::docx::from_form(&b))
+    };
+    crate::docx::render(&title, Some(f_2i2(kind)), so, &blocks)
+}
 #[cfg(test)]
 mod generic_tests {
     use super::*;

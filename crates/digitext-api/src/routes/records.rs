@@ -19,6 +19,7 @@ pub fn router() -> Router<AppState> {
         .route("/records", get(f_1o9).post(f_12d))
         .route("/records/{id}", get(get_record))
         .route("/records/{id}/download", get(f_17e))
+        .route("/records/{id}/docx", get(download_docx))
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -216,6 +217,28 @@ async fn get_record(
     }
     let payload = row.payload.clone();
     Ok(Json(RecordDetailDto { row: row.into(), payload }))
+}
+/// Biên bản dạng Word (4/11/2026): dựng lại từ payload mỗi lần tải (không lưu kho), cùng nội dung với PDF.
+async fn download_docx(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>) -> Result<Response, ApiError> {
+    ts.require_perm(Permission::RecordView)?;
+    let row = records::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
+    let scope = f_29a(&st.pool, &ts.user).await?;
+    if !can_touch_project(&ts, &scope, row.project_id) {
+        return Err(ApiError::forbidden());
+    }
+    let bytes = bienban::render_docx(&row.kind, &row.payload, Some(&row.so_bien_ban)).map_err(|e| {
+        tracing::warn!(record = %id, error = %e, "dựng DOCX biên bản lỗi");
+        ApiError::bad_request(format!("dựng Word biên bản lỗi: {e}"))
+    })?;
+    let safe_name: String = format!("{}.docx", row.so_bien_ban.replace('/', "-"));
+    Ok((
+        [
+            (header::CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document".to_string()),
+            (header::CONTENT_DISPOSITION, format!("attachment; filename=\"{safe_name}\"")),
+        ],
+        Body::from(bytes),
+    )
+        .into_response())
 }
 async fn f_17e(
     State(r_q0): State<AppState>,

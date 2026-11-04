@@ -326,8 +326,15 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   hồ sơ, Σ số tờ) ⨝ kho máy chủ (`docs_review_summary` gộp theo thư mục phông, ghép tên bỏ dấu, sửa tay) so với hợp đồng
   (`project_contracts.contract_boxes/dossiers/sheets`, nhập ở Tiến độ dự án › Hợp đồng); biên bản `nghiem_thu` /
   `ban_giao_lan` điền sẵn; "Tạo bộ hồ sơ nghiệm thu" ghi vào thư mục chọn: Excel khối lượng, PDF mọi biên bản của dự án,
-  MLHS TT05 từng phông (Tauri `save_export`/`record_download` nhận `dir`; `writeXlsx`/`xuatTT05` nhận thư mục đích). Mô tả
-  cũ bên dưới giữ để tra cứu vị trí tệp:
+  MLHS TT05 từng phông (Tauri `save_export`/`record_download` nhận `dir`; `writeXlsx`/`xuatTT05` nhận thư mục đích).
+  **R5 (4/11):** biên bản Word `GET /records/{id}/docx` (`digitext-api/src/docx.rs` tự viết WordprocessingML + zip, dựng lại
+  từ payload mỗi lần, mẫu generic giữ bảng thật; nút Word ở sổ biên bản, Tauri `record_download` `format: "docx"`); bộ hồ sơ
+  nghiệm thu có hộp tuỳ chọn: thêm `02-Bien-ban/Word`, `04-Goi-AIP` (Tauri `package_download` nhận `dir`) + `05-Bao-cao-kiem-tra-goi.pdf`
+  (`pkgcheckRun` trên thư mục gói, trang "Kiểm tra gói" trong Excel), nén `<thư mục>.zip` (Tauri `bundle::zip_dir`); sổ biên bản
+  lật trang `recordsAll` (máy chủ trả ≤ 200 dòng/lần). Ghép mục lục ↔ tài liệu dùng chung `tu_ocr::BoGhep`: khớp (hộp, hồ sơ)
+  trước, rồi theo riêng số hồ sơ khi mục lục không kê hộp (cả Tạo văn bản từ OCR lẫn đối soát); đối soát tách `tinh` (đọc CSDL)
+  + `ghep` (hàm thuần) — test `chay_that_json` (bỏ qua mặc định) chạy trên JSON xuất từ máy chủ + `kiem:mucluc` `KIEM_XUAT_JSON`.
+  Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
   `LeaderDashboard` mọi dự án; khối dùng chung ở `home/blocks/`; định mức KPI `report/KpiSettingsDialog`;

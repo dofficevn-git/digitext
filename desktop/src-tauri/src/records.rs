@@ -33,6 +33,8 @@ pub struct ListArgs {
     pub project_id: Option<String>,
     #[serde(default)]
     pub limit: Option<u32>,
+    #[serde(default)]
+    pub offset: Option<u32>,
 }
 /// Mã hoá phần trăm tối thiểu cho tham số truy vấn (chữ số, chữ cái ASCII, "-_.~" giữ nguyên).
 fn pct(s: &str) -> String {
@@ -53,6 +55,9 @@ pub async fn records_list(
 ) -> Result<Vec<RecordRow>, AppError> {
     let a = args.unwrap_or_default();
     let mut q: Vec<String> = vec![format!("limit={}", a.limit.unwrap_or(200).clamp(1, 200))];
+    if let Some(o) = a.offset.filter(|o| *o > 0) {
+        q.push(format!("offset={o}"));
+    }
     if !a.kinds.is_empty() {
         q.push(format!("kind={}", a.kinds.join(",")));
     }
@@ -123,6 +128,9 @@ pub struct T58 {
     /// Thư mục đích tuỳ chọn (bộ hồ sơ nghiệm thu); trống = `<kho>/_bien_ban`.
     #[serde(default)]
     pub dir: Option<String>,
+    /// "docx" = bản Word dựng lại từ payload (máy chủ 4/11/2026); trống = PDF đã lưu.
+    #[serde(default)]
+    pub format: Option<String>,
 }
 #[tauri::command]
 pub async fn record_download(
@@ -132,9 +140,11 @@ pub async fn record_download(
     args: T58,
 ) -> Result<String, AppError> {
     let id = args.id.clone();
+    let docx = args.format.as_deref() == Some("docx");
+    let duoi = if docx { "docx" } else { "download" };
     let r_2ai = f_2r8(&db, &auth, Permission::RecordView, move |r_2ah, r_2ap| {
         let id = id.clone();
-        async move { client::f_1ei(&r_2ah, &r_2ap, &format!("/records/{id}/download")).await }
+        async move { client::f_1ei(&r_2ah, &r_2ap, &format!("/records/{id}/{duoi}")).await }
     })
     .await?;
     let r_2aj = match args.dir.as_deref().map(str::trim).filter(|d| !d.is_empty()) {
@@ -147,7 +157,7 @@ pub async fn record_download(
         let r_2ao = std::path::PathBuf::from(&file_name)
             .file_name()
             .map(|r_2an| r_2an.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "bien-ban.pdf".into());
+            .unwrap_or_else(|| if docx { "bien-ban.docx".into() } else { "bien-ban.pdf".into() });
         let r_2ak = r_2aj.join(r_2ao);
         std::fs::write(&r_2ak, &r_2ai)?;
         Ok(r_2ak.to_string_lossy().into_owned())
@@ -156,7 +166,7 @@ pub async fn record_download(
     .map_err(|e| AppError::internal(format!("luồng lưu file lỗi: {e}")))?
     .map_err(|e| AppError::internal(format!("lưu file lỗi: {e}")))?;
     tracing::info!(
-        record = % args.id, "record_download: đã lưu PDF biên bản"
+        record = % args.id, docx, "record_download: đã lưu biên bản"
     );
     Ok(r_2al)
 }

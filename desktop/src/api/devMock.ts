@@ -37,13 +37,13 @@ export function devMock(cmd: string, args?: Record<string, unknown>): unknown {
     case "cl_catalog_list":
       return { khoi_phong: [], phong: [{ id: "p1", ma_du_an: "CCVTLT", ten: "Chi cục Văn thư – Lưu trữ tỉnh Bắc Giang" }, { id: "p2", ma_du_an: "UBND", ten: "UBND tỉnh Bắc Giang (1997 – 2017)" }], phong_ban: [], mang: [], thbq: [], ngon_ngu: [], loai_van_ban: [], kho: [], gia: [], hop: [] };
     case "records_list":
-      return [];
+      return [{ id: "rec1", projectId: "dev-ltlsbn", kind: "kiem_tra_san_pham", soBienBan: "01/BB-KTS.2026", title: "Biên bản kiểm tra sản phẩm số hoá tài liệu", submissionId: null, createdAt: new Date().toISOString(), ref: "CCVTLT" }];
     // Nghiệm thu (0.23): hợp đồng, gói, mục lục mẫu để xem trước `?view=acceptance`.
     case "report_project_progress":
       return [{ projectId: String((args?.args as { projectId?: string } | undefined)?.projectId ?? ""), code: "LTLSBN", name: "Lưu trữ lịch sử Bắc Ninh", contract: { signedOn: "2026-03-01", endOn: "2027-03-25", deadlineOn: "2027-03-25", contractPages: 2_250_000, contractFiles: 220_000, contractBoxes: 1_800, contractDossiers: 14_000, contractSheets: 1_100_000, managerName: "Nguyễn Văn A", note: null }, files: 205_008, pages: 866_703, pdfaFiles: 183_679, signedFiles: 160_375, ocrFiles: 190_000, approvedFiles: 1_200, rejectedFiles: 40 }];
     case "packages_list":
       return [
-        { id: "g1", projectId: String((args?.args as { projectId?: string } | undefined)?.projectId ?? ""), kind: "aip", status: "built", hoSoRef: null, label: "CCVTLT · hộp 01–05", objid: "urn:uuid:1", zipName: "CCVTLT-01-05.zip", zipSha256: "9e630ee18a7ad5a1", zipSize: 812_000_000, documentCount: 420, error: null, virusScan: "clean", submissionId: null, convertedFrom: null, sttFrom: 1, sttTo: 420, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: "g1", projectId: "dev-ltlsbn", kind: "aip", status: "built", hoSoRef: null, label: "CCVTLT · hộp 01–05", objid: "urn:uuid:1", zipName: "CCVTLT-01-05.zip", zipSha256: "9e630ee18a7ad5a1", zipSize: 812_000_000, documentCount: 420, error: null, virusScan: "clean", submissionId: null, convertedFrom: null, sttFrom: 1, sttTo: 420, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
         { id: "g2", projectId: "khac", kind: "aip", status: "built", hoSoRef: null, label: "Dự án khác", objid: null, zipName: "x.zip", zipSha256: null, zipSize: 1, documentCount: 1, error: null, virusScan: null, submissionId: null, convertedFrom: null, sttFrom: null, sttTo: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       ];
     case "cl_ho_so_list": {

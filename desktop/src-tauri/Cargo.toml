@@ -47,6 +47,7 @@ x25519-dalek = "2"
 cryptoki = "0.12"
 rusqlite = { version = "0.31", features = ["bundled"] }
 lopdf = "0.42.0"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 pdfium-render = { version = "0.9.4", default-features = false, features = ["image_025", "thread_safe", "pdfium_latest"] }
 x509-cert = "0.2"
 der = { version = "0.7", features = ["oid"] }

@@ -45,6 +45,6 @@ export function V4rv(V2nt: {
   return invoke<V4rt>("package_create", { args: V2nt });
 }
 
-export function V4rw(V2nu: string, V2nv: string): Promise<string> {
-  return invoke<string>("package_download", { args: { id: V2nu, zipName: V2nv } });
+export function V4rw(V2nu: string, V2nv: string, dir?: string): Promise<string> {
+  return invoke<string>("package_download", { args: { id: V2nu, zipName: V2nv, dir: dir ?? null } });
 }

@@ -85,6 +85,51 @@ struct Resp {
 
 /// Khoá ghép: chữ thường, bỏ tiền tố "hộp"/"hop"/"hồ sơ"/"ho so"/"hs", bỏ ký tự không phải chữ số/chữ cái ở hai đầu,
 /// toàn chữ số thì bỏ số 0 đầu ("01" = "1"; "572A" giữ nguyên).
+/// Bộ ghép mục lục ↔ tài liệu máy chủ theo (hộp, hồ sơ số), dùng chung cho Tạo văn bản từ OCR và Kiểm tra sản phẩm.
+/// Khớp đúng cả hai trước; không khớp thì thử theo riêng số hồ sơ khi mục lục không kê hộp cho hồ sơ đó, hoặc khi tài
+/// liệu không nằm trong thư mục hộp (4/11/2026: mục lục Sở Công nghiệp BG, Sở Lâm nghiệp HB không có cột hộp).
+pub(super) struct BoGhep {
+    theo_khoa: HashMap<(String, String), Vec<usize>>,
+    theo_hs_khong_hop: HashMap<String, Vec<usize>>,
+    theo_hs: HashMap<String, Vec<usize>>,
+}
+impl BoGhep {
+    /// `hs` = hồ sơ số (hoặc số tạm khi chưa có); thứ tự phần tử = chỉ số trả về.
+    pub(super) fn new<'a>(ho_sos: impl Iterator<Item = (Option<&'a str>, &'a str)>) -> Self {
+        let mut b = BoGhep { theo_khoa: HashMap::new(), theo_hs_khong_hop: HashMap::new(), theo_hs: HashMap::new() };
+        for (i, (hop, hs)) in ho_sos.enumerate() {
+            let kh = khoa(hop.unwrap_or(""));
+            let ks = khoa(hs);
+            if kh.is_empty() {
+                b.theo_hs_khong_hop.entry(ks.clone()).or_default().push(i);
+            }
+            b.theo_hs.entry(ks.clone()).or_default().push(i);
+            b.theo_khoa.entry((kh, ks)).or_default().push(i);
+        }
+        b
+    }
+    /// Các hồ sơ khớp (rỗng = không khớp; hơn một = trùng, không tự ghép).
+    pub(super) fn tim(&self, hop: &str, ho_so: &str) -> &[usize] {
+        let kh = khoa(hop);
+        let ks = khoa(ho_so);
+        if ks.is_empty() {
+            return &[];
+        }
+        if let Some(v) = self.theo_khoa.get(&(kh.clone(), ks.clone())) {
+            return v;
+        }
+        if let Some(v) = self.theo_hs_khong_hop.get(&ks) {
+            return v;
+        }
+        if kh.is_empty() {
+            if let Some(v) = self.theo_hs.get(&ks) {
+                return v;
+            }
+        }
+        &[]
+    }
+}
+
 pub(super) fn khoa(s: &str) -> String {
     let mut t = s.trim().to_lowercase();
     // bỏ dấu đơn giản cho hai từ tiền tố thường gặp
@@ -231,25 +276,20 @@ async fn tu_ocr(State(st): State<AppState>, ts: Ts, Json(b): Json<Req>) -> Resul
         let chon: BTreeSet<Uuid> = b.ho_so_ids.iter().copied().collect();
         ho_sos.retain(|h| chon.contains(&h.id));
     }
-    let mut theo_khoa: HashMap<(String, String), Vec<usize>> = HashMap::new();
-    for (i, h) in ho_sos.iter().enumerate() {
-        let hs = h.ho_so_so.as_deref().filter(|s| !s.trim().is_empty()).unwrap_or(h.so_tam.as_str());
-        theo_khoa.entry((khoa(h.hop_so.as_deref().unwrap_or("")), khoa(hs))).or_default().push(i);
-    }
+    let bo_ghep = BoGhep::new(ho_sos.iter().map(|h| (h.hop_so.as_deref(), h.ho_so_so.as_deref().filter(|s| !s.trim().is_empty()).unwrap_or(h.so_tam.as_str()))));
 
     // 2. Tài liệu của dự án → hồ sơ.
     let docs = documents::list_for_project_refs(&st.pool, b.project_id).await?;
     let mut tep_cua: HashMap<usize, Vec<&documents::DocRefRow>> = HashMap::new();
     for d in &docs {
-        let k = (khoa(&d.hop), khoa(&d.ho_so));
-        match theo_khoa.get(&k) {
-            Some(v) if v.len() == 1 => tep_cua.entry(v[0]).or_default().push(d),
-            Some(_) => {
+        match bo_ghep.tim(&d.hop, &d.ho_so) {
+            [i] => tep_cua.entry(*i).or_default().push(d),
+            [_, _, ..] => {
                 if b.after.is_none() {
                     out.tai_lieu_khong_khop.push(KhongKhop { document_id: d.id, filename: d.filename.clone(), ly_do: format!("Hộp {}/hồ sơ {} trùng giữa hồ sơ vĩnh viễn và có thời hạn — chọn hồ sơ và chạy cho riêng hồ sơ đó", d.hop, d.ho_so) });
                 }
             }
-            None => {
+            [] => {
                 if b.after.is_none() && b.ho_so_ids.is_empty() {
                     out.tai_lieu_khong_khop.push(KhongKhop { document_id: d.id, filename: d.filename.clone(), ly_do: format!("Không có hồ sơ hộp {:?} / hồ sơ số {:?} trong phông", d.hop, d.ho_so) });
                 }
@@ -408,7 +448,7 @@ async fn noi_tep(st: &AppState, ctx: &cl::OpCtx<'_>, vb_id: Uuid, d: &documents:
 
 #[cfg(test)]
 mod tests {
-    use super::{khoa, stt_tu_ten_tep, tach_so_ky_hieu};
+    use super::{khoa, stt_tu_ten_tep, tach_so_ky_hieu, BoGhep};
 
     #[test]
     fn khoa_bo_tien_to_va_so_khong() {
@@ -420,6 +460,16 @@ mod tests {
         assert_eq!(khoa("572A"), "572a");
         assert_eq!(khoa(""), "");
         assert_eq!(khoa("000"), "0");
+        // Bộ ghép: đủ hộp → khớp đúng; mục lục không kê hộp → khớp theo số hồ sơ; có hộp mà lệch hộp → không khớp.
+        let rows: Vec<(Option<&str>, &str)> = vec![(Some("01"), "1"), (Some("02"), "2"), (None, "7"), (Some("03"), "9"), (None, "9")];
+        let g = BoGhep::new(rows.into_iter());
+        assert_eq!(g.tim("HOP 01", "HO SO 01"), &[0]);
+        assert_eq!(g.tim("HOP 05", "HO SO 02"), &[] as &[usize]);
+        assert_eq!(g.tim("HOP 04", "HO SO 7"), &[2]);
+        assert_eq!(g.tim("", "2"), &[1]);
+        assert_eq!(g.tim("HOP 03", "9"), &[3]);
+        assert_eq!(g.tim("", "9"), &[4]);
+        assert_eq!(g.tim("HOP 01", ""), &[] as &[usize]);
     }
 
     #[test]

@@ -1139,6 +1139,7 @@ dependencies = [
  "uuid",
  "x25519-dalek",
  "x509-cert",
+ "zip 2.4.2",
 ]
 
 [[package]]

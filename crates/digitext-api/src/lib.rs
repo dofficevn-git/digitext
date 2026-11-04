@@ -6,6 +6,7 @@ pub mod app;
 pub mod backfill;
 pub mod bienban;
 pub mod cli;
+pub mod docx;
 pub mod client_ip;
 pub mod config;
 pub mod copy_sign;
