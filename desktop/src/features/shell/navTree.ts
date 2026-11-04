@@ -179,6 +179,13 @@ function nhom(id: string): V46s {
 const NAV_LUU_TRU: V46s[] = [
   nhom("home"),
   {
+    id: "nhaphethong",
+    label: "Nhập Hệ thống",
+    icon: "nhapKho",
+    gate: "nhapgoi",
+    children: [{ id: "nhapgoi", label: "Nhập gói AIP", gate: "nhapgoi", leaf: { kind: "view", view: "nhapgoi" }, keywords: "nhap he thong goi aip sip tt05 dieu 9 khoan 7 tiep nhan" }],
+  },
+  {
     id: "tracuu",
     label: "Tra cứu",
     icon: "tim",

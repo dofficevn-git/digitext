@@ -9,6 +9,7 @@ pub mod devices;
 pub mod disposal;
 pub mod documents;
 pub mod info;
+pub mod ingest;
 pub mod kie_examples;
 pub mod notifications;
 pub mod ocr_fields;

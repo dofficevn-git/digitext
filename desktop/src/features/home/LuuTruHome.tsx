@@ -1,6 +1,6 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Tổng quan của bản Lưu trữ (4/11/2026, docs/KE-HOACH-BAN-LUU-TRU.md): việc chờ của cán bộ lưu trữ (yêu cầu khai thác,
-// cung cấp thông tin), tình trạng bảo quản, lối tắt nhóm Lưu trữ số. Số liệu mục lục / gói đã nhập thêm ở GĐ3–4.
+// cung cấp thông tin), tình trạng bảo quản, lối tắt nhóm Lưu trữ số (cả Nhập gói AIP, GĐ3). Số liệu mục lục thêm ở GĐ4.
 
 import { useCallback } from "react";
 import { V3z9 } from "@/domain/permissions";
@@ -62,6 +62,7 @@ export default function LuuTruHome() {
 
   type LoiTat = { label: string; icon: IconName; run: () => void; show: boolean };
   const loiTat = ([
+    { label: "Nhập gói AIP", icon: "nhapKho", run: () => goto("nhapgoi"), show: has("submission.approve") },
     { label: "Mục lục hồ sơ", icon: "tim", run: () => gotoKhoGia("khaithac"), show: has("dossier.read") || has("catalog.read") },
     { label: "Khai thác", icon: "luuTruSo", run: () => goto("access"), show: coKhaiThac },
     { label: "Cung cấp thông tin", icon: "thongTin", run: () => goto("info"), show: coKhaiThac },

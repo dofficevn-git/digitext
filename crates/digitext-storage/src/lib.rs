@@ -544,7 +544,18 @@ impl ObjectStore for WormGuard {
     fn ensure_ready<'a>(&'a self) -> Tm3<'a, ()> {
         self.inner.ensure_ready()
     }
+    /// Gói lưu trữ (`*-packages/`) ghi một lần: đã có thì chỉ chấp nhận ghi lại ĐÚNG nội dung cũ (worker thử lại, nhập gói
+    /// chạy lại), khác nội dung → từ chối (4/11/2026, trước đó chỉ chặn xoá).
     fn put<'a>(&'a self, key: &'a str, bytes: &'a [u8]) -> Tm3<'a, ()> {
+        if f_1jb(key) {
+            return Box::pin(async move {
+                match self.inner.get(key).await? {
+                    Some(cu) if cu.as_slice() == bytes => Ok(()),
+                    Some(_) => Err(StorageError::Immutable(key.to_owned())),
+                    None => self.inner.put(key, bytes).await,
+                }
+            });
+        }
         self.inner.put(key, bytes)
     }
     fn delete<'a>(&'a self, key: &'a str) -> Tm3<'a, ()> {
@@ -572,4 +583,23 @@ fn f_13g(r_5gr: &str) -> String {
         .decode_utf8()
         .map(|r_5gs| r_5gs.into_owned())
         .unwrap_or_else(|_| r_5gr.to_owned())
+}
+
+#[cfg(test)]
+mod worm_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn goi_ghi_mot_lan_nhung_ghi_lai_dung_noi_dung_duoc() {
+        let dir = std::env::temp_dir().join(format!("worm-{}", Uuid::now_v7()));
+        let g = WormGuard::new(std::sync::Arc::new(FsObjectStore::new(&dir)));
+        let k = "p-packages/a.zip";
+        g.put(k, b"goi").await.unwrap();
+        g.put(k, b"goi").await.unwrap();
+        assert!(matches!(g.put(k, b"khac").await, Err(StorageError::Immutable(_))));
+        assert!(matches!(g.delete(k).await, Err(StorageError::Immutable(_))));
+        g.put("p-warm/x.pdf", b"1").await.unwrap();
+        g.put("p-warm/x.pdf", b"2").await.unwrap();
+        let _ = std::fs::remove_dir_all(dir);
+    }
 }

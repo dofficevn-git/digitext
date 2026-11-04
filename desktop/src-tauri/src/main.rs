@@ -43,6 +43,7 @@ mod telemetry;
 mod pkgcheck;
 mod bundle;
 mod edition;
+mod ingest;
 mod update;
 mod tiff;
 use tauri::Manager;
@@ -92,6 +93,12 @@ fn main() {
             auth::commands::auth_set_server_url,
             update::update_check,
             update::update_install,
+            ingest::ingest_discover,
+            ingest::ingest_batch_create,
+            ingest::ingest_batches,
+            ingest::ingest_batch_items,
+            ingest::ingest_batch_finish,
+            ingest::ingest_upload,
             auth::commands::auth_validate_online,
             auth::admin::users_list,
             auth::admin::user_create,

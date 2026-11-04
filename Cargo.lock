@@ -791,6 +791,7 @@ dependencies = [
  "digitext-db",
  "digitext-package",
  "digitext-pdf",
+ "digitext-pkgcheck",
  "digitext-sign-verify",
  "digitext-storage",
  "digitext-telemetry",

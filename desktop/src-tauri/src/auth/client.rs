@@ -318,6 +318,24 @@ pub async fn f_20e<T: serde::de::DeserializeOwned>(
     )
     .await
 }
+/// POST thân byte (tải gói lên theo khúc, nhập gói vào Hệ thống 4/11/2026): trả (mã HTTP, JSON) cả khi 409 để người gọi
+/// đọc lại vị trí máy chủ đang có; mã lỗi khác → ClientError như mọi lời gọi.
+pub async fn post_bytes(base: &str, token: &str, path: &str, body: Vec<u8>) -> Result<(u16, serde_json::Value), ClientError> {
+    let r = http()
+        .post(api(base, path))
+        .timeout(UPLOAD_TIMEOUT)
+        .bearer_auth(token)
+        .header("content-type", "application/octet-stream")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+    let status = r.status().as_u16();
+    if r.status().is_success() || status == 409 {
+        return Ok((status, r.json().await.unwrap_or(serde_json::Value::Null)));
+    }
+    Err(f_rt(r).await)
+}
 fn f_29h(r_f7: &reqwest::Response, name: &str) -> Option<u64> {
     r_f7.headers().get(name)?.to_str().ok()?.parse().ok()
 }

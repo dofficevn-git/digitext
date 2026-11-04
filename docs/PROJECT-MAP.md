@@ -339,6 +339,13 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   bản), `home/LuuTruHome.tsx`; Tauri `edition.rs` (`cfg(luu_tru)` từ `build.rs`), `update.rs` (cập nhật theo máy chủ đang
   kết nối); lớp phủ `tauri.luutru.conf.json`; API `config::edition_luu_tru()` (bỏ route thi công trong `app.rs`),
   `config::public_url()`, `routes/updates.rs` viết lại `latest.json` + `GET /tai-ve`. Phát hành: DEPLOY-DESKTOP §3b.
+  **GĐ3 nhập gói AIP (4/11):** `digitext-api/src/nhap_goi.rs` (dùng chung lệnh `digitext-api nhap-goi` và `routes/ingest.rs`
+  tải lên theo khúc) — `digitext_pkgcheck::check_and_extract` (EAD hồ sơ/văn bản + ghép tệp theo structMap) → zip gốc
+  `{p}-packages/` (`packages.nguon='nhap'`) → `cl_phong` (mã phông trong OBJID) / `cl_ho_so` / `cl_van_ban` / `cl_van_ban_file`
+  qua `apply_op` → `documents` `archived` + `goi_id` + `ky_so` → lớp chữ (lopdf) vào `ocr_results` (engine cố định
+  `lop-chu-goi-nhap`) → `cl_ho_so_goi` (dấu xong, nhập lại không trùng). Migration 0025 + `ingest_batches/items`.
+  `WormGuard.put` chặn ghi đè `*-packages/` khác nội dung. `bootstrap-superadmin --password-file`. Desktop
+  `features/ingest/NhapGoiView.tsx` (`view:nhapgoi`, quyền submission.approve), Tauri `ingest.rs`.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
@@ -393,7 +400,7 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0024` (sửa 3/11/2026)
+### Schema Postgres: `migrations/0001`–`0025` (sửa 4/11/2026; 0025 = nhập gói AIP)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
 (0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05: mở CHECK `records.kind` + cột `ref`,

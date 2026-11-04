@@ -92,6 +92,60 @@ pub struct PackageResult {
     pub verdict: String,
 }
 
+/// Nội dung gói đã đọc — để NHẬP gói vào Hệ thống (bản Lưu trữ, 4/11/2026), không chỉ kiểm.
+#[derive(Debug, Clone, Default)]
+pub struct Extract {
+    /// Đường dẫn từ gốc gói → nội dung (mọi tệp).
+    pub files: BTreeMap<String, Vec<u8>>,
+    /// Trường đơn của EAD hồ sơ (tên phần tử cục bộ → chữ), vd `arcFileCode`, `title`, `maintenance`.
+    pub ho_so: BTreeMap<String, String>,
+    pub docs: Vec<DocExtract>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DocExtract {
+    pub ead_path: String,
+    /// Trường đơn của EAD văn bản, vd `arcDocCode`, `typeName`, `subject`, `issuedDate`.
+    pub fields: BTreeMap<String, String>,
+    /// Tệp dữ liệu của văn bản: theo structMap METS (DMDID → FILEID), không có thì theo tên tệp = mã văn bản.
+    pub data_path: Option<String>,
+}
+
+fn fields_of(e: &El) -> BTreeMap<String, String> {
+    let mut m = BTreeMap::new();
+    for c in &e.children {
+        if c.children.is_empty() {
+            m.entry(c.name.clone()).or_insert_with(|| c.text.trim().to_string());
+        }
+    }
+    m
+}
+
+/// (EAD văn bản, tệp dữ liệu) theo structMap của METS bản đại diện: div DMDID → mdRef của dmdSec, fptr FILEID → FLocat.
+fn cap_ead_tep(m: &El, base: &str) -> Vec<(String, String)> {
+    let dmd: HashMap<&str, String> = m
+        .all("dmdSec")
+        .into_iter()
+        .filter_map(|d| Some((d.attr("ID")?, resolve(base, d.all("mdRef").first()?.attr("href")?))))
+        .collect();
+    let file: HashMap<&str, String> = m
+        .all("file")
+        .into_iter()
+        .filter_map(|f| Some((f.attr("ID")?, resolve(base, f.all("FLocat").first()?.attr("href")?))))
+        .collect();
+    let mut out = Vec::new();
+    for div in m.all("div") {
+        let Some(ids) = div.attr("DMDID") else { continue };
+        let Some(tep) = div.all("fptr").iter().filter_map(|p| p.attr("FILEID")).find_map(|f| file.get(f)) else { continue };
+        for id in ids.split_whitespace() {
+            if let Some(ead) = dmd.get(id) {
+                out.push((ead.clone(), tep.clone()));
+            }
+        }
+    }
+    out
+}
+
 struct Ctx {
     f: Vec<Finding>,
 }
@@ -352,13 +406,18 @@ fn mets_info(m: &El) -> (String, String, String, String, String) {
 
 /// Kiểm một gói (tệp .zip hoặc thư mục).
 pub fn check_path(path: &Path) -> PackageResult {
+    check_and_extract(path).0
+}
+
+/// Kiểm một gói và trả kèm nội dung đã đọc (None khi không đọc được gói / thiếu METS.xml gốc).
+pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
     let name = path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let mut res = PackageResult { source: path.display().to_string(), name: name.clone(), kind: "?".into(), ..Default::default() };
     let loaded = match load::load(path) {
         Ok(l) => l,
         Err(e) => {
             res.findings.push(Finding::new(Level::Err, "Cấu trúc", e));
-            return finish(res);
+            return (finish(res), None);
         }
     };
     res.root = loaded.root.clone();
@@ -393,7 +452,7 @@ pub fn check_path(path: &Path) -> PackageResult {
     let Some(root_mets) = parsed.get("METS.xml") else {
         c.err("Cấu trúc", "Thiếu METS.xml ở gốc gói");
         res.findings = c.f;
-        return finish(res);
+        return (finish(res), None);
     };
     let (kind, org, sw, created, profile) = mets_info(root_mets);
     res.kind = if kind.is_empty() { "?".into() } else { kind.to_uppercase() };
@@ -769,7 +828,36 @@ pub fn check_path(path: &Path) -> PackageResult {
         }
     }
     res.findings = c.f;
-    finish(res)
+
+    // Nội dung để nhập: EAD hồ sơ, từng EAD văn bản ghép tệp dữ liệu.
+    let ho_so = ead_path.and_then(|p| parsed.get(p)).map(fields_of).unwrap_or_default();
+    let mut cap: HashMap<String, String> = HashMap::new();
+    for mp in mets_paths.iter().skip(1) {
+        if let Some(m) = parsed.get(mp.as_str()) {
+            cap.extend(cap_ead_tep(m, dir_of(mp)));
+        }
+    }
+    let mut docs: Vec<DocExtract> = doc_eads
+        .iter()
+        .map(|(p, e)| {
+            let fields = fields_of(e);
+            let data_path = cap.get(*p).filter(|t| files.contains_key(*t)).cloned().or_else(|| {
+                let code = fields.get("arcDocCode").or_else(|| fields.get("docCode")).filter(|c| !c.is_empty())?;
+                data.iter().map(|(dp, _)| dp.as_str()).find(|dp| {
+                    let n = dp.rsplit('/').next().unwrap_or(dp);
+                    n.rsplit_once('.').map(|x| x.0).unwrap_or(n) == code
+                }).map(str::to_string)
+            });
+            DocExtract { ead_path: (*p).to_string(), fields, data_path }
+        })
+        .collect();
+    docs.sort_by(|a, b| a.ead_path.cmp(&b.ead_path));
+    drop(cap);
+    drop(doc_eads);
+    drop(data);
+    drop(parsed);
+    let files = loaded.files;
+    (finish(res), Some(Extract { files, ho_so, docs }))
 }
 
 fn finish(mut res: PackageResult) -> PackageResult {
@@ -818,6 +906,22 @@ mod tests {
             std::fs::write(&out, report::render(&h, &all, &font).unwrap()).unwrap();
             println!("báo cáo: {out}");
         }
+    }
+
+    /// `DIGITEXT_PKG_SAMPLE=<gói.zip> cargo test -p digitext-pkgcheck thu_doc_noi_dung -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn thu_doc_noi_dung() {
+        let p = std::env::var("DIGITEXT_PKG_SAMPLE").unwrap();
+        let (r, ex) = check_and_extract(std::path::Path::new(&p));
+        let ex = ex.expect("đọc được gói");
+        println!("{} · {} · {} · hồ sơ {:?}", r.kind, r.objid, r.verdict, ex.ho_so);
+        let co_tep = ex.docs.iter().filter(|d| d.data_path.is_some()).count();
+        println!("{} văn bản, {co_tep} có tệp", ex.docs.len());
+        for d in ex.docs.iter().take(3) {
+            println!("  {} → {:?} · {:?}", d.ead_path, d.data_path, d.fields);
+        }
+        assert_eq!(co_tep, ex.docs.len());
     }
 
     #[test]

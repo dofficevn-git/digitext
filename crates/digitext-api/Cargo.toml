@@ -10,6 +10,7 @@ digitext-db = { path = "../digitext-db" }
 digitext-storage = { path = "../digitext-storage" }
 digitext-pdf = { path = "../digitext-pdf" }
 digitext-package = { path = "../digitext-package" }
+digitext-pkgcheck = { path = "../digitext-pkgcheck" }
 digitext-sign-verify = { path = "../digitext-sign-verify" }
 digitext-telemetry = { path = "../digitext-telemetry" }
 anyhow = { workspace = true }
@@ -21,6 +22,7 @@ chrono = { workspace = true }
 ed25519-dalek = { workspace = true }
 http-body-util = { workspace = true }
 jsonwebtoken = { workspace = true }
+lopdf = "0.43"
 rand = { workspace = true }
 reqwest = { workspace = true }
 rsa = { version = "0.9", features = ["sha2"] }

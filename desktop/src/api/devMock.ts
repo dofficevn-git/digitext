@@ -44,6 +44,16 @@ export function devMock(cmd: string, args?: Record<string, unknown>): unknown {
     }
     case "info_list":
       return [{ id: "i1", projectId: "dev-ltlsbn", requester: "u2", hinhThuc: "danh_muc", chuDe: "Danh mục hồ sơ quy hoạch đô thị 2001–2010", mucDich: "Phục vụ quy hoạch", phuongThuc: null, status: "approved", reviewNote: null, phi: 0, paidAt: null, coKetQua: false, bienTap: null, approvedAt: null, fulfilledAt: null, createdAt: new Date(Date.now() - 86_400_000).toISOString(), updatedAt: new Date().toISOString() }];
+    case "ingest_batches":
+      return [
+        { id: "l1", nguon: "lenh", ghiChu: "Bàn giao lần 1 — ổ cứng", nguoiTao: "Quản trị thử", createdAt: new Date(Date.now() - 86_400_000).toISOString(), finishedAt: new Date().toISOString(), tong: 3, nhap: 3, daCo: 0, tuChoi: 0, loi: 0, soVanBan: 150, soChuaKy: 0 },
+        { id: "l2", nguon: "tai_len", ghiChu: null, nguoiTao: "Quản trị thử", createdAt: new Date().toISOString(), finishedAt: new Date().toISOString(), tong: 2, nhap: 1, daCo: 0, tuChoi: 1, loi: 0, soVanBan: 76, soChuaKy: 4 },
+      ];
+    case "ingest_batch_items":
+      return [
+        { id: "g1", tenTep: "urn_H49.132.02_uuid_0A6AC212.zip", objid: "urn:H49.132.02:uuid:0A6AC212", loaiGoi: "AIP", sizeBytes: 66_032_856, ketQua: "nhap", ketLuanKiem: "ĐẠT (có cảnh báo)", soLoi: 0, soCanhBao: 2, maHoSo: "H49.132.02.2017.01.04", tieuDe: "Tờ khai đăng ký lại việc sinh xã Điền Xá năm 2017", soVanBan: 76, soChuaKy: 4, thongBao: "4 tệp chưa ký số", chiTiet: [{ level: "warn", group: "Chữ ký số", message: "4/76 tệp chưa ký số" }], createdAt: new Date().toISOString() },
+        { id: "g2", tenTep: "goi-loi.zip", objid: null, loaiGoi: "AIP", sizeBytes: 1_200_000, ketQua: "tu_choi", ketLuanKiem: "KHÔNG ĐẠT", soLoi: 3, soCanhBao: 1, maHoSo: null, tieuDe: null, soVanBan: 0, soChuaKy: 0, thongBao: "Kiểm gói KHÔNG ĐẠT (3 lỗi)", chiTiet: [{ level: "err", group: "METS", message: "representations/rep1/data/x.pdf sai mã băm SHA-256" }], createdAt: new Date().toISOString() },
+      ];
     case "ops_integrity_report":
       return { tongTaiLieu: 205_007, daKiem3Nam: 41_200, soLoi: 0, tepLoi: [] };
     case "records_list":

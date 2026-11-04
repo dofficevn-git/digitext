@@ -32,9 +32,10 @@ async fn run(r_1r: &[String]) -> anyhow::Result<()> {
         None | Some("serve") => serve().await,
         Some("bootstrap-superadmin") => f_v2(&r_1r[1..]).await,
         Some("backfill-source-pdfs") => backfill_source_pdfs().await,
+        Some("nhap-goi") => nhap_goi(&r_1r[1..]).await,
         Some(other) => {
             bail!(
-                "lệnh không hợp lệ: {other} (dùng: serve | bootstrap-superadmin --username <tên> | backfill-source-pdfs)"
+                "lệnh không hợp lệ: {other} (dùng: serve | bootstrap-superadmin --username <tên> [--password-file <tệp>] | backfill-source-pdfs | nhap-goi --du-an <mã> --nguoi <tên> [--nhan-ca-goi-loi] <thư mục|gói.zip>…)"
             )
         }
     }
@@ -324,22 +325,25 @@ fn f_2gs(r_2d: sqlx::PgPool) {
         }
     });
 }
-fn f_1ye(r_2g: &[String]) -> anyhow::Result<(String, Option<String>)> {
+fn f_1ye(r_2g: &[String]) -> anyhow::Result<(String, Option<String>, Option<String>)> {
     let mut username: Option<&str> = None;
     let mut r_2h: Option<&str> = None;
+    let mut tep_mk: Option<&str> = None;
     let mut r_2i = r_2g.iter();
     while let Some(r_2f) = r_2i.next() {
         match r_2f.as_str() {
             "--username" => username = r_2i.next().map(String::as_str),
             "--display-name" => r_2h = r_2i.next().map(String::as_str),
+            // Bộ cài máy chủ (bản Lưu trữ) chạy không có người gõ: mật khẩu đọc từ tệp (dòng đầu), xoá tệp sau khi cài.
+            "--password-file" => tep_mk = r_2i.next().map(String::as_str),
             other => bail!("tham số không hợp lệ: {other}"),
         }
     }
     let username = username.context("thiếu --username <tên>")?;
-    Ok((username.to_owned(), r_2h.map(str::to_owned)))
+    Ok((username.to_owned(), r_2h.map(str::to_owned), tep_mk.map(str::to_owned)))
 }
 async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
-    let (username, r_2l) = f_1ye(r_2j)?;
+    let (username, r_2l, tep_mk) = f_1ye(r_2j)?;
     let r_2k = Config::from_env()?;
     let r_2m = digitext_db::f_11d(&r_2k.database_url).await?;
     if users::count(&r_2m).await? > 0 {
@@ -347,8 +351,14 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
             "bảng users đã có dữ liệu — bootstrap-superadmin chỉ chạy trên hệ thống trống"
         );
     }
-    let r_2n = rpassword::prompt_password("Mật khẩu super admin: ")?;
-    let r_2o = rpassword::prompt_password("Nhập lại mật khẩu: ")?;
+    let (r_2n, r_2o) = match tep_mk {
+        Some(t) => {
+            let mk = std::fs::read_to_string(&t).with_context(|| format!("đọc tệp mật khẩu {t}"))?;
+            let mk = mk.lines().next().unwrap_or("").trim_end_matches('\r').to_string();
+            (mk.clone(), mk)
+        }
+        None => (rpassword::prompt_password("Mật khẩu super admin: ")?, rpassword::prompt_password("Nhập lại mật khẩu: ")?),
+    };
     if r_2n != r_2o {
         bail!("hai lần nhập mật khẩu không khớp");
     }
@@ -372,6 +382,91 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
     println!(
         "Đã tạo super admin '{}' (id {}).",
         r_2p.username, r_2p.id
+    );
+    Ok(())
+}
+
+/// `nhap-goi --du-an <mã|id> --nguoi <tên đăng nhập> [--nhan-ca-goi-loi] [--ghi-chu <chữ>] <thư mục|gói.zip>…` — nhập gói
+/// AIP/SIP vào Hệ thống từ ổ cứng giao kèm bộ hồ sơ nghiệm thu (bản Lưu trữ GĐ3). Tìm gói trong thư mục như Kiểm tra gói tin.
+async fn nhap_goi(args: &[String]) -> anyhow::Result<()> {
+    let mut du_an: Option<String> = None;
+    let mut nguoi: Option<String> = None;
+    let mut cho_phep_loi = false;
+    let mut ghi_chu: Option<String> = None;
+    let mut duong_dan: Vec<String> = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--du-an" => du_an = it.next().cloned(),
+            "--nguoi" => nguoi = it.next().cloned(),
+            "--nhan-ca-goi-loi" => cho_phep_loi = true,
+            "--ghi-chu" => ghi_chu = it.next().cloned(),
+            x if x.starts_with("--") => bail!("tham số không hợp lệ: {x}"),
+            x => duong_dan.push(x.to_owned()),
+        }
+    }
+    let du_an = du_an.context("thiếu --du-an <mã dự án>")?;
+    let nguoi = nguoi.context("thiếu --nguoi <tên đăng nhập> (người chịu trách nhiệm nhập, ghi vào lịch sử)")?;
+    if duong_dan.is_empty() {
+        bail!("thiếu đường dẫn gói hoặc thư mục chứa gói");
+    }
+    let cfg = Config::from_env()?;
+    let pool = digitext_db::f_11d(&cfg.database_url).await.context("kết nối Postgres thất bại")?;
+    let store = digitext_storage::f_vr(cfg.minio.as_ref(), cfg.pdf_store_bucket.as_deref(), cfg.pdf_store_dir.as_deref())
+        .context("dựng kho thất bại")?
+        .context("chưa cấu hình kho (DIGITEXT_PDF_STORE_BUCKET + DIGITEXT_MINIO_* hoặc DIGITEXT_PDF_STORE_DIR)")?;
+    store.ensure_ready().await.context("kho chưa sẵn sàng")?;
+    let store = digitext_storage::WormGuard::new(store);
+    let project: (uuid::Uuid, String) = sqlx::query_as("SELECT id, name FROM projects WHERE id::text = $1 OR lower(code) = lower($1)")
+        .bind(&du_an)
+        .fetch_optional(&pool)
+        .await?
+        .with_context(|| format!("không có dự án {du_an}"))?;
+    let user = users::f_1eh(&pool, &nguoi).await?.with_context(|| format!("không có người dùng {nguoi}"))?;
+    let goi = digitext_pkgcheck::discover(&duong_dan);
+    if goi.is_empty() {
+        bail!("không thấy gói nào (tệp .zip hoặc thư mục có METS.xml) trong {}", duong_dan.join(", "));
+    }
+    println!("Dự án {} · {} gói · người nhập {}{}", project.1, goi.len(), user.display_name, if cho_phep_loi { " · NHẬN CẢ GÓI LỖI" } else { "" });
+    let batch_id = crate::nhap_goi::tao_lo(&pool, project.0, user.id, "lenh", ghi_chu.as_deref()).await?;
+    let all = |_p: digitext_core::Permission| true;
+    let ctx = crate::nhap_goi::NhapCtx {
+        pool: &pool,
+        store: &store,
+        project_id: project.0,
+        user_id: user.id,
+        user_name: &user.display_name,
+        device_id: None,
+        has_perm: &all,
+        is_super: true,
+        batch_id,
+        cho_phep_loi,
+    };
+    let mut dem: std::collections::BTreeMap<&'static str, usize> = std::collections::BTreeMap::new();
+    let (mut vb, mut chua_ky) = (0usize, 0usize);
+    for (i, g) in goi.iter().enumerate() {
+        let kq = crate::nhap_goi::nhap_goi(&ctx, g).await?;
+        *dem.entry(kq.ket_qua).or_default() += 1;
+        vb += kq.so_van_ban;
+        chua_ky += kq.so_chua_ky;
+        println!(
+            "[{}/{}] {} · {} · {} · {} văn bản{}",
+            i + 1,
+            goi.len(),
+            kq.ten_tep,
+            kq.ket_qua,
+            kq.ma_ho_so,
+            kq.so_van_ban,
+            kq.thong_bao.map(|t| format!(" · {t}")).unwrap_or_default()
+        );
+    }
+    crate::nhap_goi::ket_thuc_lo(&pool, batch_id).await?;
+    println!(
+        "Xong lô {batch_id}: nhập {} · đã có {} · từ chối {} · lỗi {} · {vb} văn bản · {chua_ky} tệp chưa ký",
+        dem.get("nhap").unwrap_or(&0),
+        dem.get("da_co").unwrap_or(&0),
+        dem.get("tu_choi").unwrap_or(&0),
+        dem.get("loi").unwrap_or(&0)
     );
     Ok(())
 }

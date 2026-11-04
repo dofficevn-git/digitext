@@ -59,7 +59,22 @@ tệp bộ cài đổi sang tên ASCII khi phát hành.
 5. **Linux:** `Dockerfile` API/worker + `infra/compose/luutru/docker-compose.yml` (postgres, minio, api, worker, caddy) + `cai-dat.sh`.
 6. `docs/CAI-DAT-MAY-CHU-LUU-TRU.md` cho kỹ thuật viên CĐT.
 
-### GĐ3 — Nhập gói AIP vào Hệ thống (5–7 ngày)
+### GĐ3 — Nhập gói AIP vào Hệ thống (5–7 ngày) — XONG 4/11/2026 (nhánh `feat/ban-luu-tru`)
+
+Đã làm và chạy thử trên Postgres trống (migration 0001–0025 áp sạch) với 3 gói Diễn Xá (`test/dienxa/goi-thu`, bộ dựng đời
+cũ, kiểm KHÔNG ĐẠT nên dùng `--nhan-ca-goi-loi`): 3 hồ sơ, 150 văn bản, 150 tài liệu `archived` chữ ký hợp lệ, 3 zip gốc,
+lớp chữ 114 tài liệu — 16 giây. Nhập lại → "đã có"; chế độ chặt → từ chối; dừng giữa chừng rồi chạy lại → không trùng.
+Đường HTTP (lô → khúc 40 MB + 26 MB, lệch offset trả 409 → nhập → kết thúc) chạy với API bản lưu trữ.
+
+Lệnh máy chủ:
+```
+digitext-api nhap-goi --du-an <mã dự án> --nguoi <tên đăng nhập> [--nhan-ca-goi-loi] [--ghi-chu "<chữ>"] <thư mục|gói.zip>…
+```
+
+Quy tắc đã chốt: chữ ký KHÔNG toàn vẹn → luôn từ chối; tệp chưa ký → nhận, `documents.ky_so = 'chua_ky'`, đếm trong báo cáo;
+kiểm gói có lỗi → từ chối trừ khi bật nhận cả gói lỗi; cùng mã hồ sơ từ gói khác → từ chối (xoá hồ sơ cũ trước). Hộp không
+suy ra từ gói (gói không mang số hộp; `paperFileCode` thường trùng mã hồ sơ) — để GĐ4 nếu cần. Lớp chữ gói Diễn Xá không dấu
+(nghi lớp chữ OCR cũ của chính gói) — kiểm lại trên gói DigiText đóng.
 1. pkgcheck thành thư viện: `pub mod load/xml`, `load_bytes`, hàm trả cây EAD + bản đồ METS DMDID→FILEID.
 2. Migration 0025: `packages.nguon` (`dung`/`nhap`), `request_json` được rỗng với gói nhập; `cl_ho_so.ma_ho_so_goc`,
    `cl_ho_so.objid` (nhập lại không trùng); bảng `ingest_batches`/`ingest_items` (lô, từng gói, kết quả kiểm, lỗi).

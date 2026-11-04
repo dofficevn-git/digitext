@@ -139,7 +139,8 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::info::router())
         .merge(crate::routes::ops::router())
         .merge(crate::routes::changes::router())
-        .merge(crate::routes::chinh_ly::router());
+        .merge(crate::routes::chinh_ly::router())
+        .merge(crate::routes::ingest::router());
     // Bản Lưu trữ (máy chủ cơ quan chủ đầu tư) không gắn các route chỉ dùng khi thi công số hoá.
     if crate::config::edition_luu_tru() {
         return chung;
