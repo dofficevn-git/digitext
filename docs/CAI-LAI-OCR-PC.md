@@ -16,8 +16,7 @@ Gỡ tạm vòng đọc lặp (không sửa được ổ): `wsl --shutdown` rồ
 có `--restart=no` phải `docker start` tay, rồi chạy lại `doc_extract_pla.exe`).
 
 **Cập nhật 4/11 trưa:** thực ra ổ có **3 vùng hỏng**: 2 vùng trong `docker_data.vhdx` (mỗi vùng 4 cluster 4 KB liền nhau, tại
-offset 92.409.053.184 và 92.415.741.952 trong tệp — vùng `pla_kie_log.ldf` cũ) và **1 trang 4 KB trong `C:
-8n\.n8n\database.sqlite`**
+offset 92.409.053.184 và 92.415.741.952 trong tệp — vùng `pla_kie_log.ldf` cũ) và **1 trang 4 KB trong `C:\n8n\.n8n\database.sqlite`**
 (trang 177.389, thuộc `execution_data`). Cái đọc lỗi ~290 lần/phút kể cả khi Docker tắt chính là **n8n** đọc CSDL của nó.
 Đã xử lý: `wsl --shutdown` gỡ hai lệnh đọc kẹt (10:24); shrink log `pla_kie` 11,6 GB → 277 MB (`mssql-shrink.sh`); ghi 0 lên
 2 cluster đầu trong vhdx (`ghi-de-sector.ps1`, Docker tắt 3 phút) → đọc lại được; **n8n**: dừng pm2, ghi 0 lên trang hỏng, dựng lại
