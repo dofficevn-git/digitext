@@ -242,3 +242,9 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   (`bk-toan-bo.ps1` + `bk-sqlexpress.ps1`, xem `docs/CAI-LAI-OCR-PC.md` §2). Kiểm kê thêm trên máy: IIS 6 site (D:\DULIEU_66),
   SQL Express 2025 (chỉ CSDL hệ thống), 3 service cloudflared (chính/ct5d/n8n), n8n qua pm2. Chưa `wsl --shutdown` (chờ giờ vắng).
   Việc tiếp: thay NVMe + cài lại theo `docs/CAI-LAI-OCR-PC.md` §3; tắt máy đúng cách, UPS.
+- 4/11/2026 10:00–11:35 — sao lưu toàn bộ C: xong (178 GB, `D:\OCRPC-Backup-20261104`); `wsl --shutdown` gỡ vòng đọc kẹt, dịch vụ lên lại
+  sau 1 phút, WSL nhận 40 GB; phát hiện **vùng hỏng thứ 3 trong `C:
+8n\.n8n\database.sqlite`** (n8n là thứ đọc lỗi 290/phút);
+  shrink log pla_kie, ghi 0 lên cluster hỏng (vhdx + sqlite), dựng lại CSDL n8n sạch (mất 1 dòng execution_data) → lỗi đọc 0/phút.
+  Chi tiết + script: `docs/CAI-LAI-OCR-PC.md` §0. Còn: `ghi-de-sector-2.ps1` lúc rảnh; thay NVMe.
+

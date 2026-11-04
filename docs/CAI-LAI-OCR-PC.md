@@ -15,6 +15,17 @@ không phải do phần mềm. Ổ còn bảo hành (lắp 5/2026) — mang kèm
 Gỡ tạm vòng đọc lặp (không sửa được ổ): `wsl --shutdown` rồi mở lại Docker Desktop (DigiText ngắt ~3 phút; `mssql_container`
 có `--restart=no` phải `docker start` tay, rồi chạy lại `doc_extract_pla.exe`).
 
+**Cập nhật 4/11 trưa:** thực ra ổ có **3 vùng hỏng**: 2 vùng trong `docker_data.vhdx` (mỗi vùng 4 cluster 4 KB liền nhau, tại
+offset 92.409.053.184 và 92.415.741.952 trong tệp — vùng `pla_kie_log.ldf` cũ) và **1 trang 4 KB trong `C:
+8n\.n8n\database.sqlite`**
+(trang 177.389, thuộc `execution_data`). Cái đọc lỗi ~290 lần/phút kể cả khi Docker tắt chính là **n8n** đọc CSDL của nó.
+Đã xử lý: `wsl --shutdown` gỡ hai lệnh đọc kẹt (10:24); shrink log `pla_kie` 11,6 GB → 277 MB (`mssql-shrink.sh`); ghi 0 lên
+2 cluster đầu trong vhdx (`ghi-de-sector.ps1`, Docker tắt 3 phút) → đọc lại được; **n8n**: dừng pm2, ghi 0 lên trang hỏng, dựng lại
+CSDL sạch bằng `n8n-dung-lai.py` (integrity ok, mất đúng 1 dòng `execution_data` rowid 34801 = dữ liệu một lần chạy cũ; CSDL cũ giữ ở
+`database.sqlite.hong-20261104`), bật lại → **lỗi đọc về 0/phút từ 11:32**. Còn 6 cluster kề trong vhdx chưa ghi đè (không ai đọc;
+`ghi-de-sector-2.ps1` quét ±64 MB + ghi đè, chạy lúc rảnh). Script đều ở `C:\DigiText-ChuyenMay\`. Thêm loại trừ Defender cho
+Docker/DigiText (`loai-tru-defender.ps1`). SSD vẫn phải thay: ô dự phòng 90 %, 32,1 triệu lỗi tích luỹ.
+
 ## 1. Máy đang có gì (kiểm kê 4/11/2026)
 
 **Phần cứng:** ASUS TUF GAMING X870-PLUS WIFI, AMD Ryzen 9 9950X, 62 GB RAM, RTX 5070 Ti 16 GB (driver 610.88),
@@ -50,7 +61,9 @@ IIS site/apppool XML, wslconfig, Docker settings, systeminfo, SMART); `csdl\` (p
 `mssql-bak\` (mọi CSDL SQL Server cũ, COPY_ONLY + VERIFYONLY); `sqlexpress-bak\` (master/model/msdb của SQL Express);
 `volumes\` (tar: ct5d minio/uploads/postgres-raw, Qwen, cache OCR, cache vllm cũ, clamav, sqlserver-data cũ); `images\`
 (`docker save` OCR Blackwell, ct5d admin/api); `tep\` (toàn bộ `C:\DigiText*`, `C:\n8n`, `C:\srv`, `C:\SQL2025`, `C:\inetpub`,
-`inetsrv\config`, hồ sơ ADMIN gồm `.pm2 .ssh .docker .cloudflared Documents Desktop Downloads`, cloudflared ProgramData/systemprofile/exe).
+`inetsrv\config`, hồ sơ ADMIN gồm `.pm2 .docker .cloudflared Documents Desktop Downloads`, cloudflared ProgramData/systemprofile/exe;
+`tep
+8n\.n8n\database.sqlite` = bản dựng lại sạch 4/11). **Kết quả 4/11 10:26–10:58: 178 GB** (tep 149, images 11,7, mssql-bak 7,6, volumes 7,5, csdl 1,6), D: còn 1.976 GB.
 
 Có sẵn ở D: từ trước: `D:\doc_extract_pla-backup\2026-11-02\` (46 .bak, app, ảnh vllm v0.15.1 + mssql 2019, tar volume trừ
 `pla_kie_log.ldf`), `D:\DigiText-Backup\csdl\` (dump đêm + dump khẩn 4/11), `D:\DigiText-KhoMayChu` (kho MinIO 800 GB),
