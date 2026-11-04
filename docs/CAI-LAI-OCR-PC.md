@@ -61,8 +61,7 @@ IIS site/apppool XML, wslconfig, Docker settings, systeminfo, SMART); `csdl\` (p
 `volumes\` (tar: ct5d minio/uploads/postgres-raw, Qwen, cache OCR, cache vllm cũ, clamav, sqlserver-data cũ); `images\`
 (`docker save` OCR Blackwell, ct5d admin/api); `tep\` (toàn bộ `C:\DigiText*`, `C:\n8n`, `C:\srv`, `C:\SQL2025`, `C:\inetpub`,
 `inetsrv\config`, hồ sơ ADMIN gồm `.pm2 .docker .cloudflared Documents Desktop Downloads`, cloudflared ProgramData/systemprofile/exe;
-`tep
-8n\.n8n\database.sqlite` = bản dựng lại sạch 4/11). **Kết quả 4/11 10:26–10:58: 178 GB** (tep 149, images 11,7, mssql-bak 7,6, volumes 7,5, csdl 1,6), D: còn 1.976 GB.
+`tep\n8n\.n8n\database.sqlite` = bản dựng lại sạch 4/11). **Kết quả 4/11 10:26–10:58: 178 GB** (tep 149, images 11,7, mssql-bak 7,6, volumes 7,5, csdl 1,6), D: còn 1.976 GB.
 
 Có sẵn ở D: từ trước: `D:\doc_extract_pla-backup\2026-11-02\` (46 .bak, app, ảnh vllm v0.15.1 + mssql 2019, tar volume trừ
 `pla_kie_log.ldf`), `D:\DigiText-Backup\csdl\` (dump đêm + dump khẩn 4/11), `D:\DigiText-KhoMayChu` (kho MinIO 800 GB),
