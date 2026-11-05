@@ -3,6 +3,7 @@
 import V4wm from "./CollectStatusWidget";
 import V4wp from "./UploadStatusWidget";
 import DownloadStatusWidget from "./DownloadStatusWidget";
+import GoiDownloadWidget from "@/features/package/GoiDownloadWidget";
 import "./uploadWidget.css";
 
 export default function V4ws() {
@@ -11,6 +12,7 @@ export default function V4ws() {
       <V4wm />
       <V4wp />
       <DownloadStatusWidget />
+      <GoiDownloadWidget />
     </div>
   );
 }

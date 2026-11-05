@@ -12,6 +12,7 @@ import { V45j, V45k } from "./collects";
 import { V45y } from "@/live/LiveProvider";
 import { ProjectProvider, useProject } from "./project";
 import { DownloadsProvider, useDownloads } from "./downloads";
+import { GoiDownloadsProvider, useGoiDownloads } from "./goiDownloads";
 
 export {
   V407 as useSession,
@@ -24,6 +25,7 @@ export {
   V45k as useCollects,
   useProject,
   useDownloads,
+  useGoiDownloads,
 };
 export type { AuthSession } from "./session";
 export type { V41b as ScanTarget } from "./navigation";
@@ -42,7 +44,9 @@ export function V45z({ children: Vck }: { children: ReactNode }) {
                 <V44l>
                   <V45j>
                     <DownloadsProvider>
-                      <V42d>{Vck}</V42d>
+                      <GoiDownloadsProvider>
+                        <V42d>{Vck}</V42d>
+                      </GoiDownloadsProvider>
                     </DownloadsProvider>
                   </V45j>
                 </V44l>

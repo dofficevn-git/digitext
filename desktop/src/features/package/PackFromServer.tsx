@@ -17,6 +17,7 @@ import { isTauri } from "@/api/ipc";
 import { docsForGroups, docsReviewSummary, type ReviewSummaryRow, type V4ej } from "@/api/docs";
 import { reviewKey, reviewKeyOf } from "@/features/dossier/reviewScope";
 import { V4rv } from "@/api/packaging";
+import { writeXlsx, type Sheet } from "@/features/chinhly/excel";
 import { useProject } from "@/state/project";
 import { V4sk, V4sn, V4su, type V4sj, type V4sm } from "./packageWire";
 import { Badge, Button, Card, Dialog, EmptyState, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
@@ -337,6 +338,98 @@ export default function PackFromServer() {
   }, [trongPhong, hop, q, collator]);
   const idOf = (r: ReviewSummaryRow) => reviewKey(r.projectId, r.phong, r.hop, r.hoSo);
   const daChon = useMemo(() => rows.filter((r) => sel.has(idOf(r))), [rows, sel]);
+  // "Khớp" = có dòng mục lục VÀ không lệch tệp nào. Hồ sơ lệch bị bỏ qua, đóng gói sau khi
+  // bên lập mục lục sửa xong — quyết định của anh Hiếu 5/11/2026.
+  const dongChuan = (d: DongMucLuc | undefined) => !!d && !d.maKhac?.length && !(d.soTep != null && d.soTepKhop != null && d.soTepKhop < d.soTep);
+  const khopHienThi = useMemo(() => loc.filter((r) => dongChuan(mlTheoKhoa.get(khoaHoSo(r.hop, r.hoSo)))), [loc, mlTheoKhoa]);
+  const soKhopChuan = useMemo(() => trongPhong.filter((r) => dongChuan(mlTheoKhoa.get(khoaHoSo(r.hop, r.hoSo)))).length, [trongPhong, mlTheoKhoa]);
+  // Hồ sơ trên máy chủ không có dòng nào trong Excel (cột Tiêu đề ghi "Chưa có trong mục lục").
+  const thieuMucLuc = useMemo(() => trongPhong.filter((r) => !mlTheoKhoa.has(khoaHoSo(r.hop, r.hoSo))), [trongPhong, mlTheoKhoa]);
+  // Dòng Excel ghép được nhưng tệp trong thư mục mang mã hồ sơ khác, hoặc tên tệp không có trong Excel.
+  const lechTep = useMemo(
+    () => (mucLuc?.dongs ?? []).filter((d) => d.maKhac?.length || (d.soTep != null && d.soTepKhop != null && d.soTepKhop < d.soTep)),
+    [mucLuc],
+  );
+  const soLech = dongThieuTep.length + thieuMucLuc.length + (mucLuc?.trung.length ?? 0) + lechTep.length;
+  const [dangXuat, setDangXuat] = useState(false);
+  const xuatLech = async () => {
+    if (!mucLuc) return;
+    setDangXuat(true);
+    try {
+      const ngay = new Date().toLocaleString("vi-VN");
+      const tong: Sheet["aoa"] = [
+        ["Đối chiếu mục lục với tài liệu trên máy chủ"],
+        [],
+        ["Phông", phong],
+        ["Dự án", trongPhong[0]?.projectCode || projectId],
+        ["Tệp mục lục", mucLuc.ten],
+        ["Mã phông trong tệp", mucLuc.fondCode ?? ""],
+        ["Xuất lúc", ngay],
+        [],
+        ["Hồ sơ trong Excel", mucLuc.dongs.length + (mucLuc.khongTep?.length ?? 0)],
+        ["Hồ sơ trên máy chủ", trongPhong.length],
+        ["Khớp hộp/hồ sơ hai bên", soKhop],
+        ["Đóng gói được (khớp và không lệch tệp)", soKhopChuan],
+        ["Chưa đóng gói, chờ sửa mục lục", trongPhong.length - soKhopChuan],
+        [],
+        ["CHỖ LỆCH", "Số dòng", "Ở trang"],
+        [mucLuc.loai === "phang" ? "Mã hồ sơ Excel không thành hồ sơ riêng" : "Dòng mục lục không có tệp trên máy chủ", dongThieuTep.length, "Excel thua"],
+        ["Hồ sơ trên máy chủ chưa có trong Excel", thieuMucLuc.length, "May chu thua"],
+        ["Cặp hộp/hồ sơ trùng trong Excel", mucLuc.trung.length, "Trung trong Excel"],
+        ["Hồ sơ khớp nhưng tệp lệch mã", lechTep.length, "Lech ma tep"],
+        [],
+        ["Hướng dẫn", "Sửa trong tệp mục lục gốc rồi nhập lại; hồ sơ khớp vẫn đóng gói bình thường."],
+      ];
+      const sheets: Sheet[] = [
+        { name: "Tong hop", aoa: tong, cols: [{ wch: 52 }, { wch: 46 }, { wch: 20 }] },
+        {
+          name: "Excel thua",
+          aoa: [
+            ["Dòng", "Mã hồ sơ", "Hộp", "Hồ sơ", "Tiêu đề", "Số tệp trong Excel", "Vì sao không ghép được"],
+            ...dongThieuTep.map((d) => [d.dong, d.maHoSo ?? "", d.hop, d.hoSo, d.tieuDe, d.soTep ?? "", d.lyDo ?? ""] as Sheet["aoa"][number]),
+          ],
+          cols: [{ wch: 7 }, { wch: 26 }, { wch: 10 }, { wch: 10 }, { wch: 60 }, { wch: 18 }, { wch: 60 }],
+        },
+        {
+          name: "May chu thua",
+          aoa: [
+            ["Hộp", "Hồ sơ", "Số tệp", "Số trang", "Đã có PDF/A", "Đã duyệt"],
+            ...thieuMucLuc.map((r) => [r.hop, r.hoSo, r.files, r.pages, r.pdfaDocs, r.approved] as Sheet["aoa"][number]),
+          ],
+          cols: [{ wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 12 }],
+        },
+        {
+          name: "Trung trong Excel",
+          aoa: [
+            ["Hộp", "Hồ sơ", "Tiêu đề dòng được lấy", "Dòng được lấy"],
+            ...mucLuc.trung.map((k) => {
+              const d = mlTheoKhoa.get(k);
+              return [k.split("|")[0] ?? "", k.split("|")[1] ?? "", d?.tieuDe ?? "", d?.dong ?? ""] as Sheet["aoa"][number];
+            }),
+          ],
+          cols: [{ wch: 12 }, { wch: 12 }, { wch: 60 }, { wch: 14 }],
+        },
+        {
+          name: "Lech ma tep",
+          aoa: [
+            ["Dòng", "Mã hồ sơ", "Hộp", "Hồ sơ", "Tệp trong thư mục", "Tệp đúng mã", "Mã khác Excel ghi cho tệp cùng thư mục"],
+            ...lechTep.map(
+              (d) =>
+                [d.dong, d.maHoSo ?? "", d.hop, d.hoSo, d.soTep ?? "", d.soTepKhop ?? "", (d.maKhac ?? []).map((k) => `${k.ma} (${k.soTep} tệp)`).join(", ")] as Sheet["aoa"][number],
+            ),
+          ],
+          cols: [{ wch: 7 }, { wch: 26 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 60 }],
+        },
+      ];
+      const ten = `doi-chieu-muc-luc-${(mucLuc.fondCode || phong).replace(/[^\w.-]+/g, "-")}.xlsx`;
+      await writeXlsx(sheets, ten);
+      toast.success(`Đã xuất ${n(soLech)} chỗ lệch ra Excel.`, { description: ten });
+    } catch (e) {
+      notifyError(e, "xuất Excel đối chiếu");
+    } finally {
+      setDangXuat(false);
+    }
+  };
 
   const tiLe = (a: number, b: number, tone: "ok" | "warn") => (b === 0 ? "—" : <Badge tone={a >= b ? "ok" : a === 0 ? "gray" : tone}>{`${n(a)}/${n(b)}`}</Badge>);
   const cols: Column<ReviewSummaryRow>[] = [
@@ -438,17 +531,33 @@ export default function PackFromServer() {
           <Badge tone="info">{mucLuc.loai === "phang" ? "Metadata" : "Mục lục"}: {mucLuc.ten}</Badge>
           {mucLuc.fondCode && <Badge tone="gray">Mã phông {mucLuc.fondCode}</Badge>}
           <span>
-            {n(mucLuc.dongs.length + (mucLuc.khongTep?.length ?? 0))} hồ sơ trong Excel · khớp <b>{n(soKhop)}</b>/{n(trongPhong.length)} hồ sơ trên máy chủ
+            {n(mucLuc.dongs.length + (mucLuc.khongTep?.length ?? 0))} hồ sơ trong Excel · đóng gói được <b>{n(soKhopChuan)}</b>/{n(trongPhong.length)} hồ sơ trên máy chủ
             {dongThieuTep.length ? <> · <button type="button" className="text-fg-link hover:underline" onClick={() => setXemThieu(true)}>{mucLuc.loai === "phang" ? `${n(dongThieuTep.length)} mã hồ sơ Excel không thành gói riêng` : `${n(dongThieuTep.length)} dòng mục lục không có tệp`}</button></> : null}
             {mucLuc.trung.length ? ` · ${n(mucLuc.trung.length)} cặp hộp/hồ sơ trùng trong tệp` : ""}
           </span>
           <span className="flex-1" />
-          <Button size="sm" variant="ghost" onClick={() => setSel(new Set(loc.filter((r) => mlTheoKhoa.has(khoaHoSo(r.hop, r.hoSo))).map(idOf)))}>
-            Chọn hồ sơ có mục lục
-          </Button>
+          <Tip text="Chọn sẵn hồ sơ khớp mục lục rồi mở hộp thoại đóng gói. Hồ sơ lệch không được lấy vào; bấm Huỷ ở hộp thoại thì phần đã chọn vẫn giữ để sửa tay.">
+            <span>
+              <Button size="sm" variant="primary" icon="goi" disabled={khopHienThi.length === 0} onClick={() => { setSel(new Set(khopHienThi.map(idOf))); setDialog(true); }}>
+                Đóng gói {n(khopHienThi.length)} hồ sơ khớp
+              </Button>
+            </span>
+          </Tip>
+          <Tip text="Xuất Excel mọi chỗ lệch giữa mục lục và tài liệu trên máy chủ (Excel thừa, máy chủ thừa, trùng, tệp lệch mã) để gửi lại bên lập mục lục kiểm tra.">
+            <span>
+              <Button size="sm" variant="secondary" icon="xuatTep" loading={dangXuat} disabled={soLech === 0} onClick={() => void xuatLech()}>
+                Xuất Excel {n(soLech)} chỗ lệch
+              </Button>
+            </span>
+          </Tip>
           <Button size="sm" variant="ghost" icon="xoa" onClick={boMucLuc}>
             Bỏ mục lục
           </Button>
+        </div>
+      )}
+      {mucLuc && phong && soLech > 0 && (
+        <div className="border-b border-border-subtle bg-warning-bg px-3 py-1.5 text-xs text-warning-700">
+          Hồ sơ lệch mục lục được bỏ qua, chưa đóng gói. Xuất Excel gửi bên lập mục lục sửa, nhập lại tệp đã sửa rồi đóng gói nốt phần đó.
         </div>
       )}
       {xemThieu && (

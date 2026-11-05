@@ -279,3 +279,17 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   hai loại; thêm ô lọc loại gói (chỉ liệt kê loại thật sự có trên máy chủ) bên cạnh ô lọc phông. Tải cả lô mà
   chọn lẫn nhiều loại thì tách mỗi loại một thư mục con theo mã loại (`aip_hoso`, `sip_hoso`); chọn một loại thì
   đổ thẳng vào thư mục đã chọn. Chỉ sửa desktop, không đụng máy chủ. Dựng từ worktree sạch ở 9102d37.
+- 5/11/2026 10:00 - **Desktop 0.24.3: khung tiến độ tải gói.** Tải cả lô trước đây chỉ có một dòng chữ trong
+  thanh công cụ, rời màn là mất. Thêm `state/goiDownloads.tsx` (kho trạng thái ở cấp ứng dụng, tải tuần tự vì
+  gói AIP hồ sơ nặng cả trăm MB) và `features/package/GoiDownloadWidget.tsx` dựng theo đúng khuôn
+  `DownloadStatusWidget` (cùng `uploadWidget.css`), cắm vào `TransferDock` cạnh khung đẩy tệp: thanh phần trăm,
+  số gói, dung lượng, tốc độ, thời gian còn lại, gói đang tải, nút dừng, danh sách gói lỗi mở ra được.
+  Xem trước trên trình duyệt: `?dlgoi=1`. Bản 0.24.2 đã dựng và chép lên máy chủ nhưng chưa bật (latest.json
+  còn ở 0.24.1) nên gộp luôn vào 0.24.3.
+- 5/11/2026 10:40 - **Desktop 0.24.4: đóng gói phần đã chuẩn, xuất Excel chỗ lệch.** Anh Hiếu chốt: hồ sơ lệch
+  mục lục thì **bỏ qua**, chờ bên lập mục lục sửa rồi đóng gói sau. Màn Từ hồ sơ: "khớp" nay là **có dòng mục lục
+  VÀ không lệch tệp nào** (`dongChuan` loại cả dòng có `maKhac` lẫn dòng `soTepKhop < soTep`), dải thông tin đếm
+  theo định nghĩa đó ("đóng gói được N/M"), nút chính **Đóng gói N hồ sơ khớp** chọn sẵn đúng phần đó rồi mở hộp
+  thoại. Nút **Xuất Excel N chỗ lệch** ghi `doi-chieu-muc-luc-<mã phông>.xlsx` 5 trang: Tong hop, Excel thua,
+  May chu thua, Trung trong Excel, Lech ma tep — gửi lại bên lập mục lục. Dải cảnh báo vàng nhắc hồ sơ lệch chưa
+  đóng gói. Chỉ sửa desktop, không đụng máy chủ.

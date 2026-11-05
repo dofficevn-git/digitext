@@ -12,6 +12,7 @@ import type { V4bm } from "@/api/dossier";
 import type { V3yo } from "@/domain/types";
 import { V4sk, V4sn, V4su, type V4sj, type V4sm } from "./packageWire";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { useGoiDownloads } from "@/state/goiDownloads";
 import { Badge, Button, Card, collator, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
 
 const so = (s: string | null | undefined): number | null => {
@@ -293,7 +294,7 @@ export function PackageList() {
   const [phongF, setPhongF] = useState("");
   const [loaiF, setLoaiF] = useState("");
   const [chon, setChon] = useState<ReadonlySet<string>>(new Set());
-  const [tienDo, setTienDo] = useState("");
+  const { start: taiGoi, running: dangTaiLo } = useGoiDownloads();
   const phongs = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of data ?? []) if (p.fondCode) m.set(p.fondCode, p.fondName?.trim() || p.fondCode);
@@ -331,27 +332,10 @@ export function PackageList() {
     if (!daChon.length) return;
     const goc = await openDialog({ directory: true, multiple: false, title: `Chọn thư mục lưu ${daChon.length} gói` });
     if (typeof goc !== "string" || !goc) return;
-    // Chọn lẫn nhiều loại gói (SIP và AIP của cùng hồ sơ) thì tách mỗi loại một thư mục con,
-    // chọn một loại thì đổ thẳng vào thư mục đã chọn — khỏi lồng thêm một cấp vô ích.
-    const nhieuLoai = new Set(daChon.map((p) => p.kind)).size > 1;
-    const loi: string[] = [];
-    let xong = 0;
-    for (const [i, p] of daChon.entries()) {
-      setTienDo(`Đang tải ${i + 1}/${daChon.length}…`);
-      try {
-        await V4rw(p.id, p.zipName ?? `${p.label}.zip`, nhieuLoai ? `${goc}\\${p.kind}` : goc);
-        xong += 1;
-      } catch (e) {
-        loi.push(`${p.label}: ${errorText(e)}`);
-      }
-    }
-    setTienDo("");
-    const noi = nhieuLoai ? `${goc} (mỗi loại gói một thư mục con)` : goc;
-    if (loi.length) toast.warning(`Tải xong ${xong}/${daChon.length} gói, ${loi.length} gói lỗi.`, { description: `${noi} — ${loi.slice(0, 3).join(" · ")}` });
-    else {
-      toast.success(`Đã tải ${xong} gói về.`, { description: noi });
-      setChon(new Set());
-    }
+    // Tải ở cấp ứng dụng: chuyển màn vẫn chạy tiếp, tiến độ nằm ở khung góc màn hình
+    // cạnh khung đẩy tệp. Gói lẫn nhiều loại thì mỗi loại một thư mục con.
+    taiGoi(daChon, goc);
+    setChon(new Set());
   };
   const cols: Column<V4rt>[] = [
     { key: "label", header: "Nhãn", className: "whitespace-normal", sortable: true, cell: (p) => <Tip text={p.objid ?? ""}><span>{p.label}</span></Tip> },
@@ -379,14 +363,18 @@ export function PackageList() {
         {phongs.length > 0 && <Select size="sm" value={phongF} onChange={setPhongF} placeholder="Mọi phông" options={phongs} className="w-56" aria-label="Lọc phông" />}
         {loais.length > 1 && <Select size="sm" value={loaiF} onChange={setLoaiF} placeholder="Mọi loại gói" options={loais} className="w-48" aria-label="Lọc loại gói" />}
         <span className="flex-1" />
-        {tienDo ? (
-          <span className="text-sm text-fg-subtle">{tienDo}</span>
-        ) : (
-          daChon.length > 0 && <span className="text-sm text-fg-subtle">Đã chọn {daChon.length.toLocaleString("vi-VN")} gói · {(dungLuongChon / 1073741824).toFixed(2)} GB</span>
+        {daChon.length > 0 && (
+          <span className="text-sm text-fg-subtle">
+            Đã chọn {daChon.length.toLocaleString("vi-VN")} gói · {(dungLuongChon / 1073741824).toFixed(2)} GB
+          </span>
         )}
-        <Button size="sm" icon="taiVe" disabled={!daChon.length || !!tienDo} onClick={() => void taiLo()}>
-          Tải về đã chọn
-        </Button>
+        <Tip text={dangTaiLo ? "Đang tải một đợt khác, xem khung tiến độ ở góc màn hình" : ""}>
+          <span>
+            <Button size="sm" icon="taiVe" disabled={!daChon.length || dangTaiLo} onClick={() => void taiLo()}>
+              Tải về đã chọn
+            </Button>
+          </span>
+        </Tip>
         <span className="text-sm text-fg-subtle">{list.length.toLocaleString("vi-VN")} gói</span>
         <IconButton label="Tải lại" icon="lamMoi" size="sm" variant="secondary" loading={refreshing} onClick={reload} />
       </div>
