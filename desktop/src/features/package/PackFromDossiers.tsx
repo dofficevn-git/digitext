@@ -295,19 +295,27 @@ export function PackageList() {
   const [loaiF, setLoaiF] = useState("");
   const [chon, setChon] = useState<ReadonlySet<string>>(new Set());
   const { start: taiGoi, running: dangTaiLo } = useGoiDownloads();
-  // Gom theo TÊN phông chứ không theo mã: hai phông trong cùng dự án vẫn có thể mang cùng mã
-  // (metadata Bắc Giang ghi "Văn phòng UBND tỉnh Bắc Giang" và "UBND tỉnh Bắc Giang" cùng mã
-  // H05.13.24.01), gom theo mã thì hai phông chập làm một và mất hẳn một mục lọc.
-  const khoaPhong = (p: V4rt) => p.fondName?.trim() || p.fondCode?.trim() || "";
+  // Một mã phông = một phông. Tên phông ghi trong từng tệp metadata lại có thể khác nhau đôi chút
+  // ("Văn phòng UBND tỉnh Bắc Giang", "UBND tỉnh Bắc Giang (1997 - 2017)", "UBND tỉnh Bắc Giang
+  // (1997-2017)" đều là H05.13.24.01), nên gom theo tên sẽ tách một phông thành mấy mục lọc.
+  // Gom theo mã, nhãn lấy tên gặp nhiều nhất trong các gói của mã đó.
+  const khoaPhong = (p: V4rt) => p.fondCode?.trim() || p.fondName?.trim() || "";
   const phongs = useMemo(() => {
-    const m = new Map<string, string>();
+    const theoMa = new Map<string, Map<string, number>>();
     for (const p of data ?? []) {
       const k = khoaPhong(p);
       if (!k) continue;
-      const ma = p.fondCode?.trim();
-      m.set(k, ma && ma !== k ? `${k} · ${ma}` : k);
+      const dem = theoMa.get(k) ?? new Map<string, number>();
+      const ten = p.fondName?.trim();
+      if (ten) dem.set(ten, (dem.get(ten) ?? 0) + 1);
+      theoMa.set(k, dem);
     }
-    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => collator.compare(a.label, b.label));
+    return [...theoMa]
+      .map(([value, dem]) => {
+        const ten = [...dem].sort((a, b) => b[1] - a[1])[0]?.[0];
+        return { value, label: !ten || ten === value ? value : `${ten} · ${value}` };
+      })
+      .sort((a, b) => collator.compare(a.label, b.label));
   }, [data]);
   // Chỉ liệt kê loại gói thật sự có trên máy chủ, đỡ bắt người dùng lọc ra bảng rỗng.
   const loais = useMemo(() => {
