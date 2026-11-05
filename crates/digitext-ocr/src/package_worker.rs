@@ -209,7 +209,7 @@ impl<'a> PackageWorker<'a> {
         &self,
         r_3cg: &Tgc,
         doc_id: Option<uuid::Uuid>,
-    ) -> Result<(Option<Vec<u8>>, Option<uuid::Uuid>), BuildStepError> {
+    ) -> Result<(Option<Vec<u8>>, Option<(uuid::Uuid, &'static str)>), BuildStepError> {
         let Some(doc_id) = doc_id else {
             return Ok((None, None));
         };
@@ -226,10 +226,12 @@ impl<'a> PackageWorker<'a> {
         }
         let signed = digitext_storage::f_2fc(r_3cg.project_id, doc_id);
         let warm = digitext_storage::f_2qs(r_3cg.project_id, doc_id);
+        let mut r_3d3 = "signed";
         let r_3c9 = match self.store.get(&signed).await {
             Ok(Some(b)) => b,
             Ok(None) => match self.store.get(&warm).await {
                 Ok(Some(b)) => {
+                    r_3d3 = "warm";
                     tracing::warn!(
                         package = % r_3cg.id, document = % doc_id,
                         "chưa có PDF đã ký — dùng bản warm chưa ký"
@@ -268,7 +270,86 @@ impl<'a> PackageWorker<'a> {
                 ),
             );
         }
-        Ok((Some(r_3c9), Some(doc_id)))
+        Ok((Some(r_3c9), Some((doc_id, r_3d3))))
+    }
+    /// Quét virus theo TÀI LIỆU thay vì quét lại cả tệp zip (0027, 5/11/2026).
+    ///
+    /// Một hồ sơ đóng cả AIP lẫn SIP thì cùng những PDF đó bị quét hai lần, mà quét chiếm gần trọn
+    /// một nhân CPU cho mỗi luồng đóng gói. Nay kết quả lưu ở `documents.virus_scan` kèm dấu bản
+    /// đã quét (`@signed` / `@warm`) — ký số xong thì byte khác đi nên phải quét lại bản mới.
+    async fn quet_tai_lieu(
+        &self,
+        r_3cg: &Tgc,
+        r_3d4: &[Option<Vec<u8>>],
+        r_3d2: &[(uuid::Uuid, &'static str, usize)],
+    ) -> Result<String, BuildStepError> {
+        let Some(scanner) = self.scanner else {
+            return Ok("not_configured".to_string());
+        };
+        if r_3d2.is_empty() {
+            return Ok(format!("clean ({}) — gói không có tài liệu", scanner.name()));
+        }
+        let r_3d5: Vec<uuid::Uuid> = r_3d2.iter().map(|(id, _, _)| *id).collect();
+        let r_3d6: std::collections::HashMap<uuid::Uuid, String> =
+            digitext_db::documents::quet_virus_cua(self.pool, &r_3d5)
+                .await
+                .map_err(BuildStepError::Db)?
+                .into_iter()
+                .collect();
+        let mut r_3d7 = 0usize;
+        let mut r_3d8 = 0usize;
+        for (id, r_3d3, r_3d9) in r_3d2 {
+            if let Some(kq) = r_3d6.get(id) {
+                if kq.starts_with("infected") {
+                    let note = format!("infected: tài liệu {id} ({kq})");
+                    let _ = packages::f_2ek(self.pool, r_3cg.id, &note).await;
+                    return Err(BuildStepError::Data(format!(
+                        "tài liệu {id} đã bị đánh dấu nhiễm mã độc ({kq}) — gói không được dựng"
+                    )));
+                }
+                if kq.starts_with("clean") && kq.ends_with(r_3d3) {
+                    r_3d8 += 1;
+                    continue;
+                }
+            }
+            let Some(b) = r_3d4.get(*r_3d9).and_then(|x| x.as_ref()) else {
+                continue;
+            };
+            match scanner.scan(b).await {
+                Ok(ScanVerdict::Clean) => {
+                    let kq = format!("clean ({}) @{}", scanner.name(), r_3d3);
+                    digitext_db::documents::ghi_quet_virus(self.pool, *id, &kq)
+                        .await
+                        .map_err(BuildStepError::Db)?;
+                    r_3d7 += 1;
+                }
+                Ok(ScanVerdict::Infected(sig)) => {
+                    let kq = format!("infected: {sig}");
+                    let _ = digitext_db::documents::ghi_quet_virus(self.pool, *id, &kq).await;
+                    let _ = packages::f_2ek(self.pool, r_3cg.id, &kq).await;
+                    return Err(
+                            BuildStepError::Data(
+                                format!(
+                                    "quét virus phát hiện mã độc ở tài liệu {id}: {sig} — gói không được đưa vào kho"
+                                ),
+                            ),
+                        );
+                }
+                Err(e) => {
+                    let kq = format!("scan_error: {e}");
+                    let _ = digitext_db::documents::ghi_quet_virus(self.pool, *id, &kq).await;
+                    let _ = packages::f_2ek(self.pool, r_3cg.id, &kq).await;
+                    return Err(BuildStepError::Data(format!("quét virus lỗi: {e}")));
+                }
+            }
+        }
+        Ok(format!(
+            "clean ({}) — {} tài liệu: {} quét lần này, {} đã quét trước",
+            scanner.name(),
+            r_3d2.len(),
+            r_3d7,
+            r_3d8
+        ))
     }
     async fn build(&self, r_3cg: &Tgc) -> Result<T1f, BuildStepError> {
         let r_3cj: Tq4 = serde_json::from_value(r_3cg.request_json.clone()).map_err(|e| {
@@ -287,18 +368,22 @@ impl<'a> PackageWorker<'a> {
         // thì gói 70 tệp mất 70 vòng khứ hồi liên tiếp. Chia lô `self.fetch` tệp, giữ nguyên thứ tự.
         let mut r_3cf: Vec<Option<Vec<u8>>> = Vec::with_capacity(r_3cj.documents.len());
         let mut document_ids = Vec::new();
+        let mut r_3d2: Vec<(uuid::Uuid, &'static str, usize)> = Vec::new();
         for r_3ct in r_3cj.documents.chunks(self.fetch.max(1)) {
             let r_3cq = futures_util::future::try_join_all(
                 r_3ct.iter().map(|d| self.lay_mot_tep(r_3cg, d.document_id)),
             )
             .await?;
             for (r_3cr, r_3cs) in r_3cq {
-                if let Some(id) = r_3cs {
+                if let Some((id, r_3d3)) = r_3cs {
                     document_ids.push(id);
+                    r_3d2.push((id, r_3d3, r_3cf.len()));
                 }
                 r_3cf.push(r_3cr);
             }
         }
+        // Quét TRƯỚC khi dựng zip: tệp bẩn thì khỏi mất công nén, và không quét lại cả tệp zip.
+        let r_3ch = self.quet_tai_lieu(r_3cg, &r_3cf, &r_3d2).await?;
         let r_3ca = if r_3cj.dip_cert.is_some() {
             let r_3ce = digitext_pdf::f_1cq()
                 .ok_or_else(|| {
@@ -326,30 +411,6 @@ impl<'a> PackageWorker<'a> {
             .and_then(|p| std::fs::read(p).ok())
             .filter(|b| b.starts_with(b"%PDF-"));
         let built = f_vn(&r_3c8, &mut Tic).map_err(|e| BuildStepError::Data(e.to_string()))?;
-        let r_3ch = match self.scanner {
-            None => "not_configured".to_string(),
-            Some(scanner) => match scanner.scan(&built.zip_bytes).await {
-                Ok(ScanVerdict::Clean) => format!("clean ({})", scanner.name()),
-                Ok(ScanVerdict::Infected(sig)) => {
-                    let note = format!("infected: {sig}");
-                    let _ = packages::f_2ek(self.pool, r_3cg.id, &note).await;
-                    return Err(
-                            BuildStepError::Data(
-                                format!(
-                                    "quét virus phát hiện mã độc: {sig} — gói không được đưa vào kho"
-                                ),
-                            ),
-                        );
-                }
-                Err(e) => {
-                    let note = format!("scan_error: {e}");
-                    let _ = packages::f_2ek(self.pool, r_3cg.id, &note).await;
-                    return Err(BuildStepError::Data(format!(
-                        "quét virus lỗi: {e}"
-                    )));
-                }
-            },
-        };
         packages::f_2ek(self.pool, r_3cg.id, &r_3ch)
             .await
             .map_err(BuildStepError::Db)?;
@@ -459,6 +520,83 @@ pub async fn f_2bd(pool: &PgPool, r_3cq: Duration, r_3cr: &CancellationToken) ->
         }
     }
     Ok(())
+}
+/// Vòng nền quét virus từng tài liệu (0027, 5/11/2026) — để lúc đóng gói không phải quét nữa.
+///
+/// Quét **bản đã ký số**: đó mới là bản đi vào gói. Tài liệu chưa ký thì bỏ qua, lúc đóng gói sẽ
+/// quét bản warm ngay tại chỗ (bytes đã nằm sẵn trong bộ nhớ) rồi ghi lại.
+/// Kết quả lỗi cũ hơn `PHUT_QUET_LAI` phút được xoá để thử lại — clamd có lúc chết, lúc quá tải.
+pub async fn quet_virus_nen(
+    pool: &PgPool,
+    store: &dyn digitext_storage::ObjectStore,
+    scanner: &dyn Tpu,
+    r_3da: Duration,
+    r_3db: usize,
+    r_3dc: &CancellationToken,
+) -> sqlx::Result<()> {
+    const PHUT_QUET_LAI: i64 = 30;
+    let r_3db = r_3db.max(1);
+    while !r_3dc.is_cancelled() {
+        let _ = digitext_db::documents::quet_lai_loi(pool, PHUT_QUET_LAI).await;
+        let r_3dd = digitext_db::documents::can_quet_virus(pool, (r_3db * 4) as i64).await?;
+        if r_3dd.is_empty() {
+            tokio::select! {
+                _ = r_3dc.cancelled() => break, _ = tokio::time::sleep(r_3da) => {}
+            }
+            continue;
+        }
+        let mut r_3de = 0usize;
+        for r_3df in r_3dd.chunks(r_3db) {
+            if r_3dc.is_cancelled() {
+                break;
+            }
+            let r_3dg = futures_util::future::join_all(
+                r_3df
+                    .iter()
+                    .map(|d| quet_mot_tai_lieu(pool, store, scanner, d)),
+            )
+            .await;
+            r_3de += r_3dg.into_iter().filter(|v| *v).count();
+        }
+        if r_3de > 0 {
+            tracing::info!(da_quet = r_3de, "quét virus tài liệu (vòng nền)");
+        }
+    }
+    Ok(())
+}
+/// Quét một tài liệu; trả về true nếu đã ghi được kết quả. Không ném lỗi ra ngoài: một tài liệu
+/// hỏng không được làm chết cả vòng nền.
+async fn quet_mot_tai_lieu(
+    pool: &PgPool,
+    store: &dyn digitext_storage::ObjectStore,
+    scanner: &dyn Tpu,
+    r_3dh: &digitext_db::documents::TaiLieuChoQuet,
+) -> bool {
+    let signed = digitext_storage::f_2fc(r_3dh.project_id, r_3dh.id);
+    let r_3di = match store.get(&signed).await {
+        Ok(Some(b)) => b,
+        // Chưa ký số thì chưa quét: bản đi vào gói sẽ khác byte, quét bây giờ là quét phí.
+        Ok(None) => return false,
+        Err(e) => {
+            tracing::warn!(document = % r_3dh.id, error = % e, "đọc kho để quét virus lỗi");
+            return false;
+        }
+    };
+    let r_3dj = match scanner.scan(&r_3di).await {
+        Ok(ScanVerdict::Clean) => format!("clean ({}) @signed", scanner.name()),
+        Ok(ScanVerdict::Infected(sig)) => {
+            tracing::error!(document = % r_3dh.id, signature = % sig, "tài liệu nhiễm mã độc");
+            format!("infected: {sig}")
+        }
+        Err(e) => format!("scan_error: {e}"),
+    };
+    match digitext_db::documents::ghi_quet_virus(pool, r_3dh.id, &r_3dj).await {
+        Ok(()) => true,
+        Err(e) => {
+            tracing::warn!(document = % r_3dh.id, error = % e, "ghi kết quả quét virus lỗi");
+            false
+        }
+    }
 }
 pub async fn f_2am(
     pool: &PgPool,

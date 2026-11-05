@@ -364,6 +364,38 @@ async fn f_2gu(
                 }
             })
         });
+    // Vòng nền quét virus tài liệu (0027, 5/11/2026): quét sẵn bản đã ký để lúc đóng gói
+    // không phải quét nữa — trước đây mỗi gói quét lại cả tệp zip, hồ sơ đóng cả AIP lẫn SIP
+    // thì cùng những PDF đó bị quét hai lần.
+    let r_34u = match (r_34f.clone(), std::env::var("DIGITEXT_CLAMD_ADDR").ok().filter(|v| !v.is_empty())) {
+        (Some(store), Some(addr)) => {
+            let r_34r = r_34m.clone();
+            let r_34s = shutdown.clone();
+            let r_34t = cfg.package_fetch;
+            Some(tokio::spawn(async move {
+                let scanner = package_worker::ClamdScanner::new(addr);
+                if let Err(e) = package_worker::quet_virus_nen(
+                        &r_34r,
+                        &*store,
+                        &scanner,
+                        Duration::from_secs(30),
+                        r_34t,
+                        &r_34s,
+                    )
+                    .await
+                {
+                    tracing::error!(
+                        error = % e,
+                        "vòng nền quét virus lỗi DB — dừng để tầng trên restart"
+                    );
+                }
+            }))
+        }
+        _ => {
+            tracing::info!("vòng nền quét virus: tắt (chưa đặt DIGITEXT_CLAMD_ADDR hoặc kho object)");
+            None
+        }
+    };
     let r_34g = match r_34f.clone() {
         Some(store) => {
             let r_34j = r_34m.clone();
@@ -587,6 +619,9 @@ async fn f_2gu(
         r_344.push(h);
     }
     if let Some(h) = r_34g {
+        r_344.push(h);
+    }
+    if let Some(h) = r_34u {
         r_344.push(h);
     }
     Ok(r_344)

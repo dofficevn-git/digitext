@@ -320,3 +320,29 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   `C:\DigiText-ChuyenMay\digitext-ocr-songsong.exe` SHA-256 `D517C624576B2DB8…`, thay bằng
   `C:\DigiText-ChuyenMay\thay-worker.ps1` (dừng tiến trình → đổi tên bản cũ → chép → supervisor tự bật lại).
   **Bẫy:** bộ lọc auto-mode chặn mọi lệnh dừng tiến trình trên máy chủ, phải để anh Hiếu chạy script.
+- 5/11/2026 11:20 - **Đo lại sau khi worker chạy song song** (gói AIP/SIP Bắc Giang, hàng chờ ~1.400):
+
+  | Mức | gói/phút | MB/s | CPU clamav |
+  |---|---|---|---|
+  | 1 luồng (như cũ) | 5,6 | 1,5 | — |
+  | 4 luồng | 5,0 | 3,7 | 397 % |
+  | 8 luồng | 5,7 | 11,7 | 283 % |
+
+  Lượng dữ liệu ra tăng gần 8 lần. CPU clamav tụt xuống ở mức 8 luồng = quét virus thôi là chỗ nghẽn.
+  Cũng nâng `MaxThreads` của clamd 10 → 20 (trong `infra/compose/clamd.conf`, đã khởi động lại; 4 gói đang
+  quét dở lúc đó lỗi, cho chạy lại bằng `dev/chay-lai-goi-loi.sql`).
+- 5/11/2026 11:30 - **Quét virus một lần mỗi tài liệu** (`migrations/0027_quet_virus_tai_lieu.sql`): trước đây
+  worker gửi trọn tệp zip sang clamd sau khi dựng, hồ sơ đóng cả AIP lẫn SIP thì cùng những PDF đó bị quét hai
+  lần. Nay `documents.virus_scan` lưu kết quả từng tài liệu kèm dấu bản đã quét (`@signed`/`@warm` — ký số xong
+  byte khác đi nên phải quét lại), worker đối chiếu rồi chỉ quét tài liệu chưa có kết quả, **trước khi nén** nên
+  tệp bẩn không tốn công nén. Thêm vòng nền `quet_virus_nen` quét sẵn bản đã ký để việc quét ra khỏi đường găng.
+  **Thứ tự: áp 0027 TRƯỚC rồi mới thay exe** — worker mới truy vấn cột mới, chạy sớm là mọi gói lỗi;
+  `dev/nang-cap-quet-virus.ps1` làm đúng thứ tự và dừng nếu migration chưa xong. exe mới
+  `C:\DigiText-ChuyenMay\digitext-ocr-quetvirus.exe` SHA-256 `33AA168EC198A419…`.
+  **Bẫy:** bộ lọc auto-mode chặn cả lệnh áp migration lẫn lệnh dừng tiến trình — phải để anh Hiếu chạy script.
+  Lần dựng đầu hỏng vì em chép `package_worker.rs` của commit 0041340 (có `check_package` dùng blake3/sha2 mà
+  Cargo.toml ở 9102d37 chưa có dep) — phải áp lại từng bản vá lên bản gốc 9102d37.
+- 5/11/2026 11:35 - **Desktop 0.24.6: sửa lại ô lọc phông.** Bản 0.24.5 gom theo tên nên một phông bị tách ba
+  ("Văn phòng UBND tỉnh Bắc Giang", "UBND tỉnh Bắc Giang (1997 - 2017)", "UBND tỉnh Bắc Giang (1997-2017)"
+  đều là H05.13.24.01). Một mã phông là một phông: gom lại theo **mã**, nhãn lấy tên gặp nhiều nhất trong các
+  gói của mã đó. Lỗi ban đầu (0.24.4) không phải thiếu mục lọc mà là nhãn lấy nhầm tên.

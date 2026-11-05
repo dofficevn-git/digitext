@@ -129,6 +129,72 @@ pub async fn pdfa_offload(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<(chron
 const DOC_COLS: &str = "d.id, d.project_id, d.filename, d.ho_so_ref, d.page_count, \
      d.size_bytes, d.status, u.display_name AS uploaded_by_name, d.uploaded_at, \
      d.review_status, d.reviewed_at, d.review_note, d.rel_path";
+/// Một tài liệu đang chờ quét virus (0027, 5/11/2026).
+#[derive(Debug, Clone)]
+pub struct TaiLieuChoQuet {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub storage_path: Option<String>,
+}
+/// Lô tài liệu chưa có kết quả quét virus, cũ trước quét trước. Bỏ tài liệu đã tiêu huỷ.
+pub async fn can_quet_virus(
+    r_23r: &PgPool,
+    r_23s: i64,
+) -> sqlx::Result<Vec<TaiLieuChoQuet>> {
+    sqlx::query_as::<_, (Uuid, Uuid, Option<String>)>(
+        "SELECT id, project_id, storage_path FROM documents \
+         WHERE virus_scan IS NULL AND status <> 'disposed' \
+         ORDER BY uploaded_at LIMIT $1",
+    )
+    .bind(r_23s)
+    .fetch_all(r_23r)
+    .await
+    .map(|rows| {
+        rows.into_iter()
+            .map(|(id, project_id, storage_path)| TaiLieuChoQuet {
+                id,
+                project_id,
+                storage_path,
+            })
+            .collect()
+    })
+}
+/// Ghi kết quả quét của một tài liệu. Ghi cả khi lỗi để thấy được ở màn quản trị; vòng nền
+/// sẽ thử lại nhờ `quet_lai_loi` xoá kết quả lỗi sau một thời gian.
+pub async fn ghi_quet_virus(r_23t: &PgPool, id: Uuid, r_23u: &str) -> sqlx::Result<()> {
+    sqlx::query("UPDATE documents SET virus_scan = $2, virus_scan_at = now() WHERE id = $1")
+        .bind(id)
+        .bind(r_23u)
+        .execute(r_23t)
+        .await
+        .map(|_| ())
+}
+/// Kết quả quét của một lô tài liệu (lúc đóng gói chỉ cần biết tài liệu nào đã sạch).
+pub async fn quet_virus_cua(
+    r_23v: &PgPool,
+    r_23w: &[Uuid],
+) -> sqlx::Result<Vec<(Uuid, String)>> {
+    if r_23w.is_empty() {
+        return Ok(Vec::new());
+    }
+    sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT id, virus_scan FROM documents WHERE id = ANY($1) AND virus_scan IS NOT NULL",
+    )
+    .bind(r_23w)
+    .fetch_all(r_23v)
+    .await
+}
+/// Xoá kết quả quét lỗi cũ hơn `r_23y` phút để vòng nền thử lại (clamd có lúc chết, lúc quá tải).
+pub async fn quet_lai_loi(r_23x: &PgPool, r_23y: i64) -> sqlx::Result<u64> {
+    sqlx::query(
+        "UPDATE documents SET virus_scan = NULL WHERE virus_scan LIKE 'scan_error:%' \
+         AND virus_scan_at < now() - ($1 * interval '1 minute')",
+    )
+    .bind(r_23y)
+    .execute(r_23x)
+    .await
+    .map(|r| r.rows_affected())
+}
 pub async fn transition(r_23p: &PgPool, id: Uuid, r_23q: DocStatus) -> sqlx::Result<bool> {
     let r_23o: Vec<String> = DocStatus::ALL
         .iter()
