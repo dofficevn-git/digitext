@@ -22,6 +22,10 @@ pub const C_5J: &str = "DIGITEXT_LEASE_SECONDS";
 pub const C_6J: &str = "DIGITEXT_WORKER_ENABLED";
 pub const C_62: &str = "DIGITEXT_PAGE_SOURCE_DIR";
 pub const C_6K: &str = "DIGITEXT_WORKER_ID";
+/// Số gói dựng song song (mỗi gói một luồng nhận việc riêng; claim_next đã SKIP LOCKED).
+pub const C_6L: &str = "DIGITEXT_PACKAGE_CONCURRENCY";
+/// Số tệp PDF kéo song song trong CÙNG một gói.
+pub const C_6M: &str = "DIGITEXT_PACKAGE_FETCH";
 pub const C_5L: &str = "DIGITEXT_LLM_CORRECTOR_ENABLED";
 pub const C_5Q: &str = "DIGITEXT_LLM_CORRECTOR_TAU";
 pub const C_5N: &str = "DIGITEXT_LLM_CORRECTOR_MAX_EDIT";
@@ -100,6 +104,8 @@ pub struct WorkerConfig {
     pub triton_http_endpoint: String,
     pub metrics_addr: String,
     pub worker_concurrency: usize,
+    pub package_concurrency: usize,
+    pub package_fetch: usize,
     pub infer_batch_size: usize,
     pub tile_size: u32,
     pub tile_overlap: u32,
@@ -135,12 +141,14 @@ pub struct WorkerConfig {
     pub purge_source_after_pdfa: bool,
 }
 impl WorkerConfig {
-    pub const ENV_KEYS: [&'static str; 43] = [
+    pub const ENV_KEYS: [&'static str; 45] = [
         C_5G,
         C_6D,
         C_6E,
         C_5T,
         C_6I,
+        C_6L,
+        C_6M,
         C_5I,
         C_6C,
         C_6B,
@@ -276,6 +284,8 @@ impl WorkerConfig {
                 ),
             })?;
         let worker_concurrency = f_1eu::<usize>(r_30y, C_6I, 4, 1, 64)?;
+        let package_concurrency = f_1eu::<usize>(r_30y, C_6L, 3, 1, 16)?;
+        let package_fetch = f_1eu::<usize>(r_30y, C_6M, 6, 1, 32)?;
         let infer_batch_size = f_1eu::<usize>(r_30y, C_5I, 8, 1, 128)?;
         let tile_size = f_1eu::<u32>(r_30y, C_6C, 1024, 256, 4096)?;
         if tile_size % 32 != 0 {
@@ -413,6 +423,8 @@ impl WorkerConfig {
             triton_http_endpoint,
             metrics_addr,
             worker_concurrency,
+            package_concurrency,
+            package_fetch,
             infer_batch_size,
             tile_size,
             tile_overlap,

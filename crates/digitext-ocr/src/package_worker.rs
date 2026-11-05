@@ -90,6 +90,10 @@ pub struct PackageWorker<'a> {
     lease_secs: i64,
     software: Tlv,
     scanner: Option<&'a dyn Tpu>,
+    /// Số gói dựng cùng lúc (mỗi luồng tự nhận việc; `claim_next` dùng SKIP LOCKED nên không trùng).
+    concurrency: usize,
+    /// Số tệp PDF kéo song song trong CÙNG một gói.
+    fetch: usize,
 }
 fn f_2qd() -> FixedOffset {
     FixedOffset::east_opt(7 * 3600).expect("+07:00 hợp lệ")
@@ -111,7 +115,15 @@ impl<'a> PackageWorker<'a> {
                 version: env!("CARGO_PKG_VERSION").into(),
             },
             scanner: None,
+            concurrency: 1,
+            fetch: 1,
         }
+    }
+    /// Đặt mức song song: `goi` gói dựng cùng lúc, mỗi gói kéo `tep` tệp PDF một lượt.
+    pub fn with_concurrency(mut self, goi: usize, tep: usize) -> Self {
+        self.concurrency = goi.max(1);
+        self.fetch = tep.max(1);
+        self
     }
     pub fn with_scanner(mut self, scanner: &'a dyn Tpu) -> Self {
         self.scanner = Some(scanner);
@@ -192,6 +204,72 @@ impl<'a> PackageWorker<'a> {
             }
         }
     }
+    /// Lấy PDF của một tài liệu trong gói: ưu tiên bản đã ký, không có thì bản warm chưa ký.
+    async fn lay_mot_tep(
+        &self,
+        r_3cg: &Tgc,
+        doc_id: Option<uuid::Uuid>,
+    ) -> Result<(Option<Vec<u8>>, Option<uuid::Uuid>), BuildStepError> {
+        let Some(doc_id) = doc_id else {
+            return Ok((None, None));
+        };
+        let r_3cd = digitext_db::documents::get(self.pool, doc_id)
+            .await
+            .map_err(BuildStepError::Db)?
+            .ok_or_else(|| {
+                BuildStepError::Data(format!("tài liệu {doc_id} không tồn tại"))
+            })?;
+        if r_3cd.project_id != r_3cg.project_id {
+            return Err(BuildStepError::Data(format!(
+                "tài liệu {doc_id} không thuộc dự án của gói"
+            )));
+        }
+        let signed = digitext_storage::f_2fc(r_3cg.project_id, doc_id);
+        let warm = digitext_storage::f_2qs(r_3cg.project_id, doc_id);
+        let r_3c9 = match self.store.get(&signed).await {
+            Ok(Some(b)) => b,
+            Ok(None) => match self.store.get(&warm).await {
+                Ok(Some(b)) => {
+                    tracing::warn!(
+                        package = % r_3cg.id, document = % doc_id,
+                        "chưa có PDF đã ký — dùng bản warm chưa ký"
+                    );
+                    b
+                }
+                Ok(None) => {
+                    return Err(
+                        BuildStepError::Data(
+                            format!(
+                                "thiếu PDF trong kho cho tài liệu {doc_id} (đã thử {signed} và {warm})"
+                            ),
+                        ),
+                    );
+                }
+                Err(e) => {
+                    return Err(BuildStepError::Data(format!(
+                        "đọc kho object lỗi ({warm}): {e}"
+                    )));
+                }
+            },
+            Err(e) => {
+                return Err(BuildStepError::Data(format!(
+                    "đọc kho object lỗi ({signed}): {e}"
+                )));
+            }
+        };
+        let r_3cb = digitext_pdf::f_2p9(&r_3c9, r_3cd.page_count);
+        if !r_3cb.ok {
+            return Err(
+                BuildStepError::Data(
+                    format!(
+                        "tài liệu {doc_id} không đạt kiểm PDF lưu trữ: {}",
+                        r_3cb.reason.unwrap_or_else(|| "không đạt".into())
+                    ),
+                ),
+            );
+        }
+        Ok((Some(r_3c9), Some(doc_id)))
+    }
     async fn build(&self, r_3cg: &Tgc) -> Result<T1f, BuildStepError> {
         let r_3cj: Tq4 = serde_json::from_value(r_3cg.request_json.clone()).map_err(|e| {
             BuildStepError::Data(format!(
@@ -205,77 +283,20 @@ impl<'a> PackageWorker<'a> {
                 r_3ci.join("; ")
             )));
         }
+        // Kéo PDF song song trong cùng một gói: mỗi tệp là một lượt đọc kho object, chờ lần lượt
+        // thì gói 70 tệp mất 70 vòng khứ hồi liên tiếp. Chia lô `self.fetch` tệp, giữ nguyên thứ tự.
         let mut r_3cf: Vec<Option<Vec<u8>>> = Vec::with_capacity(r_3cj.documents.len());
         let mut document_ids = Vec::new();
-        for d in &r_3cj.documents {
-            match d.document_id {
-                None => r_3cf.push(None),
-                Some(doc_id) => {
-                    let r_3cd = digitext_db::documents::get(self.pool, doc_id)
-                        .await
-                        .map_err(BuildStepError::Db)?
-                        .ok_or_else(|| {
-                            BuildStepError::Data(format!(
-                                "tài liệu {doc_id} không tồn tại"
-                            ))
-                        })?;
-                    if r_3cd.project_id != r_3cg.project_id {
-                        return Err(
-                            BuildStepError::Data(
-                                format!(
-                                    "tài liệu {doc_id} không thuộc dự án của gói"
-                                ),
-                            ),
-                        );
-                    }
-                    let signed = digitext_storage::f_2fc(r_3cg.project_id, doc_id);
-                    let warm = digitext_storage::f_2qs(r_3cg.project_id, doc_id);
-                    let r_3c9 = match self.store.get(&signed).await {
-                        Ok(Some(b)) => b,
-                        Ok(None) => match self.store.get(&warm).await {
-                            Ok(Some(b)) => {
-                                tracing::warn!(
-                                    package = % r_3cg.id, document = % doc_id,
-                                    "chưa có PDF đã ký — dùng bản warm chưa ký"
-                                );
-                                b
-                            }
-                            Ok(None) => {
-                                return Err(
-                                        BuildStepError::Data(
-                                            format!(
-                                                "thiếu PDF trong kho cho tài liệu {doc_id} (đã thử {signed} và {warm})"
-                                            ),
-                                        ),
-                                    );
-                            }
-                            Err(e) => {
-                                return Err(BuildStepError::Data(format!(
-                                    "đọc kho object lỗi ({warm}): {e}"
-                                )));
-                            }
-                        },
-                        Err(e) => {
-                            return Err(BuildStepError::Data(format!(
-                                "đọc kho object lỗi ({signed}): {e}"
-                            )));
-                        }
-                    };
-                    let r_3cb = digitext_pdf::f_2p9(&r_3c9, r_3cd.page_count);
-                    if !r_3cb.ok {
-                        return Err(
-                            BuildStepError::Data(
-                                format!(
-                                    "tài liệu {doc_id} không đạt kiểm PDF lưu trữ: {}",
-                                    r_3cb.reason.unwrap_or_else(|| "không đạt"
-                                    .into())
-                                ),
-                            ),
-                        );
-                    }
-                    r_3cf.push(Some(r_3c9));
-                    document_ids.push(doc_id);
+        for r_3ct in r_3cj.documents.chunks(self.fetch.max(1)) {
+            let r_3cq = futures_util::future::try_join_all(
+                r_3ct.iter().map(|d| self.lay_mot_tep(r_3cg, d.document_id)),
+            )
+            .await?;
+            for (r_3cr, r_3cs) in r_3cq {
+                if let Some(id) = r_3cs {
+                    document_ids.push(id);
                 }
+                r_3cf.push(r_3cr);
             }
         }
         let r_3ca = if r_3cj.dip_cert.is_some() {
@@ -355,32 +376,61 @@ impl<'a> PackageWorker<'a> {
         r_3cl: i32,
         r_3cp: &CancellationToken,
     ) -> sqlx::Result<u64> {
-        let mut r_3co = 0u64;
+        // Mỗi luồng tự nhận việc: `claim_next` khoá dòng bằng FOR UPDATE SKIP LOCKED nên hai luồng
+        // không bao giờ nhận trùng gói. Trước 5/11/2026 chỉ có một luồng, máy 32 luồng chạy ~15 % CPU.
+        let r_3cu = std::sync::atomic::AtomicU64::new(0);
+        let r_3cv: Vec<_> = (0..self.concurrency.max(1))
+            .map(|r_3cw| self.mot_luong(r_3cw, r_3ck, r_3cl, r_3cp, &r_3cu))
+            .collect();
+        for r_3cx in futures_util::future::join_all(r_3cv).await {
+            r_3cx?;
+        }
+        Ok(r_3cu.load(std::sync::atomic::Ordering::Relaxed))
+    }
+    async fn mot_luong(
+        &self,
+        r_3cw: usize,
+        r_3ck: Duration,
+        r_3cl: i32,
+        r_3cp: &CancellationToken,
+        r_3cu: &std::sync::atomic::AtomicU64,
+    ) -> sqlx::Result<()> {
+        let mut r_3cy = std::time::Instant::now();
         while !r_3cp.is_cancelled() {
             let r_3cn = tokio::select! {
                 biased; _ = r_3cp.cancelled() => break, r = self.run_once() => r ?,
             };
             if r_3cn == PackageRunOutcome::Idle {
-                let r_3cm = packages::requeue_expired(self.pool, r_3cl).await?;
-                if r_3cm > 0 {
-                    tracing::warn!(
-                        requeued = r_3cm,
-                        "requeue yêu cầu đóng gói hết hạn lease"
-                    );
+                // Chỉ luồng đầu dọn lease hết hạn, khỏi N luồng cùng chạy một câu lệnh.
+                if r_3cw == 0 {
+                    let r_3cm = packages::requeue_expired(self.pool, r_3cl).await?;
+                    if r_3cm > 0 {
+                        tracing::warn!(
+                            requeued = r_3cm,
+                            "requeue yêu cầu đóng gói hết hạn lease"
+                        );
+                    }
                 }
                 tokio::select! {
                     _ = r_3cp.cancelled() => break, _ = tokio::time::sleep(r_3ck) => {}
                 }
             } else {
-                r_3co += 1;
+                r_3cu.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                // Dọn lease hết hạn mỗi phút kể cả khi hàng chờ còn dài: trước đây chỉ dọn lúc rảnh
+                // nên worker chết giữa chừng là gói đang dựng kẹt 'building' mãi, phải sửa tay.
+                if r_3cw == 0 && r_3cy.elapsed() >= Duration::from_secs(60) {
+                    r_3cy = std::time::Instant::now();
+                    let r_3cz = packages::requeue_expired(self.pool, r_3cl).await?;
+                    if r_3cz > 0 {
+                        tracing::warn!(
+                            requeued = r_3cz,
+                            "requeue yêu cầu đóng gói hết hạn lease"
+                        );
+                    }
+                }
             }
         }
-        tracing::info!(
-            worker_id = self.worker_id,
-            r_3co,
-            "vòng lặp đóng gói dừng"
-        );
-        Ok(r_3co)
+        Ok(())
     }
 }
 struct T1f {

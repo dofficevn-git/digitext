@@ -368,15 +368,25 @@ async fn f_2gu(
         Some(store) => {
             let r_34j = r_34m.clone();
             let r_34k = shutdown.clone();
-            let r_34h = cfg.lease.as_secs() as i64;
+            // Hạn giữ việc của gói phải rộng hơn OCR: một gói AIP hồ sơ vài trăm MB mất vài phút
+            // nén + quét virus, mà từ 5/11/2026 có nhiều luồng nên luồng rảnh sẽ dọn lease hết hạn
+            // của gói luồng khác đang dựng dở nếu hạn quá ngắn.
+            let r_34h = (cfg.lease.as_secs() as i64).max(900);
             let r_34i = cfg.max_retries as i32;
             let r_34l = format!("{}-pkg", cfg.worker_id);
+            let r_34o = cfg.package_concurrency;
+            let r_34p = cfg.package_fetch;
             let clamd = std::env::var("DIGITEXT_CLAMD_ADDR")
                 .ok()
                 .filter(|r_33u| !r_33u.is_empty())
                 .map(package_worker::ClamdScanner::new);
             Some(tokio::spawn(async move {
-                let w = package_worker::PackageWorker::new(&r_34j, &*store, &r_34l, r_34h);
+                tracing::info!(
+                    goi_song_song = r_34o, tep_song_song = r_34p, lease_giay = r_34h,
+                    "worker đóng gói"
+                );
+                let w = package_worker::PackageWorker::new(&r_34j, &*store, &r_34l, r_34h)
+                    .with_concurrency(r_34o, r_34p);
                 let w = match &clamd {
                     Some(r_34n) => {
                         tracing::info!("quét virus gói: clamd bật");

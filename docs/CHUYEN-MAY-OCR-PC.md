@@ -304,3 +304,19 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   chặn theo tên là chặn nhầm.
   Cùng bản: ô lọc phông ở tab **Gói tin** gom theo **tên** phông chứ không theo mã — gom theo mã thì hai phông
   trùng mã chập làm một, danh sách lọc mất hẳn một phông (nhãn ghi thêm mã khi mã khác tên).
+- 5/11/2026 11:00 - **Worker đóng gói chạy song song.** Đo lúc hàng chờ 1.500 gói: CPU ~15 % trên máy 32 luồng,
+  RAM trống 34,8 GB, tốc độ 5,6 gói/phút (1,5 MB/s). Nguyên nhân: worker nhận đúng một gói mỗi lượt và trong
+  mỗi gói đọc từng tệp PDF một. (Nguyên nhân thứ hai lúc đó: explorer.exe trên chính máy chủ đang chép ~70 MB/s
+  từ D: sang F: thư mục `UONG BI (đóng gói)`, ổ F chỉ còn 15 % rảnh, giành ổ với worker.)
+  Sửa: `PackageWorker::with_concurrency(goi, tep)`; `run_loop` tách thành N luồng `mot_luong`, mỗi luồng tự gọi
+  `claim_next` (đã FOR UPDATE SKIP LOCKED nên không nhận trùng); trong một gói kéo tệp theo lô bằng
+  `try_join_all` + `lay_mot_tep`, giữ nguyên thứ tự. Hai tham số mới `DIGITEXT_PACKAGE_CONCURRENCY` (mặc định 3,
+  tối đa 16) và `DIGITEXT_PACKAGE_FETCH` (mặc định 6, tối đa 32) — `DIGITEXT_WORKER_CONCURRENCY` cũ chỉ worker
+  OCR dùng. Hạn giữ việc của gói nâng lên tối thiểu 900 s (luồng rảnh sẽ dọn lease của gói luồng khác đang dựng
+  dở nếu hạn ngắn). Luồng đầu dọn lease hết hạn **mỗi phút kể cả khi bận** — trước chỉ dọn lúc rảnh nên worker
+  chết giữa chừng là gói kẹt `building` mãi.
+  Trên OCR PC đặt `DIGITEXT_PACKAGE_CONCURRENCY=4`, `DIGITEXT_PACKAGE_FETCH=8` trong
+  `crates\digitext-ocr\.env` (bản cũ `.env.bak-20261105-songsong`); exe mới
+  `C:\DigiText-ChuyenMay\digitext-ocr-songsong.exe` SHA-256 `D517C624576B2DB8…`, thay bằng
+  `C:\DigiText-ChuyenMay\thay-worker.ps1` (dừng tiến trình → đổi tên bản cũ → chép → supervisor tự bật lại).
+  **Bẫy:** bộ lọc auto-mode chặn mọi lệnh dừng tiến trình trên máy chủ, phải để anh Hiếu chạy script.
