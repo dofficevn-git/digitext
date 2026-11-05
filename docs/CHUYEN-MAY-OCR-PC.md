@@ -346,3 +346,18 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   ("Văn phòng UBND tỉnh Bắc Giang", "UBND tỉnh Bắc Giang (1997 - 2017)", "UBND tỉnh Bắc Giang (1997-2017)"
   đều là H05.13.24.01). Một mã phông là một phông: gom lại theo **mã**, nhãn lấy tên gặp nhiều nhất trong các
   gói của mã đó. Lỗi ban đầu (0.24.4) không phải thiếu mục lọc mà là nhãn lấy nhầm tên.
+- 5/11/2026 13:45 - **`dev/xuat-goi.py`: xuất gói ra ổ cắm thẳng vào máy chủ.** Tải 829 gói (70,4 GB) qua app
+  chỉ được ~3 MB/s, máy báo còn 12 giờ 34 phút — đường đi vòng ra Internet rồi quay lại. Chép tay thư mục
+  MinIO không dùng được: `D:\DigiText-KhoMayChu\pages\<dự án>-packages\<id>.zip` là **thư mục** kiểu xl
+  (xl.meta + part.N), không phải tệp zip.
+  Script đọc MinIO qua 127.0.0.1, lấy danh sách gói bằng `docker exec … psql` (khỏi cần chuỗi kết nối CSDL),
+  ghi ra tên thật `zip_name`, nhiều luồng, chạy lại được (tệp đủ kích thước thì bỏ qua). Khoá MinIO đọc từ
+  `crates/digitext-api/.env` như `dev/chep-kho.py`.
+
+  ```powershell
+  cd C:\DigiText
+  python -I -X utf8 dev\xuat-goi.py --thu-muc F:/Goi-AIP --loai aip_hoso --luong 8
+  ```
+
+  Chạy thử 12 gói lúc worker vẫn đang đóng gói: **20 MB/s** (gấp ~7 lần đường app), zip mở ra đúng bố cục
+  E-ARK. Hết hàng chờ đóng gói thì còn nhanh hơn vì không tranh ổ D.
