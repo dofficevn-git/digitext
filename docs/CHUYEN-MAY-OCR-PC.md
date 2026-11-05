@@ -257,7 +257,8 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   gói nặng nhất 911 MB. Sửa: `infra/compose/clamd.conf` (bản sinh từ ảnh `clamav/clamav:stable` + 5 dòng giới hạn ở cuối)
   gắn vào container bằng bind mount trong `docker-compose.yml`; `StreamMaxLength`/`MaxFileSize`/`MaxScanSize` 2000M,
   `ReadTimeout` 600, `MaxScanTime` 900000. **Hai bẫy:** trị số phải **dưới 2 GB** (3000M/4000M → `Incorrect argument
-  format`), và tệp phải **xuống dòng kiểu Unix** (`Add-Content` của PowerShell ghi CRLF, clamd đọc `2000M` là sai
+  format`), và tệp phải **xuống dòng kiểu Unix** (`Add-Content` của PowerShell ghi CRLF, clamd đọc `2000M
+` là sai
   định dạng). `docker compose up -d clamav` bị bộ lọc auto-mode chặn → `docker cp` cấu hình vào container rồi
   `docker restart`; mount trong compose để lần dựng lại sau vẫn còn. Sau đó cho 10 gói lỗi chạy lại
   (`chay-lai-goi-loi.sql`, chỉ đụng gói có lỗi bắt đầu bằng `quét virus lỗi:`); gói 155 MB đã dựng xong, 0 lỗi mới.
@@ -293,3 +294,13 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   thoại. Nút **Xuất Excel N chỗ lệch** ghi `doi-chieu-muc-luc-<mã phông>.xlsx` 5 trang: Tong hop, Excel thua,
   May chu thua, Trung trong Excel, Lech ma tep — gửi lại bên lập mục lục. Dải cảnh báo vàng nhắc hồ sơ lệch chưa
   đóng gói. Chỉ sửa desktop, không đụng máy chủ.
+- 5/11/2026 10:55 - **Desktop 0.24.5: mã phông lấy thẳng trong tệp metadata.** Anh Hiếu gõ tay mã phông ở hộp
+  thoại đóng gói rồi nhập nhầm. Nay có tệp metadata thì ô **Mã phông** (và **Tên cơ quan hình thành phông** nếu
+  tệp có ghi) lấy đúng giá trị trong tệp và **khoá lại**, không gõ được, không ghi đè lần nhớ trước; không có
+  metadata mới cho gõ như cũ. Sửa thêm `gopMucLuc`: thêm tệp mục lục thứ hai trước đây làm mất `fondCode`,
+  `fondName`, `loai`, `khongTep` của tệp đầu nên hộp thoại quay về đoán mã theo tên thư mục.
+  Đã thử bản chặn "mã phông trùng phông khác" rồi **bỏ**: hai tệp metadata Bắc Giang ghi tên phông khác nhau
+  ("Văn phòng UBND tỉnh Bắc Giang" và "UBND tỉnh Bắc Giang") nhưng cùng mã H05.13.24.01 — cùng một phông,
+  chặn theo tên là chặn nhầm.
+  Cùng bản: ô lọc phông ở tab **Gói tin** gom theo **tên** phông chứ không theo mã — gom theo mã thì hai phông
+  trùng mã chập làm một, danh sách lọc mất hẳn một phông (nhãn ghi thêm mã khi mã khác tên).

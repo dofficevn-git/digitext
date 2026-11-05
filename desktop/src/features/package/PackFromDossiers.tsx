@@ -295,9 +295,18 @@ export function PackageList() {
   const [loaiF, setLoaiF] = useState("");
   const [chon, setChon] = useState<ReadonlySet<string>>(new Set());
   const { start: taiGoi, running: dangTaiLo } = useGoiDownloads();
+  // Gom theo TÊN phông chứ không theo mã: hai phông trong cùng dự án vẫn có thể mang cùng mã
+  // (metadata Bắc Giang ghi "Văn phòng UBND tỉnh Bắc Giang" và "UBND tỉnh Bắc Giang" cùng mã
+  // H05.13.24.01), gom theo mã thì hai phông chập làm một và mất hẳn một mục lọc.
+  const khoaPhong = (p: V4rt) => p.fondName?.trim() || p.fondCode?.trim() || "";
   const phongs = useMemo(() => {
     const m = new Map<string, string>();
-    for (const p of data ?? []) if (p.fondCode) m.set(p.fondCode, p.fondName?.trim() || p.fondCode);
+    for (const p of data ?? []) {
+      const k = khoaPhong(p);
+      if (!k) continue;
+      const ma = p.fondCode?.trim();
+      m.set(k, ma && ma !== k ? `${k} · ${ma}` : k);
+    }
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => collator.compare(a.label, b.label));
   }, [data]);
   // Chỉ liệt kê loại gói thật sự có trên máy chủ, đỡ bắt người dùng lọc ra bảng rỗng.
@@ -311,7 +320,7 @@ export function PackageList() {
     return (data ?? []).filter(
       (p) =>
         (!statusF || p.status === statusF) &&
-        (!phongF || p.fondCode === phongF) &&
+        (!phongF || khoaPhong(p) === phongF) &&
         (!loaiF || p.kind === loaiF) &&
         (!k || p.label.toLowerCase().includes(k) || (p.zipName ?? "").toLowerCase().includes(k)),
     );

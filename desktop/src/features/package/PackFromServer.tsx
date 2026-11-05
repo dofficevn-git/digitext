@@ -109,7 +109,9 @@ function gopMucLuc(cu: MucLucDaNhap | null, ten: string, moi: DongMucLuc[]): Muc
       dongs.push(d);
     }
   }
-  return { ten: cu && cu.ten !== ten ? `${cu.ten} + ${ten}` : ten, luc: new Date().toISOString(), dongs, trung: [...trung] };
+  // Giữ mã / tên phông và loại của tệp đầu: thêm tệp thứ hai mà mất mã phông thì hộp thoại
+  // đóng gói lại quay về đoán theo tên thư mục (5/11/2026).
+  return { ten: cu && cu.ten !== ten ? `${cu.ten} + ${ten}` : ten, luc: new Date().toISOString(), dongs, trung: [...trung], loai: cu?.loai, khongTep: cu?.khongTep, fondCode: cu?.fondCode, fondName: cu?.fondName };
 }
 const KHOA_MUC_LUC = (projectId: string, phong: string) => `pack.mucluc.${projectId}.${phong}`;
 function docMucLucDaLuu(projectId: string, phong: string): MucLucDaNhap | null {
@@ -591,7 +593,7 @@ export default function PackFromServer() {
           empty: !phong ? { title: "Chọn phông để xem hồ sơ", description: "Mỗi thư mục đã đẩy lên máy chủ là một phông; bên trong là hộp, hồ sơ." } : { title: "Không có hồ sơ khớp bộ lọc" },
         }}
       />
-      {dialog && <PackServerDialog rows={daChon} mucLuc={mlTheoKhoa} excelFond={mucLuc ? { code: mucLuc.fondCode ?? "", name: mucLuc.fondName ?? "" } : undefined} projectId={projectId} projectLabel={proj.projectLabel || projectId} onClose={() => setDialog(false)} />}
+      {dialog && <PackServerDialog rows={daChon} mucLuc={mlTheoKhoa} excelFond={mucLuc ? { code: mucLuc.fondCode ?? "", name: mucLuc.fondName ?? "", ten: mucLuc.ten } : undefined} projectId={projectId} projectLabel={proj.projectLabel || projectId} onClose={() => setDialog(false)} />}
     </Card>
   );
 }
@@ -602,14 +604,19 @@ interface KetQua {
   loi: string[];
 }
 
-function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, onClose }: { rows: ReviewSummaryRow[]; mucLuc: Map<string, DongMucLuc>; excelFond?: { code: string; name: string }; projectId: string; projectLabel: string; onClose: () => void }) {
+function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, onClose }: { rows: ReviewSummaryRow[]; mucLuc: Map<string, DongMucLuc>; excelFond?: { code: string; name: string; ten: string }; projectId: string; projectLabel: string; onClose: () => void }) {
   const mlCua = (r: ReviewSummaryRow) => mucLuc.get(khoaHoSo(r.hop, r.hoSo));
   const soCoMl = rows.filter((r) => mlCua(r)).length;
   const [chiCoMl, setChiCoMl] = useState(soCoMl > 0 && soCoMl < rows.length);
   const dsPhong = useMemo(() => [...new Set(rows.map((r) => r.phong || CHUA_PHAN_LOAI))], [rows]);
   const motPhong = dsPhong.length === 1 ? dsPhong[0] : "";
   const [kind, setKind] = useState<V4sj>("aip_hoso");
-  // Mã / tên phông: ưu tiên Excel metadata, rồi lần nhớ trước, rồi gợi ý từ tên thư mục.
+  // Mã / tên phông: có tệp metadata thì LẤY THẲNG trong đó, khoá ô không cho gõ — mã phông gõ tay
+  // lệch với mã hồ sơ trong Excel là hỏng mã lưu trữ cả phông (5/11/2026). Không có metadata mới
+  // cho gõ, mặc định theo lần nhớ trước rồi mới đoán từ tên thư mục.
+  const maTuMetadata = !!excelFond?.code;
+  const tenTuMetadata = !!excelFond?.name;
+  const tuMetadata = maTuMetadata;
   const [fondCode, setFondCode] = useState(() => excelFond?.code || (motPhong ? nho(`pack.fondCode.${motPhong}`) || goiYMaPhong(motPhong) : ""));
   const [fondName, setFondName] = useState(() => excelFond?.name || (motPhong ? nho(`pack.fondName.${motPhong}`) || motPhong : ""));
   const [orgCode, setOrgCode] = useState(() => nho("pack.archiveOrgCode"));
@@ -626,7 +633,7 @@ function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, on
     setBusy(true);
     luu("pack.archiveOrgCode", orgCode.trim());
     luu("pack.archiveOrgName", orgName.trim());
-    if (motPhong) {
+    if (motPhong && !tuMetadata) {
       luu(`pack.fondCode.${motPhong}`, fondCode.trim());
       luu(`pack.fondName.${motPhong}`, fondName.trim());
     }
@@ -774,11 +781,11 @@ function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, on
         <Field label="Loại gói">
           <Select value={kind} onChange={(v) => setKind(v as V4sj)} options={KINDS.map((k) => ({ value: k, label: V4sk[k] }))} />
         </Field>
-        <Field label="Mã phông" hint="Fondcode trong gói; gợi ý từ tên thư mục">
-          <Input value={fondCode} onChange={(e) => setFondCode(e.target.value)} />
+        <Field label="Mã phông" hint={maTuMetadata ? `Lấy trong ${excelFond?.ten ?? "tệp metadata"}, cùng mã với mã hồ sơ` : "Fondcode trong gói; gợi ý từ tên thư mục"}>
+          <Input value={fondCode} readOnly={maTuMetadata} onChange={(e) => setFondCode(e.target.value)} className={maTuMetadata ? "bg-surface-sunken text-fg-subtle" : undefined} />
         </Field>
-        <Field label="Tên cơ quan hình thành phông">
-          <Input value={fondName} onChange={(e) => setFondName(e.target.value)} placeholder={motPhong || "UBND xã …"} />
+        <Field label="Tên cơ quan hình thành phông" hint={tenTuMetadata ? "Lấy trong tệp metadata" : maTuMetadata ? "Tệp metadata không ghi tên phông — gõ cho đúng tên trên quyết định" : undefined}>
+          <Input value={fondName} readOnly={tenTuMetadata} onChange={(e) => setFondName(e.target.value)} placeholder={motPhong || "UBND xã …"} className={tenTuMetadata ? "bg-surface-sunken text-fg-subtle" : undefined} />
         </Field>
         <Field label="Mã cơ quan lưu trữ">
           <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} />
