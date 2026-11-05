@@ -286,7 +286,14 @@ const TRANG_THAI: Record<string, { label: string; tone: "gray" | "info" | "ok" |
   failed: { label: "Lỗi", tone: "err" },
 };
 
-/** Danh sách gói tin trên máy chủ + tải về. */
+/** Khoá gom nhóm phông cho ô lọc: mã + tên đã bỏ khoảng trắng. */
+const chuanTen = (t: string) => t.replace(/\s+/g, "").toLowerCase();
+const khoaPhong = (p: V4rt) => {
+  const ma = p.fondCode?.trim() ?? "";
+  const ten = p.fondName?.trim() ?? "";
+  return ma || ten ? `${ma}|${chuanTen(ten)}` : "";
+};
+/** Danh sách gói tin trên máy chủ + tải về (một gói hoặc cả lô đã chọn). */
 export function PackageList() {
   const { data, error, loading, refreshing, reload } = V41t(() => V4ru(), { topics: ["docs", "packages"], pollMs: 10_000, enabled: isTauri() });
   const [q, setQ] = useState("");
@@ -295,25 +302,25 @@ export function PackageList() {
   const [loaiF, setLoaiF] = useState("");
   const [chon, setChon] = useState<ReadonlySet<string>>(new Set());
   const { start: taiGoi, running: dangTaiLo } = useGoiDownloads();
-  // Một mã phông = một phông. Tên phông ghi trong từng tệp metadata lại có thể khác nhau đôi chút
-  // ("Văn phòng UBND tỉnh Bắc Giang", "UBND tỉnh Bắc Giang (1997 - 2017)", "UBND tỉnh Bắc Giang
-  // (1997-2017)" đều là H05.13.24.01), nên gom theo tên sẽ tách một phông thành mấy mục lọc.
-  // Gom theo mã, nhãn lấy tên gặp nhiều nhất trong các gói của mã đó.
-  const khoaPhong = (p: V4rt) => p.fondCode?.trim() || p.fondName?.trim() || "";
+  // Gom theo MÃ + TÊN phông. Lẽ ra một mã là một phông, nhưng dữ liệu thật ở Bắc Giang có bốn phông
+  // ("Văn phòng UBND tỉnh Bắc Giang", "UBND tỉnh Bắc Giang (1997-2017)", "UBND tỉnh Bắc Giang",
+  // "Chi cục Văn thư lưu trữ") cùng mang mã H05.13.24.01 — gom theo mã thì ba phông biến mất khỏi ô lọc.
+  // Chỉ gộp các cách ghi chỉ khác nhau khoảng trắng ("(1997 - 2017)" với "(1997-2017)").
   const phongs = useMemo(() => {
-    const theoMa = new Map<string, Map<string, number>>();
+    const nhom = new Map<string, { ma: string; dem: Map<string, number> }>();
     for (const p of data ?? []) {
       const k = khoaPhong(p);
       if (!k) continue;
-      const dem = theoMa.get(k) ?? new Map<string, number>();
+      const g = nhom.get(k) ?? { ma: p.fondCode?.trim() ?? "", dem: new Map<string, number>() };
       const ten = p.fondName?.trim();
-      if (ten) dem.set(ten, (dem.get(ten) ?? 0) + 1);
-      theoMa.set(k, dem);
+      if (ten) g.dem.set(ten, (g.dem.get(ten) ?? 0) + 1);
+      nhom.set(k, g);
     }
-    return [...theoMa]
-      .map(([value, dem]) => {
-        const ten = [...dem].sort((a, b) => b[1] - a[1])[0]?.[0];
-        return { value, label: !ten || ten === value ? value : `${ten} · ${value}` };
+    return [...nhom]
+      .map(([value, g]) => {
+        const ten = [...g.dem].sort((a, b) => b[1] - a[1])[0]?.[0];
+        const nhan = [ten, g.ma].filter(Boolean).join(" · ");
+        return { value, label: nhan || value };
       })
       .sort((a, b) => collator.compare(a.label, b.label));
   }, [data]);

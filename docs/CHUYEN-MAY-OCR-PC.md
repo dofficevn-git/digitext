@@ -361,3 +361,18 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
 
   Chạy thử 12 gói lúc worker vẫn đang đóng gói: **20 MB/s** (gấp ~7 lần đường app), zip mở ra đúng bố cục
   E-ARK. Hết hàng chờ đóng gói thì còn nhanh hơn vì không tranh ổ D.
+- 5/11/2026 14:10 - **Desktop 0.24.7: lọc phông gom theo mã + tên.** Trên máy chủ ô lọc chỉ hiện một phông.
+  Lý do là **dữ liệu thật có bốn phông cùng mang mã `H05.13.24.01`** nên 0.24.6 (gom theo mã) nuốt mất ba:
+
+  | Tên phông trong gói | Số gói | Đóng lúc |
+  |---|---|---|
+  | Văn phòng UBND tỉnh Bắc Giang | 138 | 08:12 |
+  | UBND tỉnh Bắc Giang (1997 - 2017) / (1997-2017) | 1.658 | 10:18 |
+  | UBND tỉnh Bắc Giang | 276 | 13:32 |
+  | Chi cục Văn thư lưu trữ | 88 | 13:36 |
+
+  Nay gom theo **mã + tên**, chỉ gộp các cách ghi khác nhau mỗi khoảng trắng (`chuanTen` bỏ hết khoảng
+  trắng rồi so). Hai lần sửa trước đều lệch: 0.24.5 gom theo tên (tách một phông thành ba), 0.24.6 gom theo
+  mã (gộp bốn phông làm một).
+  **Việc còn treo cho nghiệp vụ:** 88 gói "Chi cục Văn thư lưu trữ" mang mã của UBND tỉnh — mã đó đã nằm
+  trong mã lưu trữ từng hồ sơ bên trong gói. Cần đối chiếu danh mục phông của Trung tâm rồi đóng lại nếu sai.
