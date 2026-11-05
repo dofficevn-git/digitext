@@ -275,3 +275,7 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   đã chép vào `C:\DigiText\updates`, `https://api.digitext.vn/updates/latest.json` trả 0.24.1.
   **Bẫy:** lệnh gộp thay exe + khởi động lại bị bộ lọc auto-mode chặn ("Production Deploy") - tách làm hai lệnh thì
   qua, đúng như ghi chú 3/11.
+- 5/11/2026 09:37 - **Desktop 0.24.2: lọc theo loại gói.** Một hồ sơ sinh cả SIP lẫn AIP nên bảng Gói tin trộn
+  hai loại; thêm ô lọc loại gói (chỉ liệt kê loại thật sự có trên máy chủ) bên cạnh ô lọc phông. Tải cả lô mà
+  chọn lẫn nhiều loại thì tách mỗi loại một thư mục con theo mã loại (`aip_hoso`, `sip_hoso`); chọn một loại thì
+  đổ thẳng vào thư mục đã chọn. Chỉ sửa desktop, không đụng máy chủ. Dựng từ worktree sạch ở 9102d37.

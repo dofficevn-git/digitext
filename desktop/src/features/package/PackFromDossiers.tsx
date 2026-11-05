@@ -291,11 +291,18 @@ export function PackageList() {
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("");
   const [phongF, setPhongF] = useState("");
+  const [loaiF, setLoaiF] = useState("");
   const [chon, setChon] = useState<ReadonlySet<string>>(new Set());
   const [tienDo, setTienDo] = useState("");
   const phongs = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of data ?? []) if (p.fondCode) m.set(p.fondCode, p.fondName?.trim() || p.fondCode);
+    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => collator.compare(a.label, b.label));
+  }, [data]);
+  // Chỉ liệt kê loại gói thật sự có trên máy chủ, đỡ bắt người dùng lọc ra bảng rỗng.
+  const loais = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of data ?? []) m.set(p.kind, V4sk[p.kind as V4sj] ?? p.kind);
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => collator.compare(a.label, b.label));
   }, [data]);
   const list = useMemo(() => {
@@ -304,9 +311,10 @@ export function PackageList() {
       (p) =>
         (!statusF || p.status === statusF) &&
         (!phongF || p.fondCode === phongF) &&
+        (!loaiF || p.kind === loaiF) &&
         (!k || p.label.toLowerCase().includes(k) || (p.zipName ?? "").toLowerCase().includes(k)),
     );
-  }, [data, q, statusF, phongF]);
+  }, [data, q, statusF, phongF, loaiF]);
   const taiDuoc = (p: V4rt) => p.status === "built" && !!p.zipName;
   // Chỉ tính các dòng đang hiện: đổi bộ lọc rồi bấm tải thì lấy đúng cái người dùng đang nhìn thấy.
   const daChon = useMemo(() => list.filter((p) => chon.has(p.id) && taiDuoc(p)), [list, chon]);
@@ -323,21 +331,25 @@ export function PackageList() {
     if (!daChon.length) return;
     const goc = await openDialog({ directory: true, multiple: false, title: `Chọn thư mục lưu ${daChon.length} gói` });
     if (typeof goc !== "string" || !goc) return;
+    // Chọn lẫn nhiều loại gói (SIP và AIP của cùng hồ sơ) thì tách mỗi loại một thư mục con,
+    // chọn một loại thì đổ thẳng vào thư mục đã chọn — khỏi lồng thêm một cấp vô ích.
+    const nhieuLoai = new Set(daChon.map((p) => p.kind)).size > 1;
     const loi: string[] = [];
     let xong = 0;
     for (const [i, p] of daChon.entries()) {
       setTienDo(`Đang tải ${i + 1}/${daChon.length}…`);
       try {
-        await V4rw(p.id, p.zipName ?? `${p.label}.zip`, goc);
+        await V4rw(p.id, p.zipName ?? `${p.label}.zip`, nhieuLoai ? `${goc}\\${p.kind}` : goc);
         xong += 1;
       } catch (e) {
         loi.push(`${p.label}: ${errorText(e)}`);
       }
     }
     setTienDo("");
-    if (loi.length) toast.warning(`Tải xong ${xong}/${daChon.length} gói, ${loi.length} gói lỗi.`, { description: `${goc} — ${loi.slice(0, 3).join(" · ")}` });
+    const noi = nhieuLoai ? `${goc} (mỗi loại gói một thư mục con)` : goc;
+    if (loi.length) toast.warning(`Tải xong ${xong}/${daChon.length} gói, ${loi.length} gói lỗi.`, { description: `${noi} — ${loi.slice(0, 3).join(" · ")}` });
     else {
-      toast.success(`Đã tải ${xong} gói về.`, { description: goc });
+      toast.success(`Đã tải ${xong} gói về.`, { description: noi });
       setChon(new Set());
     }
   };
@@ -365,6 +377,7 @@ export function PackageList() {
         <Input size="sm" prefix="tim" placeholder="Nhãn, tên tệp" value={q} onChange={(e) => setQ(e.target.value)} className="w-60" aria-label="Tìm gói" />
         <Select size="sm" value={statusF} onChange={setStatusF} placeholder="Mọi trạng thái" options={Object.entries(TRANG_THAI).map(([k, v]) => ({ value: k, label: v.label }))} className="w-40" aria-label="Lọc trạng thái" />
         {phongs.length > 0 && <Select size="sm" value={phongF} onChange={setPhongF} placeholder="Mọi phông" options={phongs} className="w-56" aria-label="Lọc phông" />}
+        {loais.length > 1 && <Select size="sm" value={loaiF} onChange={setLoaiF} placeholder="Mọi loại gói" options={loais} className="w-48" aria-label="Lọc loại gói" />}
         <span className="flex-1" />
         {tienDo ? (
           <span className="text-sm text-fg-subtle">{tienDo}</span>
