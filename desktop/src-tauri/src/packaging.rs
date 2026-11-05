@@ -16,6 +16,11 @@ pub struct Thc {
     pub status: String,
     pub ho_so_ref: Option<String>,
     pub label: String,
+    /// Máy chủ cũ (trước 5/11/2026) không gửi hai trường này — để `default` cho khỏi hỏng cả lô.
+    #[serde(default)]
+    pub fond_code: Option<String>,
+    #[serde(default)]
+    pub fond_name: Option<String>,
     pub objid: Option<String>,
     pub zip_name: Option<String>,
     pub zip_sha256: Option<String>,
@@ -30,6 +35,13 @@ pub struct Thc {
     pub created_at: String,
     pub updated_at: String,
 }
+/// Máy chủ chỉ trả một lô gói mỗi lần (trước 5/11/2026: mặc định 50, trần 200) — lấy lần
+/// lượt cho tới khi hết, để màn Gói tin thấy đủ mọi trạng thái chứ không chỉ 50 dòng mới nhất.
+/// Lô 200 là trần của máy chủ bản cũ: xin nhiều hơn thì bị kẹp xuống, vòng lặp tưởng đã hết.
+/// Dừng khi lô rỗng (không dựa vào số dòng trả về) và bỏ trùng theo id, vì gói mới tạo chen
+/// vào đầu danh sách giữa hai lô sẽ đẩy một dòng sang lô sau.
+const PKG_PAGE: i64 = 200;
+const PKG_MAX_PAGES: i64 = 200;
 #[tauri::command]
 pub async fn packages_list(
     db: State<'_, Db>,
@@ -40,7 +52,25 @@ pub async fn packages_list(
             &auth,
             Permission::PackageView,
             move |r_2a0, r_2a1| async move {
-                client::f_1eo::<Vec<Thc>>(&r_2a0, &r_2a1, "/packages").await
+                let mut r_2a2: Vec<Thc> = Vec::new();
+                let mut r_2a6: std::collections::HashSet<String> =
+                    std::collections::HashSet::new();
+                for r_2a3 in 0..PKG_MAX_PAGES {
+                    let path = format!(
+                        "/packages?limit={PKG_PAGE}&offset={}",
+                        r_2a3 * PKG_PAGE
+                    );
+                    let r_2a4 = client::f_1eo::<Vec<Thc>>(&r_2a0, &r_2a1, &path).await?;
+                    if r_2a4.is_empty() {
+                        break;
+                    }
+                    for r_2a5 in r_2a4 {
+                        if r_2a6.insert(r_2a5.id.clone()) {
+                            r_2a2.push(r_2a5);
+                        }
+                    }
+                }
+                Ok(r_2a2)
             },
         )
         .await

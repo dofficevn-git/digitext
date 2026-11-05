@@ -45,7 +45,11 @@ services:
     image: clamav/clamav:stable
     restart: unless-stopped
     ports: ["127.0.0.1:3310:3310"]
-    volumes: ["clamdb:/var/lib/clamav"]
+    # clamd.conf: ban sinh ra tu anh clamav/clamav:stable + muc gioi han cua DigiText o cuoi tep
+    # (5/11/2026): StreamMaxLength/MaxFileSize/MaxScanSize 2000M, MaxScanTime 900 s. Mac dinh 100 MB
+    # lam clamd cat ket noi giua chung voi goi AIP ho so lon -> goi failed "gui khuc du lieu loi".
+    # Tri so phai duoi 2 GB (trinh doc cau hinh 32-bit) va tep phai xuong dong kieu Unix.
+    volumes: ["clamdb:/var/lib/clamav", "./clamd.conf:/etc/clamav/clamd.conf:ro"]
     healthcheck:
       test: ["CMD", "clamdcheck.sh"]
       interval: 30s

@@ -39,6 +39,10 @@ pub struct PackageDto {
     pub status: String,
     pub ho_so_ref: Option<String>,
     pub label: String,
+    /// Mã và tên phông lấy từ yêu cầu đóng gói (`fondCode`/`fondName`) — bảng packages không
+    /// có cột riêng. Có hai trường này thì màn Gói tin mới lọc và tải theo phông được.
+    pub fond_code: Option<String>,
+    pub fond_name: Option<String>,
     pub objid: Option<String>,
     pub zip_name: Option<String>,
     pub zip_sha256: Option<String>,
@@ -53,6 +57,41 @@ pub struct PackageDto {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+fn chuoi_json(r_mf1: &serde_json::Value, r_mf2: &str) -> Option<String> {
+    r_mf1
+        .get(r_mf2)
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+impl From<digitext_db::packages::Tgd> for PackageDto {
+    fn from(r: digitext_db::packages::Tgd) -> Self {
+        PackageDto {
+            id: r.id,
+            project_id: r.project_id,
+            kind: r.kind,
+            status: r.status,
+            ho_so_ref: r.ho_so_ref,
+            label: r.label,
+            fond_code: r.fond_code,
+            fond_name: r.fond_name,
+            objid: r.objid,
+            zip_name: r.zip_name,
+            zip_sha256: r.zip_sha256,
+            zip_size: r.zip_size,
+            document_count: r.document_count,
+            error: r.error,
+            virus_scan: r.virus_scan,
+            submission_id: r.submission_id,
+            converted_from: r.converted_from,
+            stt_from: r.stt_from,
+            stt_to: r.stt_to,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        }
+    }
+}
 impl From<Tgc> for PackageDto {
     fn from(r: Tgc) -> Self {
         PackageDto {
@@ -62,6 +101,8 @@ impl From<Tgc> for PackageDto {
             status: r.status,
             ho_so_ref: r.ho_so_ref,
             label: r.label,
+            fond_code: chuoi_json(&r.request_json, "fondCode"),
+            fond_name: chuoi_json(&r.request_json, "fondName"),
             objid: r.objid,
             zip_name: r.zip_name,
             zip_sha256: r.zip_sha256,
@@ -213,8 +254,10 @@ pub struct ListQuery {
     pub limit: Option<i64>,
     pub offset: Option<i64>,
 }
-const DEFAULT_LIMIT: i64 = 50;
-const MAX_LIMIT: i64 = 200;
+// 5/11/2026: mot phong Bac Giang sinh hon 140 goi mot luot. Muc 50 cu lam man Goi tin
+// chi thay 50 dong moi nhat (toan 'cho dung'), loc 'Xong' ra 0 goi du da dung xong.
+const DEFAULT_LIMIT: i64 = 2000;
+const MAX_LIMIT: i64 = 5000;
 async fn f_1o6(
     State(r_n4): State<AppState>,
     r_mz: Ts,
@@ -225,7 +268,7 @@ async fn f_1o6(
     let offset = r_n1.offset.unwrap_or(0).max(0);
     let r_n3 = f_29a(&r_n4.pool, &r_mz.user).await?;
     let r_n0 = r_mz.list_projects(r_n3);
-    let r_n2 = packages::list(&r_n4.pool, r_n0.as_deref(), limit, offset).await?;
+    let r_n2 = packages::list_gon(&r_n4.pool, r_n0.as_deref(), limit, offset).await?;
     Ok(Json(r_n2.into_iter().map(PackageDto::from).collect()))
 }
 async fn load_in_scope(r_n8: &AppState, r_n5: &Ts, id: Uuid) -> Result<Tgc, ApiError> {

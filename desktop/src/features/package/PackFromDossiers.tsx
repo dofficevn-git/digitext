@@ -11,7 +11,8 @@ import { V4ru, V4rv, V4rw, type V4rt } from "@/api/packaging";
 import type { V4bm } from "@/api/dossier";
 import type { V3yo } from "@/domain/types";
 import { V4sk, V4sn, V4su, type V4sj, type V4sm } from "./packageWire";
-import { Badge, Button, Card, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { Badge, Button, Card, collator, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
 
 const so = (s: string | null | undefined): number | null => {
   const m = /(\d+)/.exec(s ?? "");
@@ -289,10 +290,27 @@ export function PackageList() {
   const { data, error, loading, refreshing, reload } = V41t(() => V4ru(), { topics: ["docs", "packages"], pollMs: 10_000, enabled: isTauri() });
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("");
+  const [phongF, setPhongF] = useState("");
+  const [chon, setChon] = useState<ReadonlySet<string>>(new Set());
+  const [tienDo, setTienDo] = useState("");
+  const phongs = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of data ?? []) if (p.fondCode) m.set(p.fondCode, p.fondName?.trim() || p.fondCode);
+    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => collator.compare(a.label, b.label));
+  }, [data]);
   const list = useMemo(() => {
     const k = q.trim().toLowerCase();
-    return (data ?? []).filter((p) => (!statusF || p.status === statusF) && (!k || p.label.toLowerCase().includes(k) || (p.zipName ?? "").toLowerCase().includes(k)));
-  }, [data, q, statusF]);
+    return (data ?? []).filter(
+      (p) =>
+        (!statusF || p.status === statusF) &&
+        (!phongF || p.fondCode === phongF) &&
+        (!k || p.label.toLowerCase().includes(k) || (p.zipName ?? "").toLowerCase().includes(k)),
+    );
+  }, [data, q, statusF, phongF]);
+  const taiDuoc = (p: V4rt) => p.status === "built" && !!p.zipName;
+  // Chỉ tính các dòng đang hiện: đổi bộ lọc rồi bấm tải thì lấy đúng cái người dùng đang nhìn thấy.
+  const daChon = useMemo(() => list.filter((p) => chon.has(p.id) && taiDuoc(p)), [list, chon]);
+  const dungLuongChon = useMemo(() => daChon.reduce((s, p) => s + (p.zipSize ?? 0), 0), [daChon]);
   const tai = async (p: V4rt) => {
     try {
       const path = await V4rw(p.id, p.zipName ?? `${p.label}.zip`);
@@ -301,8 +319,40 @@ export function PackageList() {
       notifyError(e, "tải gói");
     }
   };
+  const taiLo = async () => {
+    if (!daChon.length) return;
+    const goc = await openDialog({ directory: true, multiple: false, title: `Chọn thư mục lưu ${daChon.length} gói` });
+    if (typeof goc !== "string" || !goc) return;
+    const loi: string[] = [];
+    let xong = 0;
+    for (const [i, p] of daChon.entries()) {
+      setTienDo(`Đang tải ${i + 1}/${daChon.length}…`);
+      try {
+        await V4rw(p.id, p.zipName ?? `${p.label}.zip`, goc);
+        xong += 1;
+      } catch (e) {
+        loi.push(`${p.label}: ${errorText(e)}`);
+      }
+    }
+    setTienDo("");
+    if (loi.length) toast.warning(`Tải xong ${xong}/${daChon.length} gói, ${loi.length} gói lỗi.`, { description: `${goc} — ${loi.slice(0, 3).join(" · ")}` });
+    else {
+      toast.success(`Đã tải ${xong} gói về.`, { description: goc });
+      setChon(new Set());
+    }
+  };
   const cols: Column<V4rt>[] = [
     { key: "label", header: "Nhãn", className: "whitespace-normal", sortable: true, cell: (p) => <Tip text={p.objid ?? ""}><span>{p.label}</span></Tip> },
+    {
+      key: "fondName",
+      header: "Phông",
+      width: 170,
+      sortable: true,
+      className: "whitespace-normal",
+      sortValue: (p) => p.fondName ?? p.fondCode ?? "",
+      hideBelow: 1100,
+      cell: (p) => (p.fondName || p.fondCode ? <Tip text={p.fondCode ?? ""}><span>{p.fondName || p.fondCode}</span></Tip> : "—"),
+    },
     { key: "kind", header: "Loại", width: 150, sortable: true, cell: (p) => V4sk[p.kind as V4sj] ?? p.kind },
     { key: "status", header: "Trạng thái", width: 120, cell: (p) => { const t = TRANG_THAI[p.status] ?? { label: p.status, tone: "gray" as const }; return <Tip text={p.error ?? ""}><span><Badge tone={t.tone}>{t.label}</Badge></span></Tip>; } },
     { key: "documentCount", header: "Tài liệu", align: "right", width: 90, sortable: true },
@@ -314,7 +364,16 @@ export function PackageList() {
       <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle p-3">
         <Input size="sm" prefix="tim" placeholder="Nhãn, tên tệp" value={q} onChange={(e) => setQ(e.target.value)} className="w-60" aria-label="Tìm gói" />
         <Select size="sm" value={statusF} onChange={setStatusF} placeholder="Mọi trạng thái" options={Object.entries(TRANG_THAI).map(([k, v]) => ({ value: k, label: v.label }))} className="w-40" aria-label="Lọc trạng thái" />
+        {phongs.length > 0 && <Select size="sm" value={phongF} onChange={setPhongF} placeholder="Mọi phông" options={phongs} className="w-56" aria-label="Lọc phông" />}
         <span className="flex-1" />
+        {tienDo ? (
+          <span className="text-sm text-fg-subtle">{tienDo}</span>
+        ) : (
+          daChon.length > 0 && <span className="text-sm text-fg-subtle">Đã chọn {daChon.length.toLocaleString("vi-VN")} gói · {(dungLuongChon / 1073741824).toFixed(2)} GB</span>
+        )}
+        <Button size="sm" icon="taiVe" disabled={!daChon.length || !!tienDo} onClick={() => void taiLo()}>
+          Tải về đã chọn
+        </Button>
         <span className="text-sm text-fg-subtle">{list.length.toLocaleString("vi-VN")} gói</span>
         <IconButton label="Tải lại" icon="lamMoi" size="sm" variant="secondary" loading={refreshing} onClick={reload} />
       </div>
@@ -322,6 +381,7 @@ export function PackageList() {
         columns={cols}
         rows={list}
         getRowId={(p) => p.id}
+        selection={{ selected: chon, onChange: setChon, canSelect: taiDuoc }}
         state={{ loading: loading && !data, error: data ? undefined : error, onRetry: reload, empty: { title: "Chưa có gói tin", description: "Chọn hồ sơ ở tab Từ hồ sơ rồi bấm Đóng gói." } }}
         rowActions={(p) => (p.status === "built" && p.zipName ? <Button size="sm" icon="taiVe" onClick={() => void tai(p)}>Tải về</Button> : p.status === "failed" && p.error ? <Tip text={p.error}><span className="text-xs text-danger-700">Lỗi</span></Tip> : null)}
         maxHeight="calc(100dvh - 340px)"

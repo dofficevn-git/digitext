@@ -9,6 +9,9 @@ export interface V4rt {
   status: string;
   hoSoRef: string | null;
   label: string;
+
+  fondCode: string | null;
+  fondName: string | null;
   objid: string | null;
   zipName: string | null;
   zipSha256: string | null;

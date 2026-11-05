@@ -76,6 +76,54 @@ pub async fn get(r_29f: &PgPool, id: Uuid) -> sqlx::Result<Option<Tgc>> {
         .fetch_optional(r_29f)
         .await
 }
+/// Dòng rút gọn cho màn Gói tin. Bỏ `request_json` (trung bình 24 KB/gói, cá biệt 70 KB —
+/// danh sách vài nghìn gói sẽ kéo hàng chục MB mà máy trạm không dùng tới) và lấy sẵn mã/tên
+/// phông nằm trong đó để lọc, sắp xếp, tải theo phông.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct Tgd {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub kind: String,
+    pub status: String,
+    pub ho_so_ref: Option<String>,
+    pub label: String,
+    pub fond_code: Option<String>,
+    pub fond_name: Option<String>,
+    pub objid: Option<String>,
+    pub zip_name: Option<String>,
+    pub zip_sha256: Option<String>,
+    pub zip_size: Option<i64>,
+    pub document_count: i32,
+    pub error: Option<String>,
+    pub virus_scan: Option<String>,
+    pub submission_id: Option<Uuid>,
+    pub converted_from: Option<Uuid>,
+    pub stt_from: Option<i32>,
+    pub stt_to: Option<i32>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+const COLS_GON: &str = "id, project_id, kind, status, ho_so_ref, label, \
+     request_json->>'fondCode' AS fond_code, request_json->>'fondName' AS fond_name, \
+     objid, zip_name, zip_sha256, zip_size, document_count, error, virus_scan, \
+     submission_id, converted_from, stt_from, stt_to, created_at, updated_at";
+pub async fn list_gon(
+    r_29i2: &PgPool,
+    r_29j2: Option<&[Uuid]>,
+    r_29g2: i64,
+    r_29h2: i64,
+) -> sqlx::Result<Vec<Tgd>> {
+    sqlx::query_as::<_, Tgd>(&format!(
+        "SELECT {COLS_GON} FROM packages \
+         WHERE ($1::uuid[] IS NULL OR project_id = ANY($1)) \
+         ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+    ))
+    .bind(r_29j2)
+    .bind(r_29g2)
+    .bind(r_29h2)
+    .fetch_all(r_29i2)
+    .await
+}
 pub async fn list(
     r_29i: &PgPool,
     r_29j: Option<&[Uuid]>,
