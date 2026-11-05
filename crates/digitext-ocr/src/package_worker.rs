@@ -459,6 +459,7 @@ async fn check_document(
     r_3cz: uuid::Uuid,
     doc_id: uuid::Uuid,
     r_3cy: Option<i32>,
+    blake3_goc: Option<&str>,
 ) -> Result<(), String> {
     let signed = digitext_storage::f_2fc(r_3cz, doc_id);
     let warm = digitext_storage::f_2qs(r_3cz, doc_id);
@@ -475,6 +476,12 @@ async fn check_document(
         },
         Err(e) => return Err(format!("kho object lỗi: {e}")),
     };
+    if let Some(goc) = blake3_goc {
+        let thuc = blake3::hash(&r_3cw).to_hex().to_string();
+        if !thuc.eq_ignore_ascii_case(goc) {
+            return Err(format!("{key}: blake3 sai — lúc nhập {goc}, băm lại {thuc}"));
+        }
+    }
     let r_3cx = digitext_pdf::f_2p9(&r_3cw, r_3cy);
     if !r_3cx.ok {
         return Err(format!(
@@ -483,6 +490,20 @@ async fn check_document(
                 .reason
                 .unwrap_or_else(|| "không đạt".into())
         ));
+    }
+    Ok(())
+}
+/// Zip gói trong kho còn đúng sha256 lúc nhập/dựng (bản Lưu trữ GĐ4, 5/11/2026).
+async fn check_package(store: &dyn digitext_storage::ObjectStore, key: &str, sha256: &str) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+    let bytes = match store.get(key).await {
+        Ok(Some(b)) => b,
+        Ok(None) => return Err(format!("thiếu zip gói trong kho ({key})")),
+        Err(e) => return Err(format!("kho object lỗi: {e}")),
+    };
+    let thuc = format!("{:x}", Sha256::digest(&bytes));
+    if !thuc.eq_ignore_ascii_case(sha256) {
+        return Err(format!("{key}: sha256 sai — lưu {sha256}, băm lại {thuc}"));
     }
     Ok(())
 }
@@ -499,11 +520,17 @@ pub async fn f_2b5(
             digitext_db::ops::f_17z(pool, r_3d0). await ?; let mut per_project :
             std::collections::BTreeMap < uuid::Uuid, usize > =
             std::collections::BTreeMap::new(); for (doc_id, project_id, _filename,
-            page_count) in due { match check_document(store, project_id, doc_id,
-            page_count). await { Ok(()) => { digitext_db::ops::f_26a(pool, project_id,
+            page_count, b3) in due { match check_document(store, project_id, doc_id,
+            page_count, b3.as_deref()). await { Ok(()) => { digitext_db::ops::f_26a(pool, project_id,
             doc_id, "dat", None). await ?; } Err(detail) => {
             digitext_db::ops::f_26a(pool, project_id, doc_id, "loi", Some(& detail),).
-            await ?; * per_project.entry(project_id).or_default() += 1; } } } for
+            await ?; * per_project.entry(project_id).or_default() += 1; } } } for (pkg, project_id, key, sha) in
+            digitext_db::ops::goi_can_kiem(pool, (r_3d0 / 10).max(1)). await ? { match
+            check_package(store, & key, & sha). await { Ok(()) => {
+            digitext_db::ops::ghi_kiem_goi(pool, project_id, pkg, "dat", None). await ?; }
+            Err(detail) => { digitext_db::ops::ghi_kiem_goi(pool, project_id, pkg, "loi",
+            Some(& detail)). await ?; * per_project.entry(project_id).or_default() += 1; } } }
+            for
             (project, n_loi) in per_project { let admins =
             digitext_db::projects::f_re(pool, project). await ?; let msg =
             format!("Kiểm tra tài liệu (Điều 29): phát hiện {n_loi} tệp LỖI — xem danh mục tệp lỗi và lập biên bản kiểm tra (Mục 1 Phụ lục VII)");

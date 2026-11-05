@@ -39,6 +39,7 @@ import V4wv from "@/features/shell/dialogs/MembersDialog";
 import V4ww from "@/features/shell/dialogs/PreviewLightbox";
 import LuuTruHome from "@/features/home/LuuTruHome";
 import NhapGoiView from "@/features/ingest/NhapGoiView";
+import TraCuuView from "@/features/tracuu/TraCuuView";
 import { LUU_TRU, V3wu } from "@/config";
 import { VIEW_CUA_BAN } from "@/features/shell/navTree";
 
@@ -89,6 +90,7 @@ export default function V4wx() {
         {V382 && view === "qc" && <QcView />}
         {V382 && view === "acceptance" && <NghiemThuView />}
         {V382 && view === "nhapgoi" && <NhapGoiView />}
+        {V382 && view === "tracuu" && <TraCuuView />}
       </main>
 
       <V47t />

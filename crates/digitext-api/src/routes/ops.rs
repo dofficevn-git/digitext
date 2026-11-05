@@ -37,6 +37,20 @@ pub struct Ta0 {
     pub da_kiem_3_nam: i64,
     pub so_loi: i64,
     pub tep_loi: Vec<T7r>,
+    /// Gói zip trong kho (bản Lưu trữ: gói AIP nhập; bản thi công: gói đã dựng) — kiểm sha256 (GĐ4, 5/11/2026).
+    pub tong_goi: i64,
+    pub goi_da_kiem: i64,
+    pub goi_so_loi: i64,
+    pub goi_loi: Vec<GoiLoiDto>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoiLoiDto {
+    pub package_id: Uuid,
+    pub label: String,
+    pub objid: Option<String>,
+    pub chi_tiet: Option<String>,
+    pub checked_at: DateTime<Utc>,
 }
 async fn f_1ik(State(r_lp): State<AppState>, r_lm: Ts) -> Result<Json<Ta0>, ApiError> {
     r_lm.require_perm(Permission::BkView)?;
@@ -53,11 +67,21 @@ async fn f_1ik(State(r_lp): State<AppState>, r_lm: Ts) -> Result<Json<Ta0>, ApiE
             checked_at: r_lo.checked_at,
         })
         .collect();
+    let (tong_goi, goi_da_kiem, goi_so_loi) = ops::stats_goi(&r_lp.pool, r_ln.as_deref()).await?;
+    let goi_loi = ops::goi_loi(&r_lp.pool, r_ln.as_deref(), 200)
+        .await?
+        .into_iter()
+        .map(|g| GoiLoiDto { package_id: g.package_id, label: g.label, objid: g.objid, chi_tiet: g.chi_tiet, checked_at: g.checked_at })
+        .collect();
     Ok(Json(Ta0 {
         tong_tai_lieu: r_lq,
         da_kiem_3_nam: da_kiem,
         so_loi,
         tep_loi,
+        tong_goi,
+        goi_da_kiem,
+        goi_so_loi,
+        goi_loi,
     }))
 }
 #[derive(Debug, Deserialize)]
@@ -70,6 +94,8 @@ pub struct Tjc {
 pub struct Tjd {
     pub da_kiem: usize,
     pub loi: usize,
+    pub goi_da_kiem: usize,
+    pub goi_loi: usize,
 }
 async fn f_1il(
     State(r_lz): State<AppState>,
@@ -85,8 +111,8 @@ async fn f_1il(
     let r_lu = ops::f_17z(&r_lz.pool, limit).await?;
     let mut loi = 0usize;
     let r_lv = r_lu.len();
-    for (r_lt, r_lx, _filename, r_lw) in r_lu {
-        let r_m1 = check_document(r_m0.as_ref(), r_lx, r_lt, r_lw).await;
+    for (r_lt, r_lx, _filename, r_lw, b3) in r_lu {
+        let r_m1 = check_document(r_m0.as_ref(), r_lx, r_lt, r_lw, b3.as_deref()).await;
         match r_m1 {
             Ok(()) => {
                 ops::f_26a(&r_lz.pool, r_lx, r_lt, "dat", None).await?;
@@ -97,13 +123,40 @@ async fn f_1il(
             }
         }
     }
-    Ok(Json(Tjd { da_kiem: r_lv, loi }))
+    let goi = ops::goi_can_kiem(&r_lz.pool, (limit / 10).max(1)).await?;
+    let goi_da_kiem = goi.len();
+    let mut goi_loi = 0usize;
+    for (pkg, project, key, sha) in goi {
+        match check_package(r_m0.as_ref(), &key, &sha).await {
+            Ok(()) => ops::ghi_kiem_goi(&r_lz.pool, project, pkg, "dat", None).await?,
+            Err(e) => {
+                goi_loi += 1;
+                ops::ghi_kiem_goi(&r_lz.pool, project, pkg, "loi", Some(&e)).await?;
+            }
+        }
+    }
+    Ok(Json(Tjd { da_kiem: r_lv, loi, goi_da_kiem, goi_loi }))
+}
+/// Zip gói trong kho còn đúng sha256 lúc nhập/dựng.
+pub async fn check_package(store: &dyn digitext_storage::ObjectStore, key: &str, sha256: &str) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+    let bytes = match store.get(key).await {
+        Ok(Some(b)) => b,
+        Ok(None) => return Err(format!("thiếu zip gói trong kho ({key})")),
+        Err(e) => return Err(format!("kho object lỗi: {e}")),
+    };
+    let thuc = format!("{:x}", Sha256::digest(&bytes));
+    if !thuc.eq_ignore_ascii_case(sha256) {
+        return Err(format!("{key}: sha256 sai — lưu {sha256}, băm lại {thuc}"));
+    }
+    Ok(())
 }
 pub async fn check_document(
     r_m7: &dyn digitext_storage::ObjectStore,
     r_m6: Uuid,
     r_m4: Uuid,
     r_m5: Option<i32>,
+    blake3_goc: Option<&str>,
 ) -> Result<(), String> {
     let signed = digitext_storage::f_2fc(r_m6, r_m4);
     let warm = digitext_storage::f_2qs(r_m6, r_m4);
@@ -120,6 +173,12 @@ pub async fn check_document(
         },
         Err(e) => return Err(format!("kho object lỗi: {e}")),
     };
+    if let Some(goc) = blake3_goc {
+        let thuc = blake3::hash(&r_m2).to_hex().to_string();
+        if !thuc.eq_ignore_ascii_case(goc) {
+            return Err(format!("{key}: blake3 sai — lúc nhập {goc}, băm lại {thuc}"));
+        }
+    }
     let r_m3 = digitext_pdf::f_2p9(&r_m2, r_m5);
     if !r_m3.ok {
         return Err(format!(

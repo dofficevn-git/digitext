@@ -168,11 +168,20 @@ pub async fn f_x8(
     r_25p: i64,
 ) -> sqlx::Result<Vec<T2k>> {
     sqlx::query_as::<_, T2k>(
-        "SELECT ho_so_ref, filename, page_count, uploaded_at FROM documents \
-         WHERE project_id = $1 AND status <> 'disposed' \
-           AND (filename ILIKE '%' || $2 || '%' ESCAPE '\\' \
-                OR ho_so_ref ILIKE '%' || $2 || '%' ESCAPE '\\') \
-         ORDER BY ho_so_ref NULLS LAST, filename LIMIT $3",
+        "SELECT COALESCE(m.ma_vb, d.ho_so_ref) AS ho_so_ref, \
+                COALESCE(NULLIF(btrim(m.trich_yeu), ''), d.filename) AS filename, d.page_count, d.uploaded_at \
+         FROM documents d \
+         LEFT JOIN LATERAL ( \
+             SELECT g.ma_ho_so_goc || '.' || lpad(v.so_thu_tu::text, 7, '0') AS ma_vb, v.trich_yeu, \
+                    cl_vb_tim(v.trich_yeu, v.so_ky_hieu, v.co_quan_ban_hanh, v.loai_vb, v.tu_khoa) || ' ' || \
+                    cl_hs_tim(h.tieu_de, h.so_ky_hieu_hs, h.tu_khoa, h.so_tam) AS tim \
+             FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id AND v.deleted_at IS NULL \
+             JOIN cl_ho_so h ON h.id = v.ho_so_id LEFT JOIN cl_ho_so_goi g ON g.ho_so_id = h.id \
+             WHERE f.document_id = d.id AND f.deleted_at IS NULL LIMIT 1) m ON true \
+         WHERE d.project_id = $1 AND d.status <> 'disposed' \
+           AND (khong_dau(d.filename || ' ' || COALESCE(d.ho_so_ref, '')) LIKE '%' || khong_dau($2) || '%' ESCAPE '\\' \
+                OR m.tim LIKE '%' || khong_dau($2) || '%' ESCAPE '\\') \
+         ORDER BY 1 NULLS LAST, 2 LIMIT $3",
     )
     .bind(project_id)
     .bind(f_1a9(chu_de))
@@ -196,10 +205,13 @@ pub async fn f_1b9(
 ) -> sqlx::Result<Vec<T75>> {
     sqlx::query_as::<_, T75>(
         "SELECT DISTINCT ON (r.document_id, r.page_no) \
-                r.document_id, d.filename, d.ho_so_ref, r.page_no, r.content \
+                r.document_id, d.filename, COALESCE(g.ma_ho_so_goc, d.ho_so_ref) AS ho_so_ref, r.page_no, r.content \
          FROM ocr_results r JOIN documents d ON d.id = r.document_id \
+         LEFT JOIN LATERAL (SELECT g.ma_ho_so_goc FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id \
+                            JOIN cl_ho_so_goi g ON g.ho_so_id = v.ho_so_id \
+                            WHERE f.document_id = d.id AND f.deleted_at IS NULL LIMIT 1) g ON true \
          WHERE d.project_id = $1 AND d.status <> 'disposed' \
-           AND r.content ILIKE '%' || $2 || '%' ESCAPE '\\' \
+           AND khong_dau(r.content) LIKE '%' || khong_dau($2) || '%' ESCAPE '\\' \
          ORDER BY r.document_id, r.page_no, \
                   (r.text_source = 'ocr_corrected') DESC, r.created_at DESC \
          LIMIT $3",
@@ -229,10 +241,9 @@ pub async fn f_2i4(
                 count(DISTINCT (r.document_id, r.page_no)) AS so_trang_khop \
          FROM documents d \
          LEFT JOIN ocr_results r ON r.document_id = d.id \
-             AND r.content ILIKE '%' || $2 || '%' ESCAPE '\\' \
+             AND khong_dau(r.content) LIKE '%' || khong_dau($2) || '%' ESCAPE '\\' \
          WHERE d.project_id = $1 AND d.status <> 'disposed' \
-           AND (d.filename ILIKE '%' || $2 || '%' ESCAPE '\\' \
-                OR d.ho_so_ref ILIKE '%' || $2 || '%' ESCAPE '\\' \
+           AND (khong_dau(d.filename || ' ' || COALESCE(d.ho_so_ref, '')) LIKE '%' || khong_dau($2) || '%' ESCAPE '\\' \
                 OR r.id IS NOT NULL) \
          GROUP BY d.ho_so_ref ORDER BY d.ho_so_ref NULLS LAST LIMIT $3",
     )

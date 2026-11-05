@@ -437,6 +437,7 @@ async fn execute(
         )));
     };
     let mut disposed = 0usize;
+    let mut goi: std::collections::BTreeSet<Uuid> = std::collections::BTreeSet::new();
     for r_dv in &entries {
         let mut r_dy = vec![
             digitext_storage::f_2fc(r_dv.project_id, r_dv.document_id),
@@ -464,6 +465,64 @@ async fn execute(
                 );
             }
         }
+        let g: Option<Uuid> = sqlx::query_scalar("SELECT goi_id FROM documents WHERE id = $1")
+            .bind(r_dv.document_id)
+            .fetch_optional(&r_e0.pool)
+            .await?
+            .flatten();
+        goi.extend(g);
+    }
+    let quyet_dinh = r_du.quyet_dinh_so.clone().unwrap_or_default();
+    for g in goi {
+        huy_goi_aip(&r_e0, r_e1.as_ref(), &r_du, g, &quyet_dinh, r_dt.user.id).await?;
     }
     Ok(Json(T70 { disposed }))
+}
+/// Zip gói AIP nhập (bản Lưu trữ) theo quyết định tiêu huỷ: hết tài liệu còn giữ trong gói → xoá zip khỏi kho WORM qua
+/// `xoa_theo_quyet_dinh`, đánh dấu `packages.huy_*`; còn tài liệu chưa huỷ → giữ gói và ghi nhật ký (zip vẫn chứa bản của
+/// tài liệu đã huỷ cho tới khi huỷ đủ hồ sơ). Chốt với anh Hiếu 5/11/2026.
+async fn huy_goi_aip(
+    st: &AppState,
+    store: &dyn digitext_storage::ObjectStore,
+    dot: &digitext_db::disposal::T4v,
+    goi: Uuid,
+    quyet_dinh: &str,
+    actor: Uuid,
+) -> Result<(), ApiError> {
+    let row: Option<(Option<String>, i64, Option<String>)> = sqlx::query_as(
+        "SELECT p.zip_key, (SELECT count(*) FROM documents d WHERE d.goi_id = p.id AND d.status <> 'disposed'), p.label \
+         FROM packages p WHERE p.id = $1 AND p.huy_at IS NULL",
+    )
+    .bind(goi)
+    .fetch_optional(&st.pool)
+    .await?;
+    let Some((zip_key, con_lai, label)) = row else { return Ok(()) };
+    let (action, detail) = if con_lai > 0 {
+        ("giu_goi_aip", format!("Giữ gói {}: còn {con_lai} tài liệu chưa huỷ — zip chỉ xoá khi huỷ hết tài liệu của gói", label.unwrap_or_default()))
+    } else {
+        if let Some(key) = zip_key.as_deref() {
+            if let Err(e) = store.xoa_theo_quyet_dinh(key).await {
+                tracing::error!(key, error = %e, "xoá zip gói theo quyết định tiêu huỷ lỗi");
+                return Err(ApiError::internal());
+            }
+        }
+        sqlx::query("UPDATE packages SET huy_at = now(), huy_quyet_dinh = $2 WHERE id = $1")
+            .bind(goi)
+            .bind(quyet_dinh)
+            .execute(&st.pool)
+            .await?;
+        ("huy_goi_aip", format!("Xoá zip gói {} khỏi kho lưu trữ theo Quyết định {quyet_dinh}", label.unwrap_or_default()))
+    };
+    sqlx::query(
+        "INSERT INTO disposal_log (id, project_id, batch_id, action, actor, detail) VALUES ($1, $2, $3, $4, $5, $6)",
+    )
+    .bind(Uuid::now_v7())
+    .bind(dot.project_id)
+    .bind(dot.id)
+    .bind(action)
+    .bind(actor)
+    .bind(detail)
+    .execute(&st.pool)
+    .await?;
+    Ok(())
 }

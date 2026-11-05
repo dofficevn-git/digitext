@@ -85,7 +85,17 @@ suy ra từ gói (gói không mang số hộp; `paperFileCode` thường trùng 
    và màn desktop **Nhập gói vào Hệ thống** (lô nhỏ, tiến độ, báo cáo kết quả nhập PDF/Excel).
 5. WORM thật: chặn ghi đè khoá `*-packages/`, không chỉ chặn xoá.
 
-### GĐ4 — Tra cứu và 4 module trên dữ liệu nhập (8–10 ngày)
+### GĐ4 — Tra cứu và 4 module trên dữ liệu nhập (8–10 ngày) — XONG 5/11/2026 (nhánh `feat/ban-luu-tru`)
+
+Chạy thử trên Postgres trống (0001–0026) với 3 gói Diễn Xá đã nhập: tìm không dấu nhiều từ trên mục lục và lớp chữ (có
+trích đoạn, số trang), lọc năm / chế độ; bản đọc watermark + nhật ký; khách bị chặn đọc tài liệu hạn chế và khi phí đọc > 0;
+DIP 2 tài liệu nhập → worker dựng xong (pkgcheck chỉ còn lỗi PDF/A của chính tệp gốc Diễn Xá); kiểm toàn vẹn bắt được PDF
+sửa 1 byte (blake3) và zip sửa 1 byte (sha256); tiêu huỷ hồ sơ THBQ 5 năm → 6 tài liệu huỷ, zip gói xoá theo quyết định,
+tra cứu ẩn; huỷ 1 tài liệu của gói còn 67 → giữ zip, ghi nhật ký `giu_goi_aip`.
+
+Chưa làm: vai trò mặc định riêng cho bản Lưu trữ (dùng vai trò gốc: khách = customer, cán bộ = admin); tìm theo tên loại văn
+bản khi mục lục lưu mã (mục lục gói nhập ghi mã TT05, tra cứu hiện tên qua `cl_loai_van_ban`); gán hộp. Lớp chữ gói Diễn Xá
+là OCR cũ sai bảng mã ("Di6n X6") — tìm nội dung chỉ tốt với gói có lớp chữ chuẩn.
 1. **Tra cứu:** migration 0026 `unaccent` + chỉ mục trigram không dấu (tiêu đề, trích yếu, số ký hiệu, cơ quan ban hành,
    lớp chữ); `GET /tra-cuu` (lọc phông, năm, THBQ, loại văn bản, chế độ sử dụng); màn Tra cứu: ô tìm chung + bộ lọc +
    xem PDF trong app. Tài liệu hạn chế sử dụng chỉ hiện mục lục, không mở bản số.
@@ -109,7 +119,8 @@ tra cứu, yêu cầu khai thác → duyệt → tải bản sao, kiểm toàn v
    Windows); `http` chỉ cho localhost. Đề xuất: bản lưu trữ dùng kho chứng chỉ Windows (`rustls-platform-verifier`) +
    Caddy tự cấp chứng chỉ nội bộ, bộ cài máy trạm kèm chứng chỉ gốc → chạy trong LAN không cần tên miền. CĐT có tên miền
    thì dùng Let's Encrypt như OCR PC.
-2. **Tiêu huỷ và WORM.** Gói AIP không xoá được, nhưng tiêu huỷ phải huỷ cả bản số. Đề xuất: chỉ đường "thực hiện quyết
-   định tiêu huỷ" (có số quyết định, ghi nhật ký) được xoá zip; mọi đường khác vẫn chặn.
+2. **Tiêu huỷ và WORM.** Gói AIP không xoá được, nhưng tiêu huỷ phải huỷ cả bản số. ĐÃ CHỐT 5/11/2026: chỉ đường "thực
+   hiện quyết định tiêu huỷ" (có số quyết định, ghi nhật ký) được xoá zip, và chỉ khi đã huỷ hết tài liệu của gói; mọi
+   đường khác vẫn chặn.
 3. **Gói chưa ký số** (worker rơi về bản chưa ký khi thiếu): đề xuất nhận, đánh dấu "chưa ký" trên hồ sơ và báo cáo nhập.
 4. **Thứ tự:** đề xuất GĐ1 → GĐ3 → GĐ4 → GĐ2 → GĐ5 — dựng và nhập thử trên máy chủ dev trước, đóng bộ cài sau cùng.

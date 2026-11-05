@@ -594,6 +594,118 @@ async fn luu_tai_lieu(
     Ok(doc_id)
 }
 
+/// Mô tả một tài liệu NHẬP TỪ GÓI để cấp DIP (bản Lưu trữ GĐ4): gói nhập không có `request_json` dựng gói, nên EAD văn bản
+/// dựng lại từ mục lục đã nhập (cl_van_ban + hồ sơ + THBQ). Bản số worker lấy theo `documentId` như tài liệu thường.
+pub struct DipTuGoi {
+    pub doc: digitext_package::wire::Tq3,
+    pub fond_code: String,
+    pub archive_org_code: String,
+    pub ma: String,
+    pub trich_yeu: Option<String>,
+}
+
+/// "Tên cơ quan (MÃ)" → "MÃ".
+fn ma_trong_ngoac(s: &str) -> Option<String> {
+    let (_, sau) = s.trim().rsplit_once('(')?;
+    let ma = sau.trim_end_matches(')').trim();
+    (!ma.is_empty()).then(|| ma.to_string())
+}
+
+/// Chế độ sử dụng về mã TT05 (01 công khai · 02 hạn chế · 03 mật).
+fn ma_che_do(s: Option<&str>) -> String {
+    let s = s.map(str::trim).unwrap_or("");
+    if matches!(s, "01" | "02" | "03") {
+        return s.to_string();
+    }
+    let t = s.to_lowercase();
+    if t.starts_with("hạn chế") || t.starts_with("han che") {
+        "02".into()
+    } else if t.starts_with("mật") {
+        "03".into()
+    } else {
+        "01".into()
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct VanBanGoi {
+    so_thu_tu: i32,
+    loai_vb: Option<String>,
+    so_van_ban: Option<String>,
+    so_ky_hieu: Option<String>,
+    ngay_thang: Option<String>,
+    co_quan_ban_hanh: Option<String>,
+    trich_yeu: Option<String>,
+    ngon_ngu: Option<String>,
+    so_trang: Option<i32>,
+    ky_hieu_thong_tin: Option<String>,
+    tu_khoa: Option<String>,
+    che_do: Option<String>,
+    do_tin_cay: Option<String>,
+    but_tich: Option<String>,
+    ghi_chu: Option<String>,
+    thbq: Option<String>,
+    ma_ho_so_goc: String,
+    ma_phong: String,
+    nguoi_tao: Option<String>,
+    ten_tep: String,
+}
+
+pub async fn dip_tu_goi(pool: &PgPool, document_id: Uuid) -> sqlx::Result<Option<DipTuGoi>> {
+    let r: Option<VanBanGoi> = sqlx::query_as(
+        "SELECT v.so_thu_tu, v.loai_vb, v.so_van_ban, v.so_ky_hieu, v.ngay_thang, v.co_quan_ban_hanh, v.trich_yeu, v.ngon_ngu, \
+                v.so_trang, v.ky_hieu_thong_tin, v.tu_khoa, COALESCE(NULLIF(btrim(v.che_do_su_dung), ''), h.che_do_su_dung) AS che_do, \
+                v.do_tin_cay, v.but_tich, v.ghi_chu, t.ma_tt05 AS thbq, g.ma_ho_so_goc, p.ma_du_an AS ma_phong, \
+                pk.request_json->>'nguoiTao' AS nguoi_tao, f.name AS ten_tep \
+         FROM documents d \
+         JOIN cl_van_ban_file f ON f.document_id = d.id AND f.deleted_at IS NULL \
+         JOIN cl_van_ban v ON v.id = f.van_ban_id AND v.deleted_at IS NULL \
+         JOIN cl_ho_so h ON h.id = v.ho_so_id \
+         JOIN cl_phong p ON p.id = h.phong_id \
+         JOIN cl_ho_so_goi g ON g.ho_so_id = h.id \
+         LEFT JOIN packages pk ON pk.id = g.package_id \
+         LEFT JOIN cl_thbq t ON t.id = h.thbq_id \
+         WHERE d.id = $1 AND d.goi_id IS NOT NULL LIMIT 1",
+    )
+    .bind(document_id)
+    .fetch_optional(pool)
+    .await?;
+    let Some(v) = r else { return Ok(None) };
+    let ma = digitext_core::chinh_ly::ma_van_ban_tt05(&v.ma_ho_so_goc, v.so_thu_tu as i64);
+    let meta = digitext_package::ead::T4y {
+        doc_code: ma.clone(),
+        maintenance: v.thbq.unwrap_or_else(|| "01".into()),
+        type_name: v.loai_vb.unwrap_or_default(),
+        code_number: v.so_van_ban,
+        code_notation: v.so_ky_hieu,
+        issued_date: v.ngay_thang,
+        organ_name: v.co_quan_ban_hanh,
+        subject: v.trich_yeu.clone(),
+        language: v.ngon_ngu.map(|s| s.split([',', ';']).map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect()).unwrap_or_default(),
+        number_of_page: v.so_trang.and_then(|n| u32::try_from(n).ok()),
+        infor_sign: v.ky_hieu_thong_tin,
+        keyword: v.tu_khoa,
+        mode: ma_che_do(v.che_do.as_deref()),
+        confidence_level: v.do_tin_cay,
+        autograph: v.but_tich,
+        description: v.ghi_chu,
+        ..Default::default()
+    };
+    Ok(Some(DipTuGoi {
+        doc: digitext_package::wire::Tq3 {
+            document_id: Some(document_id),
+            file_name: v.ten_tep,
+            mimetype: Some("application/pdf".into()),
+            metadata: digitext_package::ead::DocEad::Doc(meta),
+            fetch: None,
+        },
+        archive_org_code: v.nguoi_tao.as_deref().and_then(ma_trong_ngoac).unwrap_or_else(|| v.ma_phong.clone()),
+        fond_code: v.ma_phong,
+        ma,
+        trich_yeu: v.trich_yeu,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -607,6 +719,10 @@ mod tests {
         assert_eq!(so_tam_tu_ma("ABC.1", "H49"), "ABC.1");
         assert_eq!(stt_tu_ma("H49.132.02.2017.01.04.0000012"), Some(12));
         assert_eq!(stt_tu_ma("H49.132.02.2017.01.04.12"), None);
+        assert_eq!(ma_trong_ngoac("UBND huyện Diễn Châu (H40.25)").as_deref(), Some("H40.25"));
+        assert_eq!(ma_trong_ngoac("UBND huyện"), None);
+        assert_eq!(ma_che_do(Some("Hạn chế")), "02");
+        assert_eq!(ma_che_do(None), "01");
     }
 
     /// Lớp chữ của PDF trong gói thật:

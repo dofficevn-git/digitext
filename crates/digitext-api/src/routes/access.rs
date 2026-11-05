@@ -444,7 +444,7 @@ async fn f_2od(
     r_8o: &Ts,
     request_id: Uuid,
     item_id: Uuid,
-) -> Result<(Ta, Vec<u8>), ApiError> {
+) -> Result<(Ta, Vec<u8>, Uuid), ApiError> {
     let r_8w = load_in_scope(r_91, r_8o, request_id).await?;
     require_owner_or_reviewer(r_8o, &r_8w)?;
     if r_8w.status != "approved" {
@@ -489,7 +489,7 @@ async fn f_2od(
         tracing::error!(error = % e, "đọc bản người dùng lỗi");
         ApiError::internal()
     })? {
-        return Ok((r_8w, r_8p));
+        return Ok((r_8w, r_8p, r_8t.document_id));
     }
     let r_8x = digitext_storage::f_2fc(r_8w.project_id, r_8t.document_id);
     let r_93 = digitext_storage::f_2qs(r_8w.project_id, r_8t.document_id);
@@ -557,7 +557,7 @@ async fn f_2od(
         ApiError::internal()
     })?;
     access::f_2ej(&r_91.pool, r_8t.id, &key).await?;
-    Ok((r_8w, r_90))
+    Ok((r_8w, r_90, r_8t.document_id))
 }
 async fn f_25r(
     State(r_96): State<AppState>,
@@ -565,7 +565,8 @@ async fn f_25r(
     Path((id, item_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Response, ApiError> {
     r_94.require_perm(Permission::AccessView)?;
-    let (_, r_95) = f_2od(&r_96, &r_94, id, item_id).await?;
+    let (r_yc, r_95, doc_id) = f_2od(&r_96, &r_94, id, item_id).await?;
+    crate::routes::tra_cuu::ghi_nhat_ky(&r_96, &r_94, "doc", r_yc.project_id, Some(doc_id), serde_json::json!({ "yeuCau": id, "hinhThuc": r_yc.kind })).await;
     Ok((
         [
             (header::CONTENT_TYPE, "application/pdf".to_string()),
@@ -581,7 +582,7 @@ async fn f_178(
     Path((id, item_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Response, ApiError> {
     r_97.require_perm(Permission::AccessView)?;
-    let (r_99, r_98) = f_2od(&r_9a, &r_97, id, item_id).await?;
+    let (r_99, r_98, doc_id) = f_2od(&r_9a, &r_97, id, item_id).await?;
     if !matches!(r_99.kind.as_str(), "ban_sao" | "ban_sao_ky") {
         return Err(
             ApiError::conflict(
@@ -590,6 +591,7 @@ async fn f_178(
             ),
         );
     }
+    crate::routes::tra_cuu::ghi_nhat_ky(&r_9a, &r_97, "tai", r_99.project_id, Some(doc_id), serde_json::json!({ "yeuCau": id, "hinhThuc": r_99.kind })).await;
     Ok((
         [
             (header::CONTENT_TYPE, "application/pdf".to_string()),
@@ -646,6 +648,15 @@ async fn f_127(
         let doc = documents::get(&r_9q.pool, r_9k.document_id)
             .await?
             .ok_or_else(ApiError::not_found)?;
+        // Bản Lưu trữ: tài liệu nhập từ gói AIP (không có request_json dựng gói) → EAD văn bản lấy từ mục lục đã nhập.
+        if let Some(g) = crate::nhap_goi::dip_tu_goi(&r_9q.pool, r_9k.document_id).await? {
+            r_9h.get_or_insert(g.fond_code);
+            r_9c.get_or_insert(g.archive_org_code);
+            r_9l.push(g.ma);
+            r_9t.push(g.trich_yeu.unwrap_or_else(|| doc.filename.clone()));
+            r_9g.push(g.doc);
+            continue;
+        }
         let aip = r_9b
             .iter()
             .filter(|p| {
@@ -786,6 +797,15 @@ async fn f_127(
             ),
         )
         .await;
+    crate::routes::tra_cuu::ghi_nhat_ky(
+        &r_9q,
+        &r_9d,
+        "dip",
+        r_9o.project_id,
+        None,
+        serde_json::json!({ "yeuCau": id, "maXacThuc": ma_xac_thuc, "goi": r_9f.id, "soTaiLieu": approved.len() }),
+    )
+    .await;
     Ok((
         StatusCode::CREATED,
         Json(T4p {

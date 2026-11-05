@@ -4,7 +4,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { V41t } from "@/live/useLive";
-import { V4v5, V4v4, V4v1, V4v2, type V4v3, type V4v0, type V4uz } from "@/api/infoops";
+import { V4v5, V4v4, V4v1, V4v2, type GoiLoi, type V4v3, type V4v0, type V4uz } from "@/api/infoops";
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
 import { V4v8 } from "./infoFlow";
@@ -99,8 +99,10 @@ export default function V4vd() {
     setDangKiem(true);
     try {
       const r = await V4v2();
-      if (r.loi > 0) toast.warning(`Đã kiểm ${fmtN(r.daKiem)} tài liệu, ${fmtN(r.loi)} lỗi.`);
-      else toast.success(`Đã kiểm ${fmtN(r.daKiem)} tài liệu, không có lỗi.`);
+      const goi = r.goiDaKiem ? `, ${fmtN(r.goiDaKiem)} gói` : "";
+      const loi = r.loi + (r.goiLoi ?? 0);
+      if (loi > 0) toast.warning(`Đã kiểm ${fmtN(r.daKiem)} tài liệu${goi}, ${fmtN(loi)} lỗi.`);
+      else toast.success(`Đã kiểm ${fmtN(r.daKiem)} tài liệu${goi}, không có lỗi.`);
       reload();
     } catch (e) {
       notifyError(e, "chạy kiểm tra");
@@ -114,6 +116,12 @@ export default function V4vd() {
     { key: "hoSoRef", header: "Mã hồ sơ", width: 160, cell: (t) => t.hoSoRef ?? "—" },
     { key: "chiTiet", header: "Chi tiết lỗi", className: "whitespace-normal text-danger-700", cell: (t) => t.chiTiet ?? "—" },
     { key: "checkedAt", header: "Thời điểm kiểm", width: 150, cell: (t) => new Date(t.checkedAt).toLocaleString("vi-VN") },
+  ];
+  const colsGoiLoi: Column<GoiLoi>[] = [
+    { key: "label", header: "Gói", className: "whitespace-normal" },
+    { key: "objid", header: "OBJID", width: 260, className: "break-all", cell: (g) => g.objid ?? "—" },
+    { key: "chiTiet", header: "Chi tiết lỗi", className: "whitespace-normal text-danger-700", cell: (g) => g.chiTiet ?? "—" },
+    { key: "checkedAt", header: "Thời điểm kiểm", width: 150, cell: (g) => new Date(g.checkedAt).toLocaleString("vi-VN") },
   ];
   const colsSaoLuu: Column<V4v3>[] = [
     { key: "createdAt", header: "Thời điểm", width: 150, sortable: true, cell: (b) => new Date(b.createdAt).toLocaleString("vi-VN") },
@@ -164,6 +172,9 @@ export default function V4vd() {
         <KpiRow>
           <KpiTile label="Tài liệu đã kiểm trong 3 năm" value={report?.daKiem3Nam ?? 0} sub={report ? `${tyLe}% của ${fmtN(report.tongTaiLieu)} tài liệu` : undefined} />
           <KpiTile label="Tệp lỗi" value={report?.soLoi ?? 0} tone={report && report.soLoi > 0 ? "err" : "ok"} />
+          {report?.tongGoi ? (
+            <KpiTile label="Gói lưu trữ đã kiểm" value={report.goiDaKiem ?? 0} sub={`${fmtN(report.tongGoi)} gói zip trong kho${report.goiSoLoi ? ` · ${fmtN(report.goiSoLoi)} lỗi` : ""}`} tone={report.goiSoLoi ? "err" : "ok"} />
+          ) : null}
           <KpiTile label="Lần sao lưu đã ghi" value={backups.length} />
           <KpiTile label="Sao lưu đạt gần nhất" value={saoLuuGanNhat ? new Date(saoLuuGanNhat).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }) : "—"} tone={quaHan ? "err" : "ok"} />
         </KpiRow>
@@ -181,12 +192,18 @@ export default function V4vd() {
         </Card>
       )}
 
+      {report?.goiLoi && report.goiLoi.length > 0 && (
+        <Card className="mb-4" tone="danger" padding="none" title={`Gói lỗi (${fmtN(report.goiLoi.length)})`} description="Zip gói trong kho không còn khớp mã băm SHA-256 lúc nhập hoặc dựng — khôi phục từ bản sao lưu.">
+          <Table columns={colsGoiLoi} rows={report.goiLoi} getRowId={(g) => g.packageId} dense maxHeight={320} />
+        </Card>
+      )}
+
       <Card padding="none" title="Sổ sao lưu">
         <Table columns={colsSaoLuu} rows={backups} getRowId={(b) => b.id} dense maxHeight={480} state={{ loading: loading && !data, empty: { title: "Chưa có lần sao lưu nào", description: "Quá 26 giờ không có sao lưu đạt, hệ thống cảnh báo quản trị.", icon: "baoquan" } }} />
       </Card>
 
       <Help title="Căn cứ" className="mt-4">
-        <p>Kiểm tra tài liệu: Điều 29 Thông tư 05/2025/TT-BNV, mục tiêu toàn bộ trong 3 năm, danh mục tệp lỗi theo Điều 29.4.đ. Sao lưu: Điều 30, ghi loại, nguồn, phương tiện, kết quả kiểm tra sau sao lưu và nơi bảo quản.</p>
+        <p>Kiểm tra tài liệu: Điều 29 Thông tư 05/2025/TT-BNV, mục tiêu toàn bộ trong 3 năm, danh mục tệp lỗi theo Điều 29.4.đ. Tài liệu nhập từ gói AIP còn được so mã băm BLAKE3 với lúc nhập; zip gói lưu trữ so mã băm SHA-256. Sao lưu: Điều 30, ghi loại, nguồn, phương tiện, kết quả kiểm tra sau sao lưu và nơi bảo quản.</p>
       </Help>
 
       {moGhi && <GhiNhanDialog onClose={() => setMoGhi(false)} onDone={reload} />}

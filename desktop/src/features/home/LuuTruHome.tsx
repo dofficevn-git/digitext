@@ -63,7 +63,8 @@ export default function LuuTruHome() {
   type LoiTat = { label: string; icon: IconName; run: () => void; show: boolean };
   const loiTat = ([
     { label: "Nhập gói AIP", icon: "nhapKho", run: () => goto("nhapgoi"), show: has("submission.approve") },
-    { label: "Mục lục hồ sơ", icon: "tim", run: () => gotoKhoGia("khaithac"), show: has("dossier.read") || has("catalog.read") },
+    { label: "Tra cứu tài liệu", icon: "tim", run: () => goto("tracuu"), show: has("access.request") || has("access.review") },
+    { label: "Mục lục hồ sơ", icon: "danhmuc", run: () => gotoKhoGia("khaithac"), show: has("dossier.read") || has("catalog.read") },
     { label: "Khai thác", icon: "luuTruSo", run: () => goto("access"), show: coKhaiThac },
     { label: "Cung cấp thông tin", icon: "thongTin", run: () => goto("info"), show: coKhaiThac },
     { label: "Bảo quản và sao lưu", icon: "baoquan", run: () => goto("bk"), show: coBaoQuan },

@@ -30,6 +30,11 @@ pub trait ObjectStore: Send + Sync {
     fn put<'a>(&'a self, key: &'a str, bytes: &'a [u8]) -> Tm3<'a, ()>;
     fn get<'a>(&'a self, key: &'a str) -> Tm3<'a, Option<Vec<u8>>>;
     fn delete<'a>(&'a self, key: &'a str) -> Tm3<'a, ()>;
+    /// Xoá khi THỰC HIỆN QUYẾT ĐỊNH TIÊU HUỶ — đường duy nhất được xoá gói lưu trữ ghi một lần (`WormGuard` chặn `delete`
+    /// với `*-packages/`). Chỉ gọi từ `POST /disposal/batches/{id}/execute` (chốt với anh Hiếu 5/11/2026).
+    fn xoa_theo_quyet_dinh<'a>(&'a self, key: &'a str) -> Tm3<'a, ()> {
+        self.delete(key)
+    }
     fn list_prefix<'a>(&'a self, prefix: &'a str) -> Tm3<'a, Vec<String>>;
     fn exists<'a>(&'a self, key: &'a str) -> Tm3<'a, bool> {
         Box::pin(async move { Ok(self.get(key).await?.is_some()) })
@@ -565,6 +570,9 @@ impl ObjectStore for WormGuard {
         }
         self.inner.delete(key)
     }
+    fn xoa_theo_quyet_dinh<'a>(&'a self, key: &'a str) -> Tm3<'a, ()> {
+        self.inner.delete(key)
+    }
     fn get<'a>(&'a self, key: &'a str) -> Tm3<'a, Option<Vec<u8>>> {
         self.inner.get(key)
     }
@@ -598,6 +606,8 @@ mod worm_tests {
         g.put(k, b"goi").await.unwrap();
         assert!(matches!(g.put(k, b"khac").await, Err(StorageError::Immutable(_))));
         assert!(matches!(g.delete(k).await, Err(StorageError::Immutable(_))));
+        g.xoa_theo_quyet_dinh(k).await.unwrap();
+        assert!(g.get(k).await.unwrap().is_none());
         g.put("p-warm/x.pdf", b"1").await.unwrap();
         g.put("p-warm/x.pdf", b"2").await.unwrap();
         let _ = std::fs::remove_dir_all(dir);

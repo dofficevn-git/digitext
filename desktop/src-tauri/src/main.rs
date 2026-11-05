@@ -44,6 +44,7 @@ mod pkgcheck;
 mod bundle;
 mod edition;
 mod ingest;
+mod tra_cuu;
 mod update;
 mod tiff;
 use tauri::Manager;
@@ -99,6 +100,10 @@ fn main() {
             ingest::ingest_batch_items,
             ingest::ingest_batch_finish,
             ingest::ingest_upload,
+            tra_cuu::tra_cuu_tim,
+            tra_cuu::tra_cuu_bo_loc,
+            tra_cuu::tra_cuu_nhat_ky,
+            tra_cuu::tra_cuu_doc,
             auth::commands::auth_validate_online,
             auth::admin::users_list,
             auth::admin::user_create,

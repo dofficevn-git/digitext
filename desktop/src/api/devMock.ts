@@ -54,8 +54,36 @@ export function devMock(cmd: string, args?: Record<string, unknown>): unknown {
         { id: "g1", tenTep: "urn_H49.132.02_uuid_0A6AC212.zip", objid: "urn:H49.132.02:uuid:0A6AC212", loaiGoi: "AIP", sizeBytes: 66_032_856, ketQua: "nhap", ketLuanKiem: "ĐẠT (có cảnh báo)", soLoi: 0, soCanhBao: 2, maHoSo: "H49.132.02.2017.01.04", tieuDe: "Tờ khai đăng ký lại việc sinh xã Điền Xá năm 2017", soVanBan: 76, soChuaKy: 4, thongBao: "4 tệp chưa ký số", chiTiet: [{ level: "warn", group: "Chữ ký số", message: "4/76 tệp chưa ký số" }], createdAt: new Date().toISOString() },
         { id: "g2", tenTep: "goi-loi.zip", objid: null, loaiGoi: "AIP", sizeBytes: 1_200_000, ketQua: "tu_choi", ketLuanKiem: "KHÔNG ĐẠT", soLoi: 3, soCanhBao: 1, maHoSo: null, tieuDe: null, soVanBan: 0, soChuaKy: 0, thongBao: "Kiểm gói KHÔNG ĐẠT (3 lỗi)", chiTiet: [{ level: "err", group: "METS", message: "representations/rep1/data/x.pdf sai mã băm SHA-256" }], createdAt: new Date().toISOString() },
       ];
+    // Tra cứu (bản Lưu trữ GĐ4): `?view=tracuu&edition=luu_tru`.
+    case "tra_cuu_bo_loc":
+      return {
+        phong: [{ id: "ph1", ten: "H49.132.02 — UBND xã Điền Xá", so: 3 }],
+        thbq: [{ id: "t1", ten: "Vĩnh viễn", so: 2 }, { id: "t2", ten: "10 năm", so: 1 }],
+        loaiVb: [{ ma: "32", ten: "Khác", so: 149 }, { ma: "22", ten: "Tờ trình", so: 1 }],
+        namMin: 2012,
+        namMax: 2017,
+        tongVanBan: 150,
+        tongHoSo: 3,
+        docThang: true,
+        canBo: true,
+      };
+    case "tra_cuu_tim": {
+      const q = String(((args?.args as { query?: { q?: string } } | undefined)?.query?.q) ?? "");
+      const goc = { phongId: "ph1", maPhong: "H49.132.02", tenPhong: "UBND xã Điền Xá", objid: "urn:H49.132.02:uuid:0A6AC212", thbq: "Vĩnh viễn", soKyHieu: null, coQuan: "UBND xã Điền Xá", soTrang: 2, kySo: "hop_le", daHuy: false, trichDoan: null, trang: null };
+      const dong = [
+        { ...goc, vanBanId: "v1", hoSoId: "h1", documentId: "d1", maHoSo: "H49.132.02.2017.01.04", tieuDeHoSo: "Tờ khai đăng ký lại việc sinh của công dân xã Điền Xá năm 2017", soThuTu: 1, loaiVb: "Khác", ngayThang: "12/03/2017", trichYeu: "TỜ KHAI ĐĂNG KÝ LẠI VIỆC SINH CỦA DƯƠNG THỊ HIỀN", cheDo: "01", hanChe: false, khop: q ? "muc_luc" : null },
+        { ...goc, vanBanId: "v2", hoSoId: "h1", documentId: "d2", maHoSo: "H49.132.02.2017.01.04", tieuDeHoSo: "Tờ khai đăng ký lại việc sinh của công dân xã Điền Xá năm 2017", soThuTu: 2, loaiVb: "Khác", ngayThang: "14/03/2017", trichYeu: "GIẤY CHỨNG SINH CỦA ĐẶNG HỒNG PHƯƠNG", cheDo: "02", hanChe: true, kySo: "chua_ky", khop: q ? "noi_dung" : null, trichDoan: q ? "Họ và tên mẹ NGUYỄN THỊ HOÀI THU, năm sinh 1995, nơi đăng ký thường trú Nà Buông, Điền Xá" : null, trang: q ? 1 : null },
+        { ...goc, vanBanId: "v3", hoSoId: "h2", documentId: "d3", maHoSo: "H49.132.02.2012.01.02", tieuDeHoSo: "Giấy chứng sinh, tờ khai đăng ký lại việc sinh năm 2012", soThuTu: 5, loaiVb: "Tờ trình", soKyHieu: "15/TTr-UBND", ngayThang: "11/02/2012", trichYeu: "Tờ trình đề nghị cấp lại giấy khai sinh", cheDo: "01", hanChe: false, daHuy: true, khop: q ? "muc_luc" : null },
+      ];
+      return { tong: dong.length, dong };
+    }
+    case "tra_cuu_nhat_ky":
+      return [
+        { id: 3, at: new Date().toISOString(), action: "khai_thac.dip", nguoi: "Nguyễn Văn Khách", tenDangNhap: "khach", documentId: null, detail: { maXacThuc: "XT.2026.01A1A94A", soTaiLieu: 2 }, ip: "192.168.1.20" },
+        { id: 2, at: new Date().toISOString(), action: "khai_thac.xem", nguoi: "Nguyễn Văn Khách", tenDangNhap: "khach", documentId: "d1", detail: { maHoSo: "H49.132.02.2017.01.04", trichYeu: "TỜ KHAI ĐĂNG KÝ LẠI VIỆC SINH CỦA DƯƠNG THỊ HIỀN" }, ip: "192.168.1.20" },
+      ];
     case "ops_integrity_report":
-      return { tongTaiLieu: 205_007, daKiem3Nam: 41_200, soLoi: 0, tepLoi: [] };
+      return { tongTaiLieu: 205_007, daKiem3Nam: 41_200, soLoi: 0, tepLoi: [], tongGoi: 3_412, goiDaKiem: 3_412, goiSoLoi: 0, goiLoi: [] };
     case "records_list":
       return [{ id: "rec1", projectId: "dev-ltlsbn", kind: "kiem_tra_san_pham", soBienBan: "01/BB-KTS.2026", title: "Biên bản kiểm tra sản phẩm số hoá tài liệu", submissionId: null, createdAt: new Date().toISOString(), ref: "CCVTLT" }];
     // Nghiệm thu (0.23): hợp đồng, gói, mục lục mẫu để xem trước `?view=acceptance`.

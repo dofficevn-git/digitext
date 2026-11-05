@@ -346,6 +346,15 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   `lop-chu-goi-nhap`) → `cl_ho_so_goi` (dấu xong, nhập lại không trùng). Migration 0025 + `ingest_batches/items`.
   `WormGuard.put` chặn ghi đè `*-packages/` khác nội dung. `bootstrap-superadmin --password-file`. Desktop
   `features/ingest/NhapGoiView.tsx` (`view:nhapgoi`, quyền submission.approve), Tauri `ingest.rs`.
+  **GĐ4 tra cứu + 4 module (5/11):** migration 0026 — `khong_dau()` (unaccent, IMMUTABLE), `cl_vb_tim()` / `cl_hs_tim()`
+  + chỉ mục trigram (mục lục, `ocr_results.content`), `integrity_checks.package_id`, `packages.huy_at/huy_quyet_dinh`.
+  `routes/tra_cuu.rs`: `GET /tra-cuu` (mẫu `%từ1%từ2%`, khớp mục lục hoặc lớp chữ, trích đoạn), `/tra-cuu/bo-loc`,
+  `/tra-cuu/tai-lieu/{id}/doc` (watermark; khách chỉ đọc thẳng tài liệu công khai khi phí đọc = 0), `/tra-cuu/nhat-ky`
+  (`audit_log` `khai_thac.*` — ghi cả ở đọc/tải/DIP của `access.rs`). DIP tài liệu nhập: `nhap_goi::dip_tu_goi` dựng EAD
+  từ mục lục. Cung cấp thông tin (`digitext-db/info.rs`) tìm không dấu trên mục lục + lớp chữ. Bảo quản: blake3 tài liệu
+  nhập + sha256 zip gói (API `/ops/integrity/run` và worker `f_2b5`). Tiêu huỷ: `disposal::f_1ah` tính hạn từ THBQ cho
+  tài liệu nhập; `execute` xoá zip qua `ObjectStore::xoa_theo_quyet_dinh` (đường DUY NHẤT qua WormGuard) khi hết tài liệu
+  của gói. Desktop `features/tracuu/TraCuuView.tsx` (`view:tracuu`, quyền access.request), Tauri `tra_cuu.rs`.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
@@ -400,7 +409,7 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0025` (sửa 4/11/2026; 0025 = nhập gói AIP)
+### Schema Postgres: `migrations/0001`–`0026` (sửa 5/11/2026; 0025 = nhập gói AIP, 0026 = tra cứu không dấu / kiểm gói / huỷ gói)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
 (0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05: mở CHECK `records.kind` + cột `ref`,

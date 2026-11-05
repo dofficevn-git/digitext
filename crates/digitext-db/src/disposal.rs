@@ -133,6 +133,21 @@ pub async fn f_18b(r_226: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
     Ok(r_228)
 }
 pub async fn f_1ah(r_22a: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
+    // Bản Lưu trữ (GĐ4, 5/11/2026): tài liệu nhập từ gói AIP chưa có hạn lưu trữ → tính từ THBQ có thời hạn của hồ sơ và năm
+    // kết thúc, cùng cách tính với `digitext_core::chinh_ly::thbq_status` (hết hạn từ 1/1 năm kết thúc + số năm). Chỉ tài liệu
+    // nhập (goi_id), để máy chủ thi công không bị dồn danh mục hủy cho tài liệu đang số hoá.
+    sqlx::query(
+        "UPDATE documents d SET het_han_luu_tru = make_timestamptz(x.nam_ket_thuc + x.gia_tri, 1, 1, 0, 0, 0) \
+         FROM (SELECT DISTINCT ON (f.document_id) f.document_id, h.nam_ket_thuc, t.gia_tri \
+               FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id AND v.deleted_at IS NULL \
+               JOIN cl_ho_so h ON h.id = v.ho_so_id AND h.deleted_at IS NULL \
+               JOIN cl_thbq t ON t.id = h.thbq_id \
+               WHERE f.deleted_at IS NULL AND f.document_id IS NOT NULL AND t.trang_thai = 2 AND t.gia_tri > 0 \
+                 AND h.nam_ket_thuc IS NOT NULL) x \
+         WHERE d.id = x.document_id AND d.goi_id IS NOT NULL AND d.het_han_luu_tru IS NULL AND d.status <> 'disposed'",
+    )
+    .execute(r_22a)
+    .await?;
     let r_22c: Vec<(Uuid, Uuid)> = sqlx::query_as(
         "INSERT INTO disposal_entries (id, project_id, document_id, ly_do) \
          SELECT gen_random_uuid(), d.project_id, d.id, 'het_thoi_han' \

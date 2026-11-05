@@ -62,18 +62,32 @@ export interface V4uz {
   checkedAt: string;
 }
 
+/** Gói zip trong kho có lần kiểm sha256 gần nhất lỗi (GĐ4 bản Lưu trữ, 5/11/2026). */
+export interface GoiLoi {
+  packageId: string;
+  label: string;
+  objid: string | null;
+  chiTiet: string | null;
+  checkedAt: string;
+}
+
 export interface V4v0 {
   tongTaiLieu: number;
   daKiem3Nam: number;
   soLoi: number;
   tepLoi: V4uz[];
+  /** Máy chủ cũ (trước 0026) không trả các trường gói. */
+  tongGoi?: number;
+  goiDaKiem?: number;
+  goiSoLoi?: number;
+  goiLoi?: GoiLoi[];
 }
 
 export function V4v1(): Promise<V4v0> {
   return invoke<V4v0>("ops_integrity_report");
 }
 
-export function V4v2(): Promise<{ daKiem: number; loi: number }> {
+export function V4v2(): Promise<{ daKiem: number; loi: number; goiDaKiem?: number; goiLoi?: number }> {
   return invoke("ops_integrity_run");
 }
 

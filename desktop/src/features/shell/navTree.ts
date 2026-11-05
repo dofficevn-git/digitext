@@ -189,8 +189,11 @@ const NAV_LUU_TRU: V46s[] = [
     id: "tracuu",
     label: "Tra cứu",
     icon: "tim",
-    gate: "khogia",
-    children: [{ ...mucCon("khaithac"), label: "Mục lục hồ sơ" }],
+    gate: "tracuu",
+    children: [
+      { id: "tracuutl", label: "Tra cứu tài liệu", gate: "tracuu", leaf: { kind: "view", view: "tracuu" }, keywords: "tra cuu tim kiem tai lieu van ban noi dung khong dau doc ban so" },
+      { ...mucCon("khaithac"), label: "Mục lục hồ sơ" },
+    ],
   },
   nhom("luutruso"),
   { id: "kholuutru", label: "Kho lưu trữ", icon: "kho", gate: "khogia", children: [mucCon("khogia"), mucCon("muontra")] },

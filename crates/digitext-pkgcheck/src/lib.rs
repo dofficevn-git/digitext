@@ -603,19 +603,30 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
         None => c.err("EAD", "Thiếu metadata/descriptive/EAD.xml (mô tả hồ sơ)"),
         Some((p, e)) => {
             check_codes(&mut c, "EAD hồ sơ", e, &mut date_bad);
-            for k in ["title", "maintenance", "mode", "language", "totalDoc", "confidenceLevel"] {
-                if e.child_text(k).is_none_or(|v| v.is_empty()) {
-                    c.err("EAD", format!("EAD hồ sơ: thiếu <{k}>"));
+            if res.kind == "DIP" {
+                // Gói DIP: EAD.xml mô tả YÊU CẦU khai thác (Điều 42), không mô tả hồ sơ (5/11/2026).
+                for k in ["requestID", "requestDate", "purpose"] {
+                    if e.child_text(k).is_none_or(|v| v.is_empty()) {
+                        c.err("EAD", format!("EAD yêu cầu DIP: thiếu <{k}>"));
+                    }
                 }
+                // file_code để trống: văn bản trong DIP gom từ nhiều hồ sơ, không so khuôn <mã hồ sơ>.<STT>.
+                res.title = e.child_text("purposeContent").unwrap_or_default();
+            } else {
+                for k in ["title", "maintenance", "mode", "language", "totalDoc", "confidenceLevel"] {
+                    if e.child_text(k).is_none_or(|v| v.is_empty()) {
+                        c.err("EAD", format!("EAD hồ sơ: thiếu <{k}>"));
+                    }
+                }
+                file_code = e.child_text("arcFileCode").filter(|v| !v.is_empty()).or_else(|| e.child_text("fileCode").filter(|v| !v.is_empty())).unwrap_or_default();
+                if file_code.is_empty() {
+                    c.err("EAD", "EAD hồ sơ: thiếu mã hồ sơ (arcFileCode / fileCode)");
+                }
+                if aip && e.child_text("arcFileCode").is_none_or(|v| v.is_empty()) {
+                    c.warn("EAD", "Gói AIP nhưng EAD hồ sơ không có arcFileCode (mã hồ sơ lưu trữ)");
+                }
+                res.title = e.child_text("title").unwrap_or_default();
             }
-            file_code = e.child_text("arcFileCode").filter(|v| !v.is_empty()).or_else(|| e.child_text("fileCode").filter(|v| !v.is_empty())).unwrap_or_default();
-            if file_code.is_empty() {
-                c.err("EAD", "EAD hồ sơ: thiếu mã hồ sơ (arcFileCode / fileCode)");
-            }
-            if aip && e.child_text("arcFileCode").is_none_or(|v| v.is_empty()) {
-                c.warn("EAD", "Gói AIP nhưng EAD hồ sơ không có arcFileCode (mã hồ sơ lưu trữ)");
-            }
-            res.title = e.child_text("title").unwrap_or_default();
             res.total_doc = e.child_text("totalDoc").and_then(|v| v.parse().ok());
             res.pages = e.child_text("numberOfPage").and_then(|v| v.parse().ok());
             let xsd_name = format!("schemas/{}", p.rsplit('/').next().unwrap_or("EAD.xml").replace(".xml", ".xsd"));
@@ -916,6 +927,9 @@ mod tests {
         let (r, ex) = check_and_extract(std::path::Path::new(&p));
         let ex = ex.expect("đọc được gói");
         println!("{} · {} · {} · hồ sơ {:?}", r.kind, r.objid, r.verdict, ex.ho_so);
+        for f in r.findings.iter().filter(|f| f.level == Level::Err) {
+            println!("  LỖI [{}] {}", f.group, f.message);
+        }
         let co_tep = ex.docs.iter().filter(|d| d.data_path.is_some()).count();
         println!("{} văn bản, {co_tep} có tệp", ex.docs.len());
         for d in ex.docs.iter().take(3) {

@@ -400,17 +400,20 @@ function FeesDialog({ onClose }: { onClose: () => void }) {
 }
 
 // ---------------- Yêu cầu mới (3 bước)
-function YeuCauMoiDialog({ projectId, onClose, onDone }: { projectId: string | null; onClose: () => void; onDone: (r: V4tn) => void }) {
+/** Tài liệu cho bước "Chọn tài liệu" — tài liệu máy chủ (V4eg) hoặc dòng chọn sẵn từ Tra cứu (bản Lưu trữ). */
+export type TaiLieuChon = Pick<V4eg, "id" | "filename" | "hoSoRef" | "pageCount">;
+
+export function YeuCauMoiDialog({ projectId, onClose, onDone, chonSan }: { projectId: string | null; onClose: () => void; onDone: (r: V4tn) => void; chonSan?: TaiLieuChon[] }) {
   const [step, setStep] = useState(0);
   const [kind, setKind] = useState<V4tl["kind"]>("doc");
   const [mucDich, setMucDich] = useState("");
   const [phuongThuc, setPhuongThuc] = useState("tai_khoan");
   const [nguoiNhan, setNguoiNhan] = useState("");
   const [soDinhDanh, setSoDinhDanh] = useState("");
-  const [docs, setDocs] = useState<V4eg[] | null>(null);
+  const [docs, setDocs] = useState<TaiLieuChon[] | null>(chonSan ?? null);
   const [docErr, setDocErr] = useState<unknown>(null);
   const [q, setQ] = useState("");
-  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [sel, setSel] = useState<Set<string>>(() => new Set(chonSan?.map((d) => d.id) ?? []));
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -424,7 +427,7 @@ function YeuCauMoiDialog({ projectId, onClose, onDone }: { projectId: string | n
     const k = q.trim().toLowerCase();
     return (docs ?? []).filter((d) => !k || d.filename.toLowerCase().includes(k) || (d.hoSoRef ?? "").toLowerCase().includes(k));
   }, [docs, q]);
-  const docCols: Column<V4eg>[] = [
+  const docCols: Column<TaiLieuChon>[] = [
     { key: "filename", header: "Tệp", className: "whitespace-normal" },
     { key: "hoSoRef", header: "Hồ sơ", width: 140, cell: (d) => d.hoSoRef ?? "—" },
     { key: "pageCount", header: "Trang", align: "right", width: 70, cell: (d) => d.pageCount ?? "—" },

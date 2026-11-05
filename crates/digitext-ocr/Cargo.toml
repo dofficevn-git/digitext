@@ -24,6 +24,8 @@ digitext-storage = { path = "../digitext-storage" }
 digitext-package = { path = "../digitext-package" }
 digitext-vi = { path = "../digitext-vi" }
 digitext-telemetry = { path = "../digitext-telemetry" }
+blake3 = { workspace = true }
+sha2 = { workspace = true }
 axum = { workspace = true }
 opentelemetry = { workspace = true }
 tracing-opentelemetry = { workspace = true }
