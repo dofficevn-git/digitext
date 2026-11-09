@@ -120,6 +120,25 @@ export interface PdfaVera {
   rules: string[];
 }
 
+/** Một trang đã đo: tỉ lệ mực và góc nghiêng (độ, null = không đoán được). */
+export interface TrangDo {
+  trang: number;
+  muc: number;
+  goc: number | null;
+}
+
+/** Kết quả đo trang trắng / trang lệch của một tệp. */
+export interface KetQuaTrang {
+  daDo: number;
+  khongDo: number;
+  trangTrang: TrangDo[];
+  /** Rất ít mực nhưng chưa chắc trắng — nên mở ra xem. */
+  trangGanTrang: TrangDo[];
+  trangLech: TrangDo[];
+  trangNgang: number[];
+  gocLonNhat: number;
+}
+
 export interface PdfaFileReport {
   path: string;
   name: string;
@@ -140,6 +159,8 @@ export interface PdfaFileReport {
   looksPdfa: boolean;
   problems: string[];
   verapdf: PdfaVera | null;
+  /** null = lần kiểm này không bật đo trang. */
+  trang: KetQuaTrang | null;
   error: string | null;
 }
 
@@ -155,7 +176,7 @@ export interface PdfaSummary {
   reportFile: string | null;
 }
 
-export function pdfaCheck(args: { paths: string[]; useVerapdf: boolean }): Promise<PdfaSummary> {
+export function pdfaCheck(args: { paths: string[]; useVerapdf: boolean; scanPages?: boolean }): Promise<PdfaSummary> {
   return invoke<PdfaSummary>("pdfa_check", { args });
 }
 

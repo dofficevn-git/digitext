@@ -48,6 +48,8 @@ pub struct PdfaReport {
     pub looks_pdfa: bool,
     pub problems: Vec<String>,
     pub verapdf: Option<VeraResult>,
+    /// Đo trang trắng / trang lệch (`trang.rs`). `None` = không bật đo.
+    pub trang: Option<crate::trang::KetQuaTrang>,
     pub error: Option<String>,
 }
 
@@ -127,7 +129,7 @@ pub fn inspect_bytes(path: &str, name: &str, bytes: &[u8]) -> PdfaReport {
         path: path.to_string(), name: name.to_string(), bytes: 0, pdf_version: String::new(), declared: None,
         has_xmp: false, has_output_intent: false, pages: 0, text_pages: 0, min_dpi: None, min_bit_depth: None,
         max_page_cm: None, is_map: false, signed: false, producer: None, verdict: String::new(), looks_pdfa: false, problems: Vec::new(),
-        verapdf: None, error: None,
+        verapdf: None, trang: None, error: None,
     };
     if bytes.is_empty() {
         r.verdict = "KHÔNG ĐỌC ĐƯỢC".into();
@@ -313,11 +315,34 @@ pub fn flavour_for(declared: &Option<String>) -> String {
 
 /// Soi danh sách tệp; `use_verapdf` thì chạy thêm veraPDF (gom theo thư mục + loại, 150 tệp/lượt).
 pub fn run(files: &[PathBuf], use_verapdf: bool, progress: &(dyn Fn(usize, usize) + Sync)) -> Vec<PdfaReport> {
-    let total = files.len() * if use_verapdf { 2 } else { 1 };
+    run_opts(files, use_verapdf, false, progress)
+}
+
+/// Như `run` nhưng có thể bật đo trang trắng / trang lệch (giải nén ảnh từng trang nên chậm hơn hẳn).
+pub fn run_opts(
+    files: &[PathBuf],
+    use_verapdf: bool,
+    do_trang: bool,
+    progress: &(dyn Fn(usize, usize) + Sync),
+) -> Vec<PdfaReport> {
+    let total = files.len() * (1 + usize::from(use_verapdf) + usize::from(do_trang));
     let mut reports: Vec<PdfaReport> = Vec::with_capacity(files.len());
-    for (i, f) in files.iter().enumerate() {
-        reports.push(inspect(f));
-        progress(i + 1, total);
+    let mut buoc = 0usize;
+    for f in files.iter() {
+        let mut r = inspect(f);
+        buoc += 1;
+        progress(buoc, total);
+        if do_trang && r.error.is_none() && r.pages > 0 {
+            if let Ok(bytes) = std::fs::read(f) {
+                r.trang = crate::trang::do_pdf(&bytes, r.pages);
+                if let Some(t) = &r.trang {
+                    r.problems.extend(t.mo_ta());
+                }
+            }
+            buoc += 1;
+            progress(buoc, total);
+        }
+        reports.push(r);
     }
     if use_verapdf {
         let mut groups: BTreeMap<(PathBuf, String), Vec<usize>> = BTreeMap::new();
@@ -327,7 +352,7 @@ pub fn run(files: &[PathBuf], use_verapdf: bool, progress: &(dyn Fn(usize, usize
                 groups.entry((dir, flavour_for(&r.declared))).or_default().push(i);
             }
         }
-        let mut done = files.len();
+        let mut done = buoc;
         for ((dir, flavour), idx) in groups {
             for chunk in idx.chunks(150) {
                 let names: Vec<String> = chunk.iter().map(|i| reports[*i].name.clone()).collect();
@@ -355,7 +380,7 @@ pub fn run(files: &[PathBuf], use_verapdf: bool, progress: &(dyn Fn(usize, usize
 /// Ghi bảng kết quả ra CSV (UTF-8 có BOM — mở thẳng bằng Excel). Trả đường dẫn đã ghi.
 pub fn write_csv(reports: &[PdfaReport], path: &Path) -> Result<String, String> {
     let esc = |s: &str| if s.contains([',', '"', '\n', ';']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s.to_string() };
-    let mut out = String::from("\u{feff}Kết luận,Loại tự khai,veraPDF,Tệp,Thư mục,PDF,Trang,Trang có lớp chữ,dpi thấp nhất,Bit màu,Hồ sơ màu,Chữ ký số,Phần mềm tạo,Vấn đề,Luật veraPDF vi phạm\r\n");
+    let mut out = String::from("\u{feff}Kết luận,Loại tự khai,veraPDF,Tệp,Thư mục,PDF,Trang,Trang có lớp chữ,dpi thấp nhất,Bit màu,Hồ sơ màu,Chữ ký số,Phần mềm tạo,Trang trắng,Trang gần như trắng,Trang lệch,Góc lệch lớn nhất,Trang quét ngang,Số trang đã đo,Vấn đề,Luật veraPDF vi phạm\r\n");
     for r in reports {
         let dir = Path::new(&r.path).parent().map(|p| p.display().to_string()).unwrap_or_default();
         let vera = match &r.verapdf {
@@ -368,6 +393,12 @@ pub fn write_csv(reports: &[PdfaReport], path: &Path) -> Result<String, String> 
             r.min_dpi.map(|d| d.to_string()).unwrap_or_default(), r.min_bit_depth.map(|d| d.to_string()).unwrap_or_default(),
             if r.has_output_intent { "có" } else { "KHÔNG" }.to_string(), if r.signed { "có" } else { "không" }.to_string(),
             r.producer.clone().unwrap_or_default(),
+            r.trang.as_ref().map(|t| t.trang_trang.iter().map(|x| x.trang.to_string()).collect::<Vec<_>>().join(" ")).unwrap_or_default(),
+            r.trang.as_ref().map(|t| t.trang_gan_trang.iter().map(|x| x.trang.to_string()).collect::<Vec<_>>().join(" ")).unwrap_or_default(),
+            r.trang.as_ref().map(|t| t.trang_lech.iter().map(|x| format!("{}({:.1}°)", x.trang, x.goc.unwrap_or(0.0))).collect::<Vec<_>>().join(" ")).unwrap_or_default(),
+            r.trang.as_ref().filter(|t| t.da_do > 0).map(|t| format!("{:.1}", t.goc_lon_nhat)).unwrap_or_default(),
+            r.trang.as_ref().map(|t| t.trang_ngang.iter().map(u32::to_string).collect::<Vec<_>>().join(" ")).unwrap_or_default(),
+            r.trang.as_ref().map(|t| if t.khong_do > 0 { format!("{} (bỏ qua {})", t.da_do, t.khong_do) } else { t.da_do.to_string() }).unwrap_or_default(),
             r.error.clone().map(|e| vec![e]).unwrap_or_else(|| r.problems.clone()).join(" | "),
             r.verapdf.as_ref().map(|v| v.rules.join(" | ")).unwrap_or_default(),
         ];

@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "digitext-desktop"
-version = "0.24.7"
+version = "0.24.8"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1150,6 +1150,7 @@ dependencies = [
  "chrono",
  "digitext-package",
  "digitext-pdf",
+ "image",
  "lopdf 0.43.0",
  "serde",
  "serde_json",

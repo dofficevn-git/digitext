@@ -376,3 +376,22 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   mã (gộp bốn phông làm một).
   **Việc còn treo cho nghiệp vụ:** 88 gói "Chi cục Văn thư lưu trữ" mang mã của UBND tỉnh — mã đó đã nằm
   trong mã lưu trữ từng hồ sơ bên trong gói. Cần đối chiếu danh mục phông của Trung tâm rồi đóng lại nếu sai.
+- 9/11/2026 - **Kiểm PDF/A đo thêm trang trắng, trang lệch, trang quét ngang** (desktop 0.24.8,
+  `crates/digitext-extimport/src/trang.rs`). Đọc ảnh JPEG nhúng sẵn qua `digitext_pdf::page_jpeg` nên không
+  cần Docker hay poppler, chạy ngay trên máy người dùng cùng lượt kiểm PDF/A.
+
+  * Mực: nền giấy = mức sáng ở phân vị 90 của chính trang đó, ngưỡng = nền trừ 60. Nhờ vậy giấy ố vàng và
+    bản quét xám vẫn đo đúng. Bỏ 3 % sát mép (gáy sách, bóng nắp máy quét, lỗ ghim).
+  * Góc: chiếu điểm mực lên trục dọc ở từng góc thử, quét thô ±6° bước 0,5° rồi dò lại bước 0,1°.
+  * Trang ngang: so với điểm chiếu theo trục còn lại; hơn 1,35 lần thì chữ đang dựng đứng.
+
+  **Ngưỡng lấy từ số đo thật, không đoán**: chạy trên 332 trang quét Bắc Giang ở `data/01a0cd40-…`, trang ÍT
+  mực nhất mà vẫn có nội dung đạt **1,14 %** (bảng 7 dòng đầu trang, phần dưới để trống). Nên để trang trắng
+  ở 0,15 % (dưới 7 lần) và thêm bậc "gần như trắng" tới 0,6 %. Lệch từ 1° trở lên thì báo.
+  Kết quả trên tập đó: 72 trang lệch (lớn nhất 4,6°), 8 trang quét ngang, 0 trang trắng, không báo nhầm —
+  đã mở ảnh xem tận mắt vài trang bị gắn cờ. Tốc độ ~7 trang/giây.
+
+  Giao diện: ô "Kiểm trang trắng và trang lệch" (tắt mặc định vì chậm), cột mới trong bảng, số trang cụ thể
+  khi mở rộng dòng. CSV thêm 6 cột: Trang trắng, Trang gần như trắng, Trang lệch (kèm góc), Góc lệch lớn nhất,
+  Trang quét ngang, Số trang đã đo. `pdfa::run` giữ nguyên chữ ký cho `cli.rs`; cờ nằm ở `run_opts`.
+  Công cụ chỉnh ngưỡng: `cargo run -p digitext-extimport --example do-trang -- <thư mục> [--muc] [--xuat <thư mục>] [--csv <tệp>]`.

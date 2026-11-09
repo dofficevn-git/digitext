@@ -12,6 +12,8 @@ calamine = { version = "0.26", features = ["dates"] }
 chrono = { workspace = true }
 digitext-package = { path = "../digitext-package" }
 digitext-pdf = { path = "../digitext-pdf" }
+# Giai nen JPEG de do trang trang / trang lech (src/trang.rs).
+image = { version = "0.25.10", default-features = false, features = ["jpeg"] }
 lopdf = "0.43"
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { onExtimportProgress, pdfaCheck, pdfaVerapdfAvailable, type ExtProgress, type PdfaFileReport, type PdfaSummary } from "@/api/extimport";
+import { onExtimportProgress, pdfaCheck, pdfaVerapdfAvailable, type ExtProgress, type KetQuaTrang, type PdfaFileReport, type PdfaSummary } from "@/api/extimport";
 import { isTauri } from "@/api/ipc";
 import { Badge, Banner, Button, Card, Checkbox, ErrorBanner, Field, Help, Table, Tip, Toolbar, type Column } from "@/ui";
 
@@ -16,9 +16,29 @@ function badgeOf(f: PdfaFileReport): { tone: "err" | "ok" | "info"; text: string
   return { tone: "err", text: "Không phải PDF/A" };
 }
 
+/** Danh sách số trang, cắt bớt khi quá dài. */
+const soTrang = (ds: number[]): string => (ds.length > 20 ? `${ds.slice(0, 20).join(", ")} … và ${fmt(ds.length - 20)} trang nữa` : ds.join(", "));
+
+/** Ô tóm tắt trong cột "Trang trắng / lệch". */
+function OTrang({ t }: { t: KetQuaTrang | null }) {
+  if (!t) return <span className="text-fg-subtle">—</span>;
+  if (t.daDo === 0) return <Tip text="Trang không phải ảnh JPEG nhúng nên không đo được"><span className="text-fg-subtle">không đo được</span></Tip>;
+  const xau = t.trangTrang.length + t.trangGanTrang.length + t.trangLech.length + t.trangNgang.length;
+  if (xau === 0) return <Badge tone="ok">Sạch</Badge>;
+  return (
+    <span className="flex flex-wrap gap-1">
+      {t.trangTrang.length > 0 && <Badge tone="warn">{fmt(t.trangTrang.length)} trắng</Badge>}
+      {t.trangGanTrang.length > 0 && <Badge tone="info">{fmt(t.trangGanTrang.length)} gần trắng</Badge>}
+      {t.trangLech.length > 0 && <Badge tone="warn">{fmt(t.trangLech.length)} lệch</Badge>}
+      {t.trangNgang.length > 0 && <Badge tone="err">{fmt(t.trangNgang.length)} ngang</Badge>}
+    </span>
+  );
+}
+
 export default function PdfaCheckPanel() {
   const [paths, setPaths] = useState<string[]>([]);
   const [useVera, setUseVera] = useState(true);
+  const [doTrang, setDoTrang] = useState(false);
   const [veraOk, setVeraOk] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<ExtProgress | null>(null);
@@ -54,7 +74,7 @@ export default function PdfaCheckPanel() {
     setProgress(null);
     setBusy(true);
     try {
-      setRes(await pdfaCheck({ paths, useVerapdf: useVera && veraOk === true }));
+      setRes(await pdfaCheck({ paths, useVerapdf: useVera && veraOk === true, scanPages: doTrang }));
     } catch (e) {
       setErr(e);
     } finally {
@@ -69,6 +89,7 @@ export default function PdfaCheckPanel() {
     { key: "hasOutputIntent", header: "Hồ sơ màu", width: 100, cell: (f) => (f.hasOutputIntent ? "Có" : <span className="text-danger-700">Không</span>) },
     { key: "textPages", header: "Lớp chữ", width: 100, cell: (f) => `${f.textPages}/${f.pages} trang` },
     { key: "minDpi", header: "dpi", width: 110, cell: (f) => `${f.minDpi ?? "—"}${f.isMap ? " (bản đồ, cần 300)" : ""}` },
+    { key: "trang", header: "Trang trắng / lệch", width: 170, cell: (f) => <OTrang t={f.trang} /> },
     { key: "signed", header: "Ký số", width: 80, cell: (f) => (f.signed ? "Có" : "Không") },
     { key: "producer", header: "Phần mềm tạo", className: "text-sm text-fg-subtle", cell: (f) => f.producer ?? "—", hideBelow: 1440 },
   ];
@@ -93,6 +114,13 @@ export default function PdfaCheckPanel() {
               </Field>
             </span>
           </Tip>
+          <Tip text="Giải nén ảnh từng trang để đo lượng mực và góc dòng chữ. Chậm hơn hẳn, nên chỉ bật khi cần soát chất lượng quét.">
+            <span>
+              <Field label="Kiểm trang trắng và trang lệch" inline>
+                <Checkbox checked={doTrang} onChange={setDoTrang} disabled={busy} />
+              </Field>
+            </span>
+          </Tip>
           <Toolbar.Spacer />
           <Button variant="primary" icon="kiemTraPdfa" loading={busy} disabled={!isTauri() || paths.length === 0} onClick={() => void run()}>
             Kiểm tra PDF/A
@@ -114,7 +142,32 @@ export default function PdfaCheckPanel() {
           title={`${fmt(res.total)} tệp: ${fmt(res.ok)} ${res.verapdfUsed ? "đạt veraPDF" : "có khai PDF/A đủ dấu hiệu"}, ${fmt(res.notOk)} không đạt`}
           description={`Theo loại: ${Object.entries(res.byKind).map(([k, v]) => `${k} ${fmt(v)}`).join(" · ")}${!res.verapdfUsed ? " · chưa chạy veraPDF, đây là loại tự khai" : ""}${res.truncated ? " · quá 5.000 tệp, chỉ kiểm 5.000 tệp đầu" : ""}`}
         >
-          <Table columns={cols} rows={res.files} getRowId={(f) => f.path} maxHeight={480} dense renderExpanded={(f) => { const d = [...(f.error ? [f.error] : f.problems), ...(f.verapdf?.rules ?? [])]; return d.length ? <ul className="list-disc px-8 py-2 text-sm">{d.map((x, i) => <li key={i}>{x}</li>)}</ul> : null; }} />
+          <Table columns={cols} rows={res.files} getRowId={(f) => f.path} maxHeight={480} dense renderExpanded={(f) => {
+            const d = [...(f.error ? [f.error] : f.problems), ...(f.verapdf?.rules ?? [])];
+            const t = f.trang;
+            const coTrang = t && (t.trangTrang.length > 0 || t.trangGanTrang.length > 0 || t.trangLech.length > 0 || t.trangNgang.length > 0);
+            if (!d.length && !coTrang) return null;
+            return (
+              <div className="space-y-2 px-8 py-2 text-sm">
+                {d.length > 0 && <ul className="list-disc">{d.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+                {coTrang && t && (
+                  <div className="space-y-1">
+                    {t.trangTrang.length > 0 && <div><b>Trang trắng ({fmt(t.trangTrang.length)}):</b> {soTrang(t.trangTrang.map((x) => x.trang))}</div>}
+                    {t.trangGanTrang.length > 0 && <div><b>Gần như trắng, nên xem lại ({fmt(t.trangGanTrang.length)}):</b> {soTrang(t.trangGanTrang.map((x) => x.trang))}</div>}
+                    {t.trangLech.length > 0 && (
+                      <div>
+                        <b>Trang lệch ({fmt(t.trangLech.length)}):</b>{" "}
+                        {t.trangLech.slice(0, 20).map((x) => `${x.trang} (${(x.goc ?? 0).toFixed(1)}°)`).join(", ")}
+                        {t.trangLech.length > 20 ? ` … và ${fmt(t.trangLech.length - 20)} trang nữa` : ""}
+                      </div>
+                    )}
+                    {t.trangNgang.length > 0 && <div><b>Trang quét ngang 90° ({fmt(t.trangNgang.length)}):</b> {soTrang(t.trangNgang)}</div>}
+                    <div className="text-xs text-fg-subtle">Đã đo {fmt(t.daDo)} trang{t.khongDo > 0 ? `, ${fmt(t.khongDo)} trang không lấy được ảnh nên bỏ qua` : ""}.</div>
+                  </div>
+                )}
+              </div>
+            );
+          }} />
           <p className="px-4 py-2 text-xs text-fg-subtle">
             {res.total > res.files.length ? `Bảng hiện ${fmt(res.files.length)} tệp đầu, tệp không đạt xếp trước. ` : ""}
             {res.reportFile ? (
@@ -125,6 +178,13 @@ export default function PdfaCheckPanel() {
           </p>
         </Card>
       )}
+
+      <Help title="Trang trắng và trang lệch đo thế nào">
+        <p>Mỗi trang được rút nhỏ về bản xám rồi lấy mức sáng ở phân vị 90 làm nền giấy, nên giấy ố vàng hay bản quét xám vẫn đo đúng. Điểm nào tối hơn nền 60 mức thì tính là mực; dưới 0,15 % diện tích coi là trang trắng, từ đó đến 0,6 % thì báo gần như trắng để người soát mở ra xem. Vùng 3 % sát mép bị bỏ qua vì gáy sách, bóng nắp máy quét và lỗ ghim đều nằm đó.</p>
+        <p>Ngưỡng lấy từ 332 trang quét thật của Bắc Giang: trang ít mực nhất mà vẫn có nội dung đạt 1,14 %, tức gấp bảy lần ngưỡng trang trắng.</p>
+        <p>Góc lệch đo bằng cách chiếu các điểm mực lên trục dọc ở từng góc thử từ âm 6 đến dương 6 độ: dòng chữ dồn vào ít hàng nhất ở đúng góc nghiêng. Từ 1 độ trở lên thì báo lệch. Trang nào chữ dựng đứng thì báo là quét ngang 90 độ chứ không báo lệch.</p>
+        <p>Chỉ đo được trang lưu dưới dạng ảnh JPEG nhúng, tức bản quét. Trang chữ thật hoặc ảnh nén kiểu khác sẽ bị bỏ qua và ghi rõ số lượng.</p>
+      </Help>
 
       <Help title="Lớp chữ không phải PDF/A">
         <p>Bôi được chữ bằng Ctrl+A chỉ chứng minh tệp có lớp chữ. PDF/A còn đòi hồ sơ màu, siêu dữ liệu XMP, font nhúng và không có thành phần bị cấm; veraPDF kiểm đủ các luật đó theo ISO 19005.</p>

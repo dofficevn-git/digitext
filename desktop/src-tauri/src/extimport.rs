@@ -315,6 +315,9 @@ pub struct PdfaArgs {
     /// Chạy thêm veraPDF (bộ kiểm chuẩn ISO 19005) — cần Docker trên máy này.
     #[serde(default)]
     pub use_verapdf: bool,
+    /// Đo trang trắng / trang lệch: phải giải nén ảnh từng trang nên chậm hơn hẳn.
+    #[serde(default)]
+    pub scan_pages: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -363,7 +366,7 @@ pub async fn pdfa_check(app: AppHandle, auth: State<'_, AuthState>, args: PdfaAr
         let available = pdfa::verapdf_available();
         let use_vera = args.use_verapdf && available;
         let app2 = app.clone();
-        let mut reports = pdfa::run(&files, use_vera, &move |done, total| {
+        let mut reports = pdfa::run_opts(&files, use_vera, args.scan_pages, &move |done, total| {
             if done == total || done % 10 == 0 {
                 let _ = app2.emit(EV_PROGRESS, Progress { phase: "pdfa", done, total, note: None });
             }
@@ -382,7 +385,7 @@ pub async fn pdfa_check(app: AppHandle, auth: State<'_, AuthState>, args: PdfaAr
         reports.sort_by_key(|r| (r.looks_pdfa, r.path.clone()));
         let total = reports.len();
         reports.truncate(500);
-        tracing::info!(total, ok, not_ok, verapdf = use_vera, "pdfa_check");
+        tracing::info!(total, ok, not_ok, verapdf = use_vera, trang = args.scan_pages, "pdfa_check");
         Ok(PdfaSummary {
             total, truncated, verapdf_used: use_vera, verapdf_available: available, by_kind, ok, not_ok,
             files: reports, report_file,

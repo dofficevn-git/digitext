@@ -14,6 +14,7 @@ pub mod excel;
 pub mod pack;
 pub mod pdfa;
 pub mod report;
+pub mod trang;
 
 pub use digitext_package::OrgIdent;
 
