@@ -14,6 +14,7 @@ pub mod error;
 pub mod extract;
 pub mod jwt;
 pub mod limiter;
+pub mod migrate;
 pub mod nhap_goi;
 pub mod password;
 pub mod routes;

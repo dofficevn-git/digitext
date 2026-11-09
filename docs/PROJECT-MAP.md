@@ -355,6 +355,11 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   nhập + sha256 zip gói (API `/ops/integrity/run` và worker `f_2b5`). Tiêu huỷ: `disposal::f_1ah` tính hạn từ THBQ cho
   tài liệu nhập; `execute` xoá zip qua `ObjectStore::xoa_theo_quyet_dinh` (đường DUY NHẤT qua WormGuard) khi hết tài liệu
   của gói. Desktop `features/tracuu/TraCuuView.tsx` (`view:tracuu`, quyền access.request), Tauri `tra_cuu.rs`.
+  **GĐ2 bộ cài máy chủ (9/11):** `digitext-api migrate [--da-ap-den NNNN] [--chi-xem]` (`migrate.rs`, bảng
+  `_digitext_migrations`) — dùng được cho cả OCR PC thay psql tay; worker `DIGITEXT_CHI_LUU_TRU=true` (config.rs, entry.rs,
+  `OcrProbe::KhongCo`); gói Windows `dev/luutru/` + Linux `infra/compose/luutru/` (+ `.dockerignore` danh sách trắng ở gốc);
+  `/tai-ve` phát `chung-chi-goc.crt` / `cai-chung-chi-goc.cmd`; desktop reqwest `rustls-tls-native-roots`,
+  `auth/client.rs::chuoi_loi`. Hướng dẫn: `docs/CAI-DAT-MAY-CHU-LUU-TRU.md`.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,

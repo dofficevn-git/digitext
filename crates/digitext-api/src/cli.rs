@@ -33,9 +33,10 @@ async fn run(r_1r: &[String]) -> anyhow::Result<()> {
         Some("bootstrap-superadmin") => f_v2(&r_1r[1..]).await,
         Some("backfill-source-pdfs") => backfill_source_pdfs().await,
         Some("nhap-goi") => nhap_goi(&r_1r[1..]).await,
+        Some("migrate") => migrate(&r_1r[1..]).await,
         Some(other) => {
             bail!(
-                "lệnh không hợp lệ: {other} (dùng: serve | bootstrap-superadmin --username <tên> [--password-file <tệp>] | backfill-source-pdfs | nhap-goi --du-an <mã> --nguoi <tên> [--nhan-ca-goi-loi] <thư mục|gói.zip>…)"
+                "lệnh không hợp lệ: {other} (dùng: serve | migrate [--da-ap-den <NNNN>] [--chi-xem] [--thu-muc <dir>] | bootstrap-superadmin --username <tên> [--password-file <tệp>] | backfill-source-pdfs | nhap-goi --du-an <mã> --nguoi <tên> [--nhan-ca-goi-loi] <thư mục|gói.zip>…)"
             )
         }
     }
@@ -469,4 +470,24 @@ async fn nhap_goi(args: &[String]) -> anyhow::Result<()> {
         dem.get("loi").unwrap_or(&0)
     );
     Ok(())
+}
+
+/// `migrate [--da-ap-den <NNNN>] [--chi-xem] [--thu-muc <dir>]` — chỉ cần DATABASE_URL (không đọc cấu hình khác của API,
+/// để bộ cài chạy được trước khi có khoá JWT / kho).
+async fn migrate(args: &[String]) -> anyhow::Result<()> {
+    let mut tc = crate::migrate::Tuychon { thu_muc: None, da_ap_den: None, chi_xem: false };
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--thu-muc" => tc.thu_muc = it.next().cloned(),
+            "--da-ap-den" => {
+                let v = it.next().context("thiếu số sau --da-ap-den")?;
+                tc.da_ap_den = Some(v.trim_start_matches('0').parse().unwrap_or(0));
+            }
+            "--chi-xem" => tc.chi_xem = true,
+            x => bail!("tham số không hợp lệ: {x}"),
+        }
+    }
+    let url = std::env::var("DATABASE_URL").context("thiếu DATABASE_URL")?;
+    crate::migrate::chay(&url, tc).await
 }

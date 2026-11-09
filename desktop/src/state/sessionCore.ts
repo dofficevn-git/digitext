@@ -43,6 +43,10 @@ export function V3zt(V14: string, V15: string): string {
     case "server_unreachable": {
       // Kèm lỗi thật (hết giờ chờ / đọc phản hồi lỗi…) để biết đâu là nguyên nhân.
       const chiTiet = V15.match(/\((.*)\)\.?$/)?.[1];
+      // Máy chủ Lưu trữ trong mạng nội bộ dùng chứng chỉ tự cấp: máy trạm chưa cài chứng chỉ gốc thì TLS báo UnknownIssuer.
+      if (/UnknownIssuer|invalid peer certificate|certificate/i.test(V15)) {
+        return "Máy này chưa tin chứng chỉ của máy chủ. Mở trình duyệt vào http://<địa chỉ máy chủ>/tai-ve, tải và chạy tệp cài chứng chỉ, rồi đăng nhập lại." + (chiTiet ? ` Chi tiết: ${chiTiet}` : "");
+      }
       return "Không kết nối được máy chủ. Kiểm tra mạng, hoặc đăng nhập offline nếu đã dùng máy này trước đó." + (chiTiet ? ` Chi tiết: ${chiTiet}` : "");
     }
     case "server_not_configured":

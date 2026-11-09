@@ -125,6 +125,10 @@ fn f_2bh() -> ExitCode {
             // chạy engine HTTP thì /readyz sẽ LUÔN fail vì không dịch vụ nào
             // khai báo 5 model đó.
             let (r_33m, r_33n) = match cfg.ocr_engine {
+                _ if cfg.chi_luu_tru => {
+                    tracing::info!("CHẾ ĐỘ CHỈ LƯU TRỮ (DIGITEXT_CHI_LUU_TRU) — không OCR, chỉ việc nền lưu trữ");
+                    (OcrProbe::KhongCo, Vec::new())
+                }
                 OcrEngine::Triton => match GrpcTritonProbe::connect_lazy(&cfg.triton_endpoint) {
                     Ok(p) => (
                         OcrProbe::Triton(p),
@@ -196,6 +200,10 @@ async fn f_2gu(
     let r_34m = digitext_db::connect(&cfg.database_url)
         .await
         .map_err(|e| format!("kết nối Postgres: {e}"))?;
+    // Chế độ chỉ lưu trữ: không đăng ký / kiểm engine nhận dạng (máy chủ chủ đầu tư không OCR).
+    let r_33z = if cfg.chi_luu_tru {
+        uuid::Uuid::nil()
+    } else {
     let rec_name = std::env::var(ENV_RECOGNITION_ENGINE_NAME)
         .ok()
         .map(|s| s.trim().to_owned())
@@ -227,8 +235,9 @@ async fn f_2gu(
             );
         }
     }
-    let r_33z = engine.id;
-    let r_343: Option<(VlmFieldExtractorV2, uuid::Uuid)> = if cfg.fields_engine == FieldsEngine::V2
+    engine.id
+    };
+    let r_343: Option<(VlmFieldExtractorV2, uuid::Uuid)> = if cfg.fields_engine == FieldsEngine::V2 && !cfg.chi_luu_tru
     {
         let ep = std::env::var(ENV_VLM_ENDPOINT).unwrap_or_default();
         let model = std::env::var(ENV_VLM_MODEL).unwrap_or_default();
@@ -270,7 +279,11 @@ async fn f_2gu(
     let r_34t = cfg.max_retries as i32;
     let r_34z = r_34y.clone();
     let r_34w = cfg.auto_make_pdf2;
+    let r_34c = cfg.chi_luu_tru;
     let r_34s = tokio::spawn(async move {
+        if r_34c {
+            return;
+        }
         let _ = worker::f_2b8(&r_34u, Duration::from_secs(30), r_34t, &r_34v, Some(r_34z), r_34w).await;
     });
     let r_34p = r_34m.clone();
@@ -443,6 +456,10 @@ async fn f_2gu(
     };
     let cfg = cfg.clone();
     let r_347 = tokio::spawn(async move {
+        if cfg.chi_luu_tru {
+            tracing::info!("vòng OCR: tắt (chế độ chỉ lưu trữ)");
+            return;
+        }
         let infer = match cfg.ocr_engine {
             OcrEngine::Triton => {
                 match GrpcTritonInfer::connect_lazy(&cfg.triton_endpoint, "ocr_pipeline") {

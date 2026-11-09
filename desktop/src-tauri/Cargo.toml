@@ -25,6 +25,9 @@ rand = "0.8"
 reqwest = { version = "0.12", default-features = false, features = [
   "json",
   "rustls-tls",
+  # Nạp cả chứng chỉ gốc trong kho Windows (bản Lưu trữ GĐ2, 9/11/2026): máy chủ chủ đầu tư trong LAN dùng chứng chỉ Caddy
+  # tự cấp, bộ cài máy trạm cài chứng chỉ gốc vào kho Windows. Updater (reqwest 0.13) đã dùng rustls-platform-verifier.
+  "rustls-tls-native-roots",
   "gzip",
 ] }
 sha2 = "0.10"

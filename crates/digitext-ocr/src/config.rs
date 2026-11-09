@@ -95,6 +95,9 @@ pub enum FieldsEngine {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkerConfig {
     pub database_url: String,
+    /// Bản Lưu trữ (máy chủ chủ đầu tư, GĐ2 9/11/2026): chỉ chạy việc nền lưu trữ — đóng gói DIP, kiểm toàn vẹn, quét
+    /// danh mục huỷ, hết hạn khai thác, quét virus; KHÔNG OCR, không cần Triton / dịch vụ OCR. `DIGITEXT_CHI_LUU_TRU=true`.
+    pub chi_luu_tru: bool,
     pub ocr_engine: OcrEngine,
     /// Rỗng khi ocr_engine = Http — lúc đó Triton không được dùng tới.
     pub triton_endpoint: String,
@@ -141,7 +144,8 @@ pub struct WorkerConfig {
     pub purge_source_after_pdfa: bool,
 }
 impl WorkerConfig {
-    pub const ENV_KEYS: [&'static str; 45] = [
+    pub const ENV_KEYS: [&'static str; 46] = [
+        "DIGITEXT_CHI_LUU_TRU",
         C_5G,
         C_6D,
         C_6E,
@@ -206,6 +210,7 @@ impl WorkerConfig {
                     .to_owned(),
             });
         }
+        let chi_luu_tru = f_1ee(r_30y, "DIGITEXT_CHI_LUU_TRU", false)?;
         let ocr_engine = match r_30y
             .get(ENV_OCR_ENGINE)
             .map(|s| s.to_ascii_lowercase())
@@ -225,8 +230,8 @@ impl WorkerConfig {
         // Chỉ bắt buộc khi thực sự dùng Triton. Bắt buộc vô điều kiện sẽ khiến
         // worker không khởi động nổi ở deployment không còn Triton.
         let triton_endpoint = match ocr_engine {
-            OcrEngine::Triton => require(r_30y, C_6D)?.to_owned(),
-            OcrEngine::Http => r_30y.get(C_6D).cloned().unwrap_or_default(),
+            OcrEngine::Triton if !chi_luu_tru => require(r_30y, C_6D)?.to_owned(),
+            _ => r_30y.get(C_6D).cloned().unwrap_or_default(),
         };
         if triton_endpoint.chars().any(char::is_whitespace) {
             return Err(ConfigError::Invalid {
@@ -235,7 +240,7 @@ impl WorkerConfig {
             });
         }
         let ocr_http_endpoint = match ocr_engine {
-            OcrEngine::Http => {
+            OcrEngine::Http if !chi_luu_tru => {
                 let v = require(r_30y, ENV_OCR_HTTP_ENDPOINT)?.to_owned();
                 if !(v.starts_with("http://") || v.starts_with("https://")) {
                     return Err(ConfigError::Invalid {
@@ -245,7 +250,7 @@ impl WorkerConfig {
                 }
                 v
             }
-            OcrEngine::Triton => r_30y
+            _ => r_30y
                 .get(ENV_OCR_HTTP_ENDPOINT)
                 .cloned()
                 .unwrap_or_default(),
@@ -319,7 +324,8 @@ impl WorkerConfig {
             });
         }
         let r_30x = f_1eu::<u64>(r_30y, C_5J, 120, 5, 3600)?;
-        let worker_enabled = f_1ee(r_30y, C_6J, false)?;
+        // Chế độ lưu trữ không có việc gì ngoài vòng nền → luôn bật.
+        let worker_enabled = f_1ee(r_30y, C_6J, false)? || chi_luu_tru;
         let page_source_dir = r_30y
             .get(C_62)
             .map(String::as_str)
@@ -418,6 +424,7 @@ impl WorkerConfig {
             }
         };
         Ok(WorkerConfig {
+            chi_luu_tru,
             database_url,
             triton_endpoint,
             triton_http_endpoint,

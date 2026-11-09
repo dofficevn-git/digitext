@@ -30,6 +30,21 @@ impl ClientError {
     }
 }
 const UPLOAD_TIMEOUT: Duration = Duration::from_secs(120);
+/// Lỗi kèm cả chuỗi nguyên nhân: reqwest chỉ in "error sending request…", lý do thật (vd chứng chỉ máy chủ chưa được tin —
+/// `invalid peer certificate: UnknownIssuer`, máy chủ Lưu trữ trong LAN) nằm ở `source()`.
+pub(crate) fn chuoi_loi(e: &dyn std::error::Error) -> String {
+    let mut s = e.to_string();
+    let mut cur = e.source();
+    while let Some(c) = cur {
+        let t = c.to_string();
+        if !s.contains(&t) {
+            s.push_str(": ");
+            s.push_str(&t);
+        }
+        cur = c.source();
+    }
+    s
+}
 fn http() -> &'static reqwest::Client {
     static C_1V: OnceLock<reqwest::Client> = OnceLock::new();
     C_1V.get_or_init(|| {
@@ -126,7 +141,7 @@ struct Thu {
 async fn parse<T: serde::de::DeserializeOwned>(
     resp: Result<reqwest::Response, reqwest::Error>,
 ) -> Result<T, ClientError> {
-    let resp = resp.map_err(|e| ClientError::Unreachable(e.to_string()))?;
+    let resp = resp.map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     let status = resp.status();
     if status.is_success() {
         return resp.json::<T>().await.map_err(|e| {
@@ -222,7 +237,7 @@ pub struct Tp9 {
     pub completed_at: Option<String>,
 }
 async fn f_1yv(resp: Result<reqwest::Response, reqwest::Error>) -> Result<(), ClientError> {
-    let resp = resp.map_err(|e| ClientError::Unreachable(e.to_string()))?;
+    let resp = resp.map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     let status = resp.status();
     if status.is_success() {
         return Ok(());
@@ -329,7 +344,7 @@ pub async fn post_bytes(base: &str, token: &str, path: &str, body: Vec<u8>) -> R
         .body(body)
         .send()
         .await
-        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        .map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     let status = r.status().as_u16();
     if r.status().is_success() || status == 409 {
         return Ok((status, r.json().await.unwrap_or(serde_json::Value::Null)));
@@ -378,7 +393,7 @@ pub async fn f_2nq(
         .query(&q)
         .send()
         .await
-        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        .map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     if !r_fb.status().is_success() {
         return Err(f_rt(r_fb).await);
     }
@@ -444,7 +459,7 @@ pub async fn f_2nk(
         .body(r_ff)
         .send()
         .await
-        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        .map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     let status = r_fm.status();
     if status.as_u16() == 201 || r_fm.headers().get("upload-complete").is_some() {
         return Ok(ChunkOutcome::Done {
@@ -470,7 +485,7 @@ pub async fn f_1ei(r_fq: &str, r_ft: &str, path: &str) -> Result<Vec<u8>, Client
         .timeout(C_4D)
         .send()
         .await
-        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        .map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     let status = r_fs.status();
     if !status.is_success() {
         let r_fr = r_fs.json::<T6x>().await.unwrap_or(T6x {
@@ -505,7 +520,7 @@ pub async fn f_1ez(
         .timeout(C_4D)
         .send()
         .await
-        .map_err(|e| ClientError::Unreachable(e.to_string()))?;
+        .map_err(|e| ClientError::Unreachable(chuoi_loi(&e)))?;
     if !r_fy.status().is_success() {
         return Err(f_rt(r_fy).await);
     }

@@ -1,0 +1,89 @@
+# Máy chủ DigiText Lưu trữ trên Linux (bản Lưu trữ GĐ2, 9/11/2026) — cài bằng ./cai-dat.sh, không chạy tay lần đầu.
+# Biến lấy từ .env cùng thư mục (cai-dat.sh sinh, giữ nguyên khi chạy lại). Dữ liệu: ./du-lieu (CSDL, khoá JWT, Caddy)
+# và ${KHO_DIR} (kho tài liệu dạng thư mục — tài liệu, gói AIP; không dùng MinIO: image MinIO đã rời Docker Hub, và máy
+# chủ một máy không cần). Chỉ Caddy mở cổng ra ngoài (80/443); API, Postgres nằm trong mạng compose.
+name: digitext-luutru
+
+x-digitext-env: &digitext-env
+  TZ: Asia/Ho_Chi_Minh
+  DIGITEXT_PDF_STORE_DIR: /kho
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: digitext
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: digitext
+      # Sắp xếp / chữ hoa-thường tiếng Việt theo ICU (lower/ILIKE đúng với chữ có dấu).
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale-provider=icu --icu-locale=vi-VN --locale=C.UTF-8
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - ./du-lieu/postgres:/var/lib/postgresql/data
+    healthcheck:
+      # Kiểm qua TCP: lúc khởi tạo lần đầu, server tạm của initdb chỉ nghe unix socket — pg_isready qua socket báo sẵn sàng sớm.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U digitext -d digitext"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  migrate:
+    image: digitext-luutru:local
+    build:
+      context: ../../..
+      dockerfile: infra/compose/luutru/Dockerfile
+    environment:
+      DATABASE_URL: postgres://digitext:${PG_PASSWORD}@postgres:5432/digitext
+    command: ["digitext-api", "migrate"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: digitext-luutru:local
+    restart: unless-stopped
+    environment:
+      <<: *digitext-env
+      DATABASE_URL: postgres://digitext:${PG_PASSWORD}@postgres:5432/digitext
+      DIGITEXT_EDITION: luu_tru
+      DIGITEXT_BIND: 0.0.0.0:8080
+      DIGITEXT_BEHIND_PROXY: "true"
+      DIGITEXT_PUBLIC_URL: https://${DIA_CHI}
+    volumes:
+      - ./du-lieu/api:/var/lib/digitext
+      - ./updates:/opt/digitext/updates:ro
+      - ${KHO_DIR}:/kho
+      - ${GOI_DIR:-./goi-nhap}:/goi:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: digitext-luutru:local
+    restart: unless-stopped
+    command: ["digitext-ocr", "run"]
+    environment:
+      <<: *digitext-env
+      DIGITEXT_DATABASE_URL: postgres://digitext:${PG_PASSWORD}@postgres:5432/digitext
+      DIGITEXT_CHI_LUU_TRU: "true"
+      DIGITEXT_METRICS_ADDR: 0.0.0.0:9100
+    volumes:
+      - ${KHO_DIR}:/kho
+    depends_on:
+      api:
+        condition: service_started
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./du-lieu/caddy:/data
+    depends_on:
+      api:
+        condition: service_started

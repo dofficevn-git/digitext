@@ -1,0 +1,10 @@
+# Context build Docker (infra/compose/luutru/Dockerfile, 9/11/2026): danh sách TRẮNG — chỉ gửi mã Rust + migrations,
+# không gửi target/, dữ liệu thử, kho, mô hình ML (hàng trăm GB).
+*
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!crates/
+!migrations/
+crates/*/target/
+crates/**/.env

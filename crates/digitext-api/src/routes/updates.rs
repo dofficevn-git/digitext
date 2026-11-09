@@ -69,6 +69,9 @@ fn viet_lai_latest(mut v: Value, goc: &str) -> Value {
 
 const ALLOWED_EXT: &[(&str, &str)] = &[
     (".json", "application/json; charset=utf-8"),
+    // Chứng chỉ gốc của máy chủ trong LAN (Caddy tự cấp) + tệp cài vào kho Windows — bản Lưu trữ GĐ2.
+    (".crt", "application/x-x509-ca-cert"),
+    (".cmd", "application/octet-stream"),
     (".exe", "application/vnd.microsoft.portable-executable"),
     (".msi", "application/x-msi"),
     (".sig", "text/plain; charset=utf-8"),
@@ -124,6 +127,10 @@ async fn serve(State(state): State<AppState>, Path(file): Path<String>, headers:
     resp
 }
 
+/// Tên cố định trong updates/ — `dev/luutru/cai-dat.ps1` / `cai-dat.sh` ghi ra.
+const TEP_CHUNG_CHI: &str = "chung-chi-goc.crt";
+const TEP_CAI_CHUNG_CHI: &str = "cai-chung-chi-goc.cmd";
+
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&#39;")
 }
@@ -136,6 +143,18 @@ async fn tai_ve(State(state): State<AppState>, headers: HeaderMap) -> Response {
         .and_then(|raw| serde_json::from_slice::<Value>(&raw).ok());
     let ten_app = if crate::config::edition_luu_tru() { "DigiText Lưu trữ" } else { "DigiText" };
     let goc = dia_chi_goc(&headers).unwrap_or_default();
+    // Máy chủ trong LAN dùng chứng chỉ tự cấp: bộ cài máy chủ chép chứng chỉ gốc vào updates/ (cai-dat.ps1).
+    let chung_chi = if tokio::fs::metadata(state.updates_dir.join(TEP_CHUNG_CHI)).await.is_ok() {
+        format!(
+            r#"<h2>Chứng chỉ máy chủ (mạng nội bộ)</h2>
+<p>Máy chủ này dùng chứng chỉ do chính nó cấp. Trên mỗi máy trạm, cài chứng chỉ gốc <b>một lần</b> trước khi đăng nhập:
+tải tệp cài, bấm đúp, chọn <b>Yes</b> khi Windows hỏi. Không cần quyền quản trị máy.</p>
+<p><a class="btn" href="/updates/{CMD}" download>Tải tệp cài chứng chỉ</a> &nbsp;<a href="/updates/{TEP_CHUNG_CHI}" download>Tải riêng tệp chứng chỉ</a></p>"#,
+            CMD = TEP_CAI_CHUNG_CHI
+        )
+    } else {
+        String::new()
+    };
     let than = match latest.as_ref().and_then(|v| {
         let tep = v.pointer("/platforms/windows-x86_64/url")?.as_str()?.rsplit('/').next()?;
         safe_name(tep)?;
@@ -157,13 +176,15 @@ async fn tai_ve(State(state): State<AppState>, headers: HeaderMap) -> Response {
 <li>Chạy tệp vừa tải, làm theo hướng dẫn (không cần quyền quản trị máy).</li>
 <li>Mở <b>{app}</b>, bấm <b>Máy chủ</b> ở cuối màn đăng nhập, nhập địa chỉ <code>{goc}</code>.</li>
 <li>Đăng nhập bằng tài khoản cán bộ lưu trữ cấp. Các bản sau tự cập nhật từ máy chủ này.</li>
-</ol>"#,
+</ol>
+{chung_chi}"#,
                 ver = ver,
                 ngay = ngay.map(|d| format!(" · phát hành {}", html_escape(&d))).unwrap_or_default(),
                 tep = html_escape(&tep),
                 ghi_chu = ghi_chu.map(|n| format!("<p class=\"notes\">{}</p>", html_escape(n))).unwrap_or_default(),
                 app = ten_app,
                 goc = html_escape(&goc),
+                chung_chi = chung_chi,
             )
         }
         None => "<p class=\"ver\">Máy chủ chưa có bộ cài. Quản trị viên chép gói phát hành vào thư mục updates của máy chủ.</p>".to_string(),
@@ -224,6 +245,8 @@ mod tests {
         assert!(safe_name("a\\b.json").is_none());
         assert!(safe_name(".hidden.json").is_none());
         assert!(safe_name("x.pem").is_none());
+        assert!(safe_name("chung-chi-goc.crt").is_some());
+        assert!(safe_name("cai-chung-chi-goc.cmd").is_some());
         assert!(safe_name("").is_none());
     }
 }

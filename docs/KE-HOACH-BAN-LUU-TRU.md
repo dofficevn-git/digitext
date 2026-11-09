@@ -48,7 +48,24 @@ tệp bộ cài đổi sang tên ASCII khi phát hành.
 4. `dev/release-desktop.ps1 -Edition luutru`: build lớp phủ, ra `phat-hanh-luutru-<ver>.zip`.
 5. API: `DIGITEXT_PUBLIC_URL`, `latest.json` viết lại URL, `GET /tai-ve`; `DIGITEXT_EDITION` chặn route thi công.
 
-### GĐ2 — Bộ cài máy chủ (4–5 ngày)
+### GĐ2 — Bộ cài máy chủ (4–5 ngày) — XONG 9/11/2026 (nhánh `feat/ban-luu-tru`), chưa thử trên máy sạch (GĐ5)
+
+Đã làm: `digitext-api migrate` (`crates/digitext-api/src/migrate.rs`, bảng `_digitext_migrations`, tách câu lệnh chạy
+autocommit trên một kết nối nên `CREATE INDEX CONCURRENTLY` chạy được; máy chủ đã áp tay: `migrate --da-ap-den <NNNN>`);
+worker `DIGITEXT_CHI_LUU_TRU=true` (không OCR, không cần Triton, vẫn đóng gói DIP / kiểm toàn vẹn / quét huỷ / hết hạn
+khai thác / quét virus); gói Windows `dev/luutru/` (`dong-goi-may-chu.ps1` → `dist/luutru-server-win-*.zip`, trong gói
+`cai-dat.ps1` / `giam-sat.ps1` / `sao-luu.ps1` / `nhap-goi.ps1`); Linux `infra/compose/luutru/` (Dockerfile, compose,
+`cai-dat.sh`, `sao-luu.sh`; `dong-goi-may-chu.ps1 -Linux` → tar.gz kèm image `docker save`, không kèm mã nguồn); TLS LAN:
+Caddy `tls internal`, chứng chỉ gốc + `cai-chung-chi-goc.cmd` (certutil -user) phát ở `/tai-ve` (cả cổng 80), desktop
+reqwest thêm `rustls-tls-native-roots` (updater reqwest 0.13 vốn dùng platform-verifier), màn đăng nhập nhận ra lỗi
+UnknownIssuer; `docs/CAI-DAT-MAY-CHU-LUU-TRU.md`. CSDL tạo với ICU `vi-VN` (Windows cần PostgreSQL ≥ 15).
+Kho tài liệu là THƯ MỤC (`DIGITEXT_PDF_STORE_DIR`, FsObjectStore) ở cả hai bộ cài — bỏ MinIO (image MinIO đã rời Docker
+Hub / quay.io 11/2026; máy chủ một máy không cần; MinIO Windows từng chết theo stderr).
+
+Đã chạy thử: migrate trên Postgres trống (27 tệp) và đường đánh dấu; worker chế độ lưu trữ; parser PowerShell cho 5
+script; phần sinh Caddyfile + `caddy validate` (nội bộ và tên miền); compose Linux trọn luồng trên Docker Desktop (cài, chạy lại,
+HTTPS bằng chứng chỉ gốc phát ra, cổng 80 chỉ phát chứng chỉ, nhập gói, tra cứu, bản đọc watermark, sao lưu CSDL + ghi sổ).
+CHƯA thử: `cai-dat.ps1` trọn vẹn (đăng ký dịch vụ thật — làm trên máy Windows sạch ở GĐ5), máy trạm tin chứng chỉ tự cấp.
 1. Lệnh `digitext-api migrate` (áp `migrations/*.sql` theo thứ tự, bảng `_digitext_migrations`, 0006 ngoài giao dịch);
    dùng luôn cho OCR PC thay áp tay.
 2. `bootstrap-superadmin --password-file`.

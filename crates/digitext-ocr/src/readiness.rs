@@ -73,12 +73,15 @@ impl<P: Tol> Readiness<P> {
 pub enum OcrProbe {
     Triton(crate::grpc::GrpcTritonProbe),
     Http(crate::http_ocr::HttpOcrProbe),
+    /// Chế độ chỉ lưu trữ: không có dịch vụ OCR nào để dò, luôn sẵn sàng.
+    KhongCo,
 }
 impl Tol for OcrProbe {
     async fn probe(&self, required_models: &[String]) -> Result<Toj, Thj> {
         match self {
             OcrProbe::Triton(p) => p.probe(required_models).await,
             OcrProbe::Http(p) => p.probe(required_models).await,
+            OcrProbe::KhongCo => Ok(Toj { server_ready: true, models: Vec::new() }),
         }
     }
 }
