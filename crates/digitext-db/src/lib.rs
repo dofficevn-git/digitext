@@ -32,6 +32,7 @@ pub mod tokens;
 pub mod trees;
 pub mod upload_batches;
 pub mod users;
+pub mod webhooks;
 pub mod work_packages;
 pub mod workdays;
 pub use pool::{connect, f_11d};

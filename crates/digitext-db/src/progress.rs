@@ -80,6 +80,11 @@ pub async fn project_progress(
 }
 
 pub async fn upsert_contract(pool: &PgPool, project_id: Uuid, c: &Contract, by: Uuid) -> sqlx::Result<()> {
+    upsert_contract_opt(pool, project_id, c, Some(by)).await
+}
+
+/// Như trên nhưng người sửa có thể trống — webhook ghi hợp đồng thì không có người bấm (0028).
+pub async fn upsert_contract_opt(pool: &PgPool, project_id: Uuid, c: &Contract, by: Option<Uuid>) -> sqlx::Result<()> {
     sqlx::query(
         "INSERT INTO project_contracts \
            (project_id, signed_on, end_on, deadline_on, contract_pages, contract_files, manager_name, note, updated_by, updated_at, \

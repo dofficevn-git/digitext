@@ -395,3 +395,34 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
   khi mở rộng dòng. CSV thêm 6 cột: Trang trắng, Trang gần như trắng, Trang lệch (kèm góc), Góc lệch lớn nhất,
   Trang quét ngang, Số trang đã đo. `pdfa::run` giữ nguyên chữ ký cho `cli.rs`; cờ nằm ở `run_opts`.
   Công cụ chỉnh ngưỡng: `cargo run -p digitext-extimport --example do-trang -- <thư mục> [--muc] [--xuat <thư mục>] [--csv <tệp>]`.
+- 9/11/2026 - **Webhook nhận dự án từ hệ thống ngoài** (migration 0028,
+  `crates/digitext-api/src/routes/hooks.rs`, `crates/digitext-db/src/webhooks.rs`). Hệ thống quản lý hợp đồng
+  gọi `POST /api/v1/hooks/du-an` với tên dự án, loại dự án, khối lượng và ngày kết thúc hợp đồng; API tự tạo
+  dự án, ghi `project_contracts` (0008 + 0024 đã có sẵn đủ cột) và gán quản trị. Tài liệu cho bên gửi:
+  `docs/WEBHOOK-DU-AN.md`.
+
+  * Xác thực: khoá trong bảng `api_clients` (argon2 băm phần bí mật như mật khẩu người dùng), tuỳ chọn
+    HMAC-SHA256 trên chuỗi `<timestamp>.<thân gói>` + chặn lệch giờ quá 300 giây, tuỳ chọn lọc IP. HMAC tự
+    dựng trên `sha2` để không thêm phụ thuộc workspace; có test đối chiếu vector RFC 4231 ca 2 và ca 4.
+  * Chống trùng: `UNIQUE (nguon, ma_ngoai)` trên `projects`. Webhook gửi lại → cập nhật dự án cũ, trả 200
+    `taoMoi: false`, không sinh dự án thứ hai. Trường nào gói tin không gửi thì giữ nguyên (gộp lên hợp đồng
+    cũ qua `webhooks::lay_hop_dong`), nên gửi riêng một mốc ngày không xoá các số khối lượng đã nhập tay.
+  * `maDuAn` không gửi thì tự đặt `DA<yy><nnn>`, cờ `projects.ma_tu_sinh` + cảnh báo trong phản hồi. Mã đã có
+    nhưng do người tạo tay (`ma_ngoai IS NULL`) thì NHẬN dự án đó về thay vì tạo bản thứ hai; mã đang thuộc
+    hợp đồng khác thì 409.
+  * Dự án không có `project_admins` thì chỉ super admin thấy (vai trò Admin lọc theo `projects::f_1ng`) — nên
+    gói tin nhận `quanTri` (tên đăng nhập hoặc email) và khoá có `default_admin_id`; thiếu cả hai thì trả cảnh báo.
+  * Nhật ký `webhook_deliveries` ghi gói gốc + kết quả + lý do từ chối cho mọi lời gọi ĐÃ qua xác thực (lời gọi
+    sai khoá không ghi, kẻo thành chỗ cho người lạ nhồi dữ liệu). Xem qua `GET /api/v1/hooks/nhat-ky` (cần quyền
+    ProjectUpdate). Nhật ký kiểm toán ghi `project.create`/`project.update` với `actor_id = NULL`, detail
+    `{"qua": "webhook"}`.
+  * Cấp khoá: `digitext-api.exe hook-key tao --nguon crm --ten "..." [--quan-tri <tên đăng nhập>] [--khong-ky]
+    [--ip a,b]`; còn `doi` (cấp lại), `thu-hoi`, `xem`. Bí mật chỉ in một lần.
+  * Chạy thử thật trên Postgres tạm (container `digitext-hooktest`, đã xoá): 28 migration áp sạch, 13 ca gồm tạo
+    mới 201, gửi lại 200 không trùng, cập nhật riêng khối lượng vẫn giữ hồ sơ/hộp cũ, tự đặt mã, nhận dự án tạo
+    tay, chữ ký sai 401, lệch giờ 401, thiếu `maNgoai` 400, loại lạ 400, mã có dấu chấm 400, mã đã dùng 409,
+    đóng dự án chưa có 404, đóng dự án thật 200 (`is_active = false`).
+
+  **Thứ tự phát hành**: áp **0026 rồi 0028** lên CSDL OCR PC TRƯỚC khi đổi `digitext-api.exe` — 0026 vẫn chưa áp,
+  mà bản API mới dựng từ nhánh `feat/ban-luu-tru` có route `tra_cuu` cần 0026. 0028 tự nó độc lập với 0026.
+  Caddy không phải sửa: đường mới nằm trong `/api/v1` đã proxy sẵn.

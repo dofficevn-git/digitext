@@ -34,9 +34,10 @@ async fn run(r_1r: &[String]) -> anyhow::Result<()> {
         Some("backfill-source-pdfs") => backfill_source_pdfs().await,
         Some("nhap-goi") => nhap_goi(&r_1r[1..]).await,
         Some("migrate") => migrate(&r_1r[1..]).await,
+        Some("hook-key") => hook_key(&r_1r[1..]).await,
         Some(other) => {
             bail!(
-                "lệnh không hợp lệ: {other} (dùng: serve | migrate [--da-ap-den <NNNN>] [--chi-xem] [--thu-muc <dir>] | bootstrap-superadmin --username <tên> [--password-file <tệp>] | backfill-source-pdfs | nhap-goi --du-an <mã> --nguoi <tên> [--nhan-ca-goi-loi] <thư mục|gói.zip>…)"
+                "lệnh không hợp lệ: {other} (dùng: serve | migrate [--da-ap-den <NNNN>] [--chi-xem] [--thu-muc <dir>] | bootstrap-superadmin --username <tên> [--password-file <tệp>] | backfill-source-pdfs | nhap-goi --du-an <mã> --nguoi <tên> [--nhan-ca-goi-loi] <thư mục|gói.zip>… | hook-key <tao|doi|thu-hoi|xem> --nguon <tên>)"
             )
         }
     }
@@ -384,6 +385,136 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
         "Đã tạo super admin '{}' (id {}).",
         r_2p.username, r_2p.id
     );
+    Ok(())
+}
+
+/// `hook-key tao --nguon <tên> --ten <mô tả> [--quan-tri <tên đăng nhập>] [--khong-ky] [--ip a,b]`
+/// Cấp khoá cho một hệ thống ngoài gọi webhook nhận dự án (migration 0028). Bí mật chỉ in
+/// MỘT lần ở đây, trong CSDL chỉ còn bản băm — mất thì cấp lại bằng `hook-key doi`.
+/// Tài liệu cho bên gửi: docs/WEBHOOK-DU-AN.md.
+async fn hook_key(args: &[String]) -> anyhow::Result<()> {
+    let viec = args.first().map(String::as_str).unwrap_or("xem");
+    let mut nguon: Option<String> = None;
+    let mut ten: Option<String> = None;
+    let mut quan_tri: Option<String> = None;
+    let mut ip: Option<String> = None;
+    let mut khong_ky = false;
+    let mut it = args.iter().skip(1);
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--nguon" => nguon = it.next().cloned(),
+            "--ten" => ten = it.next().cloned(),
+            "--quan-tri" => quan_tri = it.next().cloned(),
+            "--ip" => ip = it.next().cloned(),
+            "--khong-ky" => khong_ky = true,
+            other => bail!("tham số không hợp lệ: {other}"),
+        }
+    }
+    let cfg = Config::from_env()?;
+    let pool = digitext_db::f_11d(&cfg.database_url).await?;
+
+    if viec == "xem" {
+        let ds = digitext_db::webhooks::danh_sach_client(&pool).await?;
+        if ds.is_empty() {
+            println!("Chưa cấp khoá webhook nào.");
+        }
+        for c in ds {
+            println!(
+                "{:<12} keyId={:<16} {} ký={} lần gọi gần nhất: {}  ({})",
+                c.nguon,
+                c.key_id,
+                if c.is_active { "đang dùng " } else { "ĐÃ THU HỒI" },
+                if c.secret_hmac.is_some_and(|s| !s.is_empty()) { "có" } else { "không" },
+                c.last_seen_at.map(|t| t.to_rfc3339()).unwrap_or_else(|| "chưa".into()),
+                c.ten,
+            );
+        }
+        return Ok(());
+    }
+
+    let nguon = nguon.context("thiếu --nguon <tên hệ thống, không dấu>")?;
+    if nguon.trim().is_empty() || !nguon.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        bail!("--nguon chỉ nhận chữ không dấu, số, '_' và '-'");
+    }
+
+    if viec == "thu-hoi" {
+        if digitext_db::webhooks::thu_hoi_client(&pool, &nguon).await? {
+            println!("Đã thu hồi khoá của nguồn '{nguon}'. Hệ thống đó gọi tiếp sẽ nhận 401.");
+        } else {
+            bail!("không có nguồn nào tên '{nguon}'");
+        }
+        return Ok(());
+    }
+
+    // Sinh khoá: phần công khai để tra trong bảng, phần bí mật chỉ băm lại.
+    let mut tho = [0u8; 40];
+    rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut tho);
+    let hexs = |b: &[u8]| b.iter().map(|x| format!("{x:02x}")).collect::<String>();
+    let key_id = format!("dk_{}", hexs(&tho[..8]));
+    let bi_mat = hexs(&tho[8..40]);
+    let mut tho2 = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut tho2);
+    let bi_mat_ky = if khong_ky { None } else { Some(hexs(&tho2)) };
+    let bam = password::hash(&bi_mat)?;
+
+    let admin = match quan_tri.as_deref() {
+        Some(u) => Some(
+            users::f_1eh(&pool, u)
+                .await?
+                .with_context(|| format!("không có tài khoản '{u}'"))?
+                .id,
+        ),
+        None => None,
+    };
+    let ds_ip: Option<Vec<String>> = ip
+        .as_deref()
+        .map(|v| v.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect());
+
+    match viec {
+        "tao" => {
+            digitext_db::webhooks::tao_client(
+                &pool,
+                digitext_db::webhooks::ClientMoi {
+                    nguon: &nguon,
+                    ten: ten.as_deref().unwrap_or(&nguon),
+                    key_id: &key_id,
+                    secret_hash: &bam,
+                    secret_hmac: bi_mat_ky.as_deref(),
+                    default_admin_id: admin,
+                    ip_allow: ds_ip,
+                },
+            )
+            .await
+            .map_err(|e| {
+                if digitext_db::f_1jn(&e) {
+                    anyhow::anyhow!("nguồn '{nguon}' đã có khoá — dùng `hook-key doi --nguon {nguon}` để cấp lại")
+                } else {
+                    e.into()
+                }
+            })?;
+        }
+        "doi" => {
+            digitext_db::webhooks::doi_khoa_client(&pool, &nguon, &key_id, &bam, bi_mat_ky.as_deref())
+                .await?
+                .with_context(|| format!("không có nguồn nào tên '{nguon}'"))?;
+        }
+        other => bail!("việc không hợp lệ: {other} (tao | doi | thu-hoi | xem)"),
+    }
+
+    println!();
+    println!("Khoá cho nguồn '{nguon}' — CHÉP NGAY, bí mật không in lại lần nào nữa:");
+    println!();
+    println!("  X-DigiText-Key: {key_id}.{bi_mat}");
+    match &bi_mat_ky {
+        Some(k) => println!("  Bí mật ký HMAC-SHA256: {k}"),
+        None => println!("  (khoá này KHÔNG bắt buộc chữ ký — chỉ nên dùng khi bên gửi không ký được)"),
+    }
+    println!();
+    if admin.is_none() {
+        println!("Chưa đặt quản trị mặc định (--quan-tri <tên đăng nhập>): dự án về sẽ chỉ super admin thấy,");
+        println!("trừ khi gói tin gửi kèm \"quanTri\".");
+    }
+    println!("Gửi cho bên kia: docs/WEBHOOK-DU-AN.md");
     Ok(())
 }
 
