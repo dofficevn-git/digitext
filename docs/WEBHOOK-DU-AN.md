@@ -115,6 +115,21 @@ r = requests.post(
 )
 ```
 
+### Giữ khoá
+
+Khoá và bí mật ký **chỉ hiện một lần** lúc DigiText cấp. Trong cơ sở dữ liệu của DigiText,
+phần bí mật của khoá chỉ còn bản băm — không ai tra lại được, kể cả người quản trị hệ
+thống. Chép ngay lúc nhận; mất thì phải xin cấp khoá mới.
+
+- Cất vào nơi chứa bí mật của phần mềm bạn: biến môi trường, tệp cấu hình được mã hoá,
+  hoặc secret store. **Đừng viết thẳng vào mã nguồn** rồi đẩy lên git.
+- Đừng nhận khoá qua Zalo hay email thường — khoá này tạo được dự án thật trong DigiText.
+  Hãy nhận qua kênh riêng, hoặc nhận khoá một đường và bí mật ký một đường khác.
+- **Cấp lại khoá là cắt khoá cũ ngay lập tức**, không có khoảng thời gian hai khoá cùng
+  chạy. Vì vậy hãy làm sao đổi được khoá mà **không phải biên dịch lại và phát hành lại**
+  phần mềm; và khi đổi thì hẹn giờ với DigiText, kẻo lời gọi ngay sau đó nhận `401`.
+- Nếu nghi khoá bị lộ, báo DigiText thu hồi ngay chứ đừng chờ tới kỳ phát hành sau.
+
 ---
 
 ## 2. Thân gói
@@ -299,7 +314,9 @@ bạn lệch bao nhiêu so với `gioMayChu`.
 
 ## 9. Việc cần làm để nối xong
 
-- [ ] Nhận khoá (và bí mật ký) từ DigiText; cất vào nơi chứa bí mật, đừng để trong mã nguồn.
+- [ ] Nhận khoá (và bí mật ký) từ DigiText; chép ngay vì chỉ hiện một lần, cất vào nơi
+      chứa bí mật, đừng để trong mã nguồn.
+- [ ] Đổi khoá được bằng cấu hình, không phải phát hành lại phần mềm.
 - [ ] Gọi `/hooks/kiem-tra` thành công.
 - [ ] Chốt `maNgoai` lấy từ trường nào bên bạn — phải **cố định suốt đời hợp đồng**.
 - [ ] Gửi một dự án thật, kiểm `maDuAn` và khối lượng hiện đúng trong DigiText.
