@@ -125,6 +125,14 @@ là OCR cũ sai bảng mã ("Di6n X6") — tìm nội dung chỉ tốt với gó
 7. Vai trò mặc định: Người khai thác (`customer`), Cán bộ lưu trữ (`admin`), Quản trị (`super_admin`).
 
 ### GĐ5 — Chạy thử trọn vẹn (2–3 ngày)
+
+Phần đã chạy 9/11/2026 (không cần máy sạch): `dong-goi-may-chu.ps1 -Linux` ra đủ hai gói (Windows 42 MB, Linux 58 MB);
+gói Windows giải nén chạy TẠM trên máy dev (không đăng ký dịch vụ): migrate 28 tệp, `giam-sat.ps1` giữ API / worker /
+Caddy.exe, Caddy tự cấp chứng chỉ + xuất `chung-chi-goc.crt` / `cai-chung-chi-goc.cmd`, `nhap-goi.ps1` nhập 3 gói Diễn Xá,
+`/tai-ve` qua cổng 80, HTTPS bằng chứng chỉ gốc. Sửa: chữ Việt gửi `psql.exe` đi qua tệp UTF-8 (`-f`) thay `-c`; tên gói
+theo phiên bản desktop. CÒN LẠI (cần máy Windows sạch có quyền quản trị — Windows Sandbox chưa bật trên máy dev — và một
+máy trạm có người thao tác): `cai-dat.ps1` thật với PostgreSQL bộ cài chuẩn, `sao-luu.ps1` với pg_dump.exe, máy trạm cài
+chứng chỉ gốc + đăng nhập + tự cập nhật (updater dùng platform-verifier: kiểm có vướng thu hồi chứng chỉ như curl/schannel).
 Máy ảo Windows sạch + máy Linux Docker: cài máy chủ theo tài liệu, tải bộ cài từ `/tai-ve`, nhập gói Đầm Hà / Bắc Giang,
 tra cứu, yêu cầu khai thác → duyệt → tải bản sao, kiểm toàn vẹn, tiêu huỷ thử, phát hành bản cập nhật và xem máy trạm tự cập nhật.
 

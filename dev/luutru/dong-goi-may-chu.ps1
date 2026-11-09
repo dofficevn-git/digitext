@@ -15,8 +15,8 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $repo
-$ver = (Select-String -Path "crates\digitext-api\Cargo.toml" -Pattern '^version\s*=\s*"(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
-if (-not $ver) { $ver = (Select-String -Path "Cargo.toml" -Pattern '^version\s*=\s*"(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value }
+# Gói máy chủ phát hành cùng nhịp bộ cài máy trạm → mang số phiên bản desktop (crate API vẫn để 0.1.0).
+$ver = (Get-Content (Join-Path $repo "desktop/src-tauri/tauri.conf.json") -Raw | ConvertFrom-Json).version
 $ngay = Get-Date -Format "yyyyMMdd"
 $ten = "luutru-server-win-$ver-$ngay"
 $ra = Join-Path $repo "dist\$ten"

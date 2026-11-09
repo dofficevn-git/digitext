@@ -19,9 +19,21 @@ foreach ($t in "conf\may-chu.env", "conf\api.env") {
 $pgBin = $cfg["PG_BIN"]; $dbUrl = $cfg["DATABASE_URL"]; $dich = $cfg["SAO_LUU_DIR"]; $kho = $cfg["KHO_DIR"]
 if (-not ($pgBin -and $dbUrl -and $dich -and $kho)) { Ghi "LỖI thiếu PG_BIN / DATABASE_URL / SAO_LUU_DIR / KHO_DIR trong conf\"; exit 1 }
 
+$psql = Join-Path $pgBin "psql.exe"
+# psql.exe (chương trình C) nhận tham số dòng lệnh theo bảng mã ANSI → chữ Việt trong -c thành '?'. SQL có chữ Việt đi qua
+# tệp UTF-8 (-f) với PGCLIENTENCODING=UTF8.
+function Psql-Tep($sql, [string[]]$ketNoi) {
+  $t = Join-Path $env:TEMP ("dt-sql-" + [guid]::NewGuid().ToString("N") + ".sql")
+  [IO.File]::WriteAllText($t, $sql, (New-Object System.Text.UTF8Encoding($false)))
+  $env:PGCLIENTENCODING = "UTF8"
+  & $psql -X -q -v ON_ERROR_STOP=1 @ketNoi -f $t
+  $ma = $LASTEXITCODE
+  Remove-Item $t -Force; Remove-Item Env:PGCLIENTENCODING -ErrorAction SilentlyContinue
+  $global:LASTEXITCODE = $ma
+}
 function Ghi-So($loai, $nguon, $ketQua, $chiTiet) {
-  $sql = "INSERT INTO backup_runs (id, loai, nguon, phuong_tien, ket_qua, chi_tiet) VALUES (gen_random_uuid(), '$loai', '$($nguon -replace "'", "''")', '$($dich -replace "'", "''")', '$ketQua', '$($chiTiet -replace "'", "''")')"
-  & (Join-Path $pgBin "psql.exe") -X -q -d $dbUrl -c $sql | Out-Null
+  $sql = "INSERT INTO backup_runs (id, loai, nguon, phuong_tien, ket_qua, chi_tiet) VALUES (gen_random_uuid(), '$loai', '$($nguon -replace "'", "''")', '$($dich -replace "'", "''")', '$ketQua', '$($chiTiet -replace "'", "''")');"
+  Psql-Tep $sql @("-d", $dbUrl) | Out-Null
 }
 
 # 1. CSDL

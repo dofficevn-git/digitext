@@ -52,6 +52,18 @@ function Ghi-Env($tep, $kv, $dau) {
   Set-Content -Path $tep -Value $dong -Encoding UTF8
 }
 
+# psql.exe (chương trình C) nhận tham số dòng lệnh theo bảng mã ANSI → chữ Việt trong -c thành '?'. SQL có chữ Việt đi qua
+# tệp UTF-8 (-f) với PGCLIENTENCODING=UTF8.
+function Psql-Tep($sql, [string[]]$ketNoi) {
+  $t = Join-Path $env:TEMP ("dt-sql-" + [guid]::NewGuid().ToString("N") + ".sql")
+  [IO.File]::WriteAllText($t, $sql, (New-Object System.Text.UTF8Encoding($false)))
+  $env:PGCLIENTENCODING = "UTF8"
+  & $psql -X -q -v ON_ERROR_STOP=1 @ketNoi -f $t
+  $ma = $LASTEXITCODE
+  Remove-Item $t -Force; Remove-Item Env:PGCLIENTENCODING -ErrorAction SilentlyContinue
+  $global:LASTEXITCODE = $ma
+}
+
 $laAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $laAdmin) { Dung "cần PowerShell quyền Administrator (chuột phải → Run as administrator)." }
 # Kho tài liệu là thư mục (FsObjectStore, ghi tệp tạm rồi đổi tên) — không dùng MinIO: máy chủ một máy không cần, bớt một
@@ -251,7 +263,7 @@ if ("$soDuAn".Trim() -eq "0") {
   if (-not $TenCoQuan) { $TenCoQuan = "Kho lưu trữ" }
   $ma = $mc["MA_DU_AN"] -replace "'", ""
   $ten = $TenCoQuan.Trim() -replace "'", "''"
-  & $psql -X -q -h 127.0.0.1 -p $PgCong -U digitext -d digitext -v ON_ERROR_STOP=1 -c "INSERT INTO projects (id, code, name) VALUES (gen_random_uuid(), '$ma', '$ten')"
+  Psql-Tep "INSERT INTO projects (id, code, name) VALUES (gen_random_uuid(), '$ma', '$ten');" @("-h", "127.0.0.1", "-p", $PgCong, "-U", "digitext", "-d", "digitext")
   if ($LASTEXITCODE -eq 0) { Ghi "  đã tạo kho lưu trữ $ma — $TenCoQuan" Green } else { Ghi "  CẢNH BÁO: không tạo được dự án $ma" Yellow }
 }
 Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
