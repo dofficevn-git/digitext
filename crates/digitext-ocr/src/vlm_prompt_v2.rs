@@ -392,6 +392,20 @@ pub fn parse_fields_v2(r_3ka: &Value) -> Vec<(VanBanField, String)> {
 #[cfg(test)]
 mod few_shot_tests {
     use super::*;
+
+    /// Hai test dưới đây đặt `DIGITEXT_VLM_MAX_LEN` ở HAI giá trị khác nhau, mà biến môi trường
+    /// là của cả tiến trình còn test thì chạy song song ⇒ chúng tranh nhau. Đo ngày 13/11/2026:
+    /// trượt 4/20 lần chạy. Phải xếp hàng, đừng tin vào may mắn của bộ xếp luồng.
+    static MOI_TRUONG: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Giữ chốt và đặt giới hạn ngữ cảnh. Nhả chốt là hết lượt.
+    fn gioi_han(v: &str) -> std::sync::MutexGuard<'static, ()> {
+        // Một test trượt làm chốt "nhiễm độc"; lấy lại ruột để test sau không trượt theo.
+        let g = MOI_TRUONG.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::set_var("DIGITEXT_VLM_MAX_LEN", v);
+        g
+    }
+
     fn ex(n: usize) -> FewShot {
         FewShot {
             ocr_text: Some("UBND TỈNH BẮC NINH\nSố: 12/QĐ-UBND ".repeat(40)),
@@ -402,7 +416,7 @@ mod few_shot_tests {
     }
     #[test]
     fn du_cho_thi_giu_het_vi_du() {
-        std::env::set_var("DIGITEXT_VLM_MAX_LEN", "8192");
+        let _g = gioi_han("8192");
         let (t, out) = fit_hint(&ex(3), 1850).unwrap();
         assert_eq!(t.matches("VÍ DỤ").count(), 3);
         assert!(t.contains("CHỮ OCR CỦA TRANG") && out >= MIN_OUTPUT_V2);
@@ -410,7 +424,7 @@ mod few_shot_tests {
     }
     #[test]
     fn thieu_cho_thi_bot_vi_du_roi_bo_ocr() {
-        std::env::set_var("DIGITEXT_VLM_MAX_LEN", "4096");
+        let _g = gioi_han("4096");
         let (t, out) = fit_hint(&ex(3), 1850).unwrap();
         assert!(t.matches("VÍ DỤ").count() < 3);
         assert!(out >= MIN_OUTPUT_V2 || t.is_empty());
