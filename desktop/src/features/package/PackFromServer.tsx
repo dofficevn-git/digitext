@@ -6,11 +6,12 @@
 // Nhập mục lục Excel (26/10/2026): tệp "Mục lục hồ sơ" (Hộp số · Hồ sơ số · Tiêu đề · Thời gian · Số tờ · THBQ, cùng
 // mẫu màn Chỉnh lý) ghép với hồ sơ trên máy chủ theo số hộp + số hồ sơ trong phông đã chọn → gói mang tiêu đề, thời
 // gian, số tờ, THBQ thật thay vì tên thư mục. Mục lục đã ghép được nhớ theo dự án + phông (localStorage).
+// Mục lục hồ sơ do MÁY CHỦ đọc từ 10/11/2026 (`/cl/muc-luc/doc`) — cùng bộ luật với màn Nhập mục lục.
 // Hai mẫu Excel: (1) Mục lục hồ sơ → ghép theo số hộp + số hồ sơ; (2) Metadata phẳng (Metadata-<PHÔNG>.xlsx, mỗi dòng
 // một văn bản, "Mã lưu trữ tài liệu" = tên tệp) → ghép theo TÊN TỆP trên máy chủ, lấy luôn mã hồ sơ / mã phông.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { phanTichMucLuc, type DongHoSo } from "@/features/chinhly/mucLucImport";
+import { docMucLucMayChu, type DongHoSo } from "@/features/chinhly/mucLucMayChu";
 import { docLuoiExcel, docMetadataPhang, laMetadataPhang } from "./metadataPhang";
 import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
@@ -57,7 +58,6 @@ function isoNgay(s: string, cuoi = false): string {
   if (/^\d{4}$/.test(t)) return cuoi ? `${t}-12-31` : `${t}-01-01`;
   return t;
 }
-const THBQ_DANH_MUC = ["Vĩnh viễn", "70 năm", "50 năm", "30 năm", "20 năm", "10 năm", "5 năm"];
 
 /** Một dòng mục lục đã rút gọn để ghép và lưu lại (localStorage). */
 export interface DongMucLuc {
@@ -306,7 +306,11 @@ export default function PackFromServer() {
           });
           continue;
         }
-        const pt = phanTichMucLuc(luoi, { tenTep: f.name, sheet, thbqDanhMuc: THBQ_DANH_MUC, thbqVinhVien: ["Vĩnh viễn"] });
+        // 10/11/2026: đọc bằng MÁY CHỦ (`/cl/muc-luc/doc`) thay vì bộ TS trên máy — cùng bộ luật với
+        // màn Nhập mục lục và cổng nhà cung cấp. Danh mục THBQ cũng là danh mục THẬT của dự án thay
+        // cho `THBQ_DANH_MUC` viết cứng ở đây (bộ cứng đó thiếu/thừa so với Danh mục từng dự án).
+        // Truyền `sheet` mà `docLuoiExcel` đã chọn để giữ đúng sheet như trước.
+        const { pt } = await docMucLucMayChu(projectId, await f.arrayBuffer(), f.name, { sheet });
         const dongs = pt.rows.filter((r) => r.hoSoSo).map(rutGon);
         if (dongs.length === 0) {
           toast.error(`${f.name}: không thấy dòng hồ sơ nào`, { detail: pt.vanDe[0]?.noiDung ?? "Cần dòng tiêu đề cột Hộp số · Hồ sơ số · Tiêu đề hồ sơ · Thời gian BĐ - KT trong 15 dòng đầu." });

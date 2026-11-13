@@ -36,7 +36,8 @@ for (const f of fs.readdirSync(dir).sort()) {
   // KIEM_XUAT_JSON=<thư mục>: ghi hồ sơ đã đọc (hộp, hồ sơ số, số tờ, vĩnh viễn) để chạy thử đối soát với kho máy chủ.
   if (process.env.KIEM_XUAT_JSON) {
     fs.mkdirSync(process.env.KIEM_XUAT_JSON, { recursive: true });
-    const hs = pt.rows.map((r) => ({ hop_so: r.hopSo || null, ho_so_so: r.hoSoSo || null, so_tam: r.hoSoSo || String(r.dong), vinh_vien: r.vinhVien === true, so_to: r.soTo || null, tieu_de: r.tieuDe }));
+    // 10/11/2026: thêm tg/lỗi/cảnh báo để đối chứng với bản Rust (crates/digitext-mucluc) từng dòng.
+    const hs = pt.rows.map((r) => ({ dong: r.dong, hop_so: r.hopSo || null, ho_so_so: r.hoSoSo || null, so_tam: r.hoSoSo || String(r.dong), vinh_vien: r.vinhVien === true, so_to: r.soTo || null, tieu_de: r.tieuDe, thbq: r.thbq, bd: r.tg.batDau, kt: r.tg.ketThuc, ket_luan: r.tg.ketLuan, loi: r.loi, canh_bao: r.canhBao }));
     fs.writeFileSync(path.join(process.env.KIEM_XUAT_JSON, f.replace(/\.[^.]+$/, ".json")), JSON.stringify(hs));
   }
   console.log(

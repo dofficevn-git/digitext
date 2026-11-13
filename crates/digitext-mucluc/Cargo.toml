@@ -1,0 +1,25 @@
+[package]
+name = "digitext-mucluc"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# ĐỌC MỤC LỤC HỒ SƠ (MLHS) phía máy chủ — bản Rust của desktop/src/features/chinhly/mucLucImport.ts.
+# Vì sao chuyển lên máy chủ: cổng nhà cung cấp chỉ là giao diện, mọi phân tích chạy ở DigiText (chốt 10/11/2026).
+# Màn "Nhập mục lục" bên desktop vốn ĐÃ bắt buộc có mạng, nên sau khi cửa này xong thì desktop gọi sang đây và
+# bộ TS bị xoá ⇒ còn một bản duy nhất.
+#
+# Đối chứng bắt buộc: `npm run kiem:mucluc -- test/MLHS` (TS) và `cargo run -p digitext-mucluc --bin mucluc-do`
+# phải ra cùng kết quả trên 23 mục lục thật của Bắc Giang. Mốc TS 10/11/2026: 23 tệp, 10171 hồ sơ, 10 tệp bị chặn.
+
+[dependencies]
+chrono = { workspace = true }
+regex = "1"
+serde = { workspace = true }
+serde_json = { workspace = true }
+calamine = { version = "0.26", features = ["dates"] }
+digitext-vi = { path = "../digitext-vi" }
+
+[[bin]]
+name = "mucluc-do"
+path = "src/bin/do.rs"

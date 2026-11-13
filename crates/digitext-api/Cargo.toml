@@ -11,6 +11,8 @@ digitext-storage = { path = "../digitext-storage" }
 digitext-pdf = { path = "../digitext-pdf" }
 digitext-package = { path = "../digitext-package" }
 digitext-pkgcheck = { path = "../digitext-pkgcheck" }
+digitext-mucluc = { path = "../digitext-mucluc" }
+digitext-extimport = { path = "../digitext-extimport" }
 digitext-sign-verify = { path = "../digitext-sign-verify" }
 digitext-telemetry = { path = "../digitext-telemetry" }
 anyhow = { workspace = true }
@@ -39,6 +41,8 @@ uuid = { workspace = true }
 zip = { workspace = true }
 
 [dev-dependencies]
+# Chỉ để dựng lưới ô trong test của routes::ncc — bản đọc thật nằm trong digitext-mucluc.
+calamine = "0.26"
 lopdf = "0.43"
 tower = { workspace = true, features = ["util"] }
 x509-cert = { version = "0.2", features = ["builder"] }

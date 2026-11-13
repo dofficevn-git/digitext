@@ -18,6 +18,7 @@ members = [
     "crates/digitext-wipe",
     "crates/digitext-extimport",
     "crates/digitext-pkgcheck",
+    "crates/digitext-mucluc",
 ]
 exclude = ["desktop", "dev/obfuscate/rust-rename"]
 

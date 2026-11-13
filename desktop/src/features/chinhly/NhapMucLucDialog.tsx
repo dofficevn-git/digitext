@@ -1,7 +1,10 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Hộp thoại "Nhập mục lục hồ sơ": chọn tệp → kiểm tra (phòng ban / mảng tự nhận, thời gian đã kiểm & điền,
-// tiền tố số tạm) → nhập vào máy chủ (tự tạo phòng ban / mảng còn thiếu). Phân tích chạy trên máy; tải tệp đã
-// chuyển / CSV kiểm tra được cả khi mất mạng, chỉ bước nhập cần máy chủ.
+// tiền tố số tạm) → nhập vào máy chủ (tự tạo phòng ban / mảng còn thiếu).
+// 10/11/2026: PHÂN TÍCH CHẠY Ở MÁY CHỦ (`POST /cl/muc-luc/doc`, crate `digitext-mucluc`) — xem
+// `mucLucMayChu.ts`. Trước đó đọc trên máy bằng `mucLucImport.ts`; hai bản luật cùng tồn tại là
+// nguồn lệch nên bản TS đã rút về làm bản đối chứng. Màn này vốn đã bắt buộc có mạng để nhập, nên
+// không mất khả năng nào; tải tệp đã chuyển / tệp đánh dấu vẫn ghi ở máy.
 
 import { useMemo, useRef, useState } from "react";
 import { clRemote, clSyncNow, str, type ClCatalog, type ClRow } from "@/api/chinhly";
@@ -9,8 +12,18 @@ import { useProject } from "@/state/project";
 import { Badge, Banner, Button, Checkbox, Dialog, Field, Help, KpiTile, notifyError, Select, Stepper, Table, toast, Toolbar, type Column } from "@/ui";
 import type { V3y0 } from "@/domain/types";
 import { n } from "./common";
-import { coLoiChan, docMucLucHoSo, dongMau, phanTichLaiMucLuc, soChuan, soTamCua, TEN_LOAI, xuatTepDaChuyen, xuatTepDanhDau, type DongHoSo, type PhanTichMucLuc } from "./mucLucImport";
-import { KET_LUAN_LABEL } from "./thoiGianHoSo";
+import {
+  docMucLucMayChu,
+  docMucLucTuFile,
+  KET_LUAN_LABEL,
+  mangCua,
+  soChuan,
+  soTamCua,
+  TEN_LOAI,
+  type DongHoSo,
+  type PhanTichMucLuc,
+} from "./mucLucMayChu";
+import { xuatTepDaChuyen, xuatTepDanhDau } from "./mucLucXuat";
 
 const BUOC = [
   { key: "tep", label: "Chọn tệp", hint: "Mục lục hồ sơ (.xlsx)" },
@@ -38,6 +51,9 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   const { projectId } = useProject();
   const [buoc, setBuoc] = useState(0);
   const [pt, setPt] = useState<PhanTichMucLuc | null>(null);
+  // Dòng nhập + kết luận chặn do MÁY CHỦ trả về, không dựng lại ở máy trạm.
+  const [rowsNhap, setRowsNhap] = useState<Record<string, unknown>[]>([]);
+  const [chanMayChu, setChanMayChu] = useState(true);
   const [chiVanDe, setChiVanDe] = useState(false);
   const [trang, setTrang] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -64,7 +80,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
       })
       .filter((x) => x.n > 0);
   }, [pt]);
-  const chan = pt ? coLoiChan(pt) : true;
+  const chan = pt ? chanMayChu : true;
   const tenPhongLech = !!pt?.tenPhongTrongTep && pt.tenPhongTrongTep.toLowerCase().replace(/\s+/g, " ") !== str(phong, "ten").toLowerCase().replace(/\s+/g, " ");
 
   const docTep = async (f: File) => {
@@ -72,9 +88,12 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     setLoiDoc(null);
     setKq(null);
     try {
-      const r = await docMucLucHoSo(f, cat.thbq, { thbqMacDinh: thbqMacDinh || undefined });
+      if (!projectId) throw new Error("Chưa chọn dự án.");
+      const r = await docMucLucTuFile(projectId, f, { thbqMacDinh: thbqMacDinh || undefined });
       setTenTep(f.name);
-      setPt(r);
+      setPt(r.pt);
+      setRowsNhap(r.rowsNhap);
+      setChanMayChu(r.coLoiChan);
       setTrang(1);
       setChiVanDe(false);
       setBuoc(1);
@@ -86,11 +105,16 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
   };
   /** Đổi sheet / THBQ mặc định → phân tích lại từ nội dung đã đọc (không chọn lại tệp). */
   const phanTichLai = async (tuyChon: { sheet?: string; thbqMacDinh?: string }) => {
-    if (!pt?.buf) return;
+    if (!pt?.buf || !projectId) return;
     setBusy(true);
     try {
-      const r = await phanTichLaiMucLuc(pt.buf, tenTep, cat.thbq, { sheet: tuyChon.sheet ?? pt.sheet, thbqMacDinh: (tuyChon.thbqMacDinh ?? thbqMacDinh) || undefined });
-      setPt(r);
+      const r = await docMucLucMayChu(projectId, pt.buf, tenTep, {
+        sheet: tuyChon.sheet ?? pt.sheet,
+        thbqMacDinh: (tuyChon.thbqMacDinh ?? thbqMacDinh) || undefined,
+      });
+      setPt(r.pt);
+      setRowsNhap(r.rowsNhap);
+      setChanMayChu(r.coLoiChan);
       setTrang(1);
     } catch (e) {
       notifyError(e, "phân tích lại");
@@ -105,7 +129,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     setBuoc(2);
     setKq(null);
     try {
-      const rows = pt.rows.map((r) => dongMau(r, soTam.get(r.dong) ?? ""));
+      const rows = rowsNhap;
       const tong: KetQuaNhap = { created: 0, updated: 0, skipped: 0, createdPhongBan: 0, createdMang: 0, ganHop: 0, hopTaoMoi: 0, notes: [], errors: [] };
       for (let i = 0; i < rows.length; i += LO) {
         setTienDo(`Đang gửi dòng ${n(i + 1)}–${n(Math.min(i + LO, rows.length))} / ${n(rows.length)}…`);
@@ -150,7 +174,15 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
     { key: "so_tam", header: "Hồ sơ số / số tạm", width: 90, cell: (r) => soTam.get(r.dong) },
     { key: "loai", header: "Loại", width: 90, className: "text-sm", cell: (r) => TEN_LOAI(r.vinhVien) },
     { key: "tieu_de", header: "Tiêu đề", className: "max-w-[360px] whitespace-normal", cell: (r) => r.tieuDe },
-    { key: "mang", header: "Mảng", className: "text-sm", cell: (r) => (r.mang ? `${r.mang.ma} · ${r.mang.ten}${r.mang.tuDong ? " (tự tạo)" : ""}` : "") },
+    {
+      key: "mang",
+      header: "Mảng",
+      className: "text-sm",
+      cell: (r) => {
+        const m = pt ? mangCua(pt, r) : null;
+        return m ? `${m.ma} · ${m.ten}${m.tuDong ? " (tự tạo)" : ""}` : "";
+      },
+    },
     { key: "goc", header: "Thời gian gốc", className: "text-sm whitespace-pre-line", cell: (r) => r.thoiGianGoc || <span className="text-fg-subtle">trống</span> },
     { key: "bd", header: "Bắt đầu", width: 100, cell: (r) => r.tg.batDau || <span className="text-fg-subtle">—</span> },
     { key: "kt", header: "Kết thúc", width: 100, cell: (r) => r.tg.ketThuc || <span className="text-fg-subtle">—</span> },
@@ -214,7 +246,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
           <Button icon="tepExcel" disabled={busy} onClick={() => void taiDanhDau()}>
             Tải tệp gốc đã đánh dấu
           </Button>
-          <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
+          <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, rowsNhap, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
             Tải tệp đã chuyển
           </Button>
         </>
@@ -418,7 +450,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
                   <Button icon="tepExcel" onClick={() => void taiDanhDau()}>
                     Tải tệp gốc đã đánh dấu
                   </Button>
-                  <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
+                  <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, rowsNhap, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
                     Tải tệp đã chuyển
                   </Button>
                 </div>

@@ -1,4 +1,8 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
+//
+// ⚠️ KHÔNG CÒN CHẠY TRONG APP (từ 10/11/2026) — bản đang dùng là `digitext-mucluc::thoi_gian`
+// (Rust, ở máy chủ). Tệp này ở lại làm bản đối chứng cùng `mucLucImport.ts`; xem đầu tệp đó.
+//
 // Kiểm tra + tự điền cột "Thời gian BĐ - KT" của mục lục hồ sơ. Chuyển từ hai công cụ ngoài
 // (check_thoigian.py / dien_thoigian.py) để không phải chạy tay trước khi nhập Excel.
 //

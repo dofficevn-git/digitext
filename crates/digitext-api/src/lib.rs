@@ -18,3 +18,4 @@ pub mod migrate;
 pub mod nhap_goi;
 pub mod password;
 pub mod routes;
+pub mod xlsx;

@@ -17,6 +17,7 @@
 
 pub mod he_thong_hoa;
 pub mod import;
+pub mod muc_luc;
 pub mod read;
 pub mod rows;
 pub mod sync;
@@ -36,7 +37,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(tu_ocr::router()).merge(doi_soat::router())
+    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(muc_luc::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(tu_ocr::router()).merge(doi_soat::router())
 }
 
 /// Người gọi phải thuộc dự án (admin quản dự án, thành viên, hoặc tài khoản gắn dự án).
