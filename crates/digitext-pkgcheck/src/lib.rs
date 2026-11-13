@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 use xml::El;
 
-pub use load::discover;
+pub use load::{discover, tu_ban_ke, Loaded};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -88,8 +88,11 @@ pub struct PackageResult {
     pub pdfs: Vec<PdfRow>,
     pub errors: usize,
     pub warnings: usize,
-    /// "ĐẠT" | "ĐẠT (có cảnh báo)" | "KHÔNG ĐẠT"
+    /// "ĐẠT" | "ĐẠT (có cảnh báo)" | "KHÔNG ĐẠT" | "CHƯA KIỂM ĐỦ" | "CHƯA KIỂM ĐỦ (có cảnh báo)"
     pub verdict: String,
+    /// Số tệp **không** gửi nội dung lên nên không kiểm được PDF/A và mã băm. `0` = kiểm đủ.
+    /// Khác 0 thì `verdict` **không bao giờ** là "ĐẠT" trơn — xem `finish`.
+    pub chua_kiem_noi_dung: usize,
 }
 
 /// Nội dung gói đã đọc — để NHẬP gói vào Hệ thống (bản Lưu trữ, 4/11/2026), không chỉ kiểm.
@@ -420,11 +423,26 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
             return (finish(res), None);
         }
     };
+    check_loaded(res, loaded)
+}
+
+/// Kiểm một gói **đã đọc sẵn**. Dùng cho bản rút gọn của cổng nhà cung cấp: gói ở đó chỉ mang
+/// siêu dữ liệu, các tệp nội dung chỉ có tên trong `loaded.thieu_noi_dung`.
+///
+/// Mọi phép kiểm cấu trúc chạy y như gói đầy đủ — chúng chỉ đọc XML. Ba phép kiểm cần byte thật
+/// (mã băm METS, mã băm PREMIS, PDF/A từng tệp) thì **bỏ qua và đếm lại**, chứ không được băm
+/// một mảng rỗng rồi báo "sai mã băm" cho cả nghìn tệp lành lặn.
+pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, Option<Extract>) {
     res.root = loaded.root.clone();
     res.sha256 = loaded.sha256.clone();
     res.size = loaded.size;
     let mut c = Ctx { f: loaded.notes };
     let files = &loaded.files;
+    let thieu = &loaded.thieu_noi_dung;
+    let co_tep = &loaded.co_tep;
+    // Số phép kiểm cần nội dung mà phải bỏ qua. Mỗi chỗ bỏ qua cộng một, và `finish` dùng con số
+    // này để KHÔNG kết luận "ĐẠT".
+    let mut bo_qua: usize = 0;
 
     // 1. XML đọc được.
     let mut parsed: HashMap<&str, El> = HashMap::new();
@@ -556,6 +574,11 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
                 }
             }
             match el.attr("CHECKSUM") {
+                // Không có byte thật thì không có gì để băm — bỏ qua, đếm lại, tuyệt đối không
+                // so với mã băm của mảng rỗng.
+                Some(_) if thieu.contains(&target) => {
+                    bo_qua += 1;
+                }
                 Some(sum) if el.attr("CHECKSUMTYPE").is_none_or(|t| t.eq_ignore_ascii_case("SHA-256")) => {
                     if !sum.eq_ignore_ascii_case(&sha256(data)) {
                         bad += 1;
@@ -569,9 +592,12 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
                 }
             }
             if let Some(sz) = el.attr("SIZE") {
-                if sz.parse::<u64>().ok() != Some(data.len() as u64) {
+                // Cỡ lấy từ `co_tep`, không phải `data.len()`: bản rút gọn không gửi byte nào
+                // nên `data` rỗng, mà cỡ thì bản kê vẫn có ⇒ phép kiểm này vẫn chạy được.
+                let co_that = co_tep.get(&target).copied().unwrap_or(data.len() as u64);
+                if sz.parse::<u64>().ok() != Some(co_that) {
                     bad += 1;
-                    c.err("METS", format!("{mp}: {target} SIZE={sz} khác thực tế {}", data.len()));
+                    c.err("METS", format!("{mp}: {target} SIZE={sz} khác thực tế {co_that}"));
                 }
             }
         }
@@ -771,7 +797,9 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
         let rep_data: Vec<&(&String, &Vec<u8>)> = data.iter().filter(|(path, _)| path.starts_with(&format!("representations/{r}/"))).collect();
         for (path, b) in &rep_data {
             let fname = path.rsplit('/').next().unwrap_or(path);
-            if !digests.contains(&sha256(b)) {
+            if thieu.contains(*path) {
+                bo_qua += 1;
+            } else if !digests.contains(&sha256(b)) {
                 miss += 1;
                 c.err("PREMIS", format!("{pp}: không có mã băm SHA-256 đúng cho {fname}"));
             }
@@ -794,6 +822,10 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
     // 8. Từng tệp PDF.
     for (p, b) in &data {
         if p.to_lowercase().ends_with(".pdf") {
+            if thieu.contains(*p) {
+                bo_qua += 1;
+                continue;
+            }
             res.pdfs.push(check_pdf(p.rsplit('/').next().unwrap_or(p), b, aip));
         }
     }
@@ -838,6 +870,17 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
             c.warn("Chữ ký số", format!("{no_ltv} chữ ký chưa có LTV (OCSP/CRL nhúng) — gói AIP nên ký PAdES-LT/LTA"));
         }
     }
+    // Nói thẳng phần CHƯA kiểm, trước khi gán findings — người đọc phải thấy nó nằm cùng chỗ
+    // với các phát hiện khác, không phải một dòng chú thích ở đâu đó.
+    res.chua_kiem_noi_dung = bo_qua;
+    if bo_qua > 0 {
+        c.warn(
+            "Chưa kiểm",
+            format!(
+                "{bo_qua} phép kiểm cần nội dung tệp chưa chạy (PDF/A từng tệp, mã băm METS, mã băm PREMIS) — gói rút gọn chỉ gửi siêu dữ liệu. Dùng «Tự kiểm PDF/A» cho tệp mẫu, và bản kiểm đầy đủ chạy khi nộp gói thật."
+            ),
+        );
+    }
     res.findings = c.f;
 
     // Nội dung để nhập: EAD hồ sơ, từng EAD văn bản ghép tệp dữ liệu.
@@ -874,12 +917,15 @@ pub fn check_and_extract(path: &Path) -> (PackageResult, Option<Extract>) {
 fn finish(mut res: PackageResult) -> PackageResult {
     res.errors = res.findings.iter().filter(|f| f.level == Level::Err).count();
     res.warnings = res.findings.iter().filter(|f| f.level == Level::Warn).count();
-    res.verdict = if res.errors > 0 {
-        "KHÔNG ĐẠT".into()
-    } else if res.warnings > 0 {
-        "ĐẠT (có cảnh báo)".into()
-    } else {
-        "ĐẠT".into()
+    // Lỗi thì luôn là KHÔNG ĐẠT, dù kiểm đủ hay không. Còn khi không có lỗi mà vẫn còn phép
+    // kiểm chưa chạy thì **không được** nói "ĐẠT": người đọc sẽ hiểu là gói nộp được, trong khi
+    // nội dung từng tệp PDF và mã băm chưa ai xem.
+    res.verdict = match (res.errors > 0, res.chua_kiem_noi_dung > 0, res.warnings > 0) {
+        (true, _, _) => "KHÔNG ĐẠT".into(),
+        (false, true, true) => "CHƯA KIỂM ĐỦ (có cảnh báo)".into(),
+        (false, true, false) => "CHƯA KIỂM ĐỦ".into(),
+        (false, false, true) => "ĐẠT (có cảnh báo)".into(),
+        (false, false, false) => "ĐẠT".into(),
     };
     res
 }
@@ -887,6 +933,117 @@ fn finish(mut res: PackageResult) -> PackageResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// Kết luận **không được** nói "ĐẠT" khi còn phép kiểm chưa chạy. Đây là chỗ một dòng mã
+    /// sai biến "gói chưa ai xem nội dung" thành "gói nộp được".
+    #[test]
+    fn ket_luan_khong_noi_dat_khi_con_phep_kiem_bi_bo() {
+        let dung = |loi: usize, canh_bao: usize, bo_qua: usize| {
+            let mut r = PackageResult { chua_kiem_noi_dung: bo_qua, ..Default::default() };
+            for _ in 0..loi {
+                r.findings.push(Finding::new(Level::Err, "t", "x".into()));
+            }
+            for _ in 0..canh_bao {
+                r.findings.push(Finding::new(Level::Warn, "t", "x".into()));
+            }
+            finish(r).verdict
+        };
+        assert_eq!(dung(0, 0, 0), "ĐẠT");
+        assert_eq!(dung(0, 1, 0), "ĐẠT (có cảnh báo)");
+        assert_eq!(dung(1, 0, 0), "KHÔNG ĐẠT");
+        assert_eq!(dung(0, 0, 5), "CHƯA KIỂM ĐỦ");
+        assert_eq!(dung(0, 1, 5), "CHƯA KIỂM ĐỦ (có cảnh báo)");
+        // Có lỗi thì vẫn là KHÔNG ĐẠT, kiểm thiếu không làm nhẹ đi.
+        assert_eq!(dung(1, 0, 5), "KHÔNG ĐẠT");
+        for v in [dung(0, 0, 5), dung(0, 1, 5)] {
+            assert!(!v.starts_with("ĐẠT"), "{v} đọc ra là đạt");
+        }
+    }
+
+    /// `tu_ban_ke` phải cắt tên thư mục gốc khỏi tập "thiếu nội dung" y như `split_root` cắt khỏi
+    /// đường dẫn tệp. Lệch một bên thì mọi phép tra đều trượt, và bộ kiểm quay lại băm mảng rỗng.
+    #[test]
+    fn ban_ke_cat_thu_muc_goc_khoi_tap_thieu_noi_dung() {
+        let goc = "urn_H49_uuid_ABC";
+        let l = tu_ban_ke(
+            vec![
+                (format!("{goc}/METS.xml"), Some(b"<x/>".to_vec()), None),
+                (format!("{goc}/metadata/preservation/PREMIS.xml"), Some(b"<x/>".to_vec()), None),
+                (format!("{goc}/representations/rep1/data/a.pdf"), None, Some(1_351_408)),
+                (format!("{goc}/representations/rep1/data/b.pdf"), None, Some(2_000)),
+            ],
+            131_723_288,
+        );
+        assert_eq!(l.root, goc);
+        assert!(l.files.contains_key("METS.xml"), "đường dẫn phải đã cắt gốc: {:?}", l.files.keys());
+        assert_eq!(l.size, 131_723_288);
+        assert_eq!(
+            l.thieu_noi_dung.iter().cloned().collect::<Vec<_>>(),
+            vec!["representations/rep1/data/a.pdf", "representations/rep1/data/b.pdf"]
+        );
+        // Tệp siêu dữ liệu KHÔNG được nằm trong tập thiếu — nếu không thì mã băm của chính
+        // METS/PREMIS cũng bị bỏ qua oan.
+        assert!(!l.thieu_noi_dung.contains("METS.xml"));
+        // Cỡ của tệp KHÔNG gửi nội dung phải lấy từ bản kê, nếu không phép kiểm SIZE của METS
+        // sẽ so với 0 và báo lỗi giả cho mọi tệp (đã sập một lần, 13/11/2026).
+        assert_eq!(l.co_tep.get("representations/rep1/data/a.pdf"), Some(&1_351_408));
+        assert_eq!(l.co_tep.get("METS.xml"), Some(&4), "tệp có nội dung thì lấy cỡ thật");
+    }
+
+    /// Đối chiếu **gói thật** với **bản rút gọn của chính nó**: mọi phát hiện về cấu trúc phải
+    /// giống hệt, chỉ khác đúng phần cần nội dung tệp.
+    ///   $env:DIGITEXT_PKG_SAMPLE="D:\\DigiText\\test\\AIP.zip"
+    ///   cargo test -p digitext-pkgcheck rut_gon_khop_goi_that -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn rut_gon_khop_goi_that() {
+        let p = std::env::var("DIGITEXT_PKG_SAMPLE").expect("đặt DIGITEXT_PKG_SAMPLE");
+        let goi = std::path::PathBuf::from(&p);
+        let day_du = check_path(&goi);
+
+        // Dựng bản rút gọn ĐÚNG như cổng sẽ dựng: giữ nội dung tệp .xml/.xsd, còn lại chỉ tên.
+        let l = load::load(&goi).expect("đọc được gói");
+        let tep: Vec<(String, Option<Vec<u8>>, Option<u64>)> = l
+            .files
+            .iter()
+            .map(|(k, v)| {
+                let low = k.to_lowercase();
+                let giu = low.ends_with(".xml") || low.ends_with(".xsd");
+                let duong = if l.root.is_empty() { k.clone() } else { format!("{}/{}", l.root, k) };
+                (duong, giu.then(|| v.clone()), Some(v.len() as u64))
+            })
+            .collect();
+        let n_thieu = tep.iter().filter(|(_, b, _)| b.is_none()).count();
+        let co_goi = l.size;
+        let rut = check_loaded(
+            PackageResult { source: "rut-gon".into(), name: "rut-gon".into(), kind: "?".into(), ..Default::default() },
+            tu_ban_ke(tep, co_goi),
+        )
+        .0;
+
+        println!("đầy đủ : {} · lỗi {} · cảnh báo {}", day_du.verdict, day_du.errors, day_du.warnings);
+        println!("rút gọn: {} · lỗi {} · cảnh báo {} · bỏ qua {}", rut.verdict, rut.errors, rut.warnings, rut.chua_kiem_noi_dung);
+        for f in rut.findings.iter().filter(|f| f.level != Level::Ok) {
+            println!("  {:?} [{}] {}", f.level, f.group, f.message);
+        }
+
+        assert!(n_thieu > 0, "gói mẫu phải có tệp nội dung");
+        assert_eq!(rut.kind, day_du.kind);
+        assert_eq!(rut.objid, day_du.objid);
+        assert_eq!(rut.data_files, day_du.data_files);
+        // Lỗi CẤU TRÚC phải khớp từng câu. Lỗi về mã băm thì bản rút gọn không có.
+        let loi_cau_truc = |r: &PackageResult| -> Vec<String> {
+            r.findings
+                .iter()
+                .filter(|f| f.level == Level::Err && f.group != "PDF" && !f.message.contains("mã băm"))
+                .map(|f| format!("[{}] {}", f.group, f.message))
+                .collect()
+        };
+        assert_eq!(loi_cau_truc(&rut), loi_cau_truc(&day_du), "lỗi cấu trúc phải giống hệt gói đầy đủ");
+        assert!(rut.chua_kiem_noi_dung > 0, "phải đếm được phép kiểm đã bỏ");
+        assert!(rut.pdfs.is_empty(), "bản rút gọn không kiểm được PDF nào");
+        assert!(!rut.verdict.starts_with("ĐẠT"), "kết luận {} không được đọc ra là đạt", rut.verdict);
+    }
+
     #[test]
     fn ghep_href() {
         assert_eq!(resolve("representations/rep1", "data/a%20b.pdf"), "representations/rep1/data/a b.pdf");

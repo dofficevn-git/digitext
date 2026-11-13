@@ -3,7 +3,7 @@
 //! `AIP.zip/AIP/uuid_….zip`) hoặc thư mục đã giải nén. Đường dẫn tệp tính từ THƯ MỤC GỐC của gói.
 use crate::{Finding, Level};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::Path;
 
@@ -15,6 +15,40 @@ pub struct Loaded {
     pub notes: Vec<Finding>,
     pub sha256: Option<String>,
     pub size: u64,
+    /// Đường dẫn của những tệp **chỉ có tên, không có nội dung** — gói rút gọn do cổng nhà cung
+    /// cấp gửi lên chỉ mang siêu dữ liệu. Phép kiểm nào cần byte thật phải tra tập này trước,
+    /// nếu không nó sẽ băm một mảng rỗng rồi báo "sai mã băm" cho cả nghìn tệp lành lặn.
+    pub thieu_noi_dung: BTreeSet<String>,
+    /// Cỡ **thật** của từng tệp, byte. Với gói đầy đủ thì bằng `files[p].len()`; với bản rút gọn
+    /// thì lấy từ bản kê — nhờ vậy phép kiểm `SIZE` của METS vẫn chạy được dù không có byte nào.
+    pub co_tep: BTreeMap<String, u64>,
+}
+
+/// Dựng `Loaded` từ **bản kê** do cổng nhà cung cấp gửi: mỗi tệp một đường dẫn, kèm nội dung nếu
+/// là tệp siêu dữ liệu. Đi qua đúng `split_root` như gói thật, nên đường dẫn tương đối giống hệt.
+pub fn tu_ban_ke(tep: Vec<(String, Option<Vec<u8>>, Option<u64>)>, co_goi: u64) -> Loaded {
+    let mut notes = Vec::new();
+    let thieu: BTreeSet<String> =
+        tep.iter().filter(|(_, b, _)| b.is_none()).map(|(p, _, _)| p.clone()).collect();
+    // Cỡ: byte thật khi có nội dung, còn lại lấy theo bản kê (thiếu thì coi là 0).
+    let co_goc: BTreeMap<String, u64> = tep
+        .iter()
+        .map(|(p, b, c)| (p.clone(), b.as_ref().map(|v| v.len() as u64).or(*c).unwrap_or(0)))
+        .collect();
+    let entries: Vec<(String, Vec<u8>)> =
+        tep.into_iter().map(|(p, b, _)| (p, b.unwrap_or_default())).collect();
+    let (root, files) = split_root(entries, &mut notes);
+    // `split_root` cắt tiền tố thư mục gốc khỏi đường dẫn ⇒ tập "thiếu nội dung" phải cắt theo.
+    let cat = |p: &String| -> Option<String> {
+        if root.is_empty() {
+            Some(p.clone())
+        } else {
+            p.strip_prefix(&format!("{root}/")).map(str::to_string)
+        }
+    };
+    let thieu_noi_dung = thieu.iter().filter_map(cat).collect();
+    let co_tep = co_goc.iter().filter_map(|(p, c)| cat(p).map(|k| (k, *c))).collect();
+    Loaded { root, files, notes, sha256: None, size: co_goi, thieu_noi_dung, co_tep }
 }
 
 fn read_zip(bytes: &[u8], label: &str) -> Result<Vec<(String, Vec<u8>)>, String> {
@@ -82,7 +116,7 @@ pub fn load(path: &Path) -> Result<Loaded, String> {
             }
         }
         notes.push(Finding::new(Level::Ok, "Cấu trúc", format!("Kiểm thư mục đã giải nén \"{root}\"")));
-        return Ok(Loaded { root, files, notes, sha256: None, size });
+        return Ok(Loaded { thieu_noi_dung: BTreeSet::new(), co_tep: files.iter().map(|(k, v)| (k.clone(), v.len() as u64)).collect(), root, files, notes, sha256: None, size });
     }
     let bytes = std::fs::read(path).map_err(|e| format!("đọc {}: {e}", path.display()))?;
     let size = bytes.len() as u64;
@@ -105,14 +139,14 @@ pub fn load(path: &Path) -> Result<Loaded, String> {
         if !root.is_empty() && stem != root {
             notes.push(Finding::new(Level::Warn, "Cấu trúc", format!("Tên tệp ZIP \"{stem}\" khác tên thư mục gốc \"{root}\"")));
         }
-        return Ok(Loaded { root, files, notes, sha256: Some(sha), size });
+        return Ok(Loaded { thieu_noi_dung: BTreeSet::new(), co_tep: files.iter().map(|(k, v)| (k.clone(), v.len() as u64)).collect(), root, files, notes, sha256: Some(sha), size });
     }
     let (root, files) = split_root(entries, &mut notes);
     let stem = label.trim_end_matches(".zip").trim_end_matches(".ZIP");
     if !root.is_empty() && stem != root {
         notes.push(Finding::new(Level::Warn, "Cấu trúc", format!("Tên tệp ZIP \"{stem}\" khác tên thư mục gốc \"{root}\"")));
     }
-    Ok(Loaded { root, files, notes, sha256: Some(sha), size })
+    Ok(Loaded { thieu_noi_dung: BTreeSet::new(), co_tep: files.iter().map(|(k, v)| (k.clone(), v.len() as u64)).collect(), root, files, notes, sha256: Some(sha), size })
 }
 
 /// Tìm các gói trong danh sách đường dẫn: tệp .zip, thư mục gói (có METS.xml), hoặc thư mục chứa nhiều gói.
