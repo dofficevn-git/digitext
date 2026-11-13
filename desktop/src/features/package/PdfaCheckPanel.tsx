@@ -89,6 +89,19 @@ export default function PdfaCheckPanel() {
     { key: "hasOutputIntent", header: "Hồ sơ màu", width: 100, cell: (f) => (f.hasOutputIntent ? "Có" : <span className="text-danger-700">Không</span>) },
     { key: "textPages", header: "Lớp chữ", width: 100, cell: (f) => `${f.textPages}/${f.pages} trang` },
     { key: "minDpi", header: "dpi", width: 110, cell: (f) => `${f.minDpi ?? "—"}${f.isMap ? " (bản đồ, cần 300)" : ""}` },
+    {
+      key: "trangLoi",
+      header: "Trang lỗi",
+      width: 200,
+      cell: (f) =>
+        f.trangLoi ? (
+          <Tip text={f.trangLoi}>
+            <span className="line-clamp-2 text-danger-700">{f.trangLoi}</span>
+          </Tip>
+        ) : (
+          "—"
+        ),
+    },
     { key: "trang", header: "Trang trắng / lệch", width: 170, cell: (f) => <OTrang t={f.trang} /> },
     { key: "signed", header: "Ký số", width: 80, cell: (f) => (f.signed ? "Có" : "Không") },
     { key: "producer", header: "Phần mềm tạo", className: "text-sm text-fg-subtle", cell: (f) => f.producer ?? "—", hideBelow: 1440 },
@@ -146,10 +159,15 @@ export default function PdfaCheckPanel() {
             const d = [...(f.error ? [f.error] : f.problems), ...(f.verapdf?.rules ?? [])];
             const t = f.trang;
             const coTrang = t && (t.trangTrang.length > 0 || t.trangGanTrang.length > 0 || t.trangLech.length > 0 || t.trangNgang.length > 0);
-            if (!d.length && !coTrang) return null;
+            if (!d.length && !coTrang && !f.trangLoi) return null;
             return (
               <div className="space-y-2 px-8 py-2 text-sm">
                 {d.length > 0 && <ul className="list-disc">{d.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+                {f.trangLoi && (
+                  <div>
+                    <b>Trang lỗi:</b> {f.trangLoi}
+                  </div>
+                )}
                 {coTrang && t && (
                   <div className="space-y-1">
                     {t.trangTrang.length > 0 && <div><b>Trang trắng ({fmt(t.trangTrang.length)}):</b> {soTrang(t.trangTrang.map((x) => x.trang))}</div>}

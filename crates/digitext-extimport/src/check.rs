@@ -481,6 +481,11 @@ pub struct PdfFacts {
     pub pages_declared: Option<u32>,
     /// Bảng tham chiếu (xref) hỏng, phải dựng lại mới đọc đủ trang — tệp không đạt cấu trúc ISO 19005.
     pub xref_rebuilt: bool,
+    /// Số thứ tự trang không có lớp chữ.
+    pub pages_without_text: Vec<u32>,
+    /// (trang, dpi) / (trang, bit màu) ảnh nền từng trang — để báo trang lỗi theo ngưỡng.
+    pub page_dpi: Vec<(u32, u32)>,
+    pub page_bits: Vec<(u32, u32)>,
 }
 
 /// Ngưỡng dpi TT05 Điều 8.2.a: 300 với bản đồ/bản vẽ, 200 với tài liệu hành chính.
@@ -604,6 +609,9 @@ pub fn inspect_pdf(bytes: &[u8]) -> PdfFacts {
     f.min_bit_depth = r.min_bit_depth;
     f.pages_declared = r.pages_declared.map(|n| n as u32);
     f.xref_rebuilt = r.xref_rebuilt;
+    f.pages_without_text = r.pages_without_text.iter().map(|&n| n as u32).collect();
+    f.page_dpi = r.page_dpi.iter().map(|&(p, d)| (p as u32, d)).collect();
+    f.page_bits = r.page_bits.iter().map(|&(p, b)| (p as u32, b)).collect();
     if r.pages == 0 {
         f.encrypted_or_broken = Some(r.reason.unwrap_or_else(|| "không đọc được trang nào".into()));
     }

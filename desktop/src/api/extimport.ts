@@ -162,6 +162,12 @@ export interface PdfaFileReport {
   /** null = lần kiểm này không bật đo trang. */
   trang: KetQuaTrang | null;
   error: string | null;
+  /** Số thứ tự trang lỗi: không có lớp chữ; [trang, dpi] dưới ngưỡng; [trang, bit] dưới 24 bit. */
+  trangKhongChu: number[];
+  trangDpiThap: [number, number][];
+  trangBitThap: [number, number][];
+  /** Gộp sẵn cho người đọc, vd "không lớp chữ: 1, 3–5 · 87 dpi: 33" (cũng là cột "Trang lỗi" trong CSV). */
+  trangLoi: string;
 }
 
 export interface PdfaSummary {

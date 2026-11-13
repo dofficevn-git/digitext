@@ -51,6 +51,48 @@ pub struct PdfaReport {
     /// Đo trang trắng / trang lệch (`trang.rs`). `None` = không bật đo.
     pub trang: Option<crate::trang::KetQuaTrang>,
     pub error: Option<String>,
+    /// Số thứ tự trang lỗi (13/11/2026): không có lớp chữ; dpi dưới ngưỡng (trang, dpi); ảnh dưới 24 bit (trang, bit).
+    pub trang_khong_chu: Vec<u32>,
+    pub trang_dpi_thap: Vec<(u32, u32)>,
+    pub trang_bit_thap: Vec<(u32, u32)>,
+    /// Gộp ba danh sách trên thành một ô cho người đọc, vd "không lớp chữ: 1, 3–5 · 87 dpi: 33".
+    pub trang_loi: String,
+}
+
+/// "1, 3–5, 9" — gộp các trang liên tiếp.
+pub fn day_trang(trang: &[u32]) -> String {
+    let mut v = trang.to_vec();
+    v.sort_unstable();
+    v.dedup();
+    let mut out: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < v.len() {
+        let mut j = i;
+        while j + 1 < v.len() && v[j + 1] == v[j] + 1 {
+            j += 1;
+        }
+        out.push(if j > i { format!("{}–{}", v[i], v[j]) } else { v[i].to_string() });
+        i = j + 1;
+    }
+    out.join(", ")
+}
+
+/// Ô "Trang lỗi": từng loại lỗi kèm dãy trang; dpi / bit gom theo giá trị (trang cùng mức đứng chung).
+pub fn gop_trang_loi(khong_chu: &[u32], dpi_thap: &[(u32, u32)], bit_thap: &[(u32, u32)]) -> String {
+    let mut phan: Vec<String> = Vec::new();
+    if !khong_chu.is_empty() {
+        phan.push(format!("không lớp chữ: {}", day_trang(khong_chu)));
+    }
+    let theo_muc = |ds: &[(u32, u32)], don_vi: &str| {
+        let mut m: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
+        for &(trang, gia_tri) in ds {
+            m.entry(gia_tri).or_default().push(trang);
+        }
+        m.into_iter().map(|(g, t)| format!("{g} {don_vi}: {}", day_trang(&t))).collect::<Vec<_>>()
+    };
+    phan.extend(theo_muc(dpi_thap, "dpi"));
+    phan.extend(theo_muc(bit_thap, "bit"));
+    phan.join(" · ")
 }
 
 fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
@@ -130,6 +172,7 @@ pub fn inspect_bytes(path: &str, name: &str, bytes: &[u8]) -> PdfaReport {
         has_xmp: false, has_output_intent: false, pages: 0, text_pages: 0, min_dpi: None, min_bit_depth: None,
         max_page_cm: None, is_map: false, signed: false, producer: None, verdict: String::new(), looks_pdfa: false, problems: Vec::new(),
         verapdf: None, trang: None, error: None,
+        trang_khong_chu: Vec::new(), trang_dpi_thap: Vec::new(), trang_bit_thap: Vec::new(), trang_loi: String::new(),
     };
     if bytes.is_empty() {
         r.verdict = "KHÔNG ĐỌC ĐƯỢC".into();
@@ -187,6 +230,10 @@ pub fn inspect_bytes(path: &str, name: &str, bytes: &[u8]) -> PdfaReport {
     if let Some(b) = r.min_bit_depth.filter(|b| *b < digitext_pdf::FM1_MIN_BIT_DEPTH) {
         r.problems.push(format!("ảnh {b} bit < 24 bit màu (TT05 Điều 8.2.a)"));
     }
+    r.trang_khong_chu = f.pages_without_text.clone();
+    r.trang_dpi_thap = f.page_dpi.iter().copied().filter(|&(_, d)| d < need).collect();
+    r.trang_bit_thap = f.page_bits.iter().copied().filter(|&(_, b)| b < digitext_pdf::FM1_MIN_BIT_DEPTH).collect();
+    r.trang_loi = gop_trang_loi(&r.trang_khong_chu, &r.trang_dpi_thap, &r.trang_bit_thap);
     r.looks_pdfa = r.declared.is_some() && r.has_output_intent;
     r.verdict = match (&r.declared, r.looks_pdfa) {
         (Some(d), true) => format!("{d} (tệp tự khai, đủ dấu hiệu)"),
@@ -390,7 +437,7 @@ pub fn run_opts(
 /// Ghi bảng kết quả ra CSV (UTF-8 có BOM — mở thẳng bằng Excel). Trả đường dẫn đã ghi.
 pub fn write_csv(reports: &[PdfaReport], path: &Path) -> Result<String, String> {
     let esc = |s: &str| if s.contains([',', '"', '\n', ';']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s.to_string() };
-    let mut out = String::from("\u{feff}Kết luận,Loại tự khai,veraPDF,Tệp,Thư mục,PDF,Trang,Trang có lớp chữ,dpi thấp nhất,Bit màu,Hồ sơ màu,Chữ ký số,Phần mềm tạo,Trang trắng,Trang gần như trắng,Trang lệch,Góc lệch lớn nhất,Trang quét ngang,Số trang đã đo,Vấn đề,Luật veraPDF vi phạm\r\n");
+    let mut out = String::from("\u{feff}Kết luận,Loại tự khai,veraPDF,Tệp,Thư mục,PDF,Trang,Trang có lớp chữ,dpi thấp nhất,Bit màu,Hồ sơ màu,Chữ ký số,Phần mềm tạo,Trang trắng,Trang gần như trắng,Trang lệch,Góc lệch lớn nhất,Trang quét ngang,Số trang đã đo,Vấn đề,Trang lỗi,Luật veraPDF vi phạm\r\n");
     for r in reports {
         let dir = Path::new(&r.path).parent().map(|p| p.display().to_string()).unwrap_or_default();
         let vera = match &r.verapdf {
@@ -410,6 +457,7 @@ pub fn write_csv(reports: &[PdfaReport], path: &Path) -> Result<String, String> 
             r.trang.as_ref().map(|t| t.trang_ngang.iter().map(u32::to_string).collect::<Vec<_>>().join(" ")).unwrap_or_default(),
             r.trang.as_ref().map(|t| if t.khong_do > 0 { format!("{} (bỏ qua {})", t.da_do, t.khong_do) } else { t.da_do.to_string() }).unwrap_or_default(),
             r.error.clone().map(|e| vec![e]).unwrap_or_else(|| r.problems.clone()).join(" | "),
+            r.trang_loi.clone(),
             r.verapdf.as_ref().map(|v| v.rules.join(" | ")).unwrap_or_default(),
         ];
         out.push_str(&cols.iter().map(|c| esc(c)).collect::<Vec<_>>().join(","));
@@ -429,6 +477,56 @@ mod tests {
         assert_eq!(pdfaid_from_xmp(b"<pdfaid:part>4</pdfaid:part>").as_deref(), Some("PDF/A-4"));
         assert_eq!(pdfaid_from_xmp(b"%PDF-1.3 khong co gi"), None);
     }
+    /// PDF 5 trang A4: ảnh nền rộng `px` (595 pt → 2480 px = 300 dpi, 720 px = 87 dpi), có / không lớp chữ, RGB / xám.
+    fn pdf_trang_loi() -> Vec<u8> {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let mut doc = Document::with_version("1.7");
+        let pages_id = doc.new_object_id();
+        let font = doc.add_object(dictionary! { "Type" => "Font", "Subtype" => "Type1", "BaseFont" => "Helvetica" });
+        let mut kids = Vec::new();
+        for (px, co_chu, mau) in [(2480, true, "DeviceRGB"), (720, true, "DeviceRGB"), (720, true, "DeviceRGB"), (2480, false, "DeviceRGB"), (2480, true, "DeviceGray")] {
+            let anh = doc.add_object(Stream::new(
+                dictionary! { "Type" => "XObject", "Subtype" => "Image", "Width" => px, "Height" => 10, "ColorSpace" => mau, "BitsPerComponent" => 8 },
+                vec![0u8; 16],
+            ));
+            let nd = if co_chu { "q 595 0 0 842 0 0 cm /Im0 Do Q BT /F1 12 Tf 72 720 Td (Van ban) Tj ET" } else { "q 595 0 0 842 0 0 cm /Im0 Do Q" };
+            let c = doc.add_object(Stream::new(dictionary! {}, nd.as_bytes().to_vec()));
+            let p = doc.add_object(dictionary! {
+                "Type" => "Page", "Parent" => pages_id, "Contents" => c,
+                "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+                "Resources" => dictionary! { "Font" => dictionary! { "F1" => font }, "XObject" => dictionary! { "Im0" => anh } },
+            });
+            kids.push(Object::Reference(p));
+        }
+        doc.objects.insert(pages_id, Object::Dictionary(dictionary! { "Type" => "Pages", "Kids" => kids, "Count" => 5 }));
+        let cat = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+        doc.trailer.set("Root", cat);
+        let mut out = Vec::new();
+        doc.save_to(&mut out).unwrap();
+        out
+    }
+
+    #[test]
+    fn bao_dung_so_thu_tu_trang_loi() {
+        let r = inspect_bytes("x.pdf", "x.pdf", &pdf_trang_loi());
+        assert_eq!(r.pages, 5);
+        assert_eq!(r.trang_khong_chu, vec![4]);
+        assert_eq!(r.trang_dpi_thap, vec![(2, 87), (3, 87)]);
+        assert_eq!(r.trang_bit_thap, vec![(5, 8)]);
+        assert_eq!(r.trang_loi, "không lớp chữ: 4 · 87 dpi: 2–3 · 8 bit: 5");
+    }
+
+    #[test]
+    fn trang_loi_gop_day_va_theo_muc() {
+        assert_eq!(day_trang(&[5, 1, 3, 4, 9, 10]), "1, 3–5, 9–10");
+        assert_eq!(day_trang(&[]), "");
+        assert_eq!(
+            gop_trang_loi(&[2, 3, 4], &[(33, 87), (34, 87), (40, 150)], &[(7, 8)]),
+            "không lớp chữ: 2–4 · 87 dpi: 33–34 · 150 dpi: 40 · 8 bit: 7"
+        );
+        assert_eq!(gop_trang_loi(&[], &[], &[]), "");
+    }
+
     #[test]
     fn loai_dem_kiem_verapdf() {
         assert_eq!(flavour_for(&Some("PDF/A-1B".into())), "1b");

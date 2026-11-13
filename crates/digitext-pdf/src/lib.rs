@@ -380,6 +380,10 @@ pub struct Tgz {
     pub pages_declared: Option<usize>,
     /// Bảng tham chiếu hỏng, đã dựng lại bằng quét `N G obj` mới đọc được (`sua_xref`).
     pub xref_rebuilt: bool,
+    /// (trang, dpi) của ảnh nền từng trang — người gọi lọc theo ngưỡng của mình (200 / 300 bản đồ).
+    pub page_dpi: Vec<(usize, u32)>,
+    /// (trang, bit màu) của ảnh nền từng trang.
+    pub page_bits: Vec<(usize, u32)>,
 }
 pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
     // 13/11/2026: mở qua sua_xref — xref hỏng thì lopdf bỏ qua trang im lặng (70 trang đếm thành 1).
@@ -398,6 +402,8 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
                 reason: Some(format!("không mở được PDF: {e}")),
                 pages_declared: None,
                 xref_rebuilt: false,
+                page_dpi: Vec::new(),
+                page_bits: Vec::new(),
             };
         }
     };
@@ -414,6 +420,8 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
             reason: Some("PDF được mã hoá (PDF/A không cho phép)".into()),
             pages_declared,
             xref_rebuilt,
+            page_dpi: Vec::new(),
+            page_bits: Vec::new(),
         };
     }
     let pages = r_4a5.get_pages();
@@ -430,6 +438,9 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
     let mut has_image = false;
     let mut min_dpi: Option<u32> = None;
     let mut min_bit_depth: Option<u32> = None;
+    // Theo từng trang (ảnh nền đầu tiên của trang) — để báo SỐ THỨ TỰ trang lỗi, không chỉ giá trị thấp nhất (13/11/2026).
+    let mut page_dpi: Vec<(usize, u32)> = Vec::new();
+    let mut page_bits: Vec<(usize, u32)> = Vec::new();
     for (page_no, r_4a9) in pages.iter() {
         let Ok(page) = r_4a5.get_dictionary(*r_4a9) else {
             continue;
@@ -466,6 +477,7 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
                                 let r_4a3 = r_4a1 as u32 * r_4a0 as u32;
                                 min_bit_depth =
                                     Some(min_bit_depth.map_or(r_4a3, |m: u32| m.min(r_4a3)));
+                                page_bits.push((*page_no as usize, r_4a3));
                             }
                             if let (Some(r_4ad), Some(r_4ac)) =
                                 (r_4a8(b"Width"), page_w_pt(page, &r_4a5))
@@ -474,6 +486,7 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
                                     u32::try_from(r_4ad).ok().and_then(|w| f_17h(w, r_4ac))
                                 {
                                     min_dpi = Some(min_dpi.map_or(dpi, |m: u32| m.min(dpi)));
+                                    page_dpi.push((*page_no as usize, dpi));
                                 }
                             }
                             break;
@@ -531,6 +544,8 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
         reason,
         pages_declared,
         xref_rebuilt,
+        page_dpi,
+        page_bits,
     }
 }
 fn page_w_pt(page: &lopdf::Dictionary, r_4ah: &Document) -> Option<f32> {
