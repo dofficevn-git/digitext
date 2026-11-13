@@ -9,6 +9,7 @@ pub mod devices;
 pub mod disposal;
 pub mod documents;
 pub mod hooks;
+pub mod ncc;
 pub mod info;
 pub mod ingest;
 pub mod tra_cuu;

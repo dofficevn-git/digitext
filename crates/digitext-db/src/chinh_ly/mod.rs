@@ -16,6 +16,7 @@ pub mod he_thong_hoa;
 pub mod ho_so;
 pub mod lich_su;
 pub mod merge;
+pub mod ncc;
 pub mod rows;
 pub mod spec;
 pub mod sync;

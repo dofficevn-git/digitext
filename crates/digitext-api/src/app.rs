@@ -156,4 +156,7 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::submissions::router())
         .merge(crate::routes::sign::router())
         .merge(crate::routes::upload_batches::router())
+        // Cửa đọc sản lượng cho cổng nhà cung cấp: số liệu nó đọc (dashboard_daily, project_contracts)
+        // chỉ có trên máy chủ thi công, và bản Lưu trữ của chủ đầu tư không có nhà thầu nào để hỏi.
+        .merge(crate::routes::ncc::router())
 }

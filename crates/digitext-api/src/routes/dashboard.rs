@@ -104,7 +104,7 @@ fn rate7d(days: &BTreeMap<NaiveDate, Metrics>, today: NaiveDate) -> Rates {
     Rates { pages_scanned: r.pages_scanned * k, docs_pdfa: r.docs_pdfa * k, docs_signed: r.docs_signed * k, docs_approved: r.docs_approved * k }
 }
 
-fn thresholds_of(s: &KpiSettingsRow) -> (RagThresholds, KpiThresholds) {
+pub(crate) fn thresholds_of(s: &KpiSettingsRow) -> (RagThresholds, KpiThresholds) {
     (
         RagThresholds { amber_lech: s.rag_amber_lech, red_lech: s.rag_red_lech },
         KpiThresholds { excellent_pct: s.excellent_pct, pass_pct: s.pass_pct, excellent_err_pct: s.excellent_err_pct, pass_err_pct: s.pass_err_pct },
@@ -143,7 +143,7 @@ struct DayMetrics {
 }
 
 /// Sức khoẻ một dự án từ dòng tiến độ + lịch sử ngày của nó.
-fn health_of(r: &progress::ProgressRow, days: &BTreeMap<NaiveDate, Metrics>, today: NaiveDate, rag: &RagThresholds) -> Health {
+pub(crate) fn health_of(r: &progress::ProgressRow, days: &BTreeMap<NaiveDate, Metrics>, today: NaiveDate, rag: &RagThresholds) -> Health {
     calc::health(
         &HealthInput {
             today,

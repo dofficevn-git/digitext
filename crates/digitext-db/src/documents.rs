@@ -503,7 +503,7 @@ pub async fn list_for_projects(
 /// ("<hộp>/<hồ sơ>" hoặc chỉ "<hồ sơ>"), không có thì tầng 2/3 của rel_path.
 const REVIEW_DERIVED_CTE: &str = "WITH base AS ( \
       SELECT d.id, d.project_id, d.filename, d.rel_path, d.ho_so_ref, d.page_count, d.size_bytes, \
-             d.status, d.review_status, d.pdfa_pages, d.pdfa_2b, \
+             d.status, d.review_status, d.review_note, d.reviewed_at, d.pdfa_pages, d.pdfa_2b, \
              COALESCE(o.n, 0)::bigint AS ocr_pages, COALESCE(k.n, 0)::bigint AS field_pages, \
              f.status AS fields_status, \
              array_remove(string_to_array(COALESCE(d.rel_path, ''), '/'), '') AS seg, \
@@ -621,6 +621,80 @@ pub async fn review_group_docs(
         .bind(hosos)
         .fetch_all(pool)
         .await
+}
+
+// ------------------------------------------------- tự kiểm cho cổng nhà cung cấp (routes::ncc)
+
+/// Ba loại vấn đề máy chủ ĐÃ bắt được trên tài liệu nhà thầu đã nộp: `(mã, nhãn)`.
+///
+/// Chỉ ba loại này vì cả ba đọc từ cột có thật, không suy đoán — `review_status` do người duyệt
+/// đặt, `pdfa_2b` tính ngay lúc tải lên (`routes::documents`), `fields_status` do tiến trình bóc
+/// trường ghi lại. Những thứ như "thiếu lớp chữ" hay "chưa tới bước PDF/A" cố tình KHÔNG có ở
+/// đây: tệp mới nộp đương nhiên chưa qua các bước đó, báo ra thì nhà thầu tưởng mình làm sai.
+pub const NCC_LOAI_LOI: &[(&str, &str)] = &[
+    ("tra_lai", "Người duyệt trả lại"),
+    ("pdfa_cu", "Có PDF/A nhưng không đạt PDF/A-2b"),
+    ("boc_truong_loi", "Bóc trường bị lỗi"),
+];
+
+/// Một (tệp, loại lỗi). Một tệp vướng hai loại thì ra hai dòng — để số đếm và danh sách khớp nhau.
+///
+/// Cột ở đây là tập đã lọc cho người NGOÀI đọc: không `uploaded_by`, không `rel_path` đầy đủ
+/// (chỉ phông/hộp/hồ sơ đã dẫn xuất), không `size_bytes`, không id nội bộ.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct NccLoiRow {
+    pub loai: String,
+    pub filename: String,
+    pub phong: String,
+    pub hop: String,
+    pub ho_so: String,
+    pub page_count: Option<i32>,
+    /// Ghi chú của người duyệt. Route quyết định có trả ra ngoài hay không — mặc định KHÔNG.
+    pub review_note: Option<String>,
+    pub reviewed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Default, sqlx::FromRow)]
+pub struct NccLoiTong {
+    pub tong_tep: i64,
+    pub tra_lai: i64,
+    pub pdfa_cu: i64,
+    pub boc_truong_loi: i64,
+}
+
+/// Số đếm từng loại trên phạm vi dự án. `projects` rỗng = không dự án nào (KHÔNG phải tất cả) —
+/// khác với các hàm `Option<&[Uuid]>` ở trên, vì cửa nhà cung cấp không bao giờ được hỏi cả kho.
+pub async fn ncc_loi_tong(pool: &PgPool, projects: &[Uuid]) -> sqlx::Result<NccLoiTong> {
+    let sql = format!(
+        "{REVIEW_DERIVED_CTE} \
+         SELECT count(*)::bigint AS tong_tep, \
+                count(*) FILTER (WHERE dd.review_status = 'rejected')::bigint AS tra_lai, \
+                count(*) FILTER (WHERE COALESCE(dd.pdfa_pages, 0) > 0 AND dd.pdfa_2b = false)::bigint AS pdfa_cu, \
+                count(*) FILTER (WHERE dd.fields_status IN ('failed_transient', 'page_failed'))::bigint AS boc_truong_loi \
+         FROM derived dd"
+    );
+    sqlx::query_as::<_, NccLoiTong>(&sql).bind(Some(projects.to_vec())).fetch_one(pool).await
+}
+
+/// Danh sách tệp có vấn đề, mới duyệt trước. `gioi_han` là trần cứng do route đặt.
+pub async fn ncc_loi_ds(pool: &PgPool, projects: &[Uuid], gioi_han: i64) -> sqlx::Result<Vec<NccLoiRow>> {
+    let sql = format!(
+        "{REVIEW_DERIVED_CTE}, loi AS ( \
+           SELECT 'tra_lai' AS loai, dd.filename, dd.phong, dd.hop, dd.ho_so, dd.page_count, dd.review_note, dd.reviewed_at \
+           FROM derived dd WHERE dd.review_status = 'rejected' \
+           UNION ALL \
+           SELECT 'pdfa_cu', dd.filename, dd.phong, dd.hop, dd.ho_so, dd.page_count, NULL::text, NULL::timestamptz \
+           FROM derived dd WHERE COALESCE(dd.pdfa_pages, 0) > 0 AND dd.pdfa_2b = false \
+           UNION ALL \
+           SELECT 'boc_truong_loi', dd.filename, dd.phong, dd.hop, dd.ho_so, dd.page_count, NULL::text, NULL::timestamptz \
+           FROM derived dd WHERE dd.fields_status IN ('failed_transient', 'page_failed') \
+         ) \
+         SELECT loai, filename, phong, hop, ho_so, page_count, review_note, reviewed_at FROM loi \
+         ORDER BY reviewed_at DESC NULLS LAST, phong COLLATE vi_so, hop COLLATE vi_so, \
+                  ho_so COLLATE vi_so, filename COLLATE vi_so \
+         LIMIT $2"
+    );
+    sqlx::query_as::<_, NccLoiRow>(&sql).bind(Some(projects.to_vec())).bind(gioi_han).fetch_all(pool).await
 }
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TreeDocRow {
