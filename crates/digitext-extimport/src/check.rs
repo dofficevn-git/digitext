@@ -477,6 +477,10 @@ pub struct PdfFacts {
     /// Cạnh dài nhất của trang (cm). Trang > A3 (cạnh dài ≥ 45 cm) coi là bản đồ/bản vẽ.
     pub max_page_cm: Option<f32>,
     pub encrypted_or_broken: Option<String>,
+    /// Số trang tệp tự khai (`/Count` gốc cây trang) — lớn hơn `pages` là chỉ đọc được một phần (13/11/2026).
+    pub pages_declared: Option<u32>,
+    /// Bảng tham chiếu (xref) hỏng, phải dựng lại mới đọc đủ trang — tệp không đạt cấu trúc ISO 19005.
+    pub xref_rebuilt: bool,
 }
 
 /// Ngưỡng dpi TT05 Điều 8.2.a: 300 với bản đồ/bản vẽ, 200 với tài liệu hành chính.
@@ -598,6 +602,8 @@ pub fn inspect_pdf(bytes: &[u8]) -> PdfFacts {
     f.min_dpi = r.min_dpi;
     f.max_page_cm = max_page_cm(bytes);
     f.min_bit_depth = r.min_bit_depth;
+    f.pages_declared = r.pages_declared.map(|n| n as u32);
+    f.xref_rebuilt = r.xref_rebuilt;
     if r.pages == 0 {
         f.encrypted_or_broken = Some(r.reason.unwrap_or_else(|| "không đọc được trang nào".into()));
     }

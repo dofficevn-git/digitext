@@ -3,6 +3,7 @@
 mod glyphless;
 mod icc;
 pub mod pdfa;
+pub mod sua_xref;
 pub mod manual;
 pub mod tach_tiff;
 use lopdf::content::{Content, Operation};
@@ -375,10 +376,15 @@ pub struct Tgz {
     pub min_dpi: Option<u32>,
     pub min_bit_depth: Option<u32>,
     pub reason: Option<String>,
+    /// Số trang tệp tự khai (`/Count` gốc cây trang). Lớn hơn `pages` = cấu trúc hỏng, chỉ đọc được một phần.
+    pub pages_declared: Option<usize>,
+    /// Bảng tham chiếu hỏng, đã dựng lại bằng quét `N G obj` mới đọc được (`sua_xref`).
+    pub xref_rebuilt: bool,
 }
 pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
-    let r_4a5 = match Document::load_mem(pdf) {
-        Ok(d) => d,
+    // 13/11/2026: mở qua sua_xref — xref hỏng thì lopdf bỏ qua trang im lặng (70 trang đếm thành 1).
+    let (r_4a5, pages_declared, xref_rebuilt) = match sua_xref::mo(pdf) {
+        Ok(m) => (m.doc, m.trang_khai, m.dung_lai_xref),
         Err(e) => {
             return Tgz {
                 ok: false,
@@ -390,6 +396,8 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
                 min_dpi: None,
                 min_bit_depth: None,
                 reason: Some(format!("không mở được PDF: {e}")),
+                pages_declared: None,
+                xref_rebuilt: false,
             };
         }
     };
@@ -404,6 +412,8 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
             min_dpi: None,
             min_bit_depth: None,
             reason: Some("PDF được mã hoá (PDF/A không cho phép)".into()),
+            pages_declared,
+            xref_rebuilt,
         };
     }
     let pages = r_4a5.get_pages();
@@ -476,6 +486,10 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
     let has_text_layer = pages_with_text > 0;
     let reason = if n == 0 {
         Some("PDF không có trang nào".into())
+    } else if let Some(k) = pages_declared.filter(|&k| k > n) {
+        Some(format!(
+            "cấu trúc PDF hỏng: chỉ đọc được {n}/{k} trang (bảng tham chiếu / cây trang lỗi) — lớp chữ, dpi chỉ tính trên {n} trang đọc được; mở bằng phần mềm khác rồi lưu lại (Save As) để sửa tệp"
+        ))
     } else if matches!(r_4a6, Some(exp) if exp > 0 && exp as usize != n) {
         Some(format!(
             "số trang lệch: PDF {n} trang, tài liệu ghi {} trang",
@@ -515,6 +529,8 @@ pub fn f_2p9(pdf: &[u8], r_4a6: Option<i32>) -> Tgz {
         min_dpi,
         min_bit_depth,
         reason,
+        pages_declared,
+        xref_rebuilt,
     }
 }
 fn page_w_pt(page: &lopdf::Dictionary, r_4ah: &Document) -> Option<f32> {

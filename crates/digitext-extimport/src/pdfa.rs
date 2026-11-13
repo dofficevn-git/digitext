@@ -166,6 +166,16 @@ pub fn inspect_bytes(path: &str, name: &str, bytes: &[u8]) -> PdfaReport {
     if !r.has_output_intent {
         r.problems.push("không nhúng hồ sơ màu (OutputIntent) — dùng màu RGB/xám phụ thuộc thiết bị (mục 6.2.4.3)".into());
     }
+    // 13/11/2026: tệp 70 trang từng bị đếm thành 1 (xref hỏng, lopdf bỏ trang im lặng) — giờ dựng lại xref
+    // (digitext_pdf::sua_xref); còn thiếu thì nói rõ, các số liệu bên dưới chỉ tính trên phần đọc được.
+    if let Some(k) = f.pages_declared.filter(|&k| k > r.pages) {
+        r.problems.push(format!(
+            "CẤU TRÚC PDF HỎNG: chỉ đọc được {}/{k} trang — số trang, lớp chữ, dpi bên cạnh chỉ tính trên phần đọc được; mở tệp bằng phần mềm PDF rồi lưu lại (Save As) và kiểm lại",
+            r.pages
+        ));
+    } else if f.xref_rebuilt {
+        r.problems.push("bảng tham chiếu (xref) hỏng — đã tự dựng lại để đọc đủ trang, nhưng tệp không đạt cấu trúc PDF/A (ISO 19005); lưu lại tệp (Save As) để sửa".into());
+    }
     if r.text_pages < r.pages {
         r.problems.push(format!("{}/{} trang không có lớp chữ (TT05 đòi PDF/A HAI LỚP)", r.pages - r.text_pages, r.pages));
     }
