@@ -828,6 +828,8 @@ Chạy **đủ** phần kiểm cấu trúc, y như bản desktop:
 
 ### 12.2. Ba phép kiểm **không** chạy, và tài liệu nói thẳng
 
+Ba dòng dưới đây **cũng chính là** `chuaKiem[]` trong phản hồi — đọc từ đó, đừng chép vào mã cổng:
+
 | Không chạy | Vì | Thay bằng |
 |---|---|---|
 | PDF/A từng tệp (lớp chữ, dpi, chữ ký) | cần byte thật của PDF | cửa `tu-kiem/pdf` (mục 11) cho tệp mẫu |
@@ -905,6 +907,11 @@ Máy chủ tự cắt tên thư mục gốc khỏi đường dẫn, nên cứ g�
   "soTaiLieu": 7, "soTrang": 412, "soTepDuLieu": 7,
   "ketLuan": "CHƯA KIỂM ĐỦ (có cảnh báo)",
   "soLoi": 0, "soCanhBao": 11, "chuaKiemNoiDung": 21,
+  "chuaKiem": [
+    { "ma": "pdfa", "ten": "PDF/A từng tệp (lớp chữ, dpi, chữ ký)", "soPhep": 7, "kiemODau": "Tự kiểm PDF/A cho tệp mẫu" },
+    { "ma": "bam_mets", "ten": "Mã băm SHA-256 khai trong METS", "soPhep": 7, "kiemODau": "Bản kiểm đầy đủ lúc nộp gói" },
+    { "ma": "bam_premis", "ten": "Mã băm (fixity) khai trong PREMIS", "soPhep": 7, "kiemODau": "Bản kiểm đầy đủ lúc nộp gói" }
+  ],
   "phatHien": [
     { "muc": "canh_bao", "nhom": "EAD", "noiDung": "7 trường <issuedDate> không theo dd/mm/yyyy…" },
     { "muc": "dat", "nhom": "METS", "noiDung": "Không có tệp mồ côi — cả 28 tệp đều được METS tham chiếu" }
@@ -916,7 +923,8 @@ Máy chủ tự cắt tên thư mục gốc khỏi đường dẫn, nên cứ g�
 | Trường | |
 |---|---|
 | **`ketLuan`** | Bày to. Bảng nghĩa ở 12.2 |
-| **`chuaKiemNoiDung`** | Số phép kiểm đã bỏ. Khác 0 thì **phải** bày kèm `ghiChu`, đừng giấu |
+| **`chuaKiemNoiDung`** | Số phép kiểm đã bỏ. Khác 0 thì **phải** bày kèm `chuaKiem[]`, đừng giấu |
+| **`chuaKiem[]`** | Chính số đó tách theo nhóm: `{ma, ten, soPhep, kiemODau}`. **Dựng cột «Chưa kiểm» từ mảng này**, đừng viết cứng ba dòng bên cổng — thêm nhóm thứ tư thì cổng tự có, không phải sửa |
 | `phatHien[]` | `muc` ∈ `loi` · `canh_bao` · `dat`. Mặc định nên ẩn `dat`, có nút mở ra |
 | `soMuc` · `soTepSieuDuLieu` | Để người dùng thấy cổng đã đọc đúng gói |
 

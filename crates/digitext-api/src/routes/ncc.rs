@@ -1245,6 +1245,15 @@ async fn tu_kiem_goi(
         "soLoi": kq.errors,
         "soCanhBao": kq.warnings,
         "chuaKiemNoiDung": kq.chua_kiem_noi_dung,
+        // Tách theo nhóm để cổng dựng được cột "Chưa kiểm" từ DỮ LIỆU. Chỉ trả con số tổng thì
+        // cổng phải viết cứng ba dòng "PDF/A / mã băm METS / mã băm PREMIS" bên họ, rồi đứng im
+        // khi bên này thêm nhóm thứ tư — đúng bệnh luật hai nơi.
+        "chuaKiem": kq.bo_qua.danh_sach().iter().map(|(ma, ten, so, o_dau)| json!({
+            "ma": ma,
+            "ten": ten,
+            "soPhep": so,
+            "kiemODau": o_dau,
+        })).collect::<Vec<_>>(),
         "phatHien": kq.findings.iter().map(|f| json!({
             "muc": muc(&f.level),
             "nhom": f.group,

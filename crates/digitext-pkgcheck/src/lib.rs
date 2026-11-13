@@ -90,9 +90,66 @@ pub struct PackageResult {
     pub warnings: usize,
     /// "ĐẠT" | "ĐẠT (có cảnh báo)" | "KHÔNG ĐẠT" | "CHƯA KIỂM ĐỦ" | "CHƯA KIỂM ĐỦ (có cảnh báo)"
     pub verdict: String,
-    /// Số tệp **không** gửi nội dung lên nên không kiểm được PDF/A và mã băm. `0` = kiểm đủ.
+    /// Số phép kiểm **không** chạy được vì thiếu byte thật. `0` = kiểm đủ.
     /// Khác 0 thì `verdict` **không bao giờ** là "ĐẠT" trơn — xem `finish`.
+    /// Luôn bằng `bo_qua.tong()`; đọc `bo_qua` khi cần biết bỏ những nhóm nào.
     pub chua_kiem_noi_dung: usize,
+    /// Cùng số đó nhưng tách theo nhóm, để màn hình liệt kê được "chưa kiểm những gì"
+    /// mà không phải viết cứng danh sách ở phía giao diện.
+    pub bo_qua: BoQua,
+}
+
+/// Phép kiểm bị bỏ vì bản kê không mang byte thật, đếm **theo nhóm**.
+///
+/// Tồn tại vì một con số tổng thì giao diện không nói được "chưa kiểm cái gì" — nó sẽ phải
+/// tự viết cứng danh sách ba nhóm, rồi đứng im khi ở đây thêm nhóm thứ tư.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct BoQua {
+    /// Tệp PDF không kiểm được PDF/A (lớp chữ, dpi, chữ ký).
+    pub pdfa: usize,
+    /// Mã băm khai trong METS không đối chiếu được.
+    pub bam_mets: usize,
+    /// Mã băm (fixity) khai trong PREMIS không đối chiếu được.
+    pub bam_premis: usize,
+}
+
+impl BoQua {
+    pub fn tong(&self) -> usize {
+        self.pdfa + self.bam_mets + self.bam_premis
+    }
+
+    /// `(mã, nhãn, số phép, kiểm ở đâu)` của **riêng** những nhóm có phép bị bỏ.
+    ///
+    /// Thêm nhóm mới thì thêm một dòng ở đây là xong — `match` không có nhánh `_` nên
+    /// quên là lỗi biên dịch.
+    pub fn danh_sach(&self) -> Vec<(&'static str, &'static str, usize, &'static str)> {
+        [Nhom::Pdfa, Nhom::BamMets, Nhom::BamPremis]
+            .into_iter()
+            .filter_map(|n| {
+                let so = match n {
+                    Nhom::Pdfa => self.pdfa,
+                    Nhom::BamMets => self.bam_mets,
+                    Nhom::BamPremis => self.bam_premis,
+                };
+                if so == 0 {
+                    return None;
+                }
+                Some(match n {
+                    Nhom::Pdfa => ("pdfa", "PDF/A từng tệp (lớp chữ, dpi, chữ ký)", so, "Tự kiểm PDF/A cho tệp mẫu"),
+                    Nhom::BamMets => ("bam_mets", "Mã băm SHA-256 khai trong METS", so, "Bản kiểm đầy đủ lúc nộp gói"),
+                    Nhom::BamPremis => ("bam_premis", "Mã băm (fixity) khai trong PREMIS", so, "Bản kiểm đầy đủ lúc nộp gói"),
+                })
+            })
+            .collect()
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Nhom {
+    Pdfa,
+    BamMets,
+    BamPremis,
 }
 
 /// Nội dung gói đã đọc — để NHẬP gói vào Hệ thống (bản Lưu trữ, 4/11/2026), không chỉ kiểm.
@@ -442,7 +499,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     let co_tep = &loaded.co_tep;
     // Số phép kiểm cần nội dung mà phải bỏ qua. Mỗi chỗ bỏ qua cộng một, và `finish` dùng con số
     // này để KHÔNG kết luận "ĐẠT".
-    let mut bo_qua: usize = 0;
+    let mut bo_qua = BoQua::default();
 
     // 1. XML đọc được.
     let mut parsed: HashMap<&str, El> = HashMap::new();
@@ -577,7 +634,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                 // Không có byte thật thì không có gì để băm — bỏ qua, đếm lại, tuyệt đối không
                 // so với mã băm của mảng rỗng.
                 Some(_) if thieu.contains(&target) => {
-                    bo_qua += 1;
+                    bo_qua.bam_mets += 1;
                 }
                 Some(sum) if el.attr("CHECKSUMTYPE").is_none_or(|t| t.eq_ignore_ascii_case("SHA-256")) => {
                     if !sum.eq_ignore_ascii_case(&sha256(data)) {
@@ -798,7 +855,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
         for (path, b) in &rep_data {
             let fname = path.rsplit('/').next().unwrap_or(path);
             if thieu.contains(*path) {
-                bo_qua += 1;
+                bo_qua.bam_premis += 1;
             } else if !digests.contains(&sha256(b)) {
                 miss += 1;
                 c.err("PREMIS", format!("{pp}: không có mã băm SHA-256 đúng cho {fname}"));
@@ -823,7 +880,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     for (p, b) in &data {
         if p.to_lowercase().ends_with(".pdf") {
             if thieu.contains(*p) {
-                bo_qua += 1;
+                bo_qua.pdfa += 1;
                 continue;
             }
             res.pdfs.push(check_pdf(p.rsplit('/').next().unwrap_or(p), b, aip));
@@ -872,12 +929,18 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     }
     // Nói thẳng phần CHƯA kiểm, trước khi gán findings — người đọc phải thấy nó nằm cùng chỗ
     // với các phát hiện khác, không phải một dòng chú thích ở đâu đó.
-    res.chua_kiem_noi_dung = bo_qua;
-    if bo_qua > 0 {
+    res.chua_kiem_noi_dung = bo_qua.tong();
+    res.bo_qua = bo_qua;
+    if res.chua_kiem_noi_dung > 0 {
+        // Câu này dựng TỪ `bo_qua`, không viết cứng tên nhóm: thêm nhóm thứ tư thì câu tự đổi
+        // theo, không để lại một dòng chữ nói thiếu.
+        let ten: Vec<&str> = res.bo_qua.danh_sach().iter().map(|(_, t, _, _)| *t).collect();
         c.warn(
             "Chưa kiểm",
             format!(
-                "{bo_qua} phép kiểm cần nội dung tệp chưa chạy (PDF/A từng tệp, mã băm METS, mã băm PREMIS) — gói rút gọn chỉ gửi siêu dữ liệu. Dùng «Tự kiểm PDF/A» cho tệp mẫu, và bản kiểm đầy đủ chạy khi nộp gói thật."
+                "{} phép kiểm cần nội dung tệp chưa chạy ({}) — bản kê chỉ mang siêu dữ liệu. Dùng «Tự kiểm PDF/A» cho tệp mẫu, và bản kiểm đầy đủ chạy khi nộp gói thật.",
+                res.chua_kiem_noi_dung,
+                ten.join("; ")
             ),
         );
     }
@@ -935,6 +998,26 @@ mod tests {
     use super::*;
     /// Kết luận **không được** nói "ĐẠT" khi còn phép kiểm chưa chạy. Đây là chỗ một dòng mã
     /// sai biến "gói chưa ai xem nội dung" thành "gói nộp được".
+    #[test]
+    fn bo_qua_tach_nhom_khong_lech_tong_va_khong_bo_sot_nhom() {
+        // Mẫu KHÔNG có `..`: thêm trường vào BoQua mà quên `danh_sach()` là lỗi biên dịch,
+        // không phải một dòng thiếu trên màn hình nhà thầu.
+        let BoQua { pdfa, bam_mets, bam_premis } = BoQua { pdfa: 7, bam_mets: 7, bam_premis: 7 };
+        let b = BoQua { pdfa, bam_mets, bam_premis };
+        assert_eq!(b.tong(), 21);
+        let ds = b.danh_sach();
+        assert_eq!(ds.len(), 3, "ba nhóm đều khác 0 thì phải ra ba dòng");
+        assert_eq!(ds.iter().map(|(_, _, so, _)| so).sum::<usize>(), b.tong(), "tổng danh sách lệch tổng");
+        for (ma, ten, _, o_dau) in &ds {
+            assert!(!ma.is_empty() && !ten.is_empty() && !o_dau.is_empty(), "{ma}: thiếu nhãn");
+        }
+        // Nhóm bằng 0 thì không được hiện — "0 phép kiểm chưa chạy" là câu vô nghĩa.
+        let ds = BoQua { pdfa: 7, ..Default::default() }.danh_sach();
+        assert_eq!(ds.len(), 1);
+        assert_eq!(ds[0].0, "pdfa");
+        assert!(BoQua::default().danh_sach().is_empty());
+    }
+
     #[test]
     fn ket_luan_khong_noi_dat_khi_con_phep_kiem_bi_bo() {
         let dung = |loi: usize, canh_bao: usize, bo_qua: usize| {
@@ -1021,7 +1104,9 @@ mod tests {
         .0;
 
         println!("đầy đủ : {} · lỗi {} · cảnh báo {}", day_du.verdict, day_du.errors, day_du.warnings);
-        println!("rút gọn: {} · lỗi {} · cảnh báo {} · bỏ qua {}", rut.verdict, rut.errors, rut.warnings, rut.chua_kiem_noi_dung);
+        println!("rút gọn: {} · lỗi {} · cảnh báo {} · bỏ qua {} {:?}", rut.verdict, rut.errors, rut.warnings, rut.chua_kiem_noi_dung, rut.bo_qua);
+        assert_eq!(rut.bo_qua.tong(), rut.chua_kiem_noi_dung, "tổng theo nhóm lệch số tổng");
+        assert!(!rut.bo_qua.danh_sach().is_empty(), "bỏ qua phép kiểm mà không nói nhóm nào");
         for f in rut.findings.iter().filter(|f| f.level != Level::Ok) {
             println!("  {:?} [{}] {}", f.level, f.group, f.message);
         }
