@@ -23,7 +23,7 @@ use chrono::NaiveDate;
 use digitext_db::progress::Contract;
 use digitext_db::webhooks::{self as wh, ApiClient};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use uuid::Uuid;
 
 /// Gói tin cũ hơn mốc này thì từ chối — chặn phát lại gói đã chặn được.
@@ -90,8 +90,56 @@ fn lay_header(h: &HeaderMap, ten: &str) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
+/// Đệm kết luận "bí mật này khớp chuỗi PHC này", sống 60 giây.
+///
+/// Mỗi lần xác thực là một lần Argon2id 19 MiB. Webhook gọi vài lần/ngày nên không ai
+/// thấy, nhưng cổng nhà cung cấp bên DO365 gọi **mỗi lần có người mở màn hình**: hàng
+/// chục lời gọi cùng lúc đủ chiếm hết luồng worker và kéo theo tải tệp, callback OCR,
+/// ký số.
+///
+/// Chỉ đệm **kết luận của phép băm**, không đệm bản ghi `api_clients`: mỗi lời gọi vẫn
+/// tra khoá trong CSDL, vẫn lọc IP, vẫn kiểm lệch giờ và chữ ký. Nhờ vậy `thu-hoi`
+/// (đổi `is_active`) và `doi` (đổi `secret_hash` ⇒ đổi luôn vân tay) có hiệu lực ngay
+/// lập tức, không phải chờ hết hạn đệm.
+static DEM_KHOA: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<[u8; 32], std::time::Instant>>,
+> = std::sync::OnceLock::new();
+const DEM_KHOA_TTL: std::time::Duration = std::time::Duration::from_secs(60);
+const DEM_KHOA_TRAN: usize = 256;
+
+/// Vân tay của bộ ba (khoá công khai, bí mật, chuỗi băm). Băm lại để **không giữ bí mật
+/// thô trong bộ nhớ tiến trình**.
+fn dem_khoa_van_tay(key_id: &str, bi_mat: &str, bam: &str) -> [u8; 32] {
+    use sha2::{Digest, Sha256};
+    Sha256::new()
+        .chain_update(key_id.as_bytes())
+        .chain_update([0u8])
+        .chain_update(bi_mat.as_bytes())
+        .chain_update([0u8])
+        .chain_update(bam.as_bytes())
+        .finalize()
+        .into()
+}
+
+fn dem_khoa_con_han(van_tay: &[u8; 32]) -> bool {
+    let dem = DEM_KHOA.get_or_init(Default::default);
+    let Ok(d) = dem.lock() else { return false };
+    d.get(van_tay).is_some_and(|at| at.elapsed() < DEM_KHOA_TTL)
+}
+
+fn dem_khoa_ghi(van_tay: [u8; 32]) {
+    let dem = DEM_KHOA.get_or_init(Default::default);
+    if let Ok(mut d) = dem.lock() {
+        d.retain(|_, at| at.elapsed() < DEM_KHOA_TTL);
+        if d.len() >= DEM_KHOA_TRAN {
+            return;
+        }
+        d.insert(van_tay, std::time::Instant::now());
+    }
+}
+
 /// Kiểm khoá, IP và chữ ký. Trả về hệ thống gọi, hoặc 401/403.
-async fn xac_thuc(
+pub(crate) async fn xac_thuc(
     st: &AppState,
     headers: &HeaderMap,
     ip: &T2t,
@@ -107,8 +155,31 @@ async fn xac_thuc(
         .await?
         .filter(|c| c.is_active)
         .ok_or_else(|| loi_khoa("khoá không tồn tại hoặc đã bị thu hồi"))?;
-    if !crate::password::verify(&kh.secret_hash, bi_mat) {
-        return Err(loi_khoa("bí mật của khoá không đúng"));
+    // Khoá đã xác minh trong 60 giây gần đây thì bỏ qua Argon2; bí mật sai luôn cho vân
+    // tay khác nên không bao giờ trúng đệm, tức mọi lần dò đều phải trả giá băm đầy đủ.
+    let van_tay = dem_khoa_van_tay(key_id, bi_mat, &kh.secret_hash);
+    let da_dem = dem_khoa_con_han(&van_tay);
+    if !da_dem {
+        // Chống dò bí mật, chốt theo ĐỊA CHỈ người gọi — cố ý không chốt theo `key_id`:
+        // phần công khai của khoá nằm ngay trong header, ai xem một gói tin cũng đọc
+        // được, nên chốt theo nó thì người lạ chỉ cần gửi bí mật bậy vài lần là khoá
+        // cửa của chính hệ thống thật. Chốt theo IP thì kẻ dò tự khoá mình.
+        if let Some(dia_chi) = ip.0 {
+            if let Err(giay) = st.limiter.check_ip(dia_chi) {
+                return Err(ApiError::too_many_attempts(giay));
+            }
+        }
+        // Bản async: đẩy phép băm sang spawn_blocking, trần 8 chỗ cùng lúc. Bản đồng bộ
+        // `password::verify` chạy thẳng trên luồng worker Tokio và sẽ chặn cả runtime.
+        if !crate::password::f_2pn(&kh.secret_hash, bi_mat).await {
+            // Chỉ ghi lần sai, không xoá sổ khi đúng: bộ đếm IP dùng chung với đường
+            // đăng nhập người dùng, xoá hộ ở đây là mở lối gỡ chốt cho đường kia.
+            if let Some(dia_chi) = ip.0 {
+                st.limiter.record_failure_ip(dia_chi);
+            }
+            return Err(loi_khoa("bí mật của khoá không đúng"));
+        }
+        dem_khoa_ghi(van_tay);
     }
 
     // Lọc IP (nếu khoá có đặt). Danh sách rỗng = không lọc.
@@ -154,7 +225,12 @@ async fn xac_thuc(
         }
     }
 
-    let _ = wh::ghi_da_goi(&st.pool, kh.id).await;
+    // Chỉ ghi khi vừa qua đường băm thật — tức nhiều nhất mỗi khoá một lần mỗi 60 giây.
+    // Cổng nhà cung cấp gọi liên tục mà cứ mỗi lời gọi một UPDATE thì bảng hai dòng này
+    // phình vì HOT update, autovacuum chạy theo không xuể.
+    if !da_dem {
+        let _ = wh::ghi_da_goi(&st.pool, kh.id).await;
+    }
     Ok(kh)
 }
 
@@ -173,6 +249,9 @@ struct GoiTin {
     ten_du_an: Option<String>,
     #[serde(default, alias = "loai")]
     loai_du_an: Option<String>,
+    /// Tên cơ quan chủ đầu tư (0029). Tuỳ chọn; để trống thì giữ nguyên giá trị cũ.
+    #[serde(default, alias = "coQuan", alias = "chuDauTuTen")]
+    chu_dau_tu: Option<String>,
     #[serde(default)]
     khoi_luong: Option<KhoiLuong>,
     #[serde(default)]
@@ -202,18 +281,27 @@ struct KhoiLuong {
     hop: Option<i64>,
     #[serde(default, alias = "soTep")]
     tep: Option<i64>,
+    /// Mét giá (mét tài liệu) — khoá DUY NHẤT nhận số lẻ, vì hợp đồng chỉnh lý khai "150.5 m".
+    /// Bốn khoá kia là số đếm, số lẻ ở đó là dấu hiệu bên gửi tính sai chứ không phải đơn vị.
+    #[serde(default, alias = "soMet", alias = "metGia")]
+    met: Option<f64>,
 }
 
 impl KhoiLuong {
-    fn co_gi(&self) -> bool {
+    fn dem(&self) -> [Option<i64>; 5] {
         [self.to, self.trang, self.ho_so, self.hop, self.tep]
-            .iter()
-            .any(Option::is_some)
+    }
+    fn co_gi(&self) -> bool {
+        self.dem().iter().any(Option::is_some) || self.met.is_some()
     }
     fn am(&self) -> bool {
-        [self.to, self.trang, self.ho_so, self.hop, self.tep]
-            .iter()
-            .any(|v| v.is_some_and(|n| n < 0))
+        self.dem().iter().any(|v| v.is_some_and(|n| n < 0))
+            || self.met.is_some_and(|m| m < 0.0)
+    }
+    /// Mét không phải số thực hợp lệ (NaN/vô cực lọt qua được JSON của vài thư viện) hoặc lớn
+    /// đến mức không còn là mét giá — `numeric(12,2)` chỉ chứa tới 10 chữ số phần nguyên.
+    fn met_vo_ly(&self) -> bool {
+        self.met.is_some_and(|m| !m.is_finite() || m >= 1e10)
     }
 }
 
@@ -225,6 +313,11 @@ struct KetQua {
     ma_du_an: String,
     ten_du_an: String,
     loai_du_an: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    chu_dau_tu: Option<String>,
+    /// Khối lượng hợp đồng **sau khi ghi**, chỉ có khi gói tin chạm tới hợp đồng.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    khoi_luong: Option<Value>,
     tao_moi: bool,
     /// true = mã dự án do Hệ thống tự đặt vì gói tin không gửi mã.
     ma_tu_sinh: bool,
@@ -284,7 +377,7 @@ fn chuan_ma(v: &str) -> Result<String, ApiError> {
     Ok(m)
 }
 
-fn doc_ngay(v: &str, truong: &str) -> Result<NaiveDate, ApiError> {
+pub(crate) fn doc_ngay(v: &str, truong: &str) -> Result<NaiveDate, ApiError> {
     let v = v.trim();
     for mau in ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"] {
         if let Ok(d) = NaiveDate::parse_from_str(v, mau) {
@@ -305,7 +398,7 @@ fn doc_ngay(v: &str, truong: &str) -> Result<NaiveDate, ApiError> {
     )))
 }
 
-fn doc_ngay_opt(v: &Option<String>, truong: &str) -> Result<Option<NaiveDate>, ApiError> {
+pub(crate) fn doc_ngay_opt(v: &Option<String>, truong: &str) -> Result<Option<NaiveDate>, ApiError> {
     match v.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         Some(s) => doc_ngay(s, truong).map(Some),
         None => Ok(None),
@@ -425,6 +518,15 @@ async fn xu_ly(
         if k.am() {
             return Err(ApiError::bad_request("khối lượng không được âm"));
         }
+        if k.met_vo_ly() {
+            return Err(ApiError::bad_request(
+                "khoiLuong.met không phải số mét hợp lệ (phải hữu hạn và nhỏ hơn 10 tỉ)",
+            ));
+        }
+    }
+    let chu_dau_tu = g.chu_dau_tu.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    if chu_dau_tu.is_some_and(|v| v.chars().count() > 300) {
+        return Err(ApiError::bad_request("chuDauTu dài quá 300 ký tự"));
     }
     let ky = doc_ngay_opt(&g.ngay_ky_hop_dong, "ngayKyHopDong")?;
     let ket_thuc = doc_ngay_opt(&g.ngay_ket_thuc_hop_dong, "ngayKetThucHopDong")?;
@@ -458,7 +560,7 @@ async fn xu_ly(
                     ));
                 }
             }
-            let d = wh::cap_nhat_du_an(&st.pool, d.id, ten, loai, bat, &kh.nguon, ma_ngoai)
+            let d = wh::cap_nhat_du_an(&st.pool, d.id, ten, loai, bat, &kh.nguon, ma_ngoai, chu_dau_tu)
                 .await?
                 .ok_or_else(ApiError::not_found)?;
             (d, false)
@@ -498,6 +600,7 @@ async fn xu_ly(
                                 None,
                                 &kh.nguon,
                                 ma_ngoai,
+                                chu_dau_tu,
                             )
                             .await?
                             .ok_or_else(ApiError::not_found)?;
@@ -510,7 +613,7 @@ async fn xu_ly(
                                 cu.nguon.unwrap_or_default()
                             )));
                         }
-                        None => (tao(st, kh, &ma, ten, loai, ma_ngoai, false).await?, true),
+                        None => (tao(st, kh, &ma, ten, loai, ma_ngoai, false, chu_dau_tu).await?, true),
                     }
                 }
                 None => {
@@ -519,7 +622,7 @@ async fn xu_ly(
                     // Hai dự án về cùng lúc có thể giành nhau một mã; thử lại vài lần.
                     for _ in 0..5 {
                         let ma = wh::ma_tu_sinh_ke_tiep(&st.pool, &tien_to).await?;
-                        match tao(st, kh, &ma, ten, loai, ma_ngoai, true).await {
+                        match tao(st, kh, &ma, ten, loai, ma_ngoai, true, chu_dau_tu).await {
                             Ok(d) => {
                                 ra = Some(d);
                                 break;
@@ -549,6 +652,10 @@ async fn xu_ly(
         || ket_thuc.is_some()
         || g.can_bo_phu_trach.is_some()
         || g.ghi_chu.is_some();
+    // Khối lượng ĐÃ LƯU, trả lại trong phản hồi để bên gửi tự đối chiếu (đề nghị DO365
+    // 11/11/2026). Không tốn truy vấn nào: đây đúng là bản ghi vừa viết xuống, kèm cả những
+    // trường gói tin không gửi mà hệ thống giữ lại từ lần trước — chính chỗ hay lệch.
+    let mut khoi_luong_ra: Option<Value> = None;
     if co_hop_dong {
         let cu = wh::lay_hop_dong(&st.pool, du_an.id).await?;
         let hd = Contract {
@@ -560,6 +667,7 @@ async fn xu_ly(
             contract_boxes: k.hop.or(cu.as_ref().and_then(|c| c.contract_boxes)),
             contract_dossiers: k.ho_so.or(cu.as_ref().and_then(|c| c.contract_dossiers)),
             contract_sheets: k.to.or(cu.as_ref().and_then(|c| c.contract_sheets)),
+            contract_meters: k.met.or(cu.as_ref().and_then(|c| c.contract_meters)),
             manager_name: g
                 .can_bo_phu_trach
                 .clone()
@@ -570,6 +678,26 @@ async fn xu_ly(
                 .or_else(|| cu.as_ref().and_then(|c| c.note.clone())),
         };
         digitext_db::progress::upsert_contract_opt(&st.pool, du_an.id, &hd, None).await?;
+        let mut m = Map::new();
+        // Đúng tên khoá của gói tin gửi lên, và bỏ hẳn khoá rỗng thay vì trả `null` —
+        // để bên gửi so thẳng với cái mình vừa gửi.
+        for (k, v) in [
+            ("to", hd.contract_sheets),
+            ("trang", hd.contract_pages),
+            ("hoSo", hd.contract_dossiers),
+            ("hop", hd.contract_boxes),
+            ("tep", hd.contract_files),
+        ] {
+            if let Some(v) = v {
+                m.insert(k.into(), json!(v));
+            }
+        }
+        if let Some(v) = hd.contract_meters {
+            m.insert("met".into(), json!(v));
+        }
+        if !m.is_empty() {
+            khoi_luong_ra = Some(Value::Object(m));
+        }
     }
 
     // 3. Quản trị dự án. Không có ai thì chỉ super admin nhìn thấy dự án — nói rõ ra.
@@ -640,6 +768,8 @@ async fn xu_ly(
         ma_du_an: du_an.code.clone(),
         ten_du_an: du_an.name.clone(),
         loai_du_an: du_an.loai.clone(),
+        chu_dau_tu: du_an.chu_dau_tu.clone(),
+        khoi_luong: khoi_luong_ra,
         tao_moi,
         ma_tu_sinh: du_an.ma_tu_sinh,
         quan_tri: nguoi
@@ -667,6 +797,7 @@ async fn tao(
     loai: Option<&str>,
     ma_ngoai: &str,
     ma_tu_sinh: bool,
+    chu_dau_tu: Option<&str>,
 ) -> Result<wh::DuAn, ApiError> {
     wh::tao_du_an(
         &st.pool,
@@ -677,6 +808,7 @@ async fn tao(
             nguon: &kh.nguon,
             ma_ngoai,
             ma_tu_sinh,
+            chu_dau_tu,
         },
     )
     .await
@@ -706,6 +838,11 @@ async fn kiem_tra(
         "batBuocKyHmac": kh.secret_hmac.is_some_and(|s| !s.is_empty()),
         "gioMayChu": chrono::Utc::now().to_rfc3339(),
         "loaiDuAnChoPhep": LOAI.iter().map(|(m, _)| *m).collect::<Vec<_>>(),
+        // Bên gửi dò được khoá khối lượng nào máy chủ nhận mà không phải mở tài liệu — thêm khoá
+        // mới (0029 thêm "met") thì chỗ này tự nói, khỏi phải báo tay.
+        "khoiLuongKhoa": ["to", "trang", "hoSo", "hop", "tep", "met"],
+        "khoiLuongSoLe": ["met"],
+        "coChuDauTu": true,
     })))
 }
 
@@ -768,6 +905,45 @@ mod tests {
         assert!(bang_nhau(b"abc", b"abc"));
         assert!(!bang_nhau(b"abc", b"abd"));
         assert!(!bang_nhau(b"abc", b"abcd"));
+    }
+
+    /// "Chỉnh lý kết hợp số hoá" ĐÃ có mã riêng — bên gửi không phải nhồi nội dung công việc
+    /// vào tenDuAn. Test này là chỗ bám khi ai đó định thêm giá trị thứ sáu.
+    #[test]
+    fn loai_du_an_co_ma_cho_ca_chinh_ly_lan_so_hoa() {
+        assert_eq!(chuan_loai("chinh_ly_so_hoa"), Some("chinh_ly_so_hoa"));
+        assert_eq!(chuan_loai("Chỉnh lý kết hợp số hoá"), Some("chinh_ly_so_hoa"));
+        assert_eq!(chuan_loai("chỉnh lý số hoá"), Some("chinh_ly_so_hoa"));
+        // Đừng để "chỉnh lý số hoá" rơi vào "chinh_ly" chỉ vì nó chứa chữ "chỉnh lý":
+        // `chuan_loai` so BẰNG, không so CHỨA. Khớp sai thì dự án hai việc bị ghi thành một việc.
+        assert_ne!(chuan_loai("chỉnh lý số hoá"), Some("chinh_ly"));
+    }
+
+    /// Mét là khoá khối lượng duy nhất nhận số lẻ, và là khoá duy nhất có thể mang NaN/vô cực
+    /// lọt qua JSON. `numeric(12,2)` chỉ chứa 10 chữ số phần nguyên — quá thì CSDL nổ lúc ghi,
+    /// phải chặn ở cửa chứ không để thành 500.
+    #[test]
+    fn met_chan_so_vo_ly() {
+        let k = |m: f64| KhoiLuong { met: Some(m), ..Default::default() };
+        assert!(!k(150.5).met_vo_ly());
+        assert!(!k(0.0).met_vo_ly());
+        assert!(k(f64::NAN).met_vo_ly());
+        assert!(k(f64::INFINITY).met_vo_ly());
+        assert!(k(1e10).met_vo_ly());
+        assert!(k(-5.0).am(), "mét âm phải bị bắt bởi am()");
+        assert!(k(150.5).co_gi(), "chỉ gửi mét cũng là có khối lượng");
+        assert!(!KhoiLuong::default().co_gi());
+    }
+
+    /// Bốn khoá đếm vẫn là số nguyên: gửi 150.5 vào `soTrang` phải hỏng gói tin chứ không được
+    /// làm tròn im lặng thành 150 hay 151.
+    #[test]
+    fn khoa_dem_khong_nhan_so_le() {
+        let r: Result<KhoiLuong, _> = serde_json::from_str(r#"{"trang": 150.5}"#);
+        assert!(r.is_err(), "soTrang phải là số nguyên");
+        let ok: KhoiLuong = serde_json::from_str(r#"{"met": 150.5, "trang": 150}"#).unwrap();
+        assert_eq!(ok.met, Some(150.5));
+        assert_eq!(ok.trang, Some(150));
     }
 
     #[test]

@@ -56,6 +56,9 @@ struct ContractDto {
     contract_dossiers: Option<i64>,
     #[serde(default)]
     contract_sheets: Option<i64>,
+    /// Mét giá theo hợp đồng (0029). Số thực vì hợp đồng chỉnh lý khai "150.5 m".
+    #[serde(default)]
+    contract_meters: Option<f64>,
     manager_name: Option<String>,
     note: Option<String>,
 }
@@ -110,6 +113,7 @@ async fn project_progress(
                     contract_boxes: r.contract_boxes,
                     contract_dossiers: r.contract_dossiers,
                     contract_sheets: r.contract_sheets,
+                    contract_meters: r.contract_meters,
                     manager_name: r.manager_name,
                     note: r.note,
                 },
@@ -143,6 +147,9 @@ async fn put_contract(
     if [c.contract_pages, c.contract_files, c.contract_boxes, c.contract_dossiers, c.contract_sheets].iter().any(|v| v.is_some_and(|n| n < 0)) {
         return Err(ApiError::bad_request("khối lượng hợp đồng không được âm"));
     }
+    if c.contract_meters.is_some_and(|m| !m.is_finite() || m < 0.0 || m >= 1e10) {
+        return Err(ApiError::bad_request("số mét hợp đồng không hợp lệ"));
+    }
     let clean = |s: Option<String>| s.map(|x| x.trim().to_string()).filter(|x| !x.is_empty());
     let c = ContractDto { manager_name: clean(c.manager_name), note: clean(c.note), ..c };
     progress::upsert_contract(
@@ -157,6 +164,7 @@ async fn put_contract(
             contract_boxes: c.contract_boxes,
             contract_dossiers: c.contract_dossiers,
             contract_sheets: c.contract_sheets,
+            contract_meters: c.contract_meters,
             manager_name: c.manager_name.clone(),
             note: c.note.clone(),
         },

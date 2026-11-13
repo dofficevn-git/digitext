@@ -56,7 +56,7 @@ chỉ cần `X-DigiText-Key`. Kênh vẫn chạy trên HTTPS, nhưng nên xin l�
 curl -X POST https://api.digitext.vn/api/v1/hooks/du-an \
   -H "Content-Type: application/json" \
   -H "X-DigiText-Key: dk_0bcf....8e29f1" \
-  -d '{"maNgoai":"HD-2026-0147","maDuAn":"VYEN","tenDuAn":"Chỉnh lý tài liệu UBND xã Việt Yên","loaiDuAn":"chinh_ly_so_hoa","khoiLuong":{"to":1250000,"hoSo":9983,"hop":1420},"ngayKetThucHopDong":"2027-03-31"}'
+  -d '{"maNgoai":"HD-2026-0147","maDuAn":"VYEN","tenDuAn":"Chỉnh lý tài liệu UBND xã Việt Yên","chuDauTu":"UBND xã Việt Yên","loaiDuAn":"chinh_ly_so_hoa","khoiLuong":{"to":1250000,"hoSo":9983,"hop":1420,"met":150.5},"ngayKetThucHopDong":"2027-03-31"}'
 ```
 
 **C#**:
@@ -140,8 +140,9 @@ thống. Chép ngay lúc nhận; mất thì phải xin cấp khoá mới.
   "maNgoai": "HD-2026-0147",
   "maDuAn": "VYEN",
   "tenDuAn": "Chỉnh lý tài liệu UBND xã Việt Yên",
+  "chuDauTu": "UBND xã Việt Yên",
   "loaiDuAn": "chinh_ly_so_hoa",
-  "khoiLuong": { "to": 1250000, "hoSo": 9983, "hop": 1420 },
+  "khoiLuong": { "to": 1250000, "hoSo": 9983, "hop": 1420, "met": 150.5 },
   "ngayKyHopDong": "2026-10-01",
   "ngayKetThucHopDong": "2027-03-31",
   "hanHoanThanh": "2027-03-15",
@@ -154,9 +155,10 @@ thống. Chép ngay lúc nhận; mất thì phải xin cấp khoá mới.
 | Trường | Bắt buộc | Ý nghĩa |
 |---|---|---|
 | `maNgoai` | **có** | Mã dự án/hợp đồng **ở hệ thống của bạn**. Đây là chốt chống tạo trùng — xem mục 4. Tối đa 120 ký tự. |
-| `tenDuAn` | khi tạo mới | Tên dự án, tối đa 300 ký tự. |
+| `tenDuAn` | khi tạo mới | Tên dự án, tối đa 300 ký tự. **Chỉ tên riêng của dự án** — đừng nhồi tên cơ quan (đã có `chuDauTu`) hay nội dung công việc (đã có `loaiDuAn`) vào đây. |
+| `chuDauTu` | không | Tên cơ quan chủ đầu tư, tối đa 300 ký tự. Cũng nhận `coQuan`. DigiText lưu riêng ô này và trả lại trong phản hồi; nhờ đó danh sách dự án không còn là một loạt dòng trùng tên nội dung công việc. |
 | `maDuAn` | không | Mã viết tắt dùng trong DigiText. Không gửi thì DigiText tự đặt (`DA26001`…) và báo lại trong `canhBao`. Xem mục 3. |
-| `loaiDuAn` | không | Một trong: `so_hoa`, `chinh_ly`, `chinh_ly_so_hoa`, `luu_tru`, `khac`. Nhận cả cách viết tiếng Việt ("chỉnh lý số hoá"). |
+| `loaiDuAn` | không | **Nội dung công việc**, xem bảng dưới. Nhận cả cách viết tiếng Việt. |
 | `khoiLuong` | không | Khối lượng theo hợp đồng, xem bảng dưới. |
 | `ngayKyHopDong` | không | Ngày ký. |
 | `ngayKetThucHopDong` | không | Ngày kết thúc theo hợp đồng. |
@@ -166,19 +168,40 @@ thống. Chép ngay lúc nhận; mất thì phải xin cấp khoá mới.
 | `quanTri` | không | Danh sách **tên đăng nhập hoặc email** của người sẽ quản trị dự án trong DigiText. Xem mục 5. |
 | `event` | không | Mặc định `du_an.tao`. Xem mục 6. |
 
+### Nội dung công việc — `loaiDuAn`
+
+Nội dung công việc là **ô riêng**, không phải một phần của tên dự án. Dự án vừa chỉnh lý
+vừa số hoá có mã riêng, không phải gửi hai dự án hay ghép chữ vào `tenDuAn`.
+
+| Giá trị | Nghĩa | Cách viết khác cũng nhận |
+|---|---|---|
+| `so_hoa` | Số hoá | `sohoa`, `số hoá`, `số hóa`, `digitize` |
+| `chinh_ly` | Chỉnh lý | `chinhly`, `chỉnh lý` |
+| `chinh_ly_so_hoa` | **Chỉnh lý kết hợp số hoá** | `chỉnh lý số hoá`, `chỉnh lý kết hợp số hoá` |
+| `luu_tru` | Nhập gói AIP vào kho lưu trữ | `lưu trữ`, `nhap aip` |
+| `khac` | Khác | `other` |
+
+So **bằng**, không so chứa — gửi chuỗi lạ thì gói tin hỏng kèm danh sách giá trị hợp lệ,
+chứ không bị xếp bừa vào loại gần giống.
+
 ### Khối lượng công việc
 
 Gửi đơn vị nào bên bạn có; không có thì bỏ trống.
 
-| Khoá | Tên khác cũng nhận | Đơn vị |
-|---|---|---|
-| `to` | `soTo` | tờ |
-| `trang` | `soTrang` | trang |
-| `hoSo` | `soHoSo` | hồ sơ |
-| `hop` | `soHop` | hộp |
-| `tep` | `soTep` | tệp tài liệu |
+| Khoá | Tên khác cũng nhận | Đơn vị | Kiểu |
+|---|---|---|---|
+| `to` | `soTo` | tờ | số nguyên |
+| `trang` | `soTrang` | trang | số nguyên |
+| `hoSo` | `soHoSo` | hồ sơ | số nguyên |
+| `hop` | `soHop` | hộp | số nguyên |
+| `tep` | `soTep` | tệp tài liệu | số nguyên |
+| `met` | `soMet`, `metGia` | mét giá (mét tài liệu) | **số thực**, 2 chữ số thập phân |
 
-Số nguyên, không âm.
+Không âm. Năm khoá đầu phải là **số nguyên** — gửi `150.5` vào `soTrang` thì gói tin hỏng,
+DigiText không tự làm tròn. Riêng `met` nhận số lẻ (`150.5`), tối đa 10 chữ số phần nguyên.
+
+Bảng này cũng đọc được bằng máy: gọi `POST /api/v1/hooks/kiem-tra` sẽ trả `khoiLuongKhoa`
+và `khoiLuongSoLe`, nên khi DigiText thêm khoá mới bạn không phải chờ tài liệu.
 
 ### Ngày tháng
 
@@ -258,7 +281,9 @@ Hai cách tránh:
   "maNgoai": "HD-2026-0147",
   "maDuAn": "VYEN",
   "tenDuAn": "Chỉnh lý tài liệu UBND xã Việt Yên",
+  "chuDauTu": "UBND xã Việt Yên",
   "loaiDuAn": "chinh_ly_so_hoa",
+  "khoiLuong": { "to": 1250000, "hoSo": 9983, "hop": 1420, "met": 150.5 },
   "taoMoi": true,
   "maTuSinh": false,
   "quanTri": ["nvanh"],
@@ -267,6 +292,14 @@ Hai cách tránh:
 ```
 
 Nên lưu `projectId` lại ở hệ thống bạn — về sau tra cứu hay đối chiếu sẽ cần.
+
+`khoiLuong` là khối lượng **đã lưu sau khi ghi**, dùng đúng tên khoá của gói tin gửi lên — so
+thẳng với cái bạn vừa gửi là biết đã vào đủ chưa, khỏi hỏi tay. Nó có mặt khi gói tin chạm tới
+hợp đồng, và **gồm cả những trường bạn không gửi lần này** mà DigiText giữ lại từ lần trước —
+chính chỗ hay lệch nhất. Khoá không có giá trị thì vắng mặt, không phải `null`.
+
+`chuDauTu` chỉ xuất hiện khi dự án có giá trị — dự án tạo trước 11/11/2026 chưa có thì
+khoá này vắng mặt, không phải `null`.
 
 `canhBao` là những chuyện đã nhận nhưng nên biết (mã do máy tự đặt, không tìm thấy tài
 khoản quản trị, dự án chưa có quản trị…). **Có cảnh báo không có nghĩa là thất bại.** Nên

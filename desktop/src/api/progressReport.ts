@@ -13,6 +13,8 @@ export interface ProjectContract {
   contractBoxes: number | null;
   contractDossiers: number | null;
   contractSheets: number | null;
+  /** Mét giá theo hợp đồng (0029). Số THỰC — hợp đồng chỉnh lý khai "150.5 m". */
+  contractMeters: number | null;
   managerName: string | null;
   note: string | null;
 }

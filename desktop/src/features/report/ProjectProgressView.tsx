@@ -47,6 +47,13 @@ function HopDongDialog({ p, onSaved, onClose }: { p: ProjectProgress; onSaved: (
   const [c, setC] = useState<ProjectContract>(p.contract);
   const [busy, setBusy] = useState(false);
   const so = (v: string) => (v.trim() === "" ? null : Math.max(0, Math.floor(Number(v)) || 0));
+  // Mét giá giữ phần lẻ — `so` làm tròn xuống nên 150,5 m sẽ thành 150 m.
+  const soLe = (v: string) => {
+    const t = v.trim().replace(",", ".");
+    if (t === "") return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+  };
   const luu = async () => {
     setBusy(true);
     try {
@@ -104,6 +111,9 @@ function HopDongDialog({ p, onSaved, onClose }: { p: ProjectProgress; onSaved: (
         </Field>
         <Field label="Số tờ hợp đồng">
           <Input type="number" min={0} value={c.contractSheets ?? ""} onChange={(e) => setC({ ...c, contractSheets: so(e.target.value) })} />
+        </Field>
+        <Field label="Số mét hợp đồng" hint="Mét giá, nhận số lẻ (150,5)">
+          <Input type="number" min={0} step="0.01" value={c.contractMeters ?? ""} onChange={(e) => setC({ ...c, contractMeters: soLe(e.target.value) })} />
         </Field>
       </FormGrid>
       <Field label="Ghi chú" className="mt-3">

@@ -16,9 +16,22 @@ pub struct Contract {
     pub contract_boxes: Option<i64>,
     pub contract_dossiers: Option<i64>,
     pub contract_sheets: Option<i64>,
+    /// Mét giá theo hợp đồng (0029, 11/11/2026). Cột là `numeric(12,2)`; đọc/ghi qua `float8`
+    /// vì sqlx của dự án không bật feature decimal — thêm một phụ thuộc chỉ để đựng một con số
+    /// hai chữ số thập phân thì không đáng. Ép kiểu nằm trong SQL, không nằm trong Rust.
+    pub contract_meters: Option<f64>,
     pub manager_name: Option<String>,
     pub note: Option<String>,
 }
+
+/// Cột cho mọi `SELECT` giải mã vào [`Contract`].
+///
+/// **Phải phủ đủ mọi trường của struct.** sqlx `FromRow` đòi mỗi trường một cột, và thiếu một
+/// cột chỉ nổ lúc **giải mã một dòng có thật** — dự án chưa có hợp đồng vẫn chạy ngon, nên lỗi
+/// trốn qua được cả test lẫn lần chạy thử đầu tiên. Đã sập một lần: 11/11/2026, thêm
+/// `contract_meters` mà quên câu `SELECT` trong `webhooks::lay_hop_dong` ⇒ webhook trả 500 trên
+/// đúng những dự án đã có hợp đồng. Test `contract_cols_phu_het_truong` canh chỗ này.
+pub const CONTRACT_COLS: &str = "signed_on, end_on, deadline_on, contract_pages, contract_files,      contract_boxes, contract_dossiers, contract_sheets,      contract_meters::float8 AS contract_meters, manager_name, note";
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct ProgressRow {
@@ -33,6 +46,7 @@ pub struct ProgressRow {
     pub contract_boxes: Option<i64>,
     pub contract_dossiers: Option<i64>,
     pub contract_sheets: Option<i64>,
+    pub contract_meters: Option<f64>,
     pub manager_name: Option<String>,
     pub note: Option<String>,
     pub files: i64,
@@ -55,7 +69,8 @@ pub async fn project_progress(
     sqlx::query_as::<_, ProgressRow>(
         "SELECT p.id AS project_id, p.code, p.name, \
                 c.signed_on, c.end_on, c.deadline_on, c.contract_pages, c.contract_files, \
-                c.contract_boxes, c.contract_dossiers, c.contract_sheets, c.manager_name, c.note, \
+                c.contract_boxes, c.contract_dossiers, c.contract_sheets, \
+                c.contract_meters::float8 AS contract_meters, c.manager_name, c.note, \
                 count(d.id) AS files, \
                 COALESCE(sum(d.page_count), 0)::bigint AS pages, \
                 count(d.id) FILTER (WHERE d.pdfa_key IS NOT NULL) AS pdfa_files, \
@@ -88,12 +103,13 @@ pub async fn upsert_contract_opt(pool: &PgPool, project_id: Uuid, c: &Contract, 
     sqlx::query(
         "INSERT INTO project_contracts \
            (project_id, signed_on, end_on, deadline_on, contract_pages, contract_files, manager_name, note, updated_by, updated_at, \
-            contract_boxes, contract_dossiers, contract_sheets) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), $10, $11, $12) \
+            contract_boxes, contract_dossiers, contract_sheets, contract_meters) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), $10, $11, $12, $13::numeric) \
          ON CONFLICT (project_id) DO UPDATE SET \
            signed_on = EXCLUDED.signed_on, end_on = EXCLUDED.end_on, deadline_on = EXCLUDED.deadline_on, \
            contract_pages = EXCLUDED.contract_pages, contract_files = EXCLUDED.contract_files, \
            contract_boxes = EXCLUDED.contract_boxes, contract_dossiers = EXCLUDED.contract_dossiers, contract_sheets = EXCLUDED.contract_sheets, \
+           contract_meters = EXCLUDED.contract_meters, \
            manager_name = EXCLUDED.manager_name, note = EXCLUDED.note, \
            updated_by = EXCLUDED.updated_by, updated_at = now()",
     )
@@ -109,6 +125,7 @@ pub async fn upsert_contract_opt(pool: &PgPool, project_id: Uuid, c: &Contract, 
     .bind(c.contract_boxes)
     .bind(c.contract_dossiers)
     .bind(c.contract_sheets)
+    .bind(c.contract_meters)
     .execute(pool)
     .await?;
     Ok(())
@@ -275,4 +292,51 @@ pub async fn mark_field_edit(pool: &PgPool, field_id: Uuid, user: Uuid, verified
     .execute(pool)
     .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Hai việc trong một test. Phép **destructure đủ trường, không có `..`** làm test KHÔNG
+    /// BIÊN DỊCH ĐƯỢC khi ai đó thêm trường vào `Contract` — buộc phải ngó xuống dưới. Rồi phần
+    /// `assert` bắt tên trường đó phải có mặt trong `CONTRACT_COLS`.
+    #[test]
+    fn contract_cols_phu_het_truong() {
+        let Contract {
+            signed_on: _,
+            end_on: _,
+            deadline_on: _,
+            contract_pages: _,
+            contract_files: _,
+            contract_boxes: _,
+            contract_dossiers: _,
+            contract_sheets: _,
+            contract_meters: _,
+            manager_name: _,
+            note: _,
+        } = Contract::default();
+
+        for ten in [
+            "signed_on",
+            "end_on",
+            "deadline_on",
+            "contract_pages",
+            "contract_files",
+            "contract_boxes",
+            "contract_dossiers",
+            "contract_sheets",
+            "contract_meters",
+            "manager_name",
+            "note",
+        ] {
+            assert!(
+                CONTRACT_COLS.contains(ten),
+                "CONTRACT_COLS thiếu cột {ten} — mọi SELECT giải mã vào Contract sẽ nổ khi gặp dòng thật"
+            );
+        }
+        // Cột numeric phải được ép về float8, nếu không sqlx (không bật feature decimal) không
+        // giải mã nổi và lỗi lại chỉ hiện khi có dòng thật.
+        assert!(CONTRACT_COLS.contains("contract_meters::float8 AS contract_meters"));
+    }
 }

@@ -120,9 +120,13 @@ pub struct DuAn {
     pub nguon: Option<String>,
     pub ma_ngoai: Option<String>,
     pub ma_tu_sinh: bool,
+    /// Tên cơ quan chủ đầu tư (0029, 11/11/2026). Tách khỏi `name` vì gần như mọi dự án lưu trữ
+    /// mang cùng một nội dung công việc, danh sách hoá ra toàn dòng giống nhau.
+    pub chu_dau_tu: Option<String>,
 }
 
-const DU_AN_COLS: &str = "id, code, name, is_active, created_at, loai, nguon, ma_ngoai, ma_tu_sinh";
+const DU_AN_COLS: &str =
+    "id, code, name, is_active, created_at, loai, nguon, ma_ngoai, ma_tu_sinh, chu_dau_tu";
 
 pub async fn tim_theo_ma_ngoai(
     pool: &PgPool,
@@ -154,12 +158,13 @@ pub struct DuAnMoi<'a> {
     pub nguon: &'a str,
     pub ma_ngoai: &'a str,
     pub ma_tu_sinh: bool,
+    pub chu_dau_tu: Option<&'a str>,
 }
 
 pub async fn tao_du_an(pool: &PgPool, d: DuAnMoi<'_>) -> sqlx::Result<DuAn> {
     sqlx::query_as::<_, DuAn>(&format!(
-        "INSERT INTO projects (id, code, name, loai, nguon, ma_ngoai, ma_tu_sinh) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING {DU_AN_COLS}"
+        "INSERT INTO projects (id, code, name, loai, nguon, ma_ngoai, ma_tu_sinh, chu_dau_tu) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING {DU_AN_COLS}"
     ))
     .bind(Uuid::now_v7())
     .bind(d.code)
@@ -168,6 +173,7 @@ pub async fn tao_du_an(pool: &PgPool, d: DuAnMoi<'_>) -> sqlx::Result<DuAn> {
     .bind(d.nguon)
     .bind(d.ma_ngoai)
     .bind(d.ma_tu_sinh)
+    .bind(d.chu_dau_tu)
     .fetch_one(pool)
     .await
 }
@@ -182,6 +188,7 @@ pub async fn cap_nhat_du_an(
     is_active: Option<bool>,
     nguon: &str,
     ma_ngoai: &str,
+    chu_dau_tu: Option<&str>,
 ) -> sqlx::Result<Option<DuAn>> {
     sqlx::query_as::<_, DuAn>(&format!(
         "UPDATE projects SET \
@@ -189,7 +196,8 @@ pub async fn cap_nhat_du_an(
            loai = COALESCE($3, loai), \
            is_active = COALESCE($4, is_active), \
            nguon = COALESCE(nguon, $5), \
-           ma_ngoai = COALESCE(ma_ngoai, $6) \
+           ma_ngoai = COALESCE(ma_ngoai, $6), \
+           chu_dau_tu = COALESCE($7, chu_dau_tu) \
          WHERE id = $1 RETURNING {DU_AN_COLS}"
     ))
     .bind(id)
@@ -198,6 +206,7 @@ pub async fn cap_nhat_du_an(
     .bind(is_active)
     .bind(nguon)
     .bind(ma_ngoai)
+    .bind(chu_dau_tu)
     .fetch_optional(pool)
     .await
 }
@@ -261,9 +270,10 @@ pub async fn lay_hop_dong(
     pool: &PgPool,
     project_id: Uuid,
 ) -> sqlx::Result<Option<crate::progress::Contract>> {
-    sqlx::query_as::<_, crate::progress::Contract>(
-        "SELECT signed_on, end_on, deadline_on, contract_pages, contract_files,                 contract_boxes, contract_dossiers, contract_sheets, manager_name, note          FROM project_contracts WHERE project_id = $1",
-    )
+    sqlx::query_as::<_, crate::progress::Contract>(&format!(
+        "SELECT {} FROM project_contracts WHERE project_id = $1",
+        crate::progress::CONTRACT_COLS
+    ))
     .bind(project_id)
     .fetch_optional(pool)
     .await
