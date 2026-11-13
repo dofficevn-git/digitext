@@ -890,10 +890,41 @@ Tổng số byte đọc từ đĩa dưới 1 MB, dù gói 10 GB.
 
 > **Gói lồng gói.** Gói giao thật hay có dạng `AIP.zip` → bên trong đúng **một** tệp
 > `AIP/uuid_….zip` → gói thật nằm trong đó. Cổng phải đi xuống một lớp khi thấy zip chỉ chứa
-> đúng một tệp `.zip`. Trong thực tế lớp trong **được lưu không nén** (đo trên gói mẫu:
-> 122.421.254 / 122.428.691 byte), nên đọc được tại chỗ theo offset, không phải giải nén.
+> đúng một tệp `.zip`.
+>
+> ⚠️ **Sửa 13/11/2026 — bản trước của mục này nói sai.** Lớp trong **CÓ nén** (deflate, phương
+> thức 8), không phải lưu thẳng. Đo lại trên gói mẫu: nén 122.428.283 byte / gốc 122.421.254
+> byte — deflate làm *to thêm* 7.029 byte, tỉ lệ 100,006%, nên nhìn số thì tưởng là lưu thẳng.
+> Hệ quả thật: **không đọc được lớp trong theo offset**. Phải cho chạy qua
+> `DecompressionStream("deflate-raw")` rồi mới thấy thư mục trung tâm của nó. Vẫn làm được và
+> vẫn không tốn bộ nhớ (vừa giải vừa bỏ, chỉ giữ phần đuôi), nhưng là **duyệt hết 122 MB** chứ
+> không phải nhảy thẳng tới offset — hãy tính vào ước lượng của đợt 2.
 
-Máy chủ tự cắt tên thư mục gốc khỏi đường dẫn, nên cứ gửi nguyên như trong zip.
+#### Chọn nhầm thư mục bọc ngoài thì sao
+
+Máy chủ **tự gỡ các lớp thư mục bọc ngoài** cho tới khi `METS.xml` nằm ngay dưới đúng một thư
+mục gốc, rồi mới kiểm. Nên cứ gửi nguyên đường dẫn như trình duyệt đưa:
+
+| Người dùng chọn | Đường dẫn gửi lên | Máy chủ hiểu |
+|---|---|---|
+| đúng thư mục gói | `urn_…/METS.xml` | giữ nguyên |
+| thư mục bọc một lớp | `AIP/urn_…/METS.xml` | gỡ `AIP/` |
+| thư mục bọc nhiều lớp | `Desktop/giao/AIP/urn_…/METS.xml` | gỡ hết phần thừa |
+
+Có gỡ thì kết quả kèm một dòng `phatHien` mức `dat`: *"Bỏ qua N lớp thư mục bọc ngoài…"* — bày
+ra, đừng ẩn, để người dùng biết máy đã hiểu đúng gói nào.
+
+**Chỉ gỡ khi MỌI tệp đều nằm trong lớp bọc đó.** Chọn thư mục chứa **hai** gói thì máy không
+đoán: nó gỡ lớp bọc rồi báo lỗi *"Gói có 2 thư mục gốc (urn_A, urn_B) — phải đúng một"*, gọi
+đúng tên hai thư mục để người dùng chọn lại.
+
+Còn thư mục **không có `METS.xml` nào** thì ra 400 `"không mục nào có noiDung"` — đó là người
+dùng trỏ vào thư mục chứa `AIP.zip` chưa giải nén. Hãy bắt riêng trường hợp này bằng câu *"Thư
+mục này không có tệp mô tả — hãy chọn thư mục đã giải nén gói (thư mục chứa METS.xml)"*.
+
+(Lưu ý cho gói `.zip` thật: `load()` ở bản desktop **vẫn nghiêm**, lớp bọc thừa trong zip là lỗi
+cấu trúc E-ARK CSIP. Chỗ nới tay này chỉ dành cho bản kê của cổng, vì ở đó lớp thừa là do người
+dùng chọn thư mục, không phải do gói sai.)
 
 ### 12.5. Phản hồi
 
@@ -923,10 +954,16 @@ Máy chủ tự cắt tên thư mục gốc khỏi đường dẫn, nên cứ g�
 | Trường | |
 |---|---|
 | **`ketLuan`** | Bày to. Bảng nghĩa ở 12.2 |
-| **`chuaKiemNoiDung`** | Số phép kiểm đã bỏ. Khác 0 thì **phải** bày kèm `chuaKiem[]`, đừng giấu |
+| **`chuaKiemNoiDung`** | **Số PHÉP KIỂM** đã bỏ — không phải số tệp. Khác 0 thì **phải** bày kèm `chuaKiem[]`, đừng giấu |
 | **`chuaKiem[]`** | Chính số đó tách theo nhóm: `{ma, ten, soPhep, kiemODau}`. **Dựng cột «Chưa kiểm» từ mảng này**, đừng viết cứng ba dòng bên cổng — thêm nhóm thứ tư thì cổng tự có, không phải sửa |
 | `phatHien[]` | `muc` ∈ `loi` · `canh_bao` · `dat`. Mặc định nên ẩn `dat`, có nút mở ra |
 | `soMuc` · `soTepSieuDuLieu` | Để người dùng thấy cổng đã đọc đúng gói |
+
+> **Đừng đọc nhầm số 21.** Trên gói mẫu `chuaKiemNoiDung` = 21 mà `soTepSieuDuLieu` cũng = 21 —
+> **trùng nhau hoàn toàn ngẫu nhiên**. 21 phép kiểm = 7 tệp dữ liệu × 3 nhóm, còn 21 tệp mô tả là
+> số tệp `.xml` trong gói. Muốn chắc thì cộng `chuaKiem[].soPhep` (7 + 7 + 7), đừng suy từ số tệp.
+> Nhãn nên viết **"21 phép kiểm thuộc 3 nhóm chưa chạy"**, kẻo đặt cạnh bảng 3 dòng thì người đọc
+> hỏi 18 cái còn lại đâu.
 
 ### 12.6. Mã lỗi
 

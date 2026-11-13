@@ -26,8 +26,51 @@ pub struct Loaded {
 
 /// Dựng `Loaded` từ **bản kê** do cổng nhà cung cấp gửi: mỗi tệp một đường dẫn, kèm nội dung nếu
 /// là tệp siêu dữ liệu. Đi qua đúng `split_root` như gói thật, nên đường dẫn tương đối giống hệt.
-pub fn tu_ban_ke(tep: Vec<(String, Option<Vec<u8>>, Option<u64>)>, co_goi: u64) -> Loaded {
+/// Cắt những lớp thư mục **bọc ngoài** cho tới khi `METS.xml` của gói nằm ngay dưới đúng một
+/// thư mục gốc — tức dạng mà [`split_root`] hiểu.
+///
+/// Chỉ dùng cho bản kê của cổng nhà cung cấp, KHÔNG dùng cho gói `.zip` thật. Lý do: khi người
+/// dùng chọn thư mục bằng `webkitdirectory`, trình duyệt luôn gắn tên thư mục ĐƯỢC CHỌN làm
+/// đoạn đầu. Chọn đúng thư mục gói thì ra `urn_…/METS.xml`; chọn nhầm thư mục bọc ngoài một lớp
+/// thì ra `AIP/urn_…/METS.xml`. `split_root` cắt đúng một lớp nên trường hợp sau sẽ không tìm
+/// thấy `METS.xml` và cả phép kiểm sụp — báo lỗi oan cho một gói hoàn toàn đúng.
+///
+/// Với gói `.zip` thật thì lớp bọc thừa LÀ lỗi cấu trúc E-ARK CSIP, nên [`load`] vẫn nghiêm.
+fn cat_lop_boc(tep: &mut [(String, Option<Vec<u8>>, Option<u64>)], notes: &mut Vec<Finding>) {
+    // METS.xml nông nhất là METS gốc; những cái sâu hơn là METS của từng representation.
+    let Some(mets) = tep
+        .iter()
+        .map(|(p, _, _)| p.as_str())
+        .filter(|p| p.rsplit('/').next() == Some("METS.xml"))
+        .min_by_key(|p| p.split('/').count())
+    else {
+        return; // Không có METS.xml nào — để `split_root` báo lỗi như cũ.
+    };
+    let doan: Vec<&str> = mets.split('/').collect();
+    // Dạng đúng là `<gốc>/METS.xml` = 2 đoạn. Thừa bao nhiêu đoạn thì cắt bấy nhiêu.
+    if doan.len() <= 2 {
+        return;
+    }
+    let tien_to = format!("{}/", doan[..doan.len() - 2].join("/"));
+    // Chỉ cắt khi MỌI tệp đều nằm trong lớp bọc đó. Nếu không, thư mục được chọn chứa nhiều thứ
+    // hơn một gói — cắt bừa sẽ giấu mất vấn đề thật, cứ để `split_root` nói.
+    if !tep.iter().all(|(p, _, _)| p.starts_with(&tien_to)) {
+        return;
+    }
+    let so_lop = doan.len() - 2;
+    notes.push(Finding::new(
+        Level::Ok,
+        "Cấu trúc",
+        format!("Bỏ qua {so_lop} lớp thư mục bọc ngoài (\"{}\") — gói thật bắt đầu từ \"{}\"", tien_to.trim_end_matches('/'), doan[doan.len() - 2]),
+    ));
+    for (p, _, _) in tep.iter_mut() {
+        *p = p[tien_to.len()..].to_string();
+    }
+}
+
+pub fn tu_ban_ke(mut tep: Vec<(String, Option<Vec<u8>>, Option<u64>)>, co_goi: u64) -> Loaded {
     let mut notes = Vec::new();
+    cat_lop_boc(&mut tep, &mut notes);
     let thieu: BTreeSet<String> =
         tep.iter().filter(|(_, b, _)| b.is_none()).map(|(p, _, _)| p.clone()).collect();
     // Cỡ: byte thật khi có nội dung, còn lại lấy theo bản kê (thiếu thì coi là 0).

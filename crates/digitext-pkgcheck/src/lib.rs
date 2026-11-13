@@ -1042,6 +1042,56 @@ mod tests {
         }
     }
 
+    /// Nhà thầu chọn nhầm thư mục BỌC NGOÀI gói (`AIP/` chứ không phải `AIP/urn_…/`).
+    ///
+    /// `split_root` cắt đúng một lớp, nên không có bước gỡ lớp bọc thì `METS.xml` tụt xuống sâu
+    /// một bậc và cả phép kiểm sụp — một gói hoàn toàn đúng bị báo hỏng. DO365 hỏi đúng chỗ này
+    /// ngày 13/11/2026 trước khi code màn chọn thư mục.
+    #[test]
+    fn chon_nham_thu_muc_boc_ngoai_van_kiem_dung_goi() {
+        let goc = "urn_H49_uuid_ABC";
+        let dung = |tien_to: &str| {
+            let p = |x: &str| if tien_to.is_empty() { format!("{goc}/{x}") } else { format!("{tien_to}/{goc}/{x}") };
+            tu_ban_ke(
+                vec![
+                    (p("METS.xml"), Some(b"<x/>".to_vec()), None),
+                    (p("representations/rep1/METS.xml"), Some(b"<x/>".to_vec()), None),
+                    (p("representations/rep1/data/a.pdf"), None, Some(1_351_408)),
+                ],
+                131_723_288,
+            )
+        };
+        let thang = dung("");
+        for boc in ["AIP", "Desktop/AIP", "D/giao/dot3/AIP"] {
+            let l = dung(boc);
+            assert_eq!(l.root, goc, "bọc {boc:?}: phải nhận ra thư mục gốc thật");
+            assert_eq!(
+                l.files.keys().collect::<Vec<_>>(),
+                thang.files.keys().collect::<Vec<_>>(),
+                "bọc {boc:?}: phải ra đúng tập đường dẫn như chọn đúng thư mục"
+            );
+            // Tập "thiếu nội dung" và bảng cỡ cũng phải cắt theo, kẻo phép kiểm SIZE tra trượt.
+            assert_eq!(l.thieu_noi_dung, thang.thieu_noi_dung, "bọc {boc:?}: tập thiếu lệch");
+            assert_eq!(l.co_tep, thang.co_tep, "bọc {boc:?}: bảng cỡ lệch");
+            assert!(
+                l.notes.iter().any(|n| n.message.contains("lớp thư mục bọc ngoài")),
+                "bọc {boc:?}: phải NÓI là đã bỏ lớp bọc, đừng âm thầm"
+            );
+        }
+        // Chọn thư mục chứa HAI gói: gỡ lớp bọc rồi để `split_root` nói thẳng là có hai gốc —
+        // đừng đoán lấy gói nào. Câu đó gọi đúng tên hai thư mục nên nhà thầu biết phải chọn lại.
+        let hai = tu_ban_ke(
+            vec![
+                ("AIP/urn_A/METS.xml".into(), Some(b"<x/>".to_vec()), None),
+                ("AIP/urn_B/METS.xml".into(), Some(b"<x/>".to_vec()), None),
+            ],
+            0,
+        );
+        assert_eq!(hai.root, "", "hai gói thì không có thư mục gốc nào là đúng");
+        let noi = hai.notes.iter().map(|n| n.message.as_str()).collect::<Vec<_>>().join(" | ");
+        assert!(noi.contains("2 thư mục gốc") && noi.contains("urn_A") && noi.contains("urn_B"), "{noi}");
+    }
+
     /// `tu_ban_ke` phải cắt tên thư mục gốc khỏi tập "thiếu nội dung" y như `split_root` cắt khỏi
     /// đường dẫn tệp. Lệch một bên thì mọi phép tra đều trượt, và bộ kiểm quay lại băm mảng rỗng.
     #[test]

@@ -1069,6 +1069,48 @@ mod tests {
             assert!(!tra_ly_do());
         }
     }
+
+    /// Chạy bộ mẫu giao cho DO365 (`ban-ke-goi-mau.json`) qua đúng bộ luật của cửa gói tin, để
+    /// biết chắc BỘ MẪU không sai trước khi người khác dựa vào nó mà dựng màn hình.
+    ///
+    /// `DIGITEXT_BAN_KE=<đường dẫn> cargo test -p digitext-api ban_ke_mau -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn ban_ke_mau_cho_do365_ra_dung_ket_qua() {
+        use base64::Engine;
+        let p = std::env::var("DIGITEXT_BAN_KE").expect("đặt DIGITEXT_BAN_KE");
+        let v: Value = serde_json::from_slice(&std::fs::read(&p).unwrap()).unwrap();
+        let tep: Vec<(String, Option<Vec<u8>>, Option<u64>)> = v["tep"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| {
+                (
+                    m["duongDan"].as_str().unwrap().to_string(),
+                    m["noiDung"].as_str().map(|b| base64::engine::general_purpose::STANDARD.decode(b).unwrap()),
+                    m["co"].as_u64(),
+                )
+            })
+            .collect();
+        let so_muc = tep.len();
+        let so_sieu = tep.iter().filter(|(_, b, _)| b.is_some()).count();
+        let goc = digitext_pkgcheck::PackageResult {
+            name: v["tenGoi"].as_str().unwrap_or("?").into(),
+            kind: "?".into(),
+            ..Default::default()
+        };
+        let r = digitext_pkgcheck::check_loaded(goc, digitext_pkgcheck::tu_ban_ke(tep, v["coGoi"].as_u64().unwrap_or(0))).0;
+        println!("soMuc {so_muc} · soTepSieuDuLieu {so_sieu}");
+        println!("ketLuan   {}", r.verdict);
+        println!("soLoi {} · soCanhBao {} · chuaKiemNoiDung {}", r.errors, r.warnings, r.chua_kiem_noi_dung);
+        println!("loai {} · maPhong {:?} · soTaiLieu {:?} · soTrang {:?} · soTepDuLieu {}", r.kind, r.file_code, r.total_doc, r.pages, r.data_files);
+        for (ma, ten, so, o_dau) in r.bo_qua.danh_sach() {
+            println!("  chuaKiem {ma}: {ten} · {so} phép · {o_dau}");
+        }
+        assert_eq!(r.errors, 0, "bộ mẫu phải sạch lỗi cấu trúc, nếu không thì chính bộ mẫu hỏng");
+        assert!(r.verdict.starts_with("CHƯA KIỂM ĐỦ"), "{}", r.verdict);
+    }
+
 }
 
 // ------------------------------------------------- tự kiểm: một tệp PDF lẻ (chưa nộp)
