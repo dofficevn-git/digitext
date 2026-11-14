@@ -858,5 +858,41 @@ OCR PC phải dump ngược + `dong-goi-kho.py xuat` phần chênh — **tuần 
     đủ KHÔNG ĐẠT vì 7/7 tệp không phải PDF/A, bản rút gọn không thấy. Đã viết thẳng điều đó vào
     cả `ghiChu` của phản hồi lẫn mục 12.2 và bản dặn bên DO365.
   * Cổng lấy bản kê bằng cách đọc **thư mục trung tâm** của zip (~64 KB cuối tệp) — dưới 1 MB đọc
-    từ đĩa dù gói 10 GB. Gói lồng gói thì lớp trong lưu **không nén** nên đọc được tại chỗ.
+    từ đĩa dù gói 10 GB. Gói lồng gói thì phải đi xuống một lớp.
+    ~~lớp trong lưu không nén nên đọc được tại chỗ~~ — **sai, sửa 13/11**: lớp trong **có nén**
+    (deflate), 122.428.283 nén / 122.421.254 gốc. Deflate làm *to thêm* 7.029 byte nên nhìn số
+    thì tưởng là lưu thẳng. Không nhảy offset được, phải qua `DecompressionStream("deflate-raw")`.
   * `cargo test --workspace`: **198 ca đạt, 0 hỏng**.
+
+### 14/11/2026 — API chết 502 vì đổi exe nửa chừng, và `dev/doi-api.ps1`
+
+**Sự việc.** Quy trình đổi exe gõ tay là bốn lệnh rời: `scp` sang máy chủ → `ssh` kiểm cỡ →
+`ren` exe cũ → `move` exe mới vào. Lần này lệnh `scp` không chạy, nhưng `ren` vẫn chạy ⇒ thư mục
+`target\release` **không còn `digitext-api.exe` nào**. Scheduled Task không có gì để khởi động,
+API trả 502. Không có cảnh báo nào — chỉ biết khi gọi thử cửa và nhận 502.
+
+Bản cũ không mất: nó nằm ở `digitext-api.exe.cu1424`. Chữa bằng `ren` ngược lại rồi
+`restart-api.ps1`.
+
+**Đây là lần thứ hai cùng một loại lỗi.** Lần trước (11/11) là đổi exe **trước** khi áp migration
+⇒ 59 phút mọi cửa `du_an.*` và NCC trả 500. Cả hai lần đều là *thứ tự các bước gõ tay*, không
+phải lỗi mã.
+
+**Chữa gốc: `dev/doi-api.ps1`.** Một lệnh thay cho bốn, và thứ tự đảo lại cho an toàn:
+
+1. Kiểm tệp mới **trước** — có tồn tại không, đủ byte không, khớp `-Co <số byte>` không.
+   Chưa chắc thì **chưa động** vào bản đang chạy, API vẫn sống.
+2. Copy bản mới vào thư mục đích dưới tên `.moi`, kiểm lại cỡ.
+3. Dừng dịch vụ rồi mới tráo — khoảng trống giữa hai lệnh chỉ vài mili giây.
+4. Chạy lại, rồi **kiểm nó thực sự sống**: còn tiến trình không, và gọi thử
+   `/ncc/tu-kiem/goi` có ra **401** không (401 = cửa sống và đang đòi khoá; 404 = đổi nhầm bản
+   cũ; 502/000 = chết). Không sống thì **tự lùi** về bản cũ, exe hỏng để lại `.hong`.
+
+```
+powershell -ExecutionPolicy Bypass -File C:\DigiText\dev\doi-api.ps1 -Co 26068992
+```
+
+Chạy ở **console/RDP máy chủ** (script tự xin UAC — qua ssh thì hộp UAC không hiện).
+
+**Việc còn nợ, cùng gốc:** Scheduled Task vẫn **không ghi stdout ra tệp**
+(`api.out.log`/`api.err.log` 0 byte). Hôm 11/11 chuyện đó làm mất một giờ đi tìm nguyên nhân.
