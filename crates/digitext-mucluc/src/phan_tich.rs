@@ -93,6 +93,30 @@ pub struct DongHoSo {
     pub canh_bao: Vec<String>,
 }
 
+/// Lỗi/cảnh báo của một dòng **thuộc ô nào** trong tệp gốc — để bên ghi tô đúng ô đó.
+///
+/// Trả về khoá cột theo cách gọi của [`CotMap::khoa`] (`soTo` · `thbq` · `hoSoSo` · `hopSo` ·
+/// `tieuDe`). Không khớp cái nào thì rơi về `tieuDe`, vì tiêu đề luôn có và luôn nhìn thấy.
+///
+/// Sống ở đây chứ không ở bên ghi: nó khớp theo **câu chữ** của chính các thông báo do mô-đun
+/// này sinh ra. Để bên ghi tự đoán thì mỗi lần sửa một câu thông báo là lặng lẽ tô sai ô, không
+/// ai biết. Trước 14/11/2026 nó là một chuỗi regex trong `desktop/.../mucLucXuat.ts`; cổng nhà
+/// cung cấp sắp cần đúng luật đó nên dọn về một chỗ.
+pub fn cot_cua_loi(thong_bao: &str) -> &'static str {
+    let t = thong_bao.to_lowercase();
+    if t.starts_with("số tờ") || t.starts_with("thiếu số tờ") {
+        "soTo"
+    } else if t.contains("thbq") || t.contains("bảo quản") {
+        "thbq"
+    } else if t.contains("hồ sơ số") {
+        "hoSoSo"
+    } else if t.contains("hộp") {
+        "hopSo"
+    } else {
+        "tieuDe"
+    }
+}
+
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PhanTich {
@@ -247,7 +271,7 @@ pub fn khop_thbq(ten: &str, danh_muc: &[String]) -> Option<String> {
     None
 }
 
-fn ten_loai(vv: Option<bool>) -> &'static str {
+pub fn ten_loai(vv: Option<bool>) -> &'static str {
     match vv {
         None => "chưa rõ loại",
         Some(true) => "vĩnh viễn",
@@ -930,4 +954,26 @@ mod tests_dong_nhap {
         let d = dong_nhap(&pt, &pt.rows[0]);
         assert_eq!(d.get("thbq").unwrap(), "Ba chục năm");
     }
+    /// Luật "lỗi này thuộc ô nào" phải khớp **đúng câu chữ thật** của mô-đun này, không phải
+    /// câu chữ tưởng tượng. Sửa một thông báo mà quên đây thì test này đổ.
+    #[test]
+    fn moi_thong_bao_that_deu_tro_dung_cot() {
+        for (tb, cot) in [
+            ("Thiếu tiêu đề hồ sơ", "tieuDe"),
+            ("Chưa có dòng phòng ban (I. …) phía trên", "tieuDe"),
+            ("THBQ trống — dùng mặc định \"Vĩnh viễn\"", "thbq"),
+            ("Thiếu thời hạn bảo quản (chọn THBQ mặc định cho tệp hoặc điền vào ô)", "thbq"),
+            ("Thời hạn bảo quản \"70 nam\" không có trong Danh mục", "thbq"),
+            ("Hồ sơ số K39 trùng với dòng 12 (cùng loại Vĩnh viễn)", "hoSoSo"),
+            ("Chưa có Hộp số — nhập không xếp hộp (xếp sau ở Hệ thống hoá)", "hopSo"),
+            ("Số tờ 0 — để trống", "soTo"),
+            ("Thiếu số tờ — tài liệu bảo quản Vĩnh viễn phải đánh số tờ", "soTo"),
+        ] {
+            assert_eq!(cot_cua_loi(tb), cot, "{tb:?}");
+        }
+        // Không khớp gì thì về tiêu đề, không được hoảng.
+        assert_eq!(cot_cua_loi("câu gì đó chưa từng có"), "tieuDe");
+        assert_eq!(cot_cua_loi(""), "tieuDe");
+    }
+
 }

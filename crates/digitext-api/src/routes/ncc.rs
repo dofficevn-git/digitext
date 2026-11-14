@@ -53,6 +53,7 @@ pub fn router() -> Router<AppState> {
         .route("/ncc/tu-kiem/da-nop", post(tu_kiem_da_nop))
         .route("/ncc/tu-kiem/muc-luc", post(tu_kiem_muc_luc).layer(axum::extract::DefaultBodyLimit::max(12 * 1024 * 1024)))
         .route("/ncc/tu-kiem/muc-luc/mau", post(muc_luc_mau))
+        .route("/ncc/tu-kiem/muc-luc/bao-cao", post(muc_luc_bao_cao).layer(axum::extract::DefaultBodyLimit::max(12 * 1024 * 1024)))
         .route("/ncc/tu-kiem/pdf", post(tu_kiem_pdf).layer(axum::extract::DefaultBodyLimit::max(48 * 1024 * 1024)))
         .route("/ncc/tu-kiem/goi", post(tu_kiem_goi).layer(axum::extract::DefaultBodyLimit::max(24 * 1024 * 1024)))
 }
@@ -512,19 +513,24 @@ struct GoiMucLuc {
     /// Có trả danh sách dòng có vấn đề hay không (mặc định có).
     #[serde(alias = "chi_tiet")]
     chi_tiet: Option<bool>,
+    /// Trả thêm `dongDayDu[]` + `cotViTri` để cổng **ghi lại tệp gốc đã điền** (xem `ket_xuat`).
+    /// Mặc định **tắt**: mục lục vạn dòng thì khối này nặng, mà màn hình không dùng tới.
+    #[serde(alias = "ket_xuat", alias = "xuat")]
+    ket_xuat: Option<bool>,
 }
 
-/// `POST /api/v1/ncc/tu-kiem/muc-luc` — nhà thầu tự kiểm tệp mục lục hồ sơ **trước khi nộp**.
+/// `POST /api/v1/ncc/tu-kiem/muc-luc/bao-cao` — tải về **bảng Kiểm tra** của chính tệp vừa soát.
 ///
-/// Toàn bộ việc đọc và kiểm chạy ở máy chủ DigiText (chốt 10/11/2026): cổng nhà cung cấp chỉ
-/// gửi tệp lên và bày kết quả, không giữ một dòng luật nào. Bộ đọc là
-/// `digitext-mucluc`, đã đối chứng khớp 23/23 mục lục thật và 10.171/10.171 dòng với bản TS
-/// đang chạy trong desktop.
+/// Thân gói y hệt cửa `tu-kiem/muc-luc` (gửi lại chính tệp đó). Trả một `.xlsx` một sheet
+/// "Kiểm tra": mỗi hồ sơ một dòng, kết luận và lý do, lỗi cấu trúc xen đúng vị trí dòng.
 ///
-/// Hai tầng kiểm, và tầng thứ hai là tầng không thể làm ở trình duyệt:
-/// 1. **Trong tệp** — cột, tiêu đề, thời gian, THBQ, trùng hồ sơ số trong chính tệp.
-/// 2. **Với kho** — hồ sơ số đã có trên máy chủ, đếm theo từng phông của dự án.
-async fn tu_kiem_muc_luc(
+/// Vì sao máy chủ dựng chứ không để cổng dựng: bảng này phải nói **đúng** những gì bộ đọc kết
+/// luận. Cổng dựng lại thì mỗi lần đổi một câu thông báo là bảng tải về nói khác màn hình.
+///
+/// Đây **không phải** tệp gốc đã điền. Tệp gốc đã điền (`<tên>_DADIEN.xlsx`) phải ghi đè lên
+/// chính tệp của nhà thầu để giữ nguyên bố cục, nên nó do cổng ghi ở máy người dùng — xem
+/// `ketXuat` của cửa `tu-kiem/muc-luc`.
+async fn muc_luc_bao_cao(
     State(st): State<AppState>,
     ip: T2t,
     headers: HeaderMap,
@@ -533,7 +539,42 @@ async fn tu_kiem_muc_luc(
     let kh = xac_thuc(&st, &headers, &ip, &body).await?;
     let g: GoiMucLuc = serde_json::from_slice(&body)
         .map_err(|e| ApiError::bad_request(format!("thân gói không phải JSON hợp lệ: {e}")))?;
+    let (ma_ngoai, du_an, _dm, pt) = doc_muc_luc(&st, &kh, &g).await?;
 
+    let sheets = digitext_mucluc::mau::bao_cao_kiem_tra(&pt);
+    let tep = crate::xlsx::dong_goi(&sheets).map_err(|_| ApiError::internal())?;
+    let goc: String = pt
+        .ten_tep
+        .rsplit_once('.')
+        .map(|(a, _)| a)
+        .unwrap_or(&pt.ten_tep)
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect();
+    use base64::Engine;
+    Ok(Json(json!({
+        "maNgoai": ma_ngoai,
+        "maDuAn": du_an.code,
+        "tenTep": format!("kiem-muc-luc-{}.xlsx", goc.trim_matches('-')),
+        "kieu": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "noiDung": base64::engine::general_purpose::STANDARD.encode(&tep),
+        "soHoSo": pt.rows.len(),
+        "soLoi": pt.so_loi,
+        "soCanhBao": pt.so_canh_bao,
+        "nhapDuoc": !digitext_mucluc::phan_tich::co_loi_chan(&pt),
+    })))
+}
+
+/// Phần dùng chung của hai cửa mục lục: giải mã tệp, tra dự án, lấy Danh mục THBQ của dự án,
+/// rồi đọc + phân tích.
+///
+/// Một chỗ chứ không hai: cửa kiểm và cửa báo cáo mà đọc tệp bằng hai đoạn mã khác nhau thì
+/// bảng tải về sẽ có ngày nói khác màn hình, và không ai biết bên nào đúng.
+async fn doc_muc_luc(
+    st: &AppState,
+    kh: &digitext_db::webhooks::ApiClient,
+    g: &GoiMucLuc,
+) -> Result<(String, digitext_db::webhooks::DuAn, Vec<digitext_db::chinh_ly::ncc::ThbqRow>, digitext_mucluc::phan_tich::PhanTich), ApiError> {
     let ma_ngoai = g
         .ma_ngoai
         .as_deref()
@@ -622,6 +663,33 @@ async fn tu_kiem_muc_luc(
         )));
     }
 
+
+    Ok((ma_ngoai.to_owned(), du_an, dm, pt))
+}
+
+/// `POST /api/v1/ncc/tu-kiem/muc-luc` — nhà thầu tự kiểm tệp mục lục hồ sơ **trước khi nộp**.
+///
+/// Toàn bộ việc đọc và kiểm chạy ở máy chủ DigiText (chốt 10/11/2026): cổng nhà cung cấp chỉ
+/// gửi tệp lên và bày kết quả, không giữ một dòng luật nào. Bộ đọc là
+/// `digitext-mucluc`, đã đối chứng khớp 23/23 mục lục thật và 10.171/10.171 dòng với bản TS
+/// đang chạy trong desktop.
+///
+/// Hai tầng kiểm, và tầng thứ hai là tầng không thể làm ở trình duyệt:
+/// 1. **Trong tệp** — cột, tiêu đề, thời gian, THBQ, trùng hồ sơ số trong chính tệp.
+/// 2. **Với kho** — hồ sơ số đã có trên máy chủ, đếm theo từng phông của dự án.
+async fn tu_kiem_muc_luc(
+    State(st): State<AppState>,
+    ip: T2t,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, ApiError> {
+    let kh = xac_thuc(&st, &headers, &ip, &body).await?;
+    let g: GoiMucLuc = serde_json::from_slice(&body)
+        .map_err(|e| ApiError::bad_request(format!("thân gói không phải JSON hợp lệ: {e}")))?;
+
+    let (ma_ngoai, du_an, dm, pt) = doc_muc_luc(&st, &kh, &g).await?;
+    let ma_ngoai = ma_ngoai.as_str();
+
     // Tầng 2: đối chiếu với hồ sơ ĐÃ có trên máy chủ. Khoá duy nhất thật là theo phông, mà cổng
     // không biết sẽ nhập vào phông nào ⇒ đếm cho từng phông, bên kia tự bày.
     let (vv, st_key): (Vec<bool>, Vec<String>) = pt
@@ -647,6 +715,11 @@ async fn tu_kiem_muc_luc(
 
     let chi_tiet = g.chi_tiet.unwrap_or(true);
     let (dong, bi_cat) = if chi_tiet { dong_co_van_de(&pt) } else { (Vec::new(), false) };
+    let (dong_day_du, cot_vi_tri) = if g.ket_xuat.unwrap_or(false) {
+        (ket_xuat_dong(&pt), Some(ket_xuat_cot(&pt)))
+    } else {
+        (Vec::new(), None)
+    };
 
     Ok(Json(json!({
         "maNgoai": ma_ngoai,
@@ -681,7 +754,58 @@ async fn tu_kiem_muc_luc(
             "soPhongTrongDuAn": phong_ds.len(),
         },
         "thbqDanhMuc": dm.iter().map(|t| json!({ "ten": t.ten, "vinhVien": t.vinh_vien })).collect::<Vec<_>>(),
+        "cotViTri": cot_vi_tri,
+        "dongDayDu": dong_day_du,
     })))
+}
+
+/// Chỉ số cột **0-based** trong sheet đã đọc, theo khoá của `CotMap::khoa`.
+///
+/// `cot` (danh sách tên) chỉ đủ để bày "máy nhận ra mấy cột". Muốn GHI vào đúng ô của tệp gốc
+/// thì phải có chỉ số — nên khối này chỉ đi kèm `ketXuat`.
+fn ket_xuat_cot(pt: &digitext_mucluc::phan_tich::PhanTich) -> Value {
+    let mut m = Map::new();
+    for (k, ten) in digitext_mucluc::MO_TA_COT.iter().enumerate().map(|(k, c)| (k, c.khoa)) {
+        if let Some(i) = pt.cot.vi_tri(k) {
+            m.insert(ten.to_string(), json!(i));
+        }
+    }
+    Value::Object(m)
+}
+
+/// **Mọi** dòng hồ sơ, kèm đủ thứ cần để ghi lại tệp gốc đã điền (`<tên>_DADIEN.xlsx`).
+///
+/// Khác `dong_co_van_de` ở hai điểm, và nhầm là tô sai ô:
+/// 1. Ở đây là MỌI dòng, kể cả dòng sạch — vì dòng sạch vẫn có thể được máy điền thời gian.
+/// 2. `canhBao` ở đây là bản **thô**, KHÔNG gộp `thoiGian.ghiChu`. Bên kia gộp vào thì ghi chú
+///    thời gian bị tô sang ô khác, trong khi nó phải tô vào chính ô thời gian.
+///
+/// Mỗi thông báo đi kèm `cot` — ô phải tô — do `digitext_mucluc::phan_tich::cot_cua_loi` quyết,
+/// không để bên ghi tự đoán theo câu chữ.
+fn ket_xuat_dong(pt: &digitext_mucluc::phan_tich::PhanTich) -> Vec<Value> {
+    let kem_cot = |v: &[String]| -> Vec<Value> {
+        v.iter()
+            .map(|m| json!({ "noiDung": m, "cot": digitext_mucluc::phan_tich::cot_cua_loi(m) }))
+            .collect()
+    };
+    pt.rows
+        .iter()
+        .map(|r| {
+            json!({
+                "dong": r.dong,
+                "hoSoSo": r.ho_so_so,
+                "thoiGianGoc": r.thoi_gian_goc,
+                "thoiGian": {
+                    "batDau": r.tg.bat_dau,
+                    "ketThuc": r.tg.ket_thuc,
+                    "ketLuan": r.tg.ket_luan,
+                    "ghiChu": r.tg.ghi_chu,
+                },
+                "loi": kem_cot(&r.loi),
+                "canhBao": kem_cot(&r.canh_bao),
+            })
+        })
+        .collect()
 }
 
 /// Các dòng hồ sơ **có vấn đề**, kèm cờ "danh sách bị cắt".
@@ -740,7 +864,7 @@ fn gon_ten(s: &str) -> String {
 
 // Thiếu `rename_all` ở đây là lỗi đã xảy ra HAI lần (GoiKiem, rồi GoiMau — bên gọi nhận 400
 // "thiếu maNgoai" dù gói tin có maNgoai). Trình biên dịch không bắt được, vì struct vẫn hợp lệ.
-// Test `moi_cua_deu_nhan_ma_ngoai_camel_case` ở cuối tệp canh cả năm cửa.
+// Test `moi_cua_deu_nhan_ma_ngoai_camel_case` ở cuối tệp canh mọi cửa.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GoiMau {
@@ -853,6 +977,71 @@ mod tests {
 
     /// Hướng dẫn phát cho nhà thầu nói trần tệp là bao nhiêu. Nói một đằng mà cửa chặn một nẻo
     /// thì nhà thầu tách tệp theo con số sai rồi vẫn bị từ chối.
+    /// Khối kết xuất phải đủ và ĐÚNG Ô để cổng ghi lại tệp gốc đã điền.
+    ///
+    /// Hai thứ sai ở đây đều âm thầm phá tệp của nhà thầu: chỉ số cột lệch ⇒ ghi đè nhầm cột;
+    /// thiếu dòng sạch ⇒ mất đúng những ô máy tự điền được, tức mất cả lý do tải tệp về.
+    #[test]
+    fn ket_xuat_du_dong_va_tro_dung_o() {
+        use calamine::Data;
+        let o = |v: &str| Data::String(v.to_string());
+        // Cột đặt KHÔNG theo thứ tự bảng mô tả, để bắt lỗi lệch thứ tự nếu có.
+        let rows: Vec<Vec<Data>> = vec![
+            vec![o("Tiêu đề hồ sơ"), o("Hồ sơ số"), o("THBQ"), o("Thời gian"), o("Số tờ"), o("Hộp số")],
+            vec![o("I. VĂN PHÒNG"), o(""), o(""), o(""), o(""), o("")],
+            vec![o("1. Công tác chung"), o(""), o(""), o(""), o(""), o("")],
+            vec![o("Hồ sơ A"), o("01"), o("Vĩnh viễn"), o("05/01/2020 - 28/12/2020"), o("10"), o("1")],
+            vec![o("Hồ sơ B năm 2019"), o("02"), o("Vĩnh viễn"), o(""), o("10"), o("1")],
+            vec![o("Hồ sơ E năm 2020"), o("03"), o("Không có thật"), o("2020"), o(""), o("1")],
+        ];
+        let dm = vec!["Vĩnh viễn".to_string()];
+        let pt = digitext_mucluc::phan_tich::phan_tich_muc_luc(
+            &rows,
+            &digitext_mucluc::phan_tich::TuyChon {
+                ten_tep: "t.xlsx",
+                sheet: "Sheet1",
+                sheets: &["Sheet1".to_string()],
+                thbq_danh_muc: &dm,
+                thbq_vinh_vien: &dm,
+                thbq_mac_dinh: None,
+            },
+        );
+
+        // 1. Chỉ số cột phải trỏ đúng ô trong lưới trên, và mang đúng khoá của `CotMap::khoa()`.
+        let cot = ket_xuat_cot(&pt);
+        for (khoa, vi_tri) in [("tieuDe", 0), ("hoSoSo", 1), ("thbq", 2), ("thoiGian", 3), ("soTo", 4), ("hopSo", 5)] {
+            assert_eq!(cot[khoa].as_u64(), Some(vi_tri), "cột {khoa} trỏ sai ô");
+        }
+        let hop_le: Vec<&str> = pt.cot.khoa();
+        for k in cot.as_object().unwrap().keys() {
+            assert!(hop_le.contains(&k.as_str()), "khoá {k:?} không có trong CotMap::khoa()");
+        }
+
+        // 2. MỌI dòng hồ sơ, kể cả dòng sạch — dòng sạch mới là dòng máy điền được thời gian.
+        let day_du = ket_xuat_dong(&pt);
+        assert_eq!(day_du.len(), pt.rows.len(), "phải trả đủ mọi dòng");
+        assert!(day_du.len() > dong_co_van_de(&pt).0.len(), "bộ thử phải có dòng sạch, nếu không test chẳng kiểm gì");
+        let b = day_du.iter().find(|d| d["hoSoSo"] == "2").expect("thiếu hồ sơ số 2");
+        assert_eq!(b["thoiGianGoc"].as_str(), Some(""), "phải giữ nguyên ô gốc (trống)");
+        assert!(!b["thoiGian"]["batDau"].as_str().unwrap_or("").is_empty(), "máy phải suy ra thời gian từ tiêu đề");
+
+        // 3. Mỗi thông báo phải nói rõ tô vào ô nào — cổng không được tự đoán theo câu chữ.
+        let e = day_du.iter().find(|d| d["hoSoSo"] == "3").expect("thiếu hồ sơ số 3");
+        let loi = e["loi"].as_array().expect("hồ sơ số 3 phải có lỗi THBQ");
+        assert!(loi.iter().any(|l| l["cot"] == "thbq"), "lỗi THBQ phải trỏ cột thbq: {loi:?}");
+        for d in &day_du {
+            for m in d["loi"].as_array().into_iter().chain(d["canhBao"].as_array()).flatten() {
+                assert!(m["noiDung"].is_string() && m["cot"].is_string(), "thiếu noiDung/cot: {m}");
+                assert!(hop_le.contains(&m["cot"].as_str().unwrap()) || m["cot"] == "tieuDe", "cot lạ: {m}");
+            }
+        }
+
+        // 4. `canhBao` ở khối kết xuất là bản THÔ — gộp ghi chú thời gian vào là tô sai ô.
+        for (d, r) in day_du.iter().zip(&pt.rows) {
+            assert_eq!(d["canhBao"].as_array().unwrap().len(), r.canh_bao.len(), "dòng {} bị gộp ghi chú", r.dong);
+        }
+    }
+
     /// Dựng một phân tích thật rồi kiểm **bất biến**: số đếm bày trên thẻ và số dòng bày trong
     /// bảng phải nói cùng một chuyện.
     ///
@@ -932,7 +1121,7 @@ mod tests {
         }
     }
 
-    /// **Cả sáu cửa phải nhận `maNgoai`** — tên khoá tài liệu công bố, và tên bên gọi dùng.
+    /// **Mọi cửa đều phải nhận `maNgoai`** — tên khoá tài liệu công bố, và tên bên gọi dùng.
     ///
     /// Quên `#[serde(rename_all = "camelCase")]` trên một struct gói tin là lỗi đã xảy ra HAI
     /// lần (`GoiKiem`, rồi `GoiMau` ngày 13/11/2026). Nó không làm hỏng biên dịch, không làm
@@ -1011,6 +1200,61 @@ mod tests {
         assert!(!digitext_mucluc::phan_tich::co_loi_chan(&pt));
         // Tên phông điền sẵn phải khớp chính nó qua phép so của cửa.
         assert_eq!(gon_ten(&pt.ten_phong_trong_tep), gon_ten("Phông thử"));
+    }
+
+    /// Bảng «Kiểm tra» tải về phải đóng gói được, đọc lại được, và **đủ dòng**: mỗi hồ sơ một
+    /// dòng cộng mỗi lỗi cấu trúc một dòng. Thiếu dòng nào là người sửa tệp không thấy lỗi đó.
+    #[test]
+    fn bao_cao_kiem_tra_dong_goi_duoc_va_du_dong() {
+        use calamine::Data;
+        let o = |v: &str| Data::String(v.to_string());
+        let rows: Vec<Vec<Data>> = vec![
+            vec![o("Hộp số"), o("Hồ sơ số"), o("Tiêu đề hồ sơ"), o("Thời gian"), o("Số tờ"), o("THBQ")],
+            vec![o(""), o(""), o("I. VĂN PHÒNG"), o(""), o(""), o("")],
+            vec![o(""), o(""), o("1. Công tác chung"), o(""), o(""), o("")],
+            vec![o("1"), o("01"), o("Hồ sơ A"), o("05/01/2020 - 28/12/2020"), o("10"), o("Vĩnh viễn")],
+            vec![o("1"), o("02"), o("Hồ sơ B năm 2019"), o(""), o("10"), o("Vĩnh viễn")],
+            vec![o("1"), o("03"), o("Hồ sơ C năm 2020"), o("2020"), o("10"), o("Không có thật")],
+        ];
+        let dm = vec!["Vĩnh viễn".to_string()];
+        let pt = digitext_mucluc::phan_tich::phan_tich_muc_luc(
+            &rows,
+            &digitext_mucluc::phan_tich::TuyChon {
+                ten_tep: "muc luc thu.xlsx",
+                sheet: "Sheet1",
+                sheets: &["Sheet1".to_string()],
+                thbq_danh_muc: &dm,
+                thbq_vinh_vien: &dm,
+                thbq_mac_dinh: None,
+            },
+        );
+        assert!(pt.so_loi > 0, "bộ thử phải có lỗi, nếu không chẳng kiểm được cột Kết luận");
+
+        let sheets = digitext_mucluc::mau::bao_cao_kiem_tra(&pt);
+        assert_eq!(sheets.len(), 1);
+        assert_eq!(sheets[0].ten, "Kiểm tra");
+        assert_eq!(sheets[0].rows.len(), sheets[0].cao.len(), "số dòng và số chiều cao phải khớp");
+        let tep = crate::xlsx::dong_goi(&sheets).unwrap();
+        let doc = digitext_mucluc::doc_so_tu_bytes(&tep, None).unwrap();
+
+        // Đủ dòng: tiêu đề + mỗi hồ sơ + mỗi lỗi cấu trúc.
+        let o_chu = |r: &Vec<calamine::Data>, i: usize| r.get(i).map(|c| c.to_string()).unwrap_or_default();
+        let than: Vec<&Vec<calamine::Data>> = doc
+            .rows
+            .iter()
+            .skip_while(|r| o_chu(r, 0) != "Dòng Excel")
+            .skip(1)
+            .filter(|r| !o_chu(r, 0).trim().is_empty())
+            .collect();
+        assert_eq!(than.len(), pt.rows.len() + pt.van_de.iter().filter(|v| v.dong > 0).count(), "thiếu dòng");
+
+        // Cột Kết luận phải nói đúng ba mức, và dòng sạch KHÔNG được ghi là lỗi.
+        let ket: Vec<String> = than.iter().map(|r| o_chu(r, 12)).collect();
+        assert!(ket.iter().any(|k| k == "Lỗi"), "{ket:?}");
+        assert!(ket.iter().any(|k| k == "Đạt"), "dòng sạch phải ghi Đạt: {ket:?}");
+        for k in &ket {
+            assert!(["Lỗi", "Cảnh báo", "Đạt"].contains(&k.as_str()), "kết luận lạ {k:?}");
+        }
     }
 
     #[test]

@@ -520,3 +520,181 @@ mod tests {
         }
     }
 }
+
+// ------------------------------------------------------------------ báo cáo «Kiểm tra»
+
+/// Bảng **Kiểm tra** của một lần soát mục lục: mỗi hồ sơ một dòng, kèm kết luận và lý do.
+///
+/// Dựng ở đây chứ không ở cổng vì nó phải nói **đúng** những gì bộ đọc kết luận — cổng dựng lại
+/// thì mỗi lần đổi một câu thông báo là bảng nói khác máy. Cùng bộ cột với sheet "Kiểm tra" mà
+/// bản desktop đã xuất từ 2/10/2026, bỏ cột "Số tạm" (số tạm chỉ có nghĩa sau khi đã nhập vào
+/// kho, nhà thầu chưa nhập thì chưa có).
+///
+/// Dòng **lỗi cấu trúc** (`van_de`) xếp xen vào đúng vị trí dòng của nó, không dồn xuống cuối:
+/// người sửa tệp đọc từ trên xuống, không ai đọc hai bảng.
+/// Chiều cao cần cho một dòng bảng, ước theo cột **dài nhất** so với bề rộng của chính cột đó.
+///
+/// Excel chỉ tự co giãn chiều cao khi người ta sửa ô, nên tệp mới sinh phải tự đặt. Bản đầu
+/// ngày 14/11/2026 chỉ nhìn cột Ghi chú ⇒ dòng có tiêu đề hồ sơ dài mà ghi chú trống bị cắt
+/// mất nửa chữ, và dòng ghi chú 200 ký tự thì cụt đuôi. Chỉ ảnh dựng ra mới thấy, không test
+/// nào bắt được, nên để nguyên công thức ở đây cho dễ sửa.
+fn cao_can(o: &[O], rong: &[f64]) -> f64 {
+    const CAO_DONG: f64 = 14.0;
+    const DEM: f64 = 8.0;
+    const TOI_DA: f64 = 108.0;
+    let so_dong = o
+        .iter()
+        .zip(rong)
+        .map(|(c, w)| {
+            // Ký tự xuống dòng sẵn trong ô cũng tính, mỗi đoạn tự xuống dòng theo bề rộng.
+            c.v.split('\n')
+                .map(|d| {
+                    let n = d.chars().count() as f64;
+                    (n / w.max(4.0)).ceil().max(1.0)
+                })
+                .sum::<f64>()
+        })
+        .fold(1.0, f64::max);
+    (CAO_DONG * so_dong + DEM).min(TOI_DA)
+}
+
+pub fn bao_cao_kiem_tra(pt: &crate::phan_tich::PhanTich) -> Vec<SheetMau> {
+    use crate::phan_tich::Muc;
+    use crate::thoi_gian::KetLuan;
+
+    let cot = [
+        ("Dòng Excel", 10.0),
+        ("Loại", 12.0),
+        ("Hộp số", 8.0),
+        ("Hồ sơ số", 10.0),
+        ("Phòng ban", 22.0),
+        ("Mảng", 22.0),
+        ("Tiêu đề hồ sơ", 50.0),
+        ("Thời gian gốc", 20.0),
+        ("Bắt đầu", 11.0),
+        ("Kết thúc", 11.0),
+        ("THBQ", 12.0),
+        ("Số tờ", 8.0),
+        ("Kết luận", 12.0),
+        ("Ghi chú kiểm tra", 60.0),
+    ];
+
+    let rong_cot: Vec<f64> = cot.iter().map(|(_, w)| *w).collect();
+    let mut rows: Vec<Vec<O>> = Vec::new();
+    let mut cao: Vec<Option<f64>> = Vec::new();
+
+    let tieu = format!(
+        "Kiểm mục lục hồ sơ — {}{}",
+        pt.ten_tep,
+        if pt.sheet.is_empty() { String::new() } else { format!(" · sheet {}", pt.sheet) }
+    );
+    rows.push(vec![k(tieu, Kieu::Tieu)]);
+    cao.push(Some(22.0));
+    let ket = if crate::phan_tich::co_loi_chan(pt) {
+        format!("CHƯA NHẬP ĐƯỢC — còn {} lỗi chặn, nộp lúc này sẽ bị từ chối cả tệp.", pt.so_loi)
+    } else {
+        format!("Nhập được — {} hồ sơ, {} cảnh báo vẫn nhập được.", pt.rows.len(), pt.so_canh_bao)
+    };
+    rows.push(vec![k(ket, Kieu::Dan)]);
+    cao.push(Some(18.0));
+    rows.push(vec![k(
+        format!(
+            "{} hồ sơ · {} hộp · {} lỗi · {} cảnh báo · {} dòng máy tự suy thời gian",
+            pt.rows.len(),
+            pt.so_hop,
+            pt.so_loi,
+            pt.so_canh_bao,
+            pt.so_da_dien
+        ),
+        Kieu::Dan,
+    )]);
+    cao.push(Some(18.0));
+    rows.push(Vec::new());
+    cao.push(None);
+
+    rows.push(cot.iter().map(|(t, _)| k(*t, Kieu::TieuDeCot)).collect());
+    cao.push(Some(28.0));
+    let dong_bang = Some(rows.len() as u32 + 1);
+
+    // Lỗi cấu trúc gắn theo dòng, để chèn xen vào đúng chỗ.
+    let mut xen: std::collections::BTreeMap<usize, Vec<&crate::phan_tich::VanDe>> = Default::default();
+    let mut chung: Vec<&crate::phan_tich::VanDe> = Vec::new();
+    for v in &pt.van_de {
+        if v.dong > 0 {
+            xen.entry(v.dong).or_default().push(v);
+        } else {
+            chung.push(v);
+        }
+    }
+
+    let them_van_de = |rows: &mut Vec<Vec<O>>, cao: &mut Vec<Option<f64>>, v: &crate::phan_tich::VanDe| {
+        let mut o = vec![O::default(); cot.len()];
+        o[0] = ks(if v.dong > 0 { v.dong.to_string() } else { String::new() }, Kieu::OGiua);
+        o[12] = k(if v.muc == Muc::Loi { "Lỗi" } else { "Cảnh báo" }, Kieu::OGiua);
+        o[13] = k(&v.noi_dung, Kieu::O);
+        cao.push(Some(cao_can(&o, &rong_cot)));
+        rows.push(o);
+    };
+
+    for v in &chung {
+        them_van_de(&mut rows, &mut cao, v);
+    }
+
+    for r in &pt.rows {
+        for v in xen.remove(&r.dong).unwrap_or_default() {
+            them_van_de(&mut rows, &mut cao, v);
+        }
+        let pb = r.pb_idx.and_then(|i| pt.phong_bans.get(i));
+        let mang = pb.and_then(|p| r.mang_id.and_then(|id| p.mangs.iter().find(|m| m.id == id)));
+        let ket_luan = if !r.loi.is_empty() {
+            "Lỗi"
+        } else if !r.canh_bao.is_empty() || matches!(r.tg.ket_luan, KetLuan::CanhBao | KetLuan::Loi) {
+            "Cảnh báo"
+        } else {
+            "Đạt"
+        };
+        let ghi: Vec<String> = r
+            .loi
+            .iter()
+            .chain(r.canh_bao.iter())
+            .chain(r.tg.ghi_chu.iter())
+            .cloned()
+            .collect();
+        rows.push(vec![
+            ks(r.dong.to_string(), Kieu::OGiua),
+            k(crate::phan_tich::ten_loai(r.vinh_vien), Kieu::OGiua),
+            k(&r.hop_so, Kieu::OGiua),
+            k(&r.ho_so_so, Kieu::OGiua),
+            k(pb.map(|p| format!("{} · {}", p.ma, p.ten)).unwrap_or_default(), Kieu::O),
+            k(mang.map(|m| format!("{} · {}", m.ma, m.ten)).unwrap_or_default(), Kieu::O),
+            k(&r.tieu_de, Kieu::O),
+            k(r.thoi_gian_goc.replace(['\n', '\r'], " ").trim(), Kieu::O),
+            k(&r.tg.bat_dau, Kieu::OGiua),
+            k(&r.tg.ket_thuc, Kieu::OGiua),
+            k(r.thbq.as_deref().unwrap_or(&r.thbq_goc), Kieu::O),
+            k(&r.so_to, Kieu::OGiua),
+            k(ket_luan, Kieu::OGiua),
+            k(ghi.join("; "), Kieu::O),
+        ]);
+        cao.push(Some(cao_can(rows.last().expect("vừa đẩy"), &rong_cot)));
+    }
+    // Dòng lỗi cấu trúc trỏ tới dòng không phải hồ sơ (tiêu đề nhóm…) thì vẫn phải hiện.
+    for (_, vs) in std::mem::take(&mut xen) {
+        for v in vs {
+            them_van_de(&mut rows, &mut cao, v);
+        }
+    }
+
+    let n = rows.len();
+    vec![SheetMau {
+        ten: "Kiểm tra".into(),
+        rong: rong_cot,
+        rows,
+        cao,
+        gop: Vec::new(),
+        dong_bang,
+        // Cột Dòng Excel / Hộp số / Hồ sơ số / Số tờ cố ý là chữ.
+        bo_qua_loi_so: vec![format!("A1:D{n}"), format!("L1:L{n}")],
+        luoi: false,
+    }]
+}

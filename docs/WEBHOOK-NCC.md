@@ -2,8 +2,8 @@
 
 Tài liệu cho lập trình viên của hệ thống quản lý hợp đồng (CRM / DO365).
 
-> **Sáu cửa, một khoá.** Tất cả dùng chung khoá và chung cách ký ở mục 1 — đọc mục 1 một
-> lần là viết được cả sáu.
+> **Bảy cửa, một khoá.** Tất cả dùng chung khoá và chung cách ký ở mục 1 — đọc mục 1 một
+> lần là viết được cả bảy.
 >
 > | Mục | Cửa | Lấp mục menu |
 > |---|---|---|
@@ -11,6 +11,7 @@ Tài liệu cho lập trình viên của hệ thống quản lý hợp đồng (
 > | 9 | `POST /ncc/tu-kiem/da-nop` | Tự kiểm chất lượng |
 > | 10 | `POST /ncc/tu-kiem/muc-luc` | Tự kiểm mục lục |
 > | 10.9 | `POST /ncc/tu-kiem/muc-luc/mau` | *(nút «Tải tệp mẫu» trong màn trên)* |
+> | 10.10 | `POST /ncc/tu-kiem/muc-luc/bao-cao` | *(nút «Tải bảng Kiểm tra» trong màn trên)* |
 > | 11 | `POST /ncc/tu-kiem/pdf` | Tự kiểm PDF/A |
 > | 12 | `POST /ncc/tu-kiem/goi` | Tự kiểm gói tin |
 >
@@ -715,6 +716,80 @@ Hai điều đáng nói với người dùng:
 Mã lỗi: như 10.5, chỉ có 400 (thiếu `maNgoai`), 404 (`ncc_du_an_khong_thay`), 401.
 
 ---
+
+### 10.10. Trả tệp về cho nhà thầu sửa — hai đường, đừng lẫn
+
+Soát xong mà chỉ bày lỗi trên màn thì người sửa phải vừa nhìn màn vừa dò tệp. Như bản desktop
+của DigiText, có **hai** tệp tải về, khác nhau về bản chất:
+
+| | Ai dựng | Là gì |
+|---|---|---|
+| **Bảng Kiểm tra** `.xlsx` | **Máy chủ** — cửa `muc-luc/bao-cao` | Bảng mới: mỗi hồ sơ một dòng, kết luận + lý do |
+| **Tệp gốc đã điền** `<tên>_DADIEN.xlsx` | **Cổng**, trong trình duyệt | Chính tệp nhà thầu gửi, giữ nguyên bố cục, điền sẵn + tô màu |
+
+Cái thứ hai phải do cổng dựng: nó **ghi đè lên chính tệp của nhà thầu**, giữ nguyên định dạng,
+cột thừa, ô gộp, logo… Máy chủ không giữ tệp gốc và không dựng lại được bố cục đó.
+
+#### a) `POST /api/v1/ncc/tu-kiem/muc-luc/bao-cao` — bảng Kiểm tra
+
+Thân gói **y hệt** `tu-kiem/muc-luc` (gửi lại chính tệp đó). Trả:
+
+```json
+{ "tenTep": "kiem-muc-luc-Book2.xlsx",
+  "kieu": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "noiDung": "UEsDBB…",
+  "soHoSo": 288, "soLoi": 9, "soCanhBao": 136, "nhapDuoc": false }
+```
+
+Giải base64 rồi cho tải. Không phải dựng gì thêm.
+
+#### b) Tệp gốc đã điền — `ketXuat: true`
+
+Gửi `"ketXuat": true` kèm thân gói của `tu-kiem/muc-luc`. Phản hồi có thêm hai khối:
+
+```json
+"cotViTri": { "hoSoSo": 1, "tieuDe": 2, "thoiGian": 3, "soTo": 4, "thbq": 5 },
+"dongDayDu": [
+  { "dong": 308, "hoSoSo": "K39", "thoiGianGoc": "",
+    "thoiGian": { "batDau": "01/01/2019", "ketThuc": "31/12/2019",
+                  "ketLuan": "da_dien", "ghiChu": ["Ô trống — điền theo năm trong tiêu đề"] },
+    "loi": [ { "noiDung": "Thiếu thời hạn bảo quản…", "cot": "thbq" } ],
+    "canhBao": [] }
+]
+```
+
+| | |
+|---|---|
+| `cotViTri` | Chỉ số cột **0-based** trong sheet đã đọc. Cần nó mới ghi đúng ô — `cot` (danh sách tên) chỉ đủ để bày "máy nhận ra mấy cột" |
+| `dongDayDu` | **MỌI** dòng hồ sơ, kể cả dòng sạch. Dòng sạch mới là dòng máy điền được thời gian |
+| `…loi[].cot` · `…canhBao[].cot` | Ô phải tô, do máy chủ quyết. **Đừng đoán theo câu chữ** — đổi một câu thông báo là cổng tô sai ô mà không ai biết |
+
+> ⚠️ **`canhBao` trong `dongDayDu` là bản THÔ**, khác `dong[]` của màn hình: ở đây nó **không**
+> gộp `thoiGian.ghiChu`. Gộp vào là ghi chú thời gian bị tô sang ô khác, trong khi nó phải tô
+> vào chính ô thời gian. (Màn hình thì ngược lại — xem 10.3b.)
+
+#### Cách ghi — làm đúng như bản desktop
+
+Mã mẫu: `desktop/src/features/chinhly/mucLucXuat.ts`, hàm `danhDauTepGoc`. Dùng **ExcelJS**
+(`wb.xlsx.load` tệp gốc → sửa ô → `writeBuffer`). Tóm tắt luật:
+
+1. **Điền thời gian.** Ghép `"{batDau} {ketThuc}"` vào ô `cotViTri.thoiGian`; tệp tách hai cột
+   thì ghi vào `ngayBatDau` / `ngayKetThuc`.
+   **Ô đã đúng sẵn thì ĐỪNG ghi đè** — chỉ khác cách viết (`7/6` ↔ `07/06`, xuống dòng ↔ dấu
+   cách) không phải là sai. So bằng cách rút mọi `d/m/yyyy` khỏi `thoiGianGoc`; còn đúng 2 ngày,
+   đúng thứ tự, không còn chữ thừa ⇒ giữ nguyên, không tô.
+2. **Ba màu, không hơn.** `C6EFCE` xanh = đã sửa · `FFFF00` vàng = cần xem lại ·
+   `FF0000` đỏ + chữ trắng đậm = lỗi phải sửa.
+3. **Ghi chú vào ô** (`cell.note`) nói rõ *Cũ → Mới* và lý do. Ô bị nhiều vấn đề thì **nối**
+   ghi chú, đừng ghi đè.
+4. **Ô trong vùng gộp**: ghi vào ô gốc (trên-trái), tức `cell.master ?? cell`.
+5. ⚠️ **ExcelJS dùng chung một đối tượng style cho các ô cùng định dạng.** Gán thẳng `cell.fill`
+   sẽ tô cả loạt ô khác (cả cột Tiêu đề đỏ au). Phải thay `cell.style` bằng **bản sao** rồi mới
+   đặt `fill`.
+6. Chỉ làm được với `.xlsx`/`.xlsm`. Tệp `.xls` thì báo người dùng lưu lại dạng `.xlsx`.
+
+Đặt tên tệp tải về `<tên gốc>_DADIEN.xlsx` — trùng quy ước desktop, người dùng hai bên gọi
+cùng một tên.
 
 ## 11. Cửa thứ tư — «Tự kiểm PDF/A»: một tệp PDF mẫu
 

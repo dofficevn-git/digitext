@@ -319,6 +319,49 @@ mod tests {
 
     /// Xuất tệp mẫu ra đĩa để NHÌN bằng mắt. Không chạy trong bộ test thường.
     ///   cargo test -p digitext-api xuat_mau_de_xem -- --ignored --nocapture
+    /// Xuất bảng «Kiểm tra» ra tệp để NHÌN. Lỗi trình bày (chữ bị cắt, cột hẹp) không test nào
+    /// bắt được, phải dựng thành ảnh mà xem.
+    ///   $env:BAO_CAO_RA="D:\tmp\bao-cao.xlsx"
+    ///   cargo test -p digitext-api xuat_bao_cao_de_xem -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn xuat_bao_cao_de_xem() {
+        use calamine::Data;
+        let o = |v: &str| Data::String(v.to_string());
+        let mut rows: Vec<Vec<Data>> = vec![
+            vec![o("Hộp số"), o("Hồ sơ số"), o("Tiêu đề hồ sơ"), o("Thời gian"), o("Số tờ"), o("THBQ")],
+            vec![o(""), o(""), o("I. VĂN PHÒNG HĐND VÀ UBND HUYỆN"), o(""), o(""), o("")],
+            vec![o(""), o(""), o("1. Tài liệu tổng hợp"), o(""), o(""), o("")],
+        ];
+        for (i, (td, tg, so_to, thbq)) in [
+            ("Hồ sơ Hội nghị tổng kết công tác năm 2020 của Ủy ban nhân dân huyện", "05/01/2020 - 28/12/2020", "124", "Vĩnh viễn"),
+            ("Tập lưu quyết định của UBND huyện năm 2019", "", "86", "Vĩnh viễn"),
+            ("Hồ sơ về việc giải quyết khiếu nại của công dân", "2020", "", "Không có thật"),
+            ("Hồ sơ xây dựng cơ bản công trình đường liên xã năm 1700", "01/01/1700 - 31/12/1700", "40", "Vĩnh viễn"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            rows.push(vec![o("1"), o(&format!("{:02}", i + 1)), o(td), o(tg), o(so_to), o(thbq)]);
+        }
+        let dm = vec!["Vĩnh viễn".to_string()];
+        let pt = digitext_mucluc::phan_tich::phan_tich_muc_luc(
+            &rows,
+            &digitext_mucluc::phan_tich::TuyChon {
+                ten_tep: "muc-luc-vp-huyen.xlsx",
+                sheet: "Sheet1",
+                sheets: &["Sheet1".to_string()],
+                thbq_danh_muc: &dm,
+                thbq_vinh_vien: &dm,
+                thbq_mac_dinh: None,
+            },
+        );
+        let tep = dong_goi(&mau::bao_cao_kiem_tra(&pt)).unwrap();
+        let ra = std::env::var("BAO_CAO_RA").unwrap_or_else(|_| "bao-cao-xem.xlsx".into());
+        std::fs::write(&ra, &tep).unwrap();
+        println!("đã ghi {ra} ({} byte)", tep.len());
+    }
+
     #[test]
     #[ignore]
     fn xuat_mau_de_xem() {
