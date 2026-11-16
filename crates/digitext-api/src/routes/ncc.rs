@@ -56,6 +56,7 @@ pub fn router() -> Router<AppState> {
         .route("/ncc/tu-kiem/muc-luc/bao-cao", post(muc_luc_bao_cao).layer(axum::extract::DefaultBodyLimit::max(12 * 1024 * 1024)))
         .route("/ncc/tu-kiem/pdf", post(tu_kiem_pdf).layer(axum::extract::DefaultBodyLimit::max(48 * 1024 * 1024)))
         .route("/ncc/tu-kiem/goi", post(tu_kiem_goi).layer(axum::extract::DefaultBodyLimit::max(24 * 1024 * 1024)))
+        .route("/ncc/tu-kiem/goi/dot", post(tu_kiem_dot))
 }
 
 // ---------------------------------------------------------------- nhóm chỉ số
@@ -1137,6 +1138,7 @@ mod tests {
         assert_eq!(serde_json::from_str::<GoiMau>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/muc-luc/mau");
         assert_eq!(serde_json::from_str::<GoiPdf>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/pdf");
         assert_eq!(serde_json::from_str::<GoiGoiTin>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/goi");
+        assert_eq!(serde_json::from_str::<GoiDot>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/goi/dot");
     }
 
     /// Các khoá nhiều chữ khác cũng phải nhận dạng camelCase, không riêng `maNgoai` — cùng một
@@ -1158,6 +1160,16 @@ mod tests {
         assert_eq!(g.co_goi, Some(131_723_288));
         assert_eq!(g.tep[0].duong_dan.as_deref(), Some("a/METS.xml"));
         assert!(g.tep[0].noi_dung.is_some());
+        // Cửa đợt nhận lại ĐÚNG những khoá nó vừa trả ra ở cửa gói — chép thẳng sang là chạy.
+        let g: GoiDot = serde_json::from_str(
+            r#"{"maNgoai":"X","goi":[{"tenGoi":"AIP.zip","objid":"urn:A","maPhong":"H49.155.03","soTaiLieu":7,"soTrang":123,"soTepDuLieu":7,"ketLuan":"CHƯA KIỂM ĐỦ","soLoi":0,"soCanhBao":11}]}"#,
+        )
+        .unwrap();
+        assert_eq!(g.goi[0].ten_goi.as_deref(), Some("AIP.zip"));
+        assert_eq!(g.goi[0].ma_phong.as_deref(), Some("H49.155.03"));
+        assert_eq!(g.goi[0].so_tai_lieu, Some(7));
+        assert_eq!(g.goi[0].so_tep_du_lieu, Some(7));
+        assert_eq!(g.goi[0].so_canh_bao, Some(11));
     }
 
     #[test]
@@ -1368,6 +1380,145 @@ const GOI_SIEU_DU_LIEU_TOI_DA: usize = 12 * 1024 * 1024;
 const GOI_MUC_TOI_DA: usize = 20_000;
 
 const PDF_BYTE_TOI_DA: usize = 32 * 1024 * 1024;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GoiDot {
+    #[serde(alias = "ma_ngoai", alias = "maDuAnNgoai")]
+    ma_ngoai: Option<String>,
+    #[serde(default)]
+    goi: Vec<MucDot>,
+}
+
+/// Tóm tắt một gói — chính là mấy trường cửa `tu-kiem/goi` vừa trả về cho gói đó.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MucDot {
+    #[serde(alias = "ten_goi", alias = "tenTep")]
+    ten_goi: Option<String>,
+    objid: Option<String>,
+    #[serde(alias = "ma_phong")]
+    ma_phong: Option<String>,
+    #[serde(alias = "so_tai_lieu")]
+    so_tai_lieu: Option<u64>,
+    #[serde(alias = "so_trang")]
+    so_trang: Option<u64>,
+    #[serde(alias = "so_tep_du_lieu")]
+    so_tep_du_lieu: Option<u64>,
+    #[serde(alias = "ket_luan")]
+    ket_luan: Option<String>,
+    #[serde(alias = "so_loi")]
+    so_loi: Option<usize>,
+    #[serde(alias = "so_canh_bao")]
+    so_canh_bao: Option<usize>,
+}
+
+/// Số gói tối đa một đợt. 500 gói × ~400 byte tóm tắt là chưa tới 200 KB, nên trần này là để
+/// chặn gói tin bậy chứ không phải vì nặng.
+const DOT_GOI_TOI_DA: usize = 500;
+
+/// `POST /api/v1/ncc/tu-kiem/goi/dot` — kiểm **cả đợt giao**, sau khi đã kiểm từng gói.
+///
+/// Gửi lên phần tóm tắt mà cửa `tu-kiem/goi` vừa trả cho từng gói, **không** gửi lại bản kê
+/// (một đợt 50 gói là hơn 20 MB). Cửa này chỉ tìm những thứ chỉ thấy khi đặt các gói cạnh nhau:
+/// trùng `OBJID`, trùng tên tệp, một đợt lẫn nhiều phông — từng gói một thì gói nào cũng sạch
+/// mà cả đợt vẫn hỏng, và nhận vào kho mới biết thì đã phải đóng lại từ đầu.
+///
+/// Có đối chiếu được mã phông của gói với phông của dự án không? **Không**, cố ý: mã trong METS
+/// dài hơn mã phông (đo trên gói thật — `H49.155.3.01.2013.09.01` so với `H49.155.03`) nên so
+/// khớp là báo oan. Cửa trả `phongTrongDuAn[]` để cổng bày cạnh `maPhong[]`, người đọc tự nhìn.
+async fn tu_kiem_dot(
+    State(st): State<AppState>,
+    ip: T2t,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, ApiError> {
+    let kh = xac_thuc(&st, &headers, &ip, &body).await?;
+    let g: GoiDot = serde_json::from_slice(&body)
+        .map_err(|e| ApiError::bad_request(format!("thân gói không phải JSON hợp lệ: {e}")))?;
+
+    let ma_ngoai = g
+        .ma_ngoai
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| ApiError::bad_request("thiếu maNgoai — mã dự án bên hệ thống của bạn"))?;
+    if g.goi.is_empty() {
+        return Err(ApiError::bad_request("thiếu goi[] — tóm tắt của từng gói đã kiểm"));
+    }
+    if g.goi.len() > DOT_GOI_TOI_DA {
+        return Err(ApiError::bad_request(format!(
+            "đợt có {} gói, vượt trần {DOT_GOI_TOI_DA} — chia nhỏ đợt",
+            g.goi.len()
+        )));
+    }
+
+    let du_an = digitext_db::webhooks::tim_theo_ma_ngoai(&st.pool, &kh.nguon, ma_ngoai)
+        .await?
+        .ok_or_else(|| ApiError {
+            status: axum::http::StatusCode::NOT_FOUND,
+            code: "ncc_du_an_khong_thay",
+            message: format!("không có dự án nào mang maNgoai {ma_ngoai:?}"),
+        })?;
+
+    let goi: Vec<digitext_pkgcheck::dot::GoiTomTat> = g
+        .goi
+        .iter()
+        .enumerate()
+        .map(|(i, m)| digitext_pkgcheck::dot::GoiTomTat {
+            // Tên rỗng thì đặt tên theo vị trí, kẻo thông báo "2 gói cùng OBJID ( , )" vô nghĩa.
+            ten_goi: m
+                .ten_goi
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or(&format!("gói thứ {}", i + 1))
+                .to_owned(),
+            objid: m.objid.as_deref().unwrap_or_default().trim().to_owned(),
+            ma_phong: m.ma_phong.as_deref().unwrap_or_default().trim().to_owned(),
+            so_tai_lieu: m.so_tai_lieu.unwrap_or(0),
+            so_trang: m.so_trang.unwrap_or(0),
+            so_tep_du_lieu: m.so_tep_du_lieu.unwrap_or(0),
+            ket_luan: m.ket_luan.as_deref().unwrap_or_default().trim().to_owned(),
+            so_loi: m.so_loi.unwrap_or(0),
+            so_canh_bao: m.so_canh_bao.unwrap_or(0),
+        })
+        .collect();
+
+    let kq = digitext_pkgcheck::dot::kiem_dot(&goi);
+    let phong_ds = cl_ncc::phong_cua_du_an(&st.pool, du_an.id).await?;
+    let muc = |l: &digitext_pkgcheck::Level| match l {
+        digitext_pkgcheck::Level::Err => "loi",
+        digitext_pkgcheck::Level::Warn => "canh_bao",
+        digitext_pkgcheck::Level::Ok => "dat",
+    };
+    let so_loi_dot = kq.findings.iter().filter(|f| f.level == digitext_pkgcheck::Level::Err).count();
+    let so_cb_dot = kq.findings.iter().filter(|f| f.level == digitext_pkgcheck::Level::Warn).count();
+    Ok(Json(json!({
+        "maNgoai": ma_ngoai,
+        "maDuAn": du_an.code,
+        "tenDuAn": du_an.name,
+        "soGoi": kq.so_goi,
+        "soGoiKhongDat": kq.so_goi_khong_dat,
+        "tongTaiLieu": kq.tong_tai_lieu,
+        "tongTrang": kq.tong_trang,
+        "tongTepDuLieu": kq.tong_tep_du_lieu,
+        // Cộng từ KẾT QUẢ TỪNG GÓI — khác `soLoiDot`/`soCanhBaoDot` là của riêng phép kiểm đợt.
+        "soLoiTrongGoi": kq.so_loi,
+        "soCanhBaoTrongGoi": kq.so_canh_bao,
+        "soLoiDot": so_loi_dot,
+        "soCanhBaoDot": so_cb_dot,
+        "giaoDuoc": so_loi_dot == 0 && kq.so_goi_khong_dat == 0,
+        "maPhong": kq.ma_phong.iter().map(|(m, n)| json!({ "ma": m, "soGoi": n })).collect::<Vec<_>>(),
+        "phongTrongDuAn": phong_ds,
+        "phatHien": kq.findings.iter().map(|f| json!({
+            "muc": muc(&f.level),
+            "nhom": f.group,
+            "noiDung": f.message,
+        })).collect::<Vec<_>>(),
+        "ghiChu": "Cửa này chỉ tìm lỗi GIỮA các gói. Mỗi gói vẫn phải tự kiểm bằng «Tự kiểm gói tin», và kết luận của từng gói ở đó vẫn là CHƯA KIỂM ĐỦ vì nội dung tệp chưa ai xem.",
+    })))
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

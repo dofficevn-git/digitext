@@ -15,3 +15,7 @@ opentelemetry-otlp = { workspace = true }
 opentelemetry-appender-tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-opentelemetry = { workspace = true }
+
+[dev-dependencies]
+# Chỉ cho `examples/thu-mau.rs` — ví dụ kiểm lớp log có tô màu hay không.
+tracing = { workspace = true }

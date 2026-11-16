@@ -2,8 +2,8 @@
 
 Tài liệu cho lập trình viên của hệ thống quản lý hợp đồng (CRM / DO365).
 
-> **Bảy cửa, một khoá.** Tất cả dùng chung khoá và chung cách ký ở mục 1 — đọc mục 1 một
-> lần là viết được cả bảy.
+> **Tám cửa, một khoá.** Tất cả dùng chung khoá và chung cách ký ở mục 1 — đọc mục 1 một
+> lần là viết được cả tám.
 >
 > | Mục | Cửa | Lấp mục menu |
 > |---|---|---|
@@ -14,6 +14,7 @@ Tài liệu cho lập trình viên của hệ thống quản lý hợp đồng (
 > | 10.10 | `POST /ncc/tu-kiem/muc-luc/bao-cao` | *(nút «Tải bảng Kiểm tra» trong màn trên)* |
 > | 11 | `POST /ncc/tu-kiem/pdf` | Tự kiểm PDF/A |
 > | 12 | `POST /ncc/tu-kiem/goi` | Tự kiểm gói tin |
+> | 13 | `POST /ncc/tu-kiem/goi/dot` | *(nút «Kiểm cả đợt» trong màn trên)* |
 >
 > Mục 12 **đổi quyết định 13/11/2026**: trước đây ghi là không làm cửa web vì gói cỡ GB. Nay cửa
 > nhận **bản kê siêu dữ liệu** (0,247% cỡ gói) nên không phải tải gói lên nữa.
@@ -1057,6 +1058,84 @@ dùng chọn thư mục, không phải do gói sai.)
 4. **Luôn bày `ghiChu`** khi `chuaKiemNoiDung > 0`. Gói "CHƯA KIỂM ĐỦ" vẫn có thể bị từ chối
    lúc giao — nói trước còn hơn để người ta tưởng đã xong.
 5. Dòng menu riêng, như bốn cửa kia (xem 10.7).
+
+---
+
+## 13. Kiểm **cả đợt giao** — `POST /api/v1/ncc/tu-kiem/goi/dot`
+
+### 13.1. Nó bắt loại lỗi nào
+
+Loại lỗi mà kiểm từng gói **không bao giờ** thấy: gói nào cũng sạch, nhưng đặt cạnh nhau thì cả
+đợt hỏng.
+
+| | Mức | Vì sao |
+|---|---|---|
+| Hai gói cùng `OBJID` | **lỗi** | Công cụ đóng gói dùng lại UUID. Kho chỉ giữ được một gói ⇒ mất gói kia |
+| Hai gói cùng tên tệp | **lỗi** | Ghi đè nhau lúc chép sang ổ giao |
+| Đợt lẫn nhiều mã phông | cảnh báo | Gần như luôn là gói lạc sang đợt khác — nhưng có đơn vị giao gộp thật, nên **không** phải lỗi |
+| Gói không đọc được `OBJID` | cảnh báo | Nói thẳng là **chưa** đối chiếu trùng lặp được cho gói đó |
+
+Cộng luôn cả đợt: tổng tài liệu · trang · tệp dữ liệu, và số gói còn lỗi cấu trúc.
+
+### 13.2. Gửi gì — chính thứ bạn vừa nhận
+
+Kiểm từng gói trước bằng mục 12, giữ lại kết quả, rồi gửi **tóm tắt** sang đây. Đúng những khoá
+cửa 12 vừa trả, chép thẳng sang là chạy:
+
+```json
+{ "maNgoai": "PRJ-26-017",
+  "goi": [
+    { "tenGoi": "AIP-001.zip", "objid": "urn:H49…A649", "maPhong": "H49.155.03",
+      "soTaiLieu": 7, "soTrang": 123, "soTepDuLieu": 7,
+      "ketLuan": "CHƯA KIỂM ĐỦ (có cảnh báo)", "soLoi": 0, "soCanhBao": 11 }
+  ] }
+```
+
+**Đừng gửi lại bản kê của từng gói** — một đợt 50 gói là hơn 20 MB, mà cửa này không dùng tới.
+Trần: **500 gói** một đợt (500 × ~400 byte tóm tắt là chưa tới 200 KB; trần đặt để chặn gói tin
+bậy, không phải vì nặng).
+
+### 13.3. Nhận
+
+```json
+{ "soGoi": 47, "soGoiKhongDat": 3,
+  "tongTaiLieu": 329, "tongTrang": 5781, "tongTepDuLieu": 329,
+  "soLoiTrongGoi": 9, "soCanhBaoTrongGoi": 517,
+  "soLoiDot": 1, "soCanhBaoDot": 1,
+  "giaoDuoc": false,
+  "maPhong": [ { "ma": "H49.155.03", "soGoi": 46 }, { "ma": "H50.112.01", "soGoi": 1 } ],
+  "phongTrongDuAn": ["UBND huyện Đầm Hà", "Phòng Nội vụ"],
+  "phatHien": [ { "muc": "loi", "nhom": "Đợt giao", "noiDung": "2 gói cùng OBJID…" } ],
+  "ghiChu": "Cửa này chỉ tìm lỗi GIỮA các gói…" }
+```
+
+| Trường | |
+|---|---|
+| **`giaoDuoc`** | `true` khi đợt không có lỗi đợt **và** không gói nào còn lỗi cấu trúc. Bày to |
+| `soLoiDot` · `soCanhBaoDot` | Của **riêng** phép kiểm đợt |
+| `soLoiTrongGoi` · `soCanhBaoTrongGoi` | **Cộng từ** kết quả từng gói bạn gửi lên. Hai cặp này khác nhau, đừng trộn |
+| `maPhong[]` | Mã phông trong đợt + số gói mang mã đó. Cái nào `soGoi` nhỏ bất thường là cái lạc đàn |
+| `phongTrongDuAn[]` | Phông của dự án, để bày **cạnh** `maPhong[]` |
+
+> ⚠️ **Máy chủ KHÔNG kết luận "gói sai phông".** Mã trong METS dài hơn mã phông của dự án — đo
+> trên gói thật: `H49.155.3.01.2013.09.01` so với `H49.155.03`. So khớp tự động là báo oan.
+> Cổng bày hai danh sách cạnh nhau, người đọc tự nhìn.
+
+> ⚠️ `giaoDuoc: true` **không** có nghĩa là gói sẽ được nhận. Từng gói vẫn ở mức `CHƯA KIỂM ĐỦ`
+> vì nội dung tệp chưa ai xem (mục 12.2). Đừng để chữ "giao được" nuốt mất điều đó.
+
+### 13.4. Việc cần làm để nối xong
+
+1. Màn «Tự kiểm gói tin» cho chọn **thư mục chứa nhiều gói**: mỗi thư mục con có `METS.xml` là
+   một gói. Gọi cửa 12 **lần lượt** cho từng gói.
+2. Gọi 47 lần liên tiếp **không bị chặn**: chốt chống dò khoá chỉ chạy khi đệm xác thực trượt và
+   chỉ đếm lần *sai*. Nhưng **gọi tuần tự hoặc tối đa 3 luồng** — mỗi lời gọi là một lần phân
+   tích XML trên máy chủ.
+3. Bảng mỗi gói một dòng: tên · kết luận · số lỗi · số cảnh báo. Bấm vào dòng mới xem chi tiết.
+4. Xong hết thì gọi cửa 13 một lần, bày `giaoDuoc` + `phatHien[]` **phía trên** bảng — lỗi đợt
+   quan trọng hơn lỗi của từng gói.
+5. Gói nào gọi hỏng (mạng, 5xx) thì ghi rõ trong bảng và **loại khỏi** gói tin gửi cửa 13,
+   kẻo "không trùng OBJID" là kết luận trên một đợt thiếu gói.
 
 ---
 

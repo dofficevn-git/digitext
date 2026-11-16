@@ -91,11 +91,21 @@ fn f_vy(r_5hg: &TelemetryConfig) -> Resource {
         ))
         .build()
 }
+/// Lớp in log ra stdout. Chỉ tô màu khi đầu ra **là màn hình**.
+///
+/// Trên máy chủ, stdout bị Scheduled Task đổ thẳng vào `logs/api.out.log`, nên bật màu là nhét
+/// mã thoát ANSI vào tệp: đo 16/11/2026 — 60 mã trong một tệp 1009 byte, đọc bằng mắt rất mệt
+/// và mọi phép `grep`/`Select-String` đều vướng. Chạy trong terminal thì vẫn có màu như cũ.
+fn f_mau<S>() -> tracing_subscriber::fmt::Layer<S> {
+    use std::io::IsTerminal as _;
+    tracing_subscriber::fmt::layer().with_ansi(std::io::stdout().is_terminal())
+}
+
 pub fn init(r_5hh: &TelemetryConfig) -> Tnx {
     if !r_5hh.export_enabled {
         let _ = tracing_subscriber::registry()
             .with(f_vd(&r_5hh.log_directive))
-            .with(tracing_subscriber::fmt::layer())
+            .with(f_mau())
             .try_init();
         return Tnx { providers: None };
     }
@@ -138,7 +148,7 @@ pub fn init(r_5hh: &TelemetryConfig) -> Tnx {
     let r_5hm = OpenTelemetryTracingBridge::new(&r_5hj);
     let _ = tracing_subscriber::registry()
         .with(f_vd(&r_5hh.log_directive))
-        .with(tracing_subscriber::fmt::layer())
+        .with(f_mau())
         .with(r_5hn)
         .with(r_5hm)
         .try_init();

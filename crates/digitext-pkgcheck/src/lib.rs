@@ -3,6 +3,7 @@
 //! `ml/tools/check_tt05_package.py` (bản kiểm gói TKT 19/9 và 9/10/2026), cộng xác minh chữ ký số.
 //! XSD: không có bộ kiểm XSD trong Rust — đối chiếu RÚT GỌN với schema đi kèm gói (đủ trường bắt buộc,
 //! không có trường lạ), chưa kiểm kiểu dữ liệu từng trường.
+pub mod dot;
 mod load;
 pub mod report;
 mod xml;
