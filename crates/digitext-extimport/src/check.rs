@@ -84,6 +84,7 @@ pub fn huong_dan(code: &str) -> (&'static str, &'static str) {
         "PDF-KHONG-PHAI-PDFA" | "PDF-THIEU-LOP-CHU" | "PDF-DPI-THAP" | "PDF-KHONG-MAU-24BIT" | "PDF-CHUA-KY-SO" => ("Tệp chưa đạt Điều 8.2.a TT05", "Quét lại / chuyển PDF/A / ký số theo yêu cầu, hoặc dùng tab Đóng gói nhanh nếu chủ dự án chấp nhận bản hiện có."),
         "PDF-KHONG-DAT-ISO" => ("Không đạt chuẩn ISO 19005 (veraPDF)", "Chuyển lại sang PDF/A bằng công cụ đạt chuẩn rồi ký lại; hoặc tắt yêu cầu ISO nếu dự án không đòi."),
         "PDF-VERAPDF-KHONG-CHAY" => ("Không chạy được veraPDF", "Cài Docker và image verapdf/cli, hoặc tắt ô yêu cầu ISO."),
+        "KHO-CAN-LE" => ("Đã tự căn đoạn đầu đường dẫn", "Không phải lỗi — bản kê gửi lên lệch một lớp thư mục so với đường dẫn trong Excel, đã tự chỉnh để đối chiếu. Soát lại xem có đúng thư mục kho bạn định chọn không."),
         "BIA-MLVB" => ("Tệp bìa / mục lục nhận mã theo thư mục", "Không cần làm gì."),
         _ => ("", "Xem nội dung để biết cần sửa gì."),
     }
@@ -212,16 +213,16 @@ pub fn rel_to_path(root: &Path, rel: &str) -> PathBuf {
     }
     p
 }
-fn norm_rel(rel: &str) -> String {
+pub(crate) fn norm_rel(rel: &str) -> String {
     rel.split(['\\', '/']).filter(|s| !s.is_empty()).collect::<Vec<_>>().join("\\")
 }
-fn dir_of(rel: &str) -> String {
+pub(crate) fn dir_of(rel: &str) -> String {
     match rel.rfind('\\') {
         Some(i) => rel[..i].to_string(),
         None => String::new(),
     }
 }
-fn base_of(rel: &str) -> &str {
+pub(crate) fn base_of(rel: &str) -> &str {
     rel.rsplit('\\').next().unwrap_or(rel)
 }
 /// Đọc số nguyên chịu được rác nhập liệu: «36 '» → 36, «12 tờ» → 12. Trả (số, có rác?).
@@ -301,6 +302,12 @@ pub fn plan(sheet: &Sheet, root: &Path) -> Plan {
             }
         }
     }
+    gom(sheet, root)
+}
+
+/// Phần gom hồ sơ của [`plan`], KHÔNG chạm đĩa. Tách ra để bản kiểm theo bản kê
+/// ([`crate::kho`]) dùng lại: ở đó không có đĩa để dò nên `root` truyền rỗng.
+pub(crate) fn gom(sheet: &Sheet, root: PathBuf) -> Plan {
     let mut map: BTreeMap<String, Vec<Row>> = BTreeMap::new();
     let mut mlvb_skipped = 0usize;
     for r in &sheet.rows {
@@ -412,15 +419,15 @@ fn date_key(s: &str) -> Option<u32> {
     Some(p[2] * 10000 + p[1] * 100 + p[0])
 }
 
-struct Sink {
+pub(crate) struct Sink {
     errors: Vec<Issue>,
     warns: BTreeMap<(String, &'static str), Issue>,
 }
 impl Sink {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Sink { errors: Vec::new(), warns: BTreeMap::new() }
     }
-    fn error(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
+    pub(crate) fn error(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
         // Liệt kê tối đa 25 lỗi cùng loại mỗi hồ sơ; phần còn lại cộng dồn vào dòng thứ 25
         // (một hồ sơ 300 tệp lệch tên không nên sinh 300 dòng báo cáo giống nhau).
         let same = self.errors.iter().filter(|i| i.code == code && i.dossier == d).count();
@@ -441,7 +448,7 @@ impl Sink {
     fn warn(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
         self.note(Severity::Warning, code, d, hs, line, file, msg)
     }
-    fn info(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
+    pub(crate) fn info(&mut self, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
         self.note(Severity::Info, code, d, hs, line, file, msg)
     }
     fn note(&mut self, severity: Severity, code: &'static str, d: &str, hs: &str, line: Option<u32>, file: Option<&str>, msg: String) {
@@ -906,9 +913,15 @@ pub fn run(
     progress: &(dyn Fn(usize, usize) + Sync),
 ) -> CheckReport {
     let mut sink = Sink::new();
-    if plan.mlvb_skipped > 0 {
-        sink.info("BIA-MLVB", "", "", None, Some("BIA.pdf / MLVB.pdf"), format!("{} tệp bìa hồ sơ (BIA.pdf) / mục lục văn bản (MLVB.pdf) nhận mã phông, mã hồ sơ theo các tệp cùng thư mục; vẫn đóng gói, STT đánh tiếp sau số lớn nhất", plan.mlvb_skipped));
-    }
+    let disk = liet_ke_dia(plan, &mut sink);
+    chay(sheet, &excel_path.display().to_string(), plan, disk, sink, deep, tt05_strict, verapdf, threads, progress)
+}
+
+/// Liệt kê PDF trên đĩa thành bảng `rel thường hoá → (rel thật, cỡ)`.
+///
+/// Đây là CHỖ DUY NHẤT của bước kiểm nông chạm đĩa — [`chay`] chỉ tra bảng này. Bản kiểm theo
+/// bản kê dựng bảng y hệt từ dữ liệu cổng gửi lên rồi gọi thẳng [`chay`].
+fn liet_ke_dia(plan: &Plan, sink: &mut Sink) -> HashMap<String, (String, u64)> {
     // ---- liệt kê đĩa: chỉ quét các thư mục cấp đầu mà Excel nhắc tới
     let mut tops: BTreeSet<String> = BTreeSet::new();
     for d in &plan.dossiers {
@@ -932,6 +945,27 @@ pub fn run(
             sink.error("THU-MUC-GOC-KHONG-CO", "", "", None, None, format!("không thấy thư mục «{}» dưới {}{hint}", t, plan.root.display()));
         }
         walk_pdfs(&p, &plan.root, &mut disk);
+    }
+    disk
+}
+
+/// Phần kiểm thuần tính toán: nhận SẴN bảng tệp (`disk`) nên dùng được cho cả đĩa thật lẫn bản
+/// kê gửi qua HTTP. `deep` bật thì mới mở từng PDF — lúc đó `plan.root` phải là đĩa thật.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn chay(
+    sheet: &Sheet,
+    excel: &str,
+    plan: &Plan,
+    disk: HashMap<String, (String, u64)>,
+    mut sink: Sink,
+    deep: bool,
+    tt05_strict: bool,
+    verapdf: bool,
+    threads: usize,
+    progress: &(dyn Fn(usize, usize) + Sync),
+) -> CheckReport {
+    if plan.mlvb_skipped > 0 {
+        sink.info("BIA-MLVB", "", "", None, Some("BIA.pdf / MLVB.pdf"), format!("{} tệp bìa hồ sơ (BIA.pdf) / mục lục văn bản (MLVB.pdf) nhận mã phông, mã hồ sơ theo các tệp cùng thư mục; vẫn đóng gói, STT đánh tiếp sau số lớn nhất", plan.mlvb_skipped));
     }
     // ---- đường dẫn trùng trong Excel + tệp trên đĩa không có trong Excel
     let mut seen: HashMap<String, u32> = HashMap::new();
@@ -1038,7 +1072,7 @@ pub fn run(
         })
         .collect();
     CheckReport {
-        excel: excel_path.display().to_string(),
+        excel: excel.to_string(),
         sheet: sheet.sheet_name.clone(),
         header_line: sheet.header_line,
         root: plan.root.display().to_string(),

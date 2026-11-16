@@ -232,7 +232,19 @@ fn map_block(
 
 /// Mở Excel, tự tìm sheet + dòng tiêu đề (trong 15 dòng đầu), trả mọi dòng dữ liệu.
 pub fn read(path: &Path) -> Result<Sheet, String> {
-    let mut wb = open_workbook_auto(path).map_err(|e| format!("không mở được Excel {}: {e}", path.display()))?;
+    let wb = open_workbook_auto(path).map_err(|e| format!("không mở được Excel {}: {e}", path.display()))?;
+    tu_workbook(wb)
+}
+
+/// Như [`read`] nhưng đọc từ BYTE sẵn trong bộ nhớ — dùng khi tệp Excel được gửi lên qua HTTP
+/// (cửa tự kiểm kho của cổng nhà cung cấp) chứ không nằm trên đĩa máy chủ.
+pub fn doc_byte(bytes: Vec<u8>) -> Result<Sheet, String> {
+    let wb = calamine::open_workbook_auto_from_rs(std::io::Cursor::new(bytes))
+        .map_err(|e| format!("không mở được tệp Excel: {e}"))?;
+    tu_workbook(wb)
+}
+
+fn tu_workbook<RS: std::io::Read + std::io::Seek>(mut wb: calamine::Sheets<RS>) -> Result<Sheet, String> {
     let names = wb.sheet_names().to_vec();
     let mut best: Option<(usize, String, u32, calamine::Range<Data>)> = None;
     for name in names {

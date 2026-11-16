@@ -11,6 +11,7 @@
 pub mod check;
 pub mod cli;
 pub mod excel;
+pub mod kho;
 pub mod pack;
 pub mod pdfa;
 pub mod report;

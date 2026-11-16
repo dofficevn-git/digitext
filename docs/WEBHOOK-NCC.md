@@ -2,8 +2,8 @@
 
 Tài liệu cho lập trình viên của hệ thống quản lý hợp đồng (CRM / DO365).
 
-> **Tám cửa, một khoá.** Tất cả dùng chung khoá và chung cách ký ở mục 1 — đọc mục 1 một
-> lần là viết được cả tám.
+> **Chín cửa, một khoá.** Tất cả dùng chung khoá và chung cách ký ở mục 1 — đọc mục 1 một
+> lần là viết được cả chín.
 >
 > | Mục | Cửa | Lấp mục menu |
 > |---|---|---|
@@ -15,6 +15,7 @@ Tài liệu cho lập trình viên của hệ thống quản lý hợp đồng (
 > | 11 | `POST /ncc/tu-kiem/pdf` | Tự kiểm PDF/A |
 > | 12 | `POST /ncc/tu-kiem/goi` | Tự kiểm gói tin |
 > | 13 | `POST /ncc/tu-kiem/goi/dot` | *(nút «Kiểm cả đợt» trong màn trên)* |
+> | 14 | `POST /ncc/tu-kiem/kho` | Tự kiểm kho trước khi đóng gói |
 >
 > Mục 12 **đổi quyết định 13/11/2026**: trước đây ghi là không làm cửa web vì gói cỡ GB. Nay cửa
 > nhận **bản kê siêu dữ liệu** (0,247% cỡ gói) nên không phải tải gói lên nữa.
@@ -1139,3 +1140,170 @@ bậy, không phải vì nặng).
 
 ---
 
+
+---
+
+## 14. Cửa thứ sáu — «Tự kiểm kho trước khi đóng gói»: `POST /api/v1/ncc/tu-kiem/kho`
+
+Mục 12 kiểm **gói đã đóng xong**. Cửa này kiểm **thứ chưa đóng**: một thư mục PDF đã quét
+(Phông ▸ Hộp ▸ Hồ sơ) và một tệp Excel metadata phẳng, mỗi dòng một tài liệu.
+
+Đây là bước kiểm của tab «Đóng gói nhanh» trên máy trạm DigiText, đưa nguyên lên máy chủ.
+
+**Vì sao nên làm cửa này trước cả mục 12 trong quy trình của nhà thầu:** nó bắt lỗi **sớm
+nhất** trong cả dây chuyền. Sai mã phông, tên tệp lệch mã hồ sơ, thiếu một tệp — biết ngay
+khi còn là thư mục quét, sửa mất mười phút. Phát hiện ở mục 12 thì gói trăm MB đã đóng
+xong, phải đóng lại từ đầu.
+
+### 14.1. Khác mục 12 ở điểm quan trọng nhất: **không bỏ phép kiểm nào**
+
+Mục 12 phải bỏ ba phép kiểm (PDF/A, mã băm METS, mã băm PREMIS) vì bản kê không mang byte
+nội dung. Cửa này **không bỏ gì cả** — vì bước kiểm nông vốn đã không cần byte nội dung:
+nó chỉ đọc **tên tệp, cỡ tệp và tệp Excel**. Nhánh mở PDF trong bộ kiểm nằm trọn sau một
+điều kiện mà chế độ nhanh luôn tắt.
+
+Nói cách khác: kết quả cửa này **bằng đúng** kết quả chạy «Đóng gói nhanh» trên máy trạm.
+Bên DigiText có test đối chiếu hai đường cho ra cùng danh sách lỗi.
+
+> **Nhưng nó không nói gì về CHẤT LƯỢNG tệp.** Không độ phân giải, không PDF/A, không lớp
+> chữ, không chữ ký số. Kho qua được cửa này vẫn có thể chưa đạt Điều 8.2.a TT05. Muốn kiểm
+> chất lượng thì gửi một tệp mẫu sang mục 11.
+
+### 14.2. Thân gói
+
+```json
+{
+  "maNgoai": "PRJ-26-017",
+  "tenExcel": "Metadata.xlsx",
+  "excel": "UEsDBBQA…",
+  "tep": [
+    { "duongDan": "KHO/UBND/HOP01/HS 001/H49.101.01.1993.001.0000001.pdf", "co": 1048576 },
+    { "duongDan": "KHO/UBND/HOP01/HS 001/H49.101.01.1993.001.0000002.pdf", "co": 2097152 }
+  ]
+}
+```
+
+| Khoá | Bắt buộc | Nghĩa |
+|---|---|---|
+| `maNgoai` | ✔ | mã dự án bên hệ thống của bạn |
+| `excel` | ✔ | nội dung tệp Excel metadata (`.xlsx`/`.xls`), **mã base64** |
+| `tenExcel` | | tên tệp, chỉ để hiện lại. Mặc định `Metadata.xlsx` |
+| `tep[].duongDan` | ✔ | đường dẫn **tương đối**. Nhận cả `/` lẫn `\` |
+| `tep[].co` | | cỡ tệp, byte. Thiếu = 0, chỉ ảnh hưởng phép kiểm tệp rỗng |
+
+**Trần:** Excel ≤ 24 MiB · `tep[]` ≤ 200.000 mục · thân gói ≤ 64 MiB. Kho lớn hơn thì gửi
+từng phông.
+
+Đường dẫn tuyệt đối (`/…`, `C:\…`) và đoạn `..` bị từ chối bằng **400**.
+
+### 14.3. Lấy bản kê ở trình duyệt — không đọc nội dung tệp
+
+Ô chọn thư mục cho đủ dữ liệu mà **không** phải đọc một byte nội dung nào:
+
+```html
+<input type="file" webkitdirectory directory multiple />
+```
+
+```ts
+const tep = [...input.files].map(f => ({
+  duongDan: f.webkitRelativePath,   // "KHO/UBND/HOP01/HS 001/….pdf"
+  co: f.size,                        // chỉ siêu dữ liệu, KHÔNG đọc nội dung
+}))
+```
+
+`f.size` và `f.webkitRelativePath` là siêu dữ liệu, có ngay — kho 50.000 tệp dựng xong
+danh sách trong chớp mắt. Đừng gọi `f.arrayBuffer()`: không cần, và sẽ nuốt hết bộ nhớ.
+
+Riêng tệp Excel thì phải đọc thật, nhưng chỉ một tệp.
+
+### 14.4. Căn lề đường dẫn — chỗ dễ hiểu sai nhất
+
+`webkitRelativePath` **luôn** gắn tên thư mục người dùng vừa chọn vào đầu. Excel thì ghi
+đường dẫn từ gốc kho. Hai bên gần như không bao giờ trùng nhau sẵn:
+
+| Excel ghi | Người dùng chọn thư mục | Trình duyệt kê | Máy chủ làm |
+|---|---|---|---|
+| `UBND\DCXD\…` | thư mục chứa `UBND` | `KHO\UBND\DCXD\…` | bỏ `KHO` |
+| `UBND\DCXD\…` | thẳng vào `UBND` | `UBND\DCXD\…` | không phải chỉnh |
+| `UBND\DCXD\…` | thẳng vào `DCXD` | `DCXD\…` | thêm `UBND` |
+
+Máy chủ tự suy bằng cách so tên tệp giữa hai danh sách, và **chỉ nhận khi việc căn làm số
+tệp khớp tăng lên** — suy sai mà vẫn áp thì mọi tệp đều hoá "thiếu", tệ hơn để nguyên.
+
+Kết quả trả về ở `canLe`:
+
+```json
+"canLe": { "bo": "KHO", "them": "", "khop": 4 }
+```
+
+**Hãy hiện câu này ra màn hình.** Người dùng chọn nhầm một cấp thư mục là nhìn thấy ngay,
+không phải đoán qua danh sách lỗi. `canLe: null` nghĩa là bản kê vốn đã khớp.
+
+Không suy được cách căn nào → `canLe: null` + lỗi `THU-MUC-GOC-KHONG-CO` nói rõ nên chọn
+thư mục nào.
+
+### 14.5. Phản hồi
+
+```json
+{
+  "maNgoai": "PRJ-26-017", "maDuAn": "DA26001", "tenDuAn": "…",
+  "tenExcel": "Metadata.xlsx", "sheet": "Metadata", "dongTieuDe": 1,
+  "soDongExcel": 2,
+
+  "soTepKe": 3, "soTepDoiChieu": 2, "boQuaKhongPdf": 1, "ngoaiPhamVi": 0,
+  "canLe": { "bo": "KHO", "them": "", "khop": 1 },
+
+  "soHoSo": 1, "soHoSoDat": 0, "soLoi": 2, "soCanhBao": 0, "dongGoiDuoc": false,
+
+  "cotNhanDuoc": [ { "truong": "hs_code", "tieuDe": "Mã hồ sơ" } ],
+  "hoSo": [ { "thuMuc": "UBND\\HOP01\\HS 001", "maHoSo": "…", "tieuDe": "…",
+              "maPhong": "H49.101", "soTaiLieu": 2, "co": 3145728,
+              "soLoi": 2, "soCanhBao": 0 } ],
+  "vanDe": [ {
+      "muc": "loi", "ma": "TEP-KHONG-CO-TREN-DIA",
+      "tieuDe": "Excel khai tệp nhưng trên đĩa không có",
+      "cachSua": "Kiểm tra lại đường dẫn ở cột «Tệp tin tài liệu»…",
+      "hoSo": "UBND\\HOP01\\HS 001", "maHoSo": "H49.101.01.1993.001",
+      "dongExcel": 3, "tep": "….pdf", "noiDung": "…", "soLan": 1
+  } ],
+  "hoSoBiCat": 0, "vanDeBiCat": 0
+}
+```
+
+Ba số đếm dễ bỏ sót, nên hiện cả ba để người dùng khỏi hoang mang vì "tôi chọn 5000 tệp mà
+nó chỉ kiểm 4800":
+
+| Khoá | Nghĩa |
+|---|---|
+| `soTepKe` | số mục bạn gửi lên |
+| `boQuaKhongPdf` | mục không phải `.pdf` (Thumbs.db, thư mục rác…) — bỏ, đúng như bản máy trạm |
+| `ngoaiPhamVi` | mục nằm ngoài các thư mục cấp đầu mà Excel nhắc tới — bỏ |
+| `soTepDoiChieu` | số còn lại thực sự đem đối chiếu |
+
+`vanDe[]` bị cắt ở 2.000 mục và `hoSo[]` ở 5.000 — `vanDeBiCat`/`hoSoBiCat` nói đã cắt bao
+nhiêu. Các con số tổng (`soLoi`, `soCanhBao`, `soHoSo`) thì **vẫn là số đầy đủ**, không bị
+cắt theo.
+
+### 14.6. Cột «Cách sửa» — đừng chép tay sang bên bạn
+
+Mỗi vấn đề đã mang sẵn `tieuDe` + `cachSua` lấy từ **chính bảng hướng dẫn** bản máy trạm
+đang dùng (44 mã lỗi). Dựng bảng thẳng từ hai khoá này. Chép 44 chuỗi sang mã nguồn bên bạn
+thì ba tháng nữa hai bên lệch nhau — đúng cái bệnh hai nơi mà cả tài liệu này đang tránh.
+
+Gợi ý bày màn hình: nhóm theo `ma`, mỗi nhóm một dòng gập lại được, tiêu đề là `tieuDe` +
+tổng `soLan`, mở ra mới liệt kê từng dòng Excel. Một kho sai quy ước đặt tên có thể ra hàng
+nghìn lỗi **cùng một mã** — liệt kê phẳng là không ai đọc nổi.
+
+### 14.7. `dongGoiDuoc` nghĩa là gì
+
+`true` khi **không còn lỗi nào** (cảnh báo thì không chặn). Đó là điều kiện để bước đóng
+gói bên DigiText chịu chạy: nghiệp vụ đòi khớp hết rồi mới đóng gói.
+
+Nhưng nó **không** hứa gói sẽ đạt TT05 — xem lại 14.1. Nhãn nên là «Đủ điều kiện đóng gói»,
+đừng viết «Đạt».
+
+### 14.8. Nhịp gọi
+
+Mỗi lời gọi là một lần đọc Excel + đối chiếu vài chục nghìn dòng trên máy chủ. Gọi **một
+lần cho mỗi lần người dùng bấm**, đừng gọi lại khi họ chỉ lọc hay sắp xếp bảng — giữ kết
+quả ở phía trình duyệt.

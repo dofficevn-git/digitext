@@ -57,6 +57,7 @@ pub fn router() -> Router<AppState> {
         .route("/ncc/tu-kiem/pdf", post(tu_kiem_pdf).layer(axum::extract::DefaultBodyLimit::max(48 * 1024 * 1024)))
         .route("/ncc/tu-kiem/goi", post(tu_kiem_goi).layer(axum::extract::DefaultBodyLimit::max(24 * 1024 * 1024)))
         .route("/ncc/tu-kiem/goi/dot", post(tu_kiem_dot))
+        .route("/ncc/tu-kiem/kho", post(tu_kiem_kho).layer(axum::extract::DefaultBodyLimit::max(64 * 1024 * 1024)))
 }
 
 // ---------------------------------------------------------------- nhóm chỉ số
@@ -1139,6 +1140,7 @@ mod tests {
         assert_eq!(serde_json::from_str::<GoiPdf>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/pdf");
         assert_eq!(serde_json::from_str::<GoiGoiTin>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/goi");
         assert_eq!(serde_json::from_str::<GoiDot>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/goi/dot");
+        assert_eq!(serde_json::from_str::<GoiKho>(j).unwrap().ma_ngoai.as_deref(), mong, "ncc/tu-kiem/kho");
     }
 
     /// Các khoá nhiều chữ khác cũng phải nhận dạng camelCase, không riêng `maNgoai` — cùng một
@@ -1170,6 +1172,106 @@ mod tests {
         assert_eq!(g.goi[0].so_tai_lieu, Some(7));
         assert_eq!(g.goi[0].so_tep_du_lieu, Some(7));
         assert_eq!(g.goi[0].so_canh_bao, Some(11));
+        let g: GoiKho = serde_json::from_str(
+            r#"{"maNgoai":"X","tenExcel":"Metadata.xlsx","excel":"UEs=","tep":[{"duongDan":"UBND/a.pdf","co":1024}]}"#,
+        )
+        .unwrap();
+        assert_eq!(g.ten_excel.as_deref(), Some("Metadata.xlsx"));
+        assert_eq!(g.tep[0].duong_dan.as_deref(), Some("UBND/a.pdf"));
+        assert_eq!(g.tep[0].co, Some(1024));
+    }
+
+    /// Dựng một tệp `.xlsx` THẬT rồi cho chạy đúng đường của cửa kho: `doc_byte` → `kiem_ban_ke`.
+    ///
+    /// Bài này canh chỗ dễ gãy nhất mà test trong `digitext-extimport` không với tới được: ở đó
+    /// `Sheet` được dựng tay, còn ở đây tệp Excel phải đi qua bộ **nhận cột theo tên**. Đổi một
+    /// tiêu đề cột trong tệp mẫu là cửa này câm, mà biên dịch vẫn trót lọt.
+    #[test]
+    fn cua_kho_doc_duoc_excel_that_va_bat_dung_lech() {
+        use digitext_mucluc::mau::{t, SheetMau};
+
+        let tieu_de = [
+            "Mã phông",
+            "Mã hồ sơ",
+            "Tiêu đề hồ sơ",
+            "Thời hạn bảo quản",
+            "Số lượng tờ",
+            "Mã lưu trữ tài liệu",
+            "Tên loại tài liệu",
+            "Trích yếu nội dung",
+            "Ngày tháng năm văn bản",
+            "Số lượng trang",
+            "Tệp tin tài liệu",
+        ];
+        let mut rows: Vec<Vec<digitext_mucluc::mau::O>> =
+            vec![tieu_de.iter().map(|h| t(*h)).collect()];
+        let mut them = |stt: &str| {
+            let ten = format!("H49.101.01.1993.001.{stt}.pdf");
+            rows.push(
+                [
+                    "H49.101",
+                    "H49.101.01.1993.001",
+                    "Hồ sơ thử",
+                    "Vĩnh viễn",
+                    "10",
+                    &ten,
+                    "Quyết định",
+                    "Trích yếu thử",
+                    "09/07/2012",
+                    "3",
+                    &format!("UBND\\HOP01\\HS 001\\{ten}"),
+                ]
+                .iter()
+                .map(|v| t(*v))
+                .collect(),
+            );
+        };
+        them("0000001");
+        them("0000002");
+
+        let sheets = [SheetMau {
+            ten: "Metadata".into(),
+            rong: vec![14.0; tieu_de.len()],
+            rows,
+            cao: Vec::new(),
+            gop: Vec::new(),
+            dong_bang: None,
+            luoi: false,
+            bo_qua_loi_so: Vec::new(),
+        }];
+        let byte = crate::xlsx::dong_goi(&sheets).expect("ghi xlsx");
+
+        let sheet = digitext_extimport::excel::doc_byte(byte).expect("đọc lại xlsx");
+        assert!(sheet.missing_columns.is_empty(), "thiếu cột: {:?}", sheet.missing_columns);
+        assert_eq!(sheet.rows.len(), 2, "phải đọc đúng 2 dòng tài liệu");
+
+        // Bản kê như ô chọn thư mục của trình duyệt trả về: có lớp bọc tên thư mục đã chọn, một
+        // tệp Excel khai mà kho KHÔNG có, và một tệp kho có mà Excel KHÔNG khai.
+        let tep = vec![
+            digitext_extimport::kho::TepKe {
+                duong_dan: "KHO/UBND/HOP01/HS 001/H49.101.01.1993.001.0000001.pdf".into(),
+                co: 1024,
+            },
+            digitext_extimport::kho::TepKe {
+                duong_dan: "KHO/UBND/HOP01/HS 001/H49.101.01.1993.001.0000003.pdf".into(),
+                co: 2048,
+            },
+        ];
+        let kq = digitext_extimport::kho::kiem_ban_ke(&sheet, "Metadata.xlsx", &tep);
+
+        assert_eq!(kq.can_le.as_ref().map(|c| c.bo.as_str()), Some("KHO"), "phải tự bỏ lớp bọc");
+        assert_eq!(kq.so_tep, 2);
+        let ma: std::collections::BTreeSet<&str> = kq.bao_cao.issues.iter().map(|i| i.code).collect();
+        assert!(ma.contains("TEP-KHONG-CO-TREN-DIA"), "thiếu tệp 0000002 phải thành lỗi: {ma:?}");
+        assert!(ma.contains("TEP-KHONG-CO-TRONG-EXCEL"), "thừa tệp 0000003 phải thành lỗi: {ma:?}");
+        assert!(!kq.bao_cao.issues.is_empty());
+        assert!(kq.bao_cao.errors() >= 2, "kho lệch mà vẫn 0 lỗi");
+
+        // Và mọi mã lỗi trả ra đều phải có hướng dẫn sửa — cổng dựng cột «Cách sửa» từ đây.
+        for i in &kq.bao_cao.issues {
+            let (tieu_de, cach_sua) = digitext_extimport::check::huong_dan(i.code);
+            assert!(!tieu_de.is_empty() && !cach_sua.is_empty(), "mã {} chưa có hướng dẫn", i.code);
+        }
     }
 
     #[test]
@@ -1841,5 +1943,236 @@ async fn tu_kiem_pdf(
         "chuaKySo": chua_ky_so,
         "tepLoi": facts.encrypted_or_broken,
         "ghiChu": "Kiểm dấu hiệu cấu trúc theo TT 05/2025 Điều 8.2.a. KHÔNG chạy veraPDF nên chưa phải kết luận hợp chuẩn ISO 19005 đầy đủ.",
+    })))
+}
+
+// --------------------------------------------------------- tự kiểm KHO trước khi đóng gói
+
+/// Tệp Excel metadata gửi kèm. Kho 50.000 dòng ra chừng 10 MB, nên trần rộng hơn cửa mục lục.
+const KHO_EXCEL_BYTE_TOI_DA: usize = 24 * 1024 * 1024;
+
+/// Trần số mục trong bản kê thư mục. 200.000 tệp × ~120 byte ≈ 24 MB thân gói.
+const KHO_TEP_TOI_DA: usize = 200_000;
+
+/// Trần số vấn đề trả về. Một kho sai quy ước đặt tên có thể ra hàng chục nghìn lỗi cùng mã —
+/// trả hết thì cổng treo trình duyệt, mà người đọc cũng không xem nổi. Cắt và nói rõ đã cắt.
+const KHO_VAN_DE_TOI_DA: usize = 2_000;
+
+/// Trần số hồ sơ liệt kê chi tiết (các con số tổng thì vẫn đủ cả).
+const KHO_HO_SO_TOI_DA: usize = 5_000;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GoiKho {
+    #[serde(alias = "ma_ngoai", alias = "maDuAnNgoai")]
+    ma_ngoai: Option<String>,
+    /// Tên tệp Excel, chỉ để hiện lại trong báo cáo.
+    #[serde(alias = "ten_excel", alias = "tenTep")]
+    ten_excel: Option<String>,
+    /// Nội dung tệp Excel metadata (.xlsx/.xls), mã base64.
+    excel: Option<String>,
+    #[serde(default)]
+    tep: Vec<MucKho>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MucKho {
+    #[serde(alias = "duong_dan", alias = "d")]
+    duong_dan: Option<String>,
+    /// Cỡ tệp, byte. Để trống = 0, chỉ ảnh hưởng phép kiểm tệp rỗng.
+    #[serde(alias = "c", default)]
+    co: Option<u64>,
+}
+
+/// `POST /api/v1/ncc/tu-kiem/kho` — nhà thầu tự kiểm **kho quét đã khớp Excel metadata chưa**,
+/// TRƯỚC khi đóng gói.
+///
+/// Đây là bước kiểm của tab «Đóng gói nhanh» trên máy trạm, đưa lên máy chủ. Nó bắt lỗi **sớm
+/// nhất** trong cả dây chuyền: sai mã phông, lệch tên tệp, thiếu hoặc thừa tệp, trùng mã hồ sơ —
+/// biết ngay khi còn là thư mục quét, chứ không phải sau khi đã đóng xong gói trăm MB.
+///
+/// **Khác cửa `tu-kiem/goi` ở chỗ không phải bỏ phép kiểm nào.** Bước kiểm nông vốn chỉ đọc tên
+/// tệp, cỡ tệp và tệp Excel (nhánh mở PDF nằm sau `if deep`, mà «Đóng gói nhanh» luôn tắt
+/// `deep`), nên bản kê là ĐỦ dữ liệu — xem `digitext_extimport::kho`, ở đó có test đối chiếu kết
+/// quả chạy từ bản kê với kết quả quét đĩa thật.
+///
+/// Đổi lại, nó **không** kết luận gì về chất lượng tệp: không độ phân giải, không PDF/A, không
+/// lớp chữ, không chữ ký số. Kho qua được cửa này vẫn có thể chưa đạt Điều 8.2.a TT05.
+async fn tu_kiem_kho(
+    State(st): State<AppState>,
+    ip: T2t,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, ApiError> {
+    let kh = xac_thuc(&st, &headers, &ip, &body).await?;
+    let g: GoiKho = serde_json::from_slice(&body)
+        .map_err(|e| ApiError::bad_request(format!("thân gói không phải JSON hợp lệ: {e}")))?;
+
+    let ma_ngoai = g
+        .ma_ngoai
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| ApiError::bad_request("thiếu maNgoai — mã dự án bên hệ thống của bạn"))?;
+
+    use base64::Engine;
+    let b64 = base64::engine::general_purpose::STANDARD;
+    let excel_b64 = g
+        .excel
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| ApiError::bad_request("thiếu excel — nội dung tệp Excel metadata, mã base64"))?;
+    let excel = b64
+        .decode(excel_b64)
+        .map_err(|_| ApiError::bad_request("excel không phải base64 hợp lệ"))?;
+    if excel.len() > KHO_EXCEL_BYTE_TOI_DA {
+        return Err(ApiError::bad_request(format!(
+            "tệp Excel {} MiB, vượt trần {} MiB",
+            excel.len() / 1024 / 1024,
+            KHO_EXCEL_BYTE_TOI_DA / 1024 / 1024
+        )));
+    }
+    if g.tep.is_empty() {
+        return Err(ApiError::bad_request(
+            "thiếu tep[] — bản kê các tệp PDF trong thư mục kho (đường dẫn + cỡ)",
+        ));
+    }
+    if g.tep.len() > KHO_TEP_TOI_DA {
+        return Err(ApiError::bad_request(format!(
+            "bản kê có {} mục, vượt trần {KHO_TEP_TOI_DA} — gửi từng phông hoặc từng đợt",
+            g.tep.len()
+        )));
+    }
+
+    let du_an = digitext_db::webhooks::tim_theo_ma_ngoai(&st.pool, &kh.nguon, ma_ngoai)
+        .await?
+        .ok_or_else(|| ApiError {
+            status: axum::http::StatusCode::NOT_FOUND,
+            code: "ncc_du_an_khong_thay",
+            message: format!("không có dự án nào mang maNgoai {ma_ngoai:?}"),
+        })?;
+
+    let mut tep: Vec<digitext_extimport::kho::TepKe> = Vec::with_capacity(g.tep.len());
+    for (i, m) in g.tep.iter().enumerate() {
+        let d = m
+            .duong_dan
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| ApiError::bad_request(format!("tep[{i}] thiếu duongDan")))?;
+        // Đường dẫn là dữ liệu của người ngoài. Ở đây nó chỉ dùng để tra bảng trong bộ nhớ, nhưng
+        // vẫn chặn lối đi lên thư mục cha và đường dẫn tuyệt đối — rẻ, và khỏi phải nhớ lại về sau
+        // khi có ai đó đem chính biến này đi mở tệp thật.
+        let dau_o_dia = d.as_bytes().get(1) == Some(&b':');
+        if d.starts_with('/') || d.starts_with('\\') || d.contains("..") || dau_o_dia {
+            return Err(ApiError::bad_request(format!(
+                "tep[{i}] duongDan {d:?} không hợp lệ — dùng đường dẫn TƯƠNG ĐỐI tính từ thư mục kho"
+            )));
+        }
+        tep.push(digitext_extimport::kho::TepKe { duong_dan: d.to_owned(), co: m.co.unwrap_or(0) });
+    }
+
+    let ten_excel = g
+        .ten_excel
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("Metadata.xlsx")
+        .to_owned();
+    let so_tep_ke = tep.len();
+
+    // Đọc Excel rồi đối chiếu vài chục nghìn dòng là việc nặng CPU ⇒ sang luồng chặn, cùng lý do
+    // với cửa mục lục và cửa gói tin.
+    let kq = tokio::task::spawn_blocking(move || {
+        let sheet = digitext_extimport::excel::doc_byte(excel)?;
+        if !sheet.missing_columns.is_empty() {
+            return Err(format!("tệp Excel thiếu cột bắt buộc: {}", sheet.missing_columns.join(", ")));
+        }
+        if sheet.rows.is_empty() {
+            return Err("tệp Excel không có dòng tài liệu nào".to_string());
+        }
+        let kq = digitext_extimport::kho::kiem_ban_ke(&sheet, &ten_excel, &tep);
+        Ok((sheet.sheet_name, sheet.header_line, sheet.rows.len(), sheet.mapping, kq))
+    })
+    .await
+    .map_err(|_| ApiError::internal())?
+    .map_err(ApiError::bad_request)?;
+    let (sheet_ten, dong_tieu_de, so_dong, cot, kq) = kq;
+
+    let bc = &kq.bao_cao;
+    let muc = |s: &digitext_extimport::check::Severity| match s {
+        digitext_extimport::check::Severity::Error => "loi",
+        digitext_extimport::check::Severity::Warning => "canh_bao",
+        digitext_extimport::check::Severity::Info => "thong_tin",
+    };
+    let van_de: Vec<Value> = bc
+        .issues
+        .iter()
+        .take(KHO_VAN_DE_TOI_DA)
+        .map(|i| {
+            // Tiêu đề + cách sửa lấy từ CHÍNH bảng hướng dẫn bản desktop đang dùng. Trả kèm để
+            // cổng khỏi chép tay 44 chuỗi sang bên họ rồi lệch dần — đúng bệnh luật hai nơi.
+            let (tieu_de, cach_sua) = digitext_extimport::check::huong_dan(i.code);
+            json!({
+                "muc": muc(&i.severity),
+                "ma": i.code,
+                "tieuDe": tieu_de,
+                "cachSua": cach_sua,
+                "hoSo": i.dossier,
+                "maHoSo": i.hs_code,
+                "dongExcel": i.line,
+                "tep": i.file,
+                "noiDung": i.message,
+                "soLan": i.count,
+            })
+        })
+        .collect();
+    let ho_so: Vec<Value> = bc
+        .dossiers
+        .iter()
+        .take(KHO_HO_SO_TOI_DA)
+        .map(|d| {
+            json!({
+                "thuMuc": d.dir,
+                "maHoSo": d.hs_code,
+                "tieuDe": d.title,
+                "maPhong": d.fond_code,
+                "soTaiLieu": d.docs,
+                "co": d.bytes,
+                "soLoi": d.errors,
+                "soCanhBao": d.warnings,
+            })
+        })
+        .collect();
+
+    Ok(Json(json!({
+        "maNgoai": ma_ngoai,
+        "maDuAn": du_an.code,
+        "tenDuAn": du_an.name,
+        "tenExcel": bc.excel,
+        "sheet": sheet_ten,
+        "dongTieuDe": dong_tieu_de,
+        "soDongExcel": so_dong,
+        "cotNhanDuoc": cot.iter().map(|(truong, tieu_de)| json!({"truong": truong, "tieuDe": tieu_de})).collect::<Vec<_>>(),
+        "soTepKe": so_tep_ke,
+        "soTepDoiChieu": kq.so_tep,
+        "boQuaKhongPdf": kq.bo_qua_khong_pdf,
+        "ngoaiPhamVi": kq.ngoai_pham_vi,
+        // Trình duyệt luôn gắn tên thư mục người dùng chọn vào đầu đường dẫn, nên gần như lần nào
+        // cũng phải căn. Trả ra để cổng hiện "đã hiểu thư mục gốc là …" — chọn nhầm một cấp là
+        // nhìn thấy ngay, không phải đoán qua danh sách lỗi.
+        "canLe": kq.can_le.as_ref().map(|c| json!({"bo": c.bo, "them": c.them, "khop": c.khop})),
+        "soHoSo": bc.dossiers.len(),
+        "soHoSoDat": bc.dossiers_ok(),
+        "soLoi": bc.errors(),
+        "soCanhBao": bc.warnings(),
+        "dongGoiDuoc": bc.errors() == 0,
+        "hoSo": ho_so,
+        "hoSoBiCat": bc.dossiers.len().saturating_sub(ho_so.len()),
+        "vanDe": van_de,
+        "vanDeBiCat": bc.issues.len().saturating_sub(van_de.len()),
+        "ghiChu": "Cửa này chỉ ĐỐI CHIẾU kho quét với Excel metadata: mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu hoặc thừa tệp. KHÔNG kiểm độ phân giải, PDF/A, lớp chữ, chữ ký số — gói dựng từ kho này vẫn có thể chưa đạt Điều 8.2.a TT05.",
     })))
 }
