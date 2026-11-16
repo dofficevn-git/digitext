@@ -30,10 +30,26 @@ pub struct Finding {
     pub level: Level,
     pub group: String,
     pub message: String,
+    /// Mã máy đọc, để bên nhận khỏi dò theo câu chữ tiếng Việt. Rỗng ở phép kiểm từng gói
+    /// (chúng phân loại bằng `group`); phép kiểm cả đợt thì mã nào cũng có.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub code: String,
+    /// Tên các gói mà phát hiện này nói tới. Rỗng = nói về cả đợt, không chỉ riêng gói nào.
+    ///
+    /// Có trường này thì cổng gắn được nhãn lên đúng dòng gói trong bảng. Tên gói vẫn nằm
+    /// trong `message` để người đọc thấy, nhưng **đừng tách từ đó ra** — câu chữ sẽ đổi.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goi: Vec<String>,
 }
 impl Finding {
     pub fn new(level: Level, group: &str, message: String) -> Self {
-        Finding { level, group: group.into(), message }
+        Finding { level, group: group.into(), message, code: String::new(), goi: Vec::new() }
+    }
+    /// Gắn mã máy đọc + danh sách gói liên quan (dùng ở [`crate::dot`]).
+    pub fn ve(mut self, code: &str, goi: Vec<String>) -> Self {
+        self.code = code.to_owned();
+        self.goi = goi;
+        self
     }
 }
 

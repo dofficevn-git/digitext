@@ -766,6 +766,22 @@ Gửi `"ketXuat": true` kèm thân gói của `tu-kiem/muc-luc`. Phản hồi c�
 | `dongDayDu` | **MỌI** dòng hồ sơ, kể cả dòng sạch. Dòng sạch mới là dòng máy điền được thời gian |
 | `…loi[].cot` · `…canhBao[].cot` | Ô phải tô, do máy chủ quyết. **Đừng đoán theo câu chữ** — đổi một câu thông báo là cổng tô sai ô mà không ai biết |
 
+**`cot` luôn có mặt** trên mọi thông báo — máy chủ không bao giờ trả thiếu khoá này, nên
+không phải viết nhánh "vắng `cot`".
+
+Chuyện thật sự xảy ra là khác: `cot` trỏ tới một cột **tệp không có** (ví dụ `"cot": "soTo"`
+mà tệp nhà thầu không có cột Số tờ ⇒ `cotViTri` không có khoá `soTo`). Khi đó:
+
+> **Luật dự phòng: không thấy `cotViTri[cot]` thì tô ô Tiêu đề** (`cotViTri.tieuDe`).
+> Đúng như bản desktop đang làm — giữ nguyên.
+
+Dự phòng này **luôn tô được**: `Hồ sơ số` và `Tiêu đề hồ sơ` là hai cột **bắt buộc**, thiếu
+một trong hai thì bộ đọc không nhận dòng tiêu đề và tệp bị từ chối ngay từ mục 10 — nên tới
+được bước ghi tệp là chắc chắn có `cotViTri.tieuDe`. Bên DigiText có test ghim điều kiện
+bắt buộc đúng bằng hai cột đó.
+
+Mấy cột hay vắng trong tệp thật: `hopSo`, `soTo`, `thbq`, `thoiGian`, `ghiChu`.
+
 > ⚠️ **`canhBao` trong `dongDayDu` là bản THÔ**, khác `dong[]` của màn hình: ở đây nó **không**
 > gộp `thoiGian.ghiChu`. Gộp vào là ghi chú thời gian bị tô sang ô khác, trong khi nó phải tô
 > vào chính ô thời gian. (Màn hình thì ngược lại — xem 10.3b.)
@@ -1033,6 +1049,16 @@ dùng chọn thư mục, không phải do gói sai.)
 | **`ketLuan`** | Bày to. Bảng nghĩa ở 12.2 |
 | **`chuaKiemNoiDung`** | **Số PHÉP KIỂM** đã bỏ — không phải số tệp. Khác 0 thì **phải** bày kèm `chuaKiem[]`, đừng giấu |
 | **`chuaKiem[]`** | Chính số đó tách theo nhóm: `{ma, ten, soPhep, kiemODau}`. **Dựng cột «Chưa kiểm» từ mảng này**, đừng viết cứng ba dòng bên cổng — thêm nhóm thứ tư thì cổng tự có, không phải sửa |
+| `objid` | **Luôn có khoá, luôn là chuỗi.** Gói không khai `OBJID` ⇒ chuỗi **rỗng** `""`, không phải `null`, không phải thiếu khoá. Cùng quy ước cho `maPhong`, `tieuDe`, `profile`, `coQuanTao`, `phanMemTao`, `ngayTao` |
+
+**Gói có METS lồng nhau** (`representations/rep1/METS.xml`): mọi trường cấp gói —
+`objid`, `loai`, `profile`, `maPhong`, `coQuanTao`, `ngayTao` — đọc từ **METS gốc**, tức
+đúng tệp `METS.xml` ở thư mục ngoài cùng của gói. METS của từng representation không bao
+giờ ghi đè các trường đó. Hiểu của cổng là đúng.
+
+Lưu ý kèm theo: nếu bản kê của bạn còn một lớp thư mục bọc ngoài, máy chủ tự bóc một lớp
+rồi mới xác định METS gốc (12.4) — nó chọn `METS.xml` **ít đoạn đường dẫn nhất**, nên METS
+của representation không bị nhầm thành METS gốc.
 | `phatHien[]` | `muc` ∈ `loi` · `canh_bao` · `dat`. Mặc định nên ẩn `dat`, có nút mở ra |
 | `soMuc` · `soTepSieuDuLieu` | Để người dùng thấy cổng đã đọc đúng gói |
 
@@ -1072,7 +1098,7 @@ Loại lỗi mà kiểm từng gói **không bao giờ** thấy: gói nào cũng
 | | Mức | Vì sao |
 |---|---|---|
 | Hai gói cùng `OBJID` | **lỗi** | Công cụ đóng gói dùng lại UUID. Kho chỉ giữ được một gói ⇒ mất gói kia |
-| Hai gói cùng tên tệp | **lỗi** | Ghi đè nhau lúc chép sang ổ giao |
+| Hai gói cùng tên | **lỗi** | Ghi đè nhau lúc chép sang ổ giao. So **bỏ qua hoa thường**: trên Windows `AIP-001` và `aip-001` là một chỗ |
 | Đợt lẫn nhiều mã phông | cảnh báo | Gần như luôn là gói lạc sang đợt khác — nhưng có đơn vị giao gộp thật, nên **không** phải lỗi |
 | Gói không đọc được `OBJID` | cảnh báo | Nói thẳng là **chưa** đối chiếu trùng lặp được cho gói đó |
 
@@ -1092,6 +1118,11 @@ cửa 12 vừa trả, chép thẳng sang là chạy:
   ] }
 ```
 
+`tenGoi` nhận **bất kỳ tên nào bạn dùng để chỉ gói** — tên tệp `.zip` hay tên thư mục
+(`AIP-001`) đều được. Máy chủ không hiểu gì về tên đó ngoài việc so trùng, và chính tên
+này được trả lại trong `phatHien[].goi` để bạn gắn nhãn lên đúng dòng. Chỉ cần **một gói
+một tên** — hai gói cùng tên thì không phân biệt được trên báo cáo.
+
 **Đừng gửi lại bản kê của từng gói** — một đợt 50 gói là hơn 20 MB, mà cửa này không dùng tới.
 Trần: **500 gói** một đợt (500 × ~400 byte tóm tắt là chưa tới 200 KB; trần đặt để chặn gói tin
 bậy, không phải vì nặng).
@@ -1106,7 +1137,8 @@ bậy, không phải vì nặng).
   "giaoDuoc": false,
   "maPhong": [ { "ma": "H49.155.03", "soGoi": 46 }, { "ma": "H50.112.01", "soGoi": 1 } ],
   "phongTrongDuAn": ["UBND huyện Đầm Hà", "Phòng Nội vụ"],
-  "phatHien": [ { "muc": "loi", "nhom": "Đợt giao", "noiDung": "2 gói cùng OBJID…" } ],
+  "phatHien": [ { "muc": "loi", "ma": "TRUNG-OBJID", "nhom": "Đợt giao",
+                  "noiDung": "2 gói cùng OBJID…", "goi": ["AIP-012", "AIP-031"] } ],
   "ghiChu": "Cửa này chỉ tìm lỗi GIỮA các gói…" }
 ```
 
@@ -1117,6 +1149,24 @@ bậy, không phải vì nặng).
 | `soLoiTrongGoi` · `soCanhBaoTrongGoi` | **Cộng từ** kết quả từng gói bạn gửi lên. Hai cặp này khác nhau, đừng trộn |
 | `maPhong[]` | Mã phông trong đợt + số gói mang mã đó. Cái nào `soGoi` nhỏ bất thường là cái lạc đàn |
 | `phongTrongDuAn[]` | Phông của dự án, để bày **cạnh** `maPhong[]` |
+| `phatHien[].ma` | **Mã máy đọc.** Phân loại bằng khoá này, đừng dò theo `noiDung` — câu chữ sẽ đổi |
+| `phatHien[].goi` | Tên các gói phát hiện này nói tới, đúng tên bạn gửi lên. Rỗng = nói về cả đợt |
+
+Bảng mã (`phatHien[].ma`) — **đóng**, thêm mã mới thì tài liệu này sẽ ghi:
+
+| Mã | Mức | `goi[]` chứa gì |
+|---|---|---|
+| `TRUNG-OBJID` | lỗi | các gói dùng chung một `OBJID` |
+| `TRUNG-TEN` | lỗi | các gói trùng tên |
+| `THIEU-OBJID` | cảnh báo | các gói không đọc được `OBJID` |
+| `NHIEU-PHONG` | cảnh báo | các gói mang mã phông **thiểu số** — cái cần nhìn trước |
+| `GOI-KHONG-DAT` | lỗi | các gói còn lỗi cấu trúc |
+| `DOT-SACH` | đạt | *(rỗng)* |
+| `TONG-DOT` | đạt | *(rỗng)* |
+| `DOT-RONG` | lỗi | *(rỗng)* — bạn gửi `goi: []` |
+
+Một mã có thể xuất hiện **nhiều lần** (ba cặp trùng `OBJID` ⇒ ba phát hiện `TRUNG-OBJID`),
+nên đừng tra theo mã như tra khoá chính.
 
 > ⚠️ **Máy chủ KHÔNG kết luận "gói sai phông".** Mã trong METS dài hơn mã phông của dự án — đo
 > trên gói thật: `H49.155.3.01.2013.09.01` so với `H49.155.03`. So khớp tự động là báo oan.

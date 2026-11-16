@@ -1613,10 +1613,14 @@ async fn tu_kiem_dot(
         "giaoDuoc": so_loi_dot == 0 && kq.so_goi_khong_dat == 0,
         "maPhong": kq.ma_phong.iter().map(|(m, n)| json!({ "ma": m, "soGoi": n })).collect::<Vec<_>>(),
         "phongTrongDuAn": phong_ds,
+        // `ma` + `goi` để cổng gắn nhãn lên đúng dòng gói mà KHÔNG phải dò theo câu chữ tiếng
+        // Việt. Câu chữ trong `noiDung` sẽ còn đổi; hai khoá kia thì không.
         "phatHien": kq.findings.iter().map(|f| json!({
             "muc": muc(&f.level),
+            "ma": f.code,
             "nhom": f.group,
             "noiDung": f.message,
+            "goi": f.goi,
         })).collect::<Vec<_>>(),
         "ghiChu": "Cửa này chỉ tìm lỗi GIỮA các gói. Mỗi gói vẫn phải tự kiểm bằng «Tự kiểm gói tin», và kết luận của từng gói ở đó vẫn là CHƯA KIỂM ĐỦ vì nội dung tệp chưa ai xem.",
     })))
