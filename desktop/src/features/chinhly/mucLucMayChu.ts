@@ -143,14 +143,23 @@ export async function docMucLucMayChu(
   tenTep: string,
   tuyChon?: TuyChonDocMucLuc,
 ): Promise<KetQuaDocMucLuc> {
-  const r = await clRemote<KetQuaDocMucLuc>("POST", "/cl/muc-luc/doc", {
-    projectId,
-    tenTep,
-    noiDung: sangBase64(buf),
-    sheet: tuyChon?.sheet,
-    thbqMacDinh: tuyChon?.thbqMacDinh,
-  });
-  return { ...r, pt: { ...r.pt, buf } };
+  // Máy chủ (routes/chinh_ly/muc_luc.rs) trả khoá `phanTich`, không phải `pt` — đọc nhầm `pt` làm màn Nhập mục lục
+  // sập "Cannot read properties of undefined (reading 'map')" ở bản 0.24.10 (17/11/2026).
+  const r = await clRemote<{ phanTich?: PhanTichMucLuc; rowsNhap?: Record<string, unknown>[]; coLoiChan?: boolean }>(
+    "POST",
+    "/cl/muc-luc/doc",
+    {
+      projectId,
+      tenTep,
+      noiDung: sangBase64(buf),
+      sheet: tuyChon?.sheet,
+      thbqMacDinh: tuyChon?.thbqMacDinh,
+    },
+  );
+  if (!r?.phanTich || !Array.isArray(r.phanTich.rows)) {
+    throw new Error("Máy chủ trả kết quả đọc mục lục không đúng dạng — cập nhật máy chủ cùng phiên bản với ứng dụng.");
+  }
+  return { pt: { ...r.phanTich, buf }, rowsNhap: r.rowsNhap ?? [], coLoiChan: !!r.coLoiChan };
 }
 
 /** Đọc tệp người dùng chọn. Giữ lại `ArrayBuffer` để đổi sheet mà không phải chọn tệp lần hai. */
