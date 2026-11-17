@@ -9,6 +9,7 @@
 import { V4dz } from "@/api/exportFile";
 import type { ClRow } from "@/api/chinhly";
 import { MAU_HS_KEYS, mauLapHoSoDauTrang, sheetDanhMucThbq, writeXlsx, type Sheet } from "./excel";
+import { vaDinhDangDieuKien } from "./xlsxVa";
 import {
   KET_LUAN_LABEL,
   mangCua,
@@ -245,5 +246,8 @@ export async function danhDauTepGoc(pt: PhanTichMucLuc): Promise<{ bytes: Uint8A
     danhDau(v.dong, pt.cot.tieuDe, MAU_DANH_DAU.loi, `LỖI: ${v.noiDung}`);
   }
 
-  return { bytes: new Uint8Array(await wb.xlsx.writeBuffer()), tk };
+  // ExcelJS ghi thẻ định dạng có điều kiện rỗng cho loại nó không hiểu (Duplicate Values…) → Excel "Repaired" và
+  // xoá luôn ghi chú. Vá bằng khối gốc trước khi trả (xlsxVa.ts).
+  const { bytes } = await vaDinhDangDieuKien(pt.buf, new Uint8Array(await wb.xlsx.writeBuffer()));
+  return { bytes, tk };
 }
