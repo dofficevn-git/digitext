@@ -160,18 +160,42 @@ pub fn blocks(h: &ReportHeader, results: &[PackageResult]) -> Vec<ManualBlock> {
         b.push(ManualBlock::KeyValue(kv));
 
         for (lvl, title) in [(Level::Err, "Lỗi phải sửa"), (Level::Warn, "Cảnh báo (nên sửa)"), (Level::Ok, "Những mục đạt")] {
+            // Mục ĐẠT không có gì để sửa nên giữ ba cột. Lỗi/cảnh báo thì thêm cột «Cách sửa»
+            // lấy từ CÙNG bảng `huong_dan` mà cổng nhà cung cấp dùng — báo cáo in ra và màn
+            // hình nhà thầu không được nói hai câu khác nhau về một lỗi.
+            let co_cach_sua = lvl != Level::Ok;
             let rows: Vec<Vec<String>> = r
                 .findings
                 .iter()
                 .filter(|f| f.level == lvl)
                 .enumerate()
-                .map(|(k, f)| vec![(k + 1).to_string(), f.group.clone(), f.message.clone()])
+                .map(|(k, f)| {
+                    let mut noi_dung = f.message.clone();
+                    // Chỗ bị ảnh hưởng: in vài tên đầu cho người sửa biết mở tệp nào, không in
+                    // hết — bản in không phải chỗ liệt kê hai trăm tên tệp.
+                    if !f.doi_tuong.is_empty() {
+                        let lay = 10.min(f.doi_tuong.len());
+                        let con = f.doi_tuong.len() - lay + f.doi_tuong_bi_cat;
+                        let them = if con > 0 { format!(" (+{con} nữa)") } else { String::new() };
+                        noi_dung.push_str(&format!("\nChỗ bị ảnh hưởng: {}{them}", f.doi_tuong[..lay].join(", ")));
+                    }
+                    let mut row = vec![(k + 1).to_string(), f.group.clone(), noi_dung];
+                    if co_cach_sua {
+                        row.push(f.huong_dan().map(|h| h.cach_sua.to_string()).unwrap_or_default());
+                    }
+                    row
+                })
                 .collect();
             if rows.is_empty() {
                 continue;
             }
             b.push(ManualBlock::Paragraph(format!("{title} ({}):", rows.len())));
-            b.push(ManualBlock::Table { headers: vec![s("#"), s("Nhóm"), s("Nội dung")], widths: vec![4.0, 13.0, 83.0], rows });
+            let (headers, widths) = if co_cach_sua {
+                (vec![s("#"), s("Nhóm"), s("Nội dung"), s("Cách sửa")], vec![4.0, 11.0, 47.0, 38.0])
+            } else {
+                (vec![s("#"), s("Nhóm"), s("Nội dung")], vec![4.0, 13.0, 83.0])
+            };
+            b.push(ManualBlock::Table { headers, widths, rows });
         }
 
         if !r.pdfs.is_empty() {

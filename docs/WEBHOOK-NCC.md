@@ -1037,7 +1037,22 @@ dùng chọn thư mục, không phải do gói sai.)
     { "ma": "bam_premis", "ten": "Mã băm (fixity) khai trong PREMIS", "soPhep": 7, "kiemODau": "Bản kiểm đầy đủ lúc nộp gói" }
   ],
   "phatHien": [
-    { "muc": "canh_bao", "nhom": "EAD", "noiDung": "7 trường <issuedDate> không theo dd/mm/yyyy…" },
+    {
+      "muc": "canh_bao", "nhom": "EAD",
+      "noiDung": "6 văn bản có trích yếu trùng nhau — kiểm lại trích yếu từng văn bản",
+      "ma": "EAD-TRICH-YEU-TRUNG",
+      "tieuDe": "Nhiều văn bản trùng trích yếu",
+      "cachSua": "Mở từng văn bản trong danh sách, sửa trích yếu cho đúng nội dung của chính văn bản đó…",
+      "doiTuong": ["d0000002.xml", "d0000003.xml"]
+    },
+    {
+      "muc": "canh_bao", "nhom": "Chưa kiểm",
+      "noiDung": "21 phép kiểm cần nội dung tệp chưa chạy…",
+      "ma": "CHUA-KIEM-NOI-DUNG",
+      "tieuDe": "Một số phép kiểm chưa chạy vì chưa có nội dung tệp",
+      "cachSua": "Đây KHÔNG phải lỗi của gói, và cũng không phải «đã kiểm và đạt»…",
+      "nopThatThanhLoi": true
+    },
     { "muc": "dat", "nhom": "METS", "noiDung": "Không có tệp mồ côi — cả 28 tệp đều được METS tham chiếu" }
   ],
   "ghiChu": "Cửa này kiểm CẤU TRÚC gói từ siêu dữ liệu…"
@@ -1050,6 +1065,8 @@ dùng chọn thư mục, không phải do gói sai.)
 | **`chuaKiemNoiDung`** | **Số PHÉP KIỂM** đã bỏ — không phải số tệp. Khác 0 thì **phải** bày kèm `chuaKiem[]`, đừng giấu |
 | **`chuaKiem[]`** | Chính số đó tách theo nhóm: `{ma, ten, soPhep, kiemODau}`. **Dựng cột «Chưa kiểm» từ mảng này**, đừng viết cứng ba dòng bên cổng — thêm nhóm thứ tư thì cổng tự có, không phải sửa |
 | `objid` | **Luôn có khoá, luôn là chuỗi.** Gói không khai `OBJID` ⇒ chuỗi **rỗng** `""`, không phải `null`, không phải thiếu khoá. Cùng quy ước cho `maPhong`, `tieuDe`, `profile`, `coQuanTao`, `phanMemTao`, `ngayTao` |
+| `phatHien[]` | `muc` ∈ `loi` · `canh_bao` · `dat`. Mặc định nên ẩn `dat`, có nút mở ra. Các khoá còn lại ở 12.6 |
+| `soMuc` · `soTepSieuDuLieu` | Để người dùng thấy cổng đã đọc đúng gói |
 
 **Gói có METS lồng nhau** (`representations/rep1/METS.xml`): mọi trường cấp gói —
 `objid`, `loai`, `profile`, `maPhong`, `coQuanTao`, `ngayTao` — đọc từ **METS gốc**, tức
@@ -1059,8 +1076,6 @@ giờ ghi đè các trường đó. Hiểu của cổng là đúng.
 Lưu ý kèm theo: nếu bản kê của bạn còn một lớp thư mục bọc ngoài, máy chủ tự bóc một lớp
 rồi mới xác định METS gốc (12.4) — nó chọn `METS.xml` **ít đoạn đường dẫn nhất**, nên METS
 của representation không bị nhầm thành METS gốc.
-| `phatHien[]` | `muc` ∈ `loi` · `canh_bao` · `dat`. Mặc định nên ẩn `dat`, có nút mở ra |
-| `soMuc` · `soTepSieuDuLieu` | Để người dùng thấy cổng đã đọc đúng gói |
 
 > **Đừng đọc nhầm số 21.** Trên gói mẫu `chuaKiemNoiDung` = 21 mà `soTepSieuDuLieu` cũng = 21 —
 > **trùng nhau hoàn toàn ngẫu nhiên**. 21 phép kiểm = 7 tệp dữ liệu × 3 nhóm, còn 21 tệp mô tả là
@@ -1068,7 +1083,123 @@ của representation không bị nhầm thành METS gốc.
 > Nhãn nên viết **"21 phép kiểm thuộc 3 nhóm chưa chạy"**, kẻo đặt cạnh bảng 3 dòng thì người đọc
 > hỏi 18 cái còn lại đâu.
 
-### 12.6. Mã lỗi
+### 12.6. Mỗi phát hiện: mã, tiêu đề, cách sửa, chỗ bị ảnh hưởng
+
+Một phát hiện mức `loi`/`canh_bao` mang đủ bốn thứ để bạn dựng bảng **mà không viết câu nào**:
+
+| Khoá | Có khi nào | |
+|---|---|---|
+| `ma` | luôn, với `loi`/`canh_bao` | Mã máy đọc, bảng **đóng** ở dưới. **Gom nhóm và gắn nhãn theo khoá này**, đừng dò theo `noiDung` |
+| `tieuDe` | khi `ma` có trong bảng hướng dẫn | Một dòng lời thường. Dùng làm tiêu đề nhóm gập lại được |
+| `cachSua` | kèm `tieuDe` | Làm gì để hết. Đây là cột «Cách sửa» |
+| `doiTuong[]` | 16 mã, xem cột cuối bảng dưới | Tệp / văn bản / bản mô tả bị ảnh hưởng — thứ mà câu gộp số không nói được |
+| `doiTuongBiCat` | khi danh sách bị cắt | Số mục đã cắt. Vắng khoá = danh sách đủ |
+| `nopThatThanhLoi` | **chỉ `CHUA-KIEM-NOI-DUNG`** | Xem 12.6.2 |
+
+`muc: "dat"` **không** có mấy khoá này — phép kiểm đã đạt thì không có gì để sửa.
+
+**Vắng `tieuDe` nghĩa là máy chủ chưa có hướng dẫn cho mã đó** (bản máy chủ cũ hơn bản tài
+liệu này, chẳng hạn). Lúc đó cứ vẽ như cũ — bày `nhom` + `noiDung` — **đừng bịa câu thay**.
+Và đừng chép bảng hướng dẫn sang mã nguồn bên bạn: nó là **một** bảng dùng cho cả cửa này,
+báo cáo PDF và màn máy trạm; chép ra là ba tháng sau ba nơi nói ba câu khác nhau về một lỗi.
+
+#### 12.6.1. Bảng mã — 58 mã, 38 lỗi + 20 cảnh báo
+
+Bảng **đóng**. Thêm mã mới thì tài liệu này sửa theo; cổng gặp mã lạ thì vẫn chạy được (xem
+đoạn «vắng `tieuDe`» ở trên). Một mã **xuất hiện nhiều lần** trong cùng một gói là bình thường
+— mỗi tệp EAD sai một kiểu là một phát hiện — nên đừng tra theo mã như tra khoá chính.
+
+| `nhom` | `ma` | `muc` | `doiTuong` |
+|---|---|---|---|
+| EAD | `EAD-TRUONG-RONG` | lỗi |  |
+|  | `EAD-MA-NGOAI-BANG` | lỗi |  |
+|  | `EAD-RISKRECOVERY-SAI` | lỗi |  |
+|  | `EAD-THIEU-HO-SO` | lỗi |  |
+|  | `EAD-DIP-THIEU-TRUONG` | lỗi |  |
+|  | `EAD-HO-SO-THIEU-TRUONG` | lỗi |  |
+|  | `EAD-HO-SO-THIEU-MA` | lỗi |  |
+|  | `EAD-AIP-THIEU-ARCFILECODE` | cảnh báo |  |
+|  | `EAD-HO-SO-LECH-XSD` | lỗi |  |
+|  | `EAD-KHONG-CO-XSD` | cảnh báo |  |
+|  | `EAD-VAN-BAN-THIEU-MA` | lỗi |  |
+|  | `EAD-MA-VAN-BAN-SAI-KHUON` | lỗi |  |
+|  | `EAD-KHONG-CO-TEP-DU-LIEU` | lỗi |  |
+|  | `EAD-VAN-BAN-LECH-XSD` | lỗi |  |
+|  | `EAD-MA-VAN-BAN-TRUNG` | lỗi | ✔ |
+|  | `EAD-THIEU-TRICH-YEU` | cảnh báo | ✔ |
+|  | `EAD-TRICH-YEU-TRUNG` | cảnh báo | ✔ |
+|  | `EAD-TOAN-LOAI-KHAC` | cảnh báo | ✔ |
+|  | `EAD-RISKRECOVERY-DU-TRANG-THAI` | cảnh báo | ✔ |
+|  | `EAD-NGAY-SAI-DINH-DANG` | cảnh báo | ✔ |
+|  | `EAD-TOTALDOC-LECH` | lỗi |  |
+|  | `EAD-SO-TRANG-LECH` | cảnh báo |  |
+| XML | `XML-HONG` | lỗi |  |
+| Cấu trúc | `THIEU-METS-GOC` | lỗi |  |
+|  | `THIEU-REPRESENTATIONS` | lỗi |  |
+|  | `THIEU-METS-BAN-DAI-DIEN` | lỗi |  |
+|  | `THIEU-SCHEMAS` | lỗi |  |
+|  | `KHONG-CO-TEP-TAI-LIEU` | lỗi |  |
+| METS | `METS-THIEU-LOAI-GOI` | lỗi |  |
+|  | `METS-THIEU-OBJID` | lỗi |  |
+|  | `METS-OBJID-KHAC-TEN-THU-MUC` | lỗi |  |
+|  | `METS-KHONG-KHAI-PROFILE` | cảnh báo |  |
+|  | `METS-PROFILE-KHONG-CSIP` | cảnh báo |  |
+|  | `METS-THIEU-STRUCTMAP-CSIP` | lỗi |  |
+|  | `SIP-THIEU-THOA-THUAN-NOP-LUU` | cảnh báo |  |
+|  | `METS-PROFILE-LECH-NHAU` | cảnh báo |  |
+|  | `METS-MUC-THIEU-HREF` | lỗi |  |
+|  | `METS-TRO-TEP-KHONG-CO` | lỗi |  |
+|  | `METS-BAM-KHONG-SHA256` | cảnh báo |  |
+|  | `METS-BAM-SAI` | lỗi |  |
+|  | `METS-THIEU-BAM` | lỗi |  |
+|  | `METS-SIZE-SAI` | lỗi |  |
+|  | `METS-MPTR-KHONG-CO` | lỗi |  |
+|  | `METS-TEP-MO-COI` | lỗi | ✔ |
+| PREMIS | `PREMIS-AIP-THIEU-GOC` | lỗi |  |
+|  | `PREMIS-AIP-THIEU-BAN-DAI-DIEN` | lỗi |  |
+|  | `PREMIS-THIEU-BAM-DUNG` | lỗi |  |
+|  | `PREMIS-THIEU-ORIGINALNAME` | cảnh báo | ✔ |
+|  | `PREMIS-FORMATNAME-CHUNG` | cảnh báo |  |
+| PDF | `PDF-KHONG-PDFA` | lỗi | ✔ |
+|  | `PDF-THIEU-LOP-CHU` | lỗi | ✔ |
+|  | `PDF-DPI-THAP` | lỗi | ✔ |
+| Chữ ký số | `KY-KHONG-TOAN-VEN` | lỗi | ✔ |
+|  | `KY-CHUA-KY` | cảnh báo | ✔ |
+|  | `KY-THIEU-CHUNG-THU-ESS` | cảnh báo | ✔ |
+|  | `KY-THIEU-TSA` | cảnh báo | ✔ |
+|  | `KY-THIEU-LTV` | cảnh báo | ✔ |
+| Chưa kiểm | `CHUA-KIEM-NOI-DUNG` | cảnh báo |  |
+
+Cột `doiTuong` đánh dấu mã nào **gộp số** nên có kèm danh sách. 16 mã, cắt ở **200** mục.
+
+#### 12.6.2. «Cảnh báo không chặn» — đúng, trừ một mã
+
+Xác nhận: ở cửa này cảnh báo **không** đổi `ketLuan`. Chỉ `soLoi > 0` mới làm kết luận thành
+KHÔNG ĐẠT. Hiểu của cổng là đúng.
+
+**Nhưng `CHUA-KIEM-NOI-DUNG` không cùng loại với 19 cảnh báo kia.** Nó không nói "đã kiểm và
+thấy hơi sai", nó nói **"chưa ai kiểm"** — những phép kiểm cần đọc byte thật của tệp (PDF/A,
+lớp chữ, độ phân giải, đối chiếu mã băm) chưa chạy. Lúc nộp gói thật, có đủ tệp, mấy phép ấy
+chạy và **sinh ra `loi`**: `PDF-KHONG-PDFA`, `PDF-THIEU-LOP-CHU`, `PDF-DPI-THAP`,
+`METS-BAM-SAI`, `PREMIS-THIEU-BAM-DUNG`. Vì vậy mã này — **và chỉ mã này** — mang
+`nopThatThanhLoi: true`, để màn hình nói «sẽ bị trả lúc giao» thay vì «không chặn».
+
+19 cảnh báo còn lại không phụ thuộc nội dung tệp: có đủ byte cũng vẫn chỉ là cảnh báo. Có test
+ghim đúng tính chất đó, nên bạn gắn cứng được: `nopThatThanhLoi` vắng ⇒ không chặn.
+
+Mã này cũng chính là chỗ để bạn **gộp** nó vào khối «Chưa kiểm» dựng từ `chuaKiem[]`, thay vì
+đếm nó như một cảnh báo thứ hai cùng nghĩa — trên màn hiện tại chữ «Chưa kiểm» hiện hai lần.
+Gộp xong thì `soCanhBao` hiện ra nên trừ nó đi, kẻo con số không khớp với số thẻ bày ra.
+
+**Hai cảnh báo khác cũng đáng đọc kỹ**, dù chúng không đổi thành lỗi — vì chúng cũng có nghĩa
+"phép kiểm không chạy", chứ không phải "đã kiểm và đạt":
+
+| | |
+|---|---|
+| `METS-BAM-KHONG-SHA256` | Gói khai mã băm bằng loại khác (MD5, SHA-1). Bộ kiểm **không đối chiếu** loại nào ngoài SHA-256 ⇒ tệp bị sửa sau khi đóng gói cũng không ai biết. Nên bày nổi hơn một cảnh báo hình thức |
+| `EAD-KHONG-CO-XSD` | Gói không mang lược đồ nên **phần đối chiếu mô tả hồ sơ bị bỏ**. Sai sót trong đó vẫn còn nguyên, chưa ai thấy |
+
+### 12.7. Mã lỗi
 
 | HTTP | | |
 |---|---|---|
@@ -1076,14 +1207,18 @@ của representation không bị nhầm thành METS gốc.
 | 404 | `ncc_du_an_khong_thay` | `maNgoai` không có, hoặc thuộc nguồn khác |
 | 401 | `hook_unauthorized` | Khoá / chữ ký / lệch giờ |
 
-### 12.7. Việc cần làm để nối xong
+### 12.8. Việc cần làm để nối xong
 
 1. Route `/ncc/tu-kiem-goi` phía bạn, `maNgoai` **lấy từ phiên**.
 2. Đọc bản kê trong trình duyệt (12.4). Bắt đầu bằng cách **a** — chọn thư mục — rồi thêm **b**.
 3. Màn hình: thẻ `ketLuan` lớn → ba số `soLoi` / `soCanhBao` / `chuaKiemNoiDung` → thông tin gói
-   (`loai`, `maPhong`, `soTepDuLieu`) → bảng `phatHien[]` gom theo `nhom`.
+   (`loai`, `maPhong`, `soTepDuLieu`) → `phatHien[]` **gom theo `ma`**, mỗi nhóm một dòng gập lại
+   được: tiêu đề là `tieuDe` + số lần, mở ra mới bày `cachSua` và `doiTuong[]`. Gom theo `nhom`
+   thì một kho sai quy ước đặt tên cho ra hàng nghìn dòng cùng nghĩa, không ai đọc nổi.
 4. **Luôn bày `ghiChu`** khi `chuaKiemNoiDung > 0`. Gói "CHƯA KIỂM ĐỦ" vẫn có thể bị từ chối
    lúc giao — nói trước còn hơn để người ta tưởng đã xong.
+   Và gộp phát hiện `CHUA-KIEM-NOI-DUNG` vào khối «Chưa kiểm» dựng từ `chuaKiem[]`, nhớ trừ nó
+   khỏi `soCanhBao` bày ra (12.6.2).
 5. Dòng menu riêng, như bốn cửa kia (xem 10.7).
 
 ---
@@ -1151,6 +1286,7 @@ bậy, không phải vì nặng).
 | `phongTrongDuAn[]` | Phông của dự án, để bày **cạnh** `maPhong[]` |
 | `phatHien[].ma` | **Mã máy đọc.** Phân loại bằng khoá này, đừng dò theo `noiDung` — câu chữ sẽ đổi |
 | `phatHien[].goi` | Tên các gói phát hiện này nói tới, đúng tên bạn gửi lên. Rỗng = nói về cả đợt |
+| `phatHien[].tieuDe` · `.cachSua` | **Mới 17/11/2026.** Tiêu đề lời thường + cách sửa, cùng quy ước với cửa 12 (12.6) — dựng cột «Cách sửa» thẳng từ đây, đừng chép câu sang bên bạn. Có ở 6 mã mức lỗi/cảnh báo; hai mã mức `dat` không có (đã đạt thì không có gì sửa) |
 
 Bảng mã (`phatHien[].ma`) — **đóng**, thêm mã mới thì tài liệu này sẽ ghi:
 

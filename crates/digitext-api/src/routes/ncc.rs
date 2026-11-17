@@ -1615,13 +1615,21 @@ async fn tu_kiem_dot(
         "phongTrongDuAn": phong_ds,
         // `ma` + `goi` để cổng gắn nhãn lên đúng dòng gói mà KHÔNG phải dò theo câu chữ tiếng
         // Việt. Câu chữ trong `noiDung` sẽ còn đổi; hai khoá kia thì không.
-        "phatHien": kq.findings.iter().map(|f| json!({
-            "muc": muc(&f.level),
-            "ma": f.code,
-            "nhom": f.group,
-            "noiDung": f.message,
-            "goi": f.goi,
-        })).collect::<Vec<_>>(),
+        "phatHien": kq.findings.iter().map(|f| {
+            let mut o = serde_json::Map::new();
+            o.insert("muc".into(), json!(muc(&f.level)));
+            o.insert("ma".into(), json!(f.code));
+            o.insert("nhom".into(), json!(f.group));
+            o.insert("noiDung".into(), json!(f.message));
+            o.insert("goi".into(), json!(f.goi));
+            // Cùng bộ khoá với cửa 12 (mục 12.6): không có lý gì cổng vẽ được cột «Cách sửa»
+            // cho từng gói mà tới phép kiểm cả đợt thì chỉ còn trơ cái mã.
+            if let Some(h) = f.huong_dan() {
+                o.insert("tieuDe".into(), json!(h.tieu_de));
+                o.insert("cachSua".into(), json!(h.cach_sua));
+            }
+            serde_json::Value::Object(o)
+        }).collect::<Vec<_>>(),
         "ghiChu": "Cửa này chỉ tìm lỗi GIỮA các gói. Mỗi gói vẫn phải tự kiểm bằng «Tự kiểm gói tin», và kết luận của từng gói ở đó vẫn là CHƯA KIỂM ĐỦ vì nội dung tệp chưa ai xem.",
     })))
 }
@@ -1797,11 +1805,38 @@ async fn tu_kiem_goi(
             "soPhep": so,
             "kiemODau": o_dau,
         })).collect::<Vec<_>>(),
-        "phatHien": kq.findings.iter().map(|f| json!({
-            "muc": muc(&f.level),
-            "nhom": f.group,
-            "noiDung": f.message,
-        })).collect::<Vec<_>>(),
+        // `ma` + `tieuDe` + `cachSua` + `doiTuong`: bên nhận dựng được bảng «lỗi gì — sửa thế
+        // nào — ở đâu» mà KHÔNG chép 58 câu tiếng Việt sang mã nguồn bên họ. Câu chữ trong
+        // `noiDung` còn đổi; `ma` thì không. Hướng dẫn lấy từ `digitext_pkgcheck::huong_dan`
+        // — cùng một bảng với báo cáo PDF, nên ba nơi không thể lệch nhau.
+        "phatHien": kq.findings.iter().map(|f| {
+            let mut o = serde_json::Map::new();
+            o.insert("muc".into(), json!(muc(&f.level)));
+            o.insert("nhom".into(), json!(f.group));
+            o.insert("noiDung".into(), json!(f.message));
+            if !f.code.is_empty() {
+                o.insert("ma".into(), json!(f.code));
+            }
+            // Vắng `tieuDe` = mã chưa có hướng dẫn (hoặc là phép kiểm ĐẠT). Bên nhận cứ vẽ
+            // như cũ — tuyệt đối đừng bịa câu thay.
+            if let Some(h) = f.huong_dan() {
+                o.insert("tieuDe".into(), json!(h.tieu_de));
+                o.insert("cachSua".into(), json!(h.cach_sua));
+                // Cảnh báo ở cửa này KHÔNG chặn. Trừ loại nói "phép kiểm chưa chạy": lúc nộp
+                // gói thật, đủ byte tệp, nó có thể hoá LỖI. Cờ này để màn hình nói đúng một
+                // trong hai câu đó, thay vì nói "không chặn" cho cả hai.
+                if h.nop_that_thanh_loi {
+                    o.insert("nopThatThanhLoi".into(), json!(true));
+                }
+            }
+            if !f.doi_tuong.is_empty() {
+                o.insert("doiTuong".into(), json!(f.doi_tuong));
+            }
+            if f.doi_tuong_bi_cat > 0 {
+                o.insert("doiTuongBiCat".into(), json!(f.doi_tuong_bi_cat));
+            }
+            serde_json::Value::Object(o)
+        }).collect::<Vec<_>>(),
         "ghiChu": "Cửa này kiểm CẤU TRÚC gói từ siêu dữ liệu. Không kiểm nội dung từng tệp PDF, không đối chiếu mã băm — dùng «Tự kiểm PDF/A» cho tệp mẫu. Bản kiểm đầy đủ chạy khi nộp gói thật.",
     })))
 }

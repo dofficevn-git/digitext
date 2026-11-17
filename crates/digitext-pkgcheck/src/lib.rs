@@ -4,6 +4,7 @@
 //! XSD: không có bộ kiểm XSD trong Rust — đối chiếu RÚT GỌN với schema đi kèm gói (đủ trường bắt buộc,
 //! không có trường lạ), chưa kiểm kiểu dữ liệu từng trường.
 pub mod dot;
+mod huong_dan;
 mod load;
 pub mod report;
 mod xml;
@@ -14,7 +15,13 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 use xml::El;
 
+pub use huong_dan::{huong_dan, HuongDan};
 pub use load::{discover, tu_ban_ke, Loaded};
+
+/// Trần số mục liệt kê trong [`Finding::doi_tuong`]. Một gói sai quy ước đặt tên có thể cho
+/// hàng nghìn tệp cùng một mã — gửi hết thì thân phản hồi phình ra mà không ai đọc tới mục thứ
+/// hai trăm.
+pub const DOI_TUONG_TOI_DA: usize = 200;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -30,8 +37,12 @@ pub struct Finding {
     pub level: Level,
     pub group: String,
     pub message: String,
-    /// Mã máy đọc, để bên nhận khỏi dò theo câu chữ tiếng Việt. Rỗng ở phép kiểm từng gói
-    /// (chúng phân loại bằng `group`); phép kiểm cả đợt thì mã nào cũng có.
+    /// Mã máy đọc, để bên nhận khỏi dò theo câu chữ tiếng Việt. Mọi phát hiện mức `Warn`/`Err`
+    /// đều có mã — ở cả phép kiểm từng gói lẫn phép kiểm cả đợt. Riêng mức `Ok` thì rỗng
+    /// (bên nhận gộp chúng thành một dòng "các phép đã đạt", không cần phân loại).
+    ///
+    /// Tra [`huong_dan`] để lấy tiêu đề lời thường + cách sửa. **Đừng chép bảng đó sang bên
+    /// mình** — ba tháng sau hai nơi lệch nhau.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
     /// Tên các gói mà phát hiện này nói tới. Rỗng = nói về cả đợt, không chỉ riêng gói nào.
@@ -40,16 +51,43 @@ pub struct Finding {
     /// trong `message` để người đọc thấy, nhưng **đừng tách từ đó ra** — câu chữ sẽ đổi.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub goi: Vec<String>,
+    /// Tệp / văn bản / trường bị ảnh hưởng, cho những câu **gộp số** ("6 văn bản…", "3/40 tệp…").
+    ///
+    /// Tồn tại vì một con số thì người đi sửa không biết mở tệp nào ra. Cắt ở
+    /// [`DOI_TUONG_TOI_DA`]; phần bị cắt đếm ở [`Finding::doi_tuong_bi_cat`]. Rỗng = phát hiện
+    /// đã tự nói rõ chỗ (câu chữ có sẵn tên tệp), hoặc nói về cả gói.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub doi_tuong: Vec<String>,
+    /// Số mục bị cắt khỏi [`Finding::doi_tuong`]. `0` = danh sách đủ.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub doi_tuong_bi_cat: usize,
 }
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
+}
+
 impl Finding {
     pub fn new(level: Level, group: &str, message: String) -> Self {
-        Finding { level, group: group.into(), message, code: String::new(), goi: Vec::new() }
+        Finding {
+            level,
+            group: group.into(),
+            message,
+            code: String::new(),
+            goi: Vec::new(),
+            doi_tuong: Vec::new(),
+            doi_tuong_bi_cat: 0,
+        }
     }
     /// Gắn mã máy đọc + danh sách gói liên quan (dùng ở [`crate::dot`]).
     pub fn ve(mut self, code: &str, goi: Vec<String>) -> Self {
         self.code = code.to_owned();
         self.goi = goi;
         self
+    }
+    /// Hướng dẫn sửa cho phát hiện này, `None` khi mã chưa có trong bảng hoặc mức là `Ok`.
+    pub fn huong_dan(&self) -> Option<HuongDan> {
+        huong_dan(&self.code)
     }
 }
 
@@ -227,15 +265,35 @@ struct Ctx {
     f: Vec<Finding>,
 }
 impl Ctx {
+    /// Phép kiểm đã đạt — không có mã, bên nhận gộp chúng thành một dòng.
     fn ok(&mut self, g: &str, m: impl Into<String>) {
         self.f.push(Finding::new(Level::Ok, g, m.into()));
     }
-    fn warn(&mut self, g: &str, m: impl Into<String>) {
-        self.f.push(Finding::new(Level::Warn, g, m.into()));
+    /// `ma` là tham số **đầu**, bắt buộc: thêm phát hiện mới mà quên mã thì không biên dịch
+    /// được, và test `moi_ma_deu_co_huong_dan` bắt tiếp nếu mã chưa có hướng dẫn.
+    fn warn(&mut self, ma: &str, g: &str, m: impl Into<String>) {
+        self.f.push(Finding::new(Level::Warn, g, m.into()).ve(ma, Vec::new()));
     }
-    fn err(&mut self, g: &str, m: impl Into<String>) {
-        self.f.push(Finding::new(Level::Err, g, m.into()));
+    fn err(&mut self, ma: &str, g: &str, m: impl Into<String>) {
+        self.f.push(Finding::new(Level::Err, g, m.into()).ve(ma, Vec::new()));
     }
+    /// Như [`Ctx::warn`] nhưng kèm danh sách chỗ bị ảnh hưởng — dùng cho câu **gộp số**.
+    fn warn_ds(&mut self, ma: &str, g: &str, m: impl Into<String>, ds: Vec<String>) {
+        self.f.push(gan_ds(Finding::new(Level::Warn, g, m.into()).ve(ma, Vec::new()), ds));
+    }
+    fn err_ds(&mut self, ma: &str, g: &str, m: impl Into<String>, ds: Vec<String>) {
+        self.f.push(gan_ds(Finding::new(Level::Err, g, m.into()).ve(ma, Vec::new()), ds));
+    }
+}
+
+/// Gắn danh sách chỗ bị ảnh hưởng, cắt ở [`DOI_TUONG_TOI_DA`] và đếm phần bị cắt.
+fn gan_ds(mut f: Finding, mut ds: Vec<String>) -> Finding {
+    if ds.len() > DOI_TUONG_TOI_DA {
+        f.doi_tuong_bi_cat = ds.len() - DOI_TUONG_TOI_DA;
+        ds.truncate(DOI_TUONG_TOI_DA);
+    }
+    f.doi_tuong = ds;
+    f
 }
 
 fn sha256(b: &[u8]) -> String {
@@ -329,32 +387,34 @@ fn xsd_lite(xsd: &El, doc: &El) -> Vec<String> {
     out
 }
 
-fn check_codes(c: &mut Ctx, label: &str, e: &El, date_bad: &mut BTreeMap<String, usize>) {
+/// `date_bad` gom theo tên trường → **danh sách nhãn** các bản EAD sai, không chỉ con số: người
+/// đi sửa cần biết mở tệp nào ra. Khoá `#riskRecovery` là chỗ riêng cho cặp trường không nhất quán.
+fn check_codes(c: &mut Ctx, label: &str, e: &El, date_bad: &mut BTreeMap<String, Vec<String>>) {
     for (k, max) in CODES {
         let Some(v) = e.child_text(k) else { continue };
         if v.is_empty() {
             if !OPTIONAL_CODES.contains(&k) {
-                c.err("EAD", format!("{label}: <{k}> rỗng"));
+                c.err("EAD-TRUONG-RONG", "EAD", format!("{label}: <{k}> rỗng"));
             }
             continue;
         }
         let ok = v.len() == 2 && v.parse::<u32>().is_ok_and(|n| (1..=max).contains(&n));
         if !ok {
-            c.err("EAD", format!("{label}: <{k}>={v} ngoài bảng mã 01..{max:02}"));
+            c.err("EAD-MA-NGOAI-BANG", "EAD", format!("{label}: <{k}>={v} ngoài bảng mã 01..{max:02}"));
         }
     }
     for k in ["startDate", "endDate", "issuedDate"] {
         if let Some(v) = e.child_text(k).filter(|v| !v.is_empty()) {
             if !is_dd_mm_yyyy(&v) {
-                *date_bad.entry(k.to_string()).or_default() += 1;
+                date_bad.entry(k.to_string()).or_default().push(label.to_string());
             }
         }
     }
     if let Some(v) = e.child_text("riskRecovery").filter(|v| !v.is_empty()) {
         if v != "0" && v != "1" {
-            c.err("EAD", format!("{label}: <riskRecovery>={v} (chỉ 0/1)"));
+            c.err("EAD-RISKRECOVERY-SAI", "EAD", format!("{label}: <riskRecovery>={v} (chỉ 0/1)"));
         } else if v == "0" && e.child_text("riskRecoveryStatus").is_some_and(|s| !s.is_empty()) {
-            *date_bad.entry("#riskRecovery".into()).or_default() += 1;
+            date_bad.entry("#riskRecovery".into()).or_default().push(label.to_string());
         }
     }
 }
@@ -530,7 +590,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                 }
                 Err(e) => {
                     bad_xml += 1;
-                    c.err("XML", format!("{p}: XML hỏng ({e})"));
+                    c.err("XML-HONG", "XML", format!("{p}: XML hỏng ({e})"));
                 }
             }
         }
@@ -542,7 +602,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
 
     // 2. Tệp bắt buộc.
     let Some(root_mets) = parsed.get("METS.xml") else {
-        c.err("Cấu trúc", "Thiếu METS.xml ở gốc gói");
+        c.err("THIEU-METS-GOC", "Cấu trúc", "Thiếu METS.xml ở gốc gói");
         res.findings = c.f;
         return (finish(res), None);
     };
@@ -559,49 +619,49 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
         .filter_map(|p| p.strip_prefix("representations/").and_then(|r| r.split_once('/')).map(|(r, _)| r.to_string()))
         .collect();
     if reps.is_empty() {
-        c.err("Cấu trúc", "Thiếu thư mục representations/ (không có bản đại diện nào)");
+        c.err("THIEU-REPRESENTATIONS", "Cấu trúc", "Thiếu thư mục representations/ (không có bản đại diện nào)");
     }
     for r in &reps {
         if !files.contains_key(&format!("representations/{r}/METS.xml")) {
-            c.err("Cấu trúc", format!("representations/{r}: thiếu METS.xml"));
+            c.err("THIEU-METS-BAN-DAI-DIEN", "Cấu trúc", format!("representations/{r}: thiếu METS.xml"));
         }
     }
     if !files.keys().any(|p| p.starts_with("schemas/") && p.to_lowercase().ends_with(".xsd")) {
-        c.err("Cấu trúc", "Thiếu thư mục schemas/ (các tệp XSD đi kèm)");
+        c.err("THIEU-SCHEMAS", "Cấu trúc", "Thiếu thư mục schemas/ (các tệp XSD đi kèm)");
     }
 
     // 3. Loại gói, OBJID, PROFILE.
     if kind.is_empty() {
-        c.err("METS", "METS.xml thiếu csip:OAISPACKAGETYPE (SIP/AIP/DIP)");
+        c.err("METS-THIEU-LOAI-GOI", "METS", "METS.xml thiếu csip:OAISPACKAGETYPE (SIP/AIP/DIP)");
     } else {
         c.ok("METS", format!("Loại gói OAIS: {}", res.kind));
     }
     if res.objid.is_empty() {
-        c.err("METS", "METS.xml thiếu OBJID");
+        c.err("METS-THIEU-OBJID", "METS", "METS.xml thiếu OBJID");
     } else if !loaded.root.is_empty() {
         let want = res.objid.replace(':', "_");
         if want == loaded.root {
             c.ok("METS", format!("OBJID {} khớp tên thư mục gốc", res.objid));
         } else {
-            c.err("METS", format!("OBJID \"{}\" không khớp tên thư mục gốc \"{}\"", res.objid, loaded.root));
+            c.err("METS-OBJID-KHAC-TEN-THU-MUC", "METS", format!("OBJID \"{}\" không khớp tên thư mục gốc \"{}\"", res.objid, loaded.root));
         }
     }
     let csip = |p: &str| p.to_lowercase().contains("e-ark-csip") || p.to_lowercase().contains("earkcsip");
     if profile.is_empty() {
-        c.warn("METS", "METS.xml không khai PROFILE");
+        c.warn("METS-KHONG-KHAI-PROFILE", "METS", "METS.xml không khai PROFILE");
     } else if !csip(&profile) {
-        c.warn("METS", format!("METS.xml dùng PROFILE \"{profile}\" — không phải hồ sơ E-ARK CSIP"));
+        c.warn("METS-PROFILE-KHONG-CSIP", "METS", format!("METS.xml dùng PROFILE \"{profile}\" — không phải hồ sơ E-ARK CSIP"));
     }
     if root_mets.all("structMap").iter().any(|s| s.attr("LABEL") == Some("CSIP")) {
         c.ok("METS", "structMap LABEL=\"CSIP\" đúng E-ARK");
     } else {
-        c.err("METS", "Không có structMap LABEL=\"CSIP\"");
+        c.err("METS-THIEU-STRUCTMAP-CSIP", "METS", "Không có structMap LABEL=\"CSIP\"");
     }
     if res.kind == "SIP" {
         if root_mets.all("altRecordID").iter().any(|a| a.attr("TYPE") == Some("SUBMISSIONAGREEMENT")) {
             c.ok("METS", "SIP có mã thoả thuận nộp lưu (SUBMISSIONAGREEMENT)");
         } else {
-            c.warn("METS", "SIP không có altRecordID SUBMISSIONAGREEMENT (thoả thuận nộp lưu)");
+            c.warn("SIP-THIEU-THOA-THUAN-NOP-LUU", "METS", "SIP không có altRecordID SUBMISSIONAGREEMENT (thoả thuận nộp lưu)");
         }
     }
 
@@ -614,7 +674,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
         if mp != "METS.xml" {
             let (_, _, _, _, p) = mets_info(m);
             if !p.is_empty() && csip(&p) != csip(&profile) {
-                c.warn("METS", format!("{mp} dùng PROFILE \"{p}\" khác METS gốc"));
+                c.warn("METS-PROFILE-LECH-NHAU", "METS", format!("{mp} dùng PROFILE \"{p}\" khác METS gốc"));
             }
         }
         let base = dir_of(mp);
@@ -632,19 +692,27 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
             n += 1;
             let Some(href) = href else {
                 bad += 1;
-                c.err("METS", format!("{mp}: mục {} thiếu xlink:href", el.attr("ID").unwrap_or("?")));
+                c.err("METS-MUC-THIEU-HREF", "METS", format!("{mp}: mục {} thiếu xlink:href", el.attr("ID").unwrap_or("?")));
                 continue;
             };
             let target = resolve(base, href);
             referenced.insert(target.clone());
             let Some(data) = files.get(&target) else {
                 bad += 1;
-                c.err("METS", format!("{mp}: tham chiếu tới tệp không có trong gói: {target}"));
+                c.err("METS-TRO-TEP-KHONG-CO", "METS", format!("{mp}: tham chiếu tới tệp không có trong gói: {target}"));
                 continue;
             };
             if let Some(t) = el.attr("CHECKSUMTYPE") {
                 if !t.eq_ignore_ascii_case("SHA-256") {
-                    c.warn("METS", format!("{mp}: {target} dùng {t} (nên SHA-256)"));
+                    // Nói luôn HẬU QUẢ, không chỉ "nên SHA-256": nhánh đối chiếu bên dưới chỉ
+                    // chạy khi CHECKSUMTYPE là SHA-256, nên với loại khác mã băm KHÔNG được
+                    // kiểm — tệp bị sửa sau khi đóng gói cũng không ai biết. Câu cũ đọc như
+                    // chuyện hình thức.
+                    c.warn(
+                        "METS-BAM-KHONG-SHA256",
+                        "METS",
+                        format!("{mp}: {target} dùng {t}, không phải SHA-256 — mã băm vì vậy KHÔNG được đối chiếu"),
+                    );
                 }
             }
             match el.attr("CHECKSUM") {
@@ -656,13 +724,13 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                 Some(sum) if el.attr("CHECKSUMTYPE").is_none_or(|t| t.eq_ignore_ascii_case("SHA-256")) => {
                     if !sum.eq_ignore_ascii_case(&sha256(data)) {
                         bad += 1;
-                        c.err("METS", format!("{mp}: {target} sai mã băm SHA-256 (tệp đã bị thay đổi sau khi đóng gói)"));
+                        c.err("METS-BAM-SAI", "METS", format!("{mp}: {target} sai mã băm SHA-256 (tệp đã bị thay đổi sau khi đóng gói)"));
                     }
                 }
                 Some(_) => {}
                 None => {
                     bad += 1;
-                    c.err("METS", format!("{mp}: {target} không ghi CHECKSUM"));
+                    c.err("METS-THIEU-BAM", "METS", format!("{mp}: {target} không ghi CHECKSUM"));
                 }
             }
             if let Some(sz) = el.attr("SIZE") {
@@ -671,7 +739,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                 let co_that = co_tep.get(&target).copied().unwrap_or(data.len() as u64);
                 if sz.parse::<u64>().ok() != Some(co_that) {
                     bad += 1;
-                    c.err("METS", format!("{mp}: {target} SIZE={sz} khác thực tế {co_that}"));
+                    c.err("METS-SIZE-SAI", "METS", format!("{mp}: {target} SIZE={sz} khác thực tế {co_that}"));
                 }
             }
         }
@@ -680,7 +748,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                 let t = resolve(base, h);
                 referenced.insert(t.clone());
                 if !files.contains_key(&t) {
-                    c.err("METS", format!("{mp}: mptr trỏ tới tệp không có: {t}"));
+                    c.err("METS-MPTR-KHONG-CO", "METS", format!("{mp}: mptr trỏ tới tệp không có: {t}"));
                 }
             }
         }
@@ -692,22 +760,27 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     if orphans.is_empty() {
         c.ok("METS", format!("Không có tệp mồ côi — cả {} tệp đều được METS tham chiếu", files.len()));
     } else {
-        c.err("METS", format!("{} tệp không được METS nào tham chiếu: {}", orphans.len(), orphans.iter().take(8).map(|s| s.as_str()).collect::<Vec<_>>().join(", ")));
+        c.err_ds(
+            "METS-TEP-MO-COI",
+            "METS",
+            format!("{} tệp không được METS nào tham chiếu: {}", orphans.len(), orphans.iter().take(8).map(|s| s.as_str()).collect::<Vec<_>>().join(", ")),
+            orphans.iter().map(|s| (*s).clone()).collect(),
+        );
     }
 
     // 5. EAD hồ sơ.
-    let mut date_bad: BTreeMap<String, usize> = BTreeMap::new();
+    let mut date_bad: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let ead_path = ["metadata/descriptive/EAD.xml", "metadata/descriptive/EAD_TL.xml"].into_iter().find(|p| parsed.contains_key(p));
     let mut file_code = String::new();
     match ead_path.and_then(|p| parsed.get(p).map(|e| (p, e))) {
-        None => c.err("EAD", "Thiếu metadata/descriptive/EAD.xml (mô tả hồ sơ)"),
+        None => c.err("EAD-THIEU-HO-SO", "EAD", "Thiếu metadata/descriptive/EAD.xml (mô tả hồ sơ)"),
         Some((p, e)) => {
             check_codes(&mut c, "EAD hồ sơ", e, &mut date_bad);
             if res.kind == "DIP" {
                 // Gói DIP: EAD.xml mô tả YÊU CẦU khai thác (Điều 42), không mô tả hồ sơ (5/11/2026).
                 for k in ["requestID", "requestDate", "purpose"] {
                     if e.child_text(k).is_none_or(|v| v.is_empty()) {
-                        c.err("EAD", format!("EAD yêu cầu DIP: thiếu <{k}>"));
+                        c.err("EAD-DIP-THIEU-TRUONG", "EAD", format!("EAD yêu cầu DIP: thiếu <{k}>"));
                     }
                 }
                 // file_code để trống: văn bản trong DIP gom từ nhiều hồ sơ, không so khuôn <mã hồ sơ>.<STT>.
@@ -715,15 +788,15 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
             } else {
                 for k in ["title", "maintenance", "mode", "language", "totalDoc", "confidenceLevel"] {
                     if e.child_text(k).is_none_or(|v| v.is_empty()) {
-                        c.err("EAD", format!("EAD hồ sơ: thiếu <{k}>"));
+                        c.err("EAD-HO-SO-THIEU-TRUONG", "EAD", format!("EAD hồ sơ: thiếu <{k}>"));
                     }
                 }
                 file_code = e.child_text("arcFileCode").filter(|v| !v.is_empty()).or_else(|| e.child_text("fileCode").filter(|v| !v.is_empty())).unwrap_or_default();
                 if file_code.is_empty() {
-                    c.err("EAD", "EAD hồ sơ: thiếu mã hồ sơ (arcFileCode / fileCode)");
+                    c.err("EAD-HO-SO-THIEU-MA", "EAD", "EAD hồ sơ: thiếu mã hồ sơ (arcFileCode / fileCode)");
                 }
                 if aip && e.child_text("arcFileCode").is_none_or(|v| v.is_empty()) {
-                    c.warn("EAD", "Gói AIP nhưng EAD hồ sơ không có arcFileCode (mã hồ sơ lưu trữ)");
+                    c.warn("EAD-AIP-THIEU-ARCFILECODE", "EAD", "Gói AIP nhưng EAD hồ sơ không có arcFileCode (mã hồ sơ lưu trữ)");
                 }
                 res.title = e.child_text("title").unwrap_or_default();
             }
@@ -737,10 +810,10 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                         c.ok("EAD", format!("EAD hồ sơ khớp {xsd_name} (đủ trường bắt buộc, không trường lạ)"));
                     }
                     for pr in probs {
-                        c.err("EAD", format!("EAD hồ sơ so với {xsd_name}: {pr}"));
+                        c.err("EAD-HO-SO-LECH-XSD", "EAD", format!("EAD hồ sơ so với {xsd_name}: {pr}"));
                     }
                 }
-                None => c.warn("EAD", format!("Không có {xsd_name} để đối chiếu EAD hồ sơ")),
+                None => c.warn("EAD-KHONG-CO-XSD", "EAD", format!("Không có {xsd_name} để đối chiếu EAD hồ sơ")),
             }
         }
     }
@@ -750,13 +823,17 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     let data: Vec<(&String, &Vec<u8>)> = files.iter().filter(|(p, _)| p.starts_with("representations/") && p.split('/').nth(2) == Some("data")).collect();
     res.data_files = data.len();
     if data.is_empty() {
-        c.err("Cấu trúc", "Không có tệp tài liệu nào trong representations/*/data/");
+        c.err("KHONG-CO-TEP-TAI-LIEU", "Cấu trúc", "Không có tệp tài liệu nào trong representations/*/data/");
     }
-    let doc_eads: Vec<(&str, &El)> = parsed
+    // Xếp theo đường dẫn: `parsed` là HashMap nên thứ tự lặp đổi mỗi lần chạy. Không xếp thì
+    // thứ tự các phát hiện EAD văn bản — và danh sách «chỗ bị ảnh hưởng» dựng từ vòng này —
+    // nhảy loạn giữa hai lần kiểm cùng một gói.
+    let mut doc_eads: Vec<(&str, &El)> = parsed
         .iter()
         .filter(|(p, _)| p.starts_with("representations/") && p.contains("/metadata/descriptive/"))
         .map(|(p, e)| (*p, e))
         .collect();
+    doc_eads.sort_by_key(|(p, _)| *p);
     let doc_xsd = parsed.get("schemas/EAD_doc.xsd");
     let data_stems: BTreeSet<String> = data.iter().map(|(p, _)| {
         let n = p.rsplit('/').next().unwrap_or(p);
@@ -765,15 +842,17 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     let mut codes_seen: BTreeMap<String, usize> = BTreeMap::new();
     let mut xsd_bad = 0;
     let mut pages_sum = 0u32;
-    let mut no_subject = 0;
-    let mut subjects: BTreeMap<String, usize> = BTreeMap::new();
-    let mut type_other = 0;
+    // Giữ NHÃN chứ không giữ số đếm: mấy câu gộp số bên dưới đều phải trả kèm danh sách chỗ
+    // bị ảnh hưởng, "6 văn bản trùng trích yếu" mà không nói văn bản nào thì người đọc bế tắc.
+    let mut no_subject: Vec<String> = Vec::new();
+    let mut subjects: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut type_other: Vec<String> = Vec::new();
     for (p, e) in &doc_eads {
         let label = p.rsplit('/').next().unwrap_or(p).to_string();
         check_codes(&mut c, &label, e, &mut date_bad);
         let code = e.child_text("arcDocCode").filter(|v| !v.is_empty()).or_else(|| e.child_text("docCode").filter(|v| !v.is_empty()));
         match &code {
-            None => c.err("EAD", format!("{label}: thiếu mã văn bản (arcDocCode / docCode)")),
+            None => c.err("EAD-VAN-BAN-THIEU-MA", "EAD", format!("{label}: thiếu mã văn bản (arcDocCode / docCode)")),
             Some(code) => {
                 *codes_seen.entry(code.clone()).or_default() += 1;
                 if !file_code.is_empty() {
@@ -783,57 +862,89 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                         last.len() == 7 && last.bytes().all(|b| b.is_ascii_digit()) && parts.len() <= 2 && (parts.len() == 1 || (1..=3).contains(&parts[0].len()))
                     });
                     if !ok {
-                        c.err("EAD", format!("{label}: mã văn bản \"{code}\" không theo khuôn <mã hồ sơ>.<STT 7 số>"));
+                        c.err("EAD-MA-VAN-BAN-SAI-KHUON", "EAD", format!("{label}: mã văn bản \"{code}\" không theo khuôn <mã hồ sơ>.<STT 7 số>"));
                     }
                 }
                 if !data_stems.contains(code) {
-                    c.err("EAD", format!("{label}: không có tệp dữ liệu tên \"{code}.*\""));
+                    c.err("EAD-KHONG-CO-TEP-DU-LIEU", "EAD", format!("{label}: không có tệp dữ liệu tên \"{code}.*\""));
                 }
             }
         }
         match e.child_text("subject") {
-            Some(s) if !s.is_empty() => *subjects.entry(s).or_default() += 1,
-            _ => no_subject += 1,
+            Some(s) if !s.is_empty() => subjects.entry(s).or_default().push(label.clone()),
+            _ => no_subject.push(label.clone()),
         }
         if e.child_text("typeName").as_deref() == Some("32") {
-            type_other += 1;
+            type_other.push(label.clone());
         }
         pages_sum += e.child_text("numberOfPage").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
         if let Some(x) = doc_xsd {
             let probs = xsd_lite(x, e);
             if !probs.is_empty() {
                 xsd_bad += 1;
-                c.err("EAD", format!("{label} so với schemas/EAD_doc.xsd: {}", probs.join("; ")));
+                c.err("EAD-VAN-BAN-LECH-XSD", "EAD", format!("{label} so với schemas/EAD_doc.xsd: {}", probs.join("; ")));
             }
         }
     }
     let dups: Vec<&String> = codes_seen.iter().filter(|(_, n)| **n > 1).map(|(k, _)| k).collect();
     if !dups.is_empty() {
-        c.err("EAD", format!("Mã văn bản trùng: {}", dups.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")));
+        c.err_ds(
+            "EAD-MA-VAN-BAN-TRUNG",
+            "EAD",
+            format!("Mã văn bản trùng: {}", dups.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")),
+            dups.iter().map(|s| (*s).clone()).collect(),
+        );
     }
     if !doc_eads.is_empty() && xsd_bad == 0 && doc_xsd.is_some() {
         c.ok("EAD", format!("{} EAD văn bản khớp schemas/EAD_doc.xsd", doc_eads.len()));
     }
-    if no_subject > 0 {
-        c.warn("EAD", format!("{no_subject} văn bản không có trích yếu (subject)"));
+    if !no_subject.is_empty() {
+        c.warn_ds(
+            "EAD-THIEU-TRICH-YEU",
+            "EAD",
+            format!("{} văn bản không có trích yếu (subject)", no_subject.len()),
+            no_subject.clone(),
+        );
     }
-    let dup_sub: usize = subjects.values().filter(|n| **n > 1).copied().sum();
-    if dup_sub > 0 {
-        c.warn("EAD", format!("{dup_sub} văn bản có trích yếu trùng nhau — kiểm lại trích yếu từng văn bản"));
+    // Chỉ các nhãn thuộc trích yếu BỊ TRÙNG, không phải mọi nhãn: người sửa cần đúng mấy văn
+    // bản phải mở ra.
+    let dup_nhan: Vec<String> = subjects.values().filter(|v| v.len() > 1).flatten().cloned().collect();
+    if !dup_nhan.is_empty() {
+        c.warn_ds(
+            "EAD-TRICH-YEU-TRUNG",
+            "EAD",
+            format!("{} văn bản có trích yếu trùng nhau — kiểm lại trích yếu từng văn bản", dup_nhan.len()),
+            dup_nhan,
+        );
     }
-    if type_other > 0 && type_other == doc_eads.len() {
-        c.warn("EAD", format!("Cả {type_other} văn bản đều là loại 32 (Khác) — nên xác định đúng tên loại văn bản"));
+    if !type_other.is_empty() && type_other.len() == doc_eads.len() {
+        c.warn_ds(
+            "EAD-TOAN-LOAI-KHAC",
+            "EAD",
+            format!("Cả {} văn bản đều là loại 32 (Khác) — nên xác định đúng tên loại văn bản", type_other.len()),
+            type_other.clone(),
+        );
     }
-    for (k, n) in &date_bad {
+    for (k, nhan) in &date_bad {
         if k == "#riskRecovery" {
-            c.warn("EAD", format!("{n} bản EAD ghi riskRecovery=0 (không dự phòng) nhưng vẫn điền riskRecoveryStatus"));
+            c.warn_ds(
+                "EAD-RISKRECOVERY-DU-TRANG-THAI",
+                "EAD",
+                format!("{} bản EAD ghi riskRecovery=0 (không dự phòng) nhưng vẫn điền riskRecoveryStatus", nhan.len()),
+                nhan.clone(),
+            );
         } else {
-            c.warn("EAD", format!("{n} trường <{k}> không theo dd/mm/yyyy (chỉ ghi năm hoặc sai định dạng)"));
+            c.warn_ds(
+                "EAD-NGAY-SAI-DINH-DANG",
+                "EAD",
+                format!("{} trường <{k}> không theo dd/mm/yyyy (chỉ ghi năm hoặc sai định dạng)", nhan.len()),
+                nhan.clone(),
+            );
         }
     }
     match res.total_doc {
         Some(t) if t as usize == data.len() && t as usize == doc_eads.len() => c.ok("EAD", format!("totalDoc = số tệp dữ liệu = số EAD văn bản = {t}")),
-        Some(t) => c.err("EAD", format!("totalDoc={t} nhưng có {} tệp dữ liệu, {} EAD văn bản", data.len(), doc_eads.len())),
+        Some(t) => c.err("EAD-TOTALDOC-LECH", "EAD", format!("totalDoc={t} nhưng có {} tệp dữ liệu, {} EAD văn bản", data.len(), doc_eads.len())),
         None => {}
     }
     if let Some(p) = res.pages {
@@ -841,7 +952,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
             if p == pages_sum {
                 c.ok("EAD", format!("numberOfPage hồ sơ = tổng số trang các văn bản = {p}"));
             } else {
-                c.warn("EAD", format!("numberOfPage hồ sơ = {p} nhưng tổng các văn bản = {pages_sum}"));
+                c.warn("EAD-SO-TRANG-LECH", "EAD", format!("numberOfPage hồ sơ = {p} nhưng tổng các văn bản = {pages_sum}"));
             }
         }
     }
@@ -849,7 +960,7 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     // 7. PREMIS.
     let premis_root = parsed.get("metadata/preservation/PREMIS.xml");
     match (premis_root, aip) {
-        (None, true) => c.err("PREMIS", "Gói AIP thiếu metadata/preservation/PREMIS.xml"),
+        (None, true) => c.err("PREMIS-AIP-THIEU-GOC", "PREMIS", "Gói AIP thiếu metadata/preservation/PREMIS.xml"),
         (None, false) => c.ok("PREMIS", format!("{} không kèm PREMIS (không bắt buộc)", res.kind)),
         (Some(p), _) => {
             let ev: BTreeSet<String> = p.all("eventType").iter().map(|e| e.text.trim().to_string()).collect();
@@ -860,14 +971,14 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
         let pp = format!("representations/{r}/metadata/preservation/PREMIS_{r}.xml");
         let Some(p) = parsed.get(pp.as_str()) else {
             if aip {
-                c.err("PREMIS", format!("Gói AIP thiếu {pp}"));
+                c.err("PREMIS-AIP-THIEU-BAN-DAI-DIEN", "PREMIS", format!("Gói AIP thiếu {pp}"));
             }
             continue;
         };
         let objs = p.all("object");
         let digests: BTreeSet<String> = p.all("messageDigest").iter().map(|d| d.text.trim().to_lowercase()).collect();
         let mut miss = 0;
-        let mut no_orig = 0;
+        let mut no_orig: Vec<String> = Vec::new();
         let rep_data: Vec<&(&String, &Vec<u8>)> = data.iter().filter(|(path, _)| path.starts_with(&format!("representations/{r}/"))).collect();
         for (path, b) in &rep_data {
             let fname = path.rsplit('/').next().unwrap_or(path);
@@ -875,21 +986,26 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
                 bo_qua.bam_premis += 1;
             } else if !digests.contains(&sha256(b)) {
                 miss += 1;
-                c.err("PREMIS", format!("{pp}: không có mã băm SHA-256 đúng cho {fname}"));
+                c.err("PREMIS-THIEU-BAM-DUNG", "PREMIS", format!("{pp}: không có mã băm SHA-256 đúng cho {fname}"));
             }
             let has_orig = objs.iter().any(|o| o.all("originalName").iter().any(|n| n.text.trim() == fname));
             if !has_orig {
-                no_orig += 1;
+                no_orig.push(fname.to_string());
             }
         }
         if miss == 0 && !rep_data.is_empty() {
             c.ok("PREMIS", format!("{pp}: fixity SHA-256 khớp {}/{} tệp", rep_data.len(), rep_data.len()));
         }
-        if no_orig > 0 {
-            c.warn("PREMIS", format!("{pp}: {no_orig} tệp không có originalName — khó đối chiếu tự động"));
+        if !no_orig.is_empty() {
+            c.warn_ds(
+                "PREMIS-THIEU-ORIGINALNAME",
+                "PREMIS",
+                format!("{pp}: {} tệp không có originalName — khó đối chiếu tự động", no_orig.len()),
+                no_orig.clone(),
+            );
         }
         if p.all("formatName").iter().any(|f| f.text.trim().eq_ignore_ascii_case("Portable Document Format")) {
-            c.warn("PREMIS", format!("{pp}: formatName chỉ ghi \"Portable Document Format\" — nên ghi PDF/A-2b (PRONOM fmt/477)"));
+            c.warn("PREMIS-FORMATNAME-CHUNG", "PREMIS", format!("{pp}: formatName chỉ ghi \"Portable Document Format\" — nên ghi PDF/A-2b (PRONOM fmt/477)"));
         }
     }
 
@@ -905,43 +1021,49 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
     }
     if !res.pdfs.is_empty() {
         let n = res.pdfs.len();
-        let not_pdfa = res.pdfs.iter().filter(|r| r.pdfa.is_none() || !r.output_intent).count();
-        let no_text = res.pdfs.iter().filter(|r| r.text_pages < r.pages).count();
-        let low_dpi = res.pdfs.iter().filter(|r| r.problems.iter().any(|x| x.contains("dpi"))).count();
-        let unsigned = res.pdfs.iter().filter(|r| !r.signed).count();
-        let sig_bad = res.pdfs.iter().filter(|r| r.sig_valid == Some(false)).count();
-        let no_tsa = res.pdfs.iter().filter(|r| r.signed && !r.tsa).count();
-        let no_ltv = res.pdfs.iter().filter(|r| r.signed && !r.ltv).count();
-        if not_pdfa > 0 {
-            c.err("PDF", format!("{not_pdfa}/{n} tệp không phải PDF/A (TT05 Điều 8.2.a: PDF/A hai lớp)"));
+        // Giữ TÊN TỆP, không giữ số đếm: "3/40 tệp thiếu lớp chữ" mà không nói tệp nào thì
+        // người sửa phải mở cả 40. Số đếm lấy lại bằng `.len()`.
+        let ten = |loc: &dyn Fn(&PdfRow) -> bool| -> Vec<String> {
+            res.pdfs.iter().filter(|r| loc(r)).map(|r| r.file.clone()).collect()
+        };
+        let not_pdfa = ten(&|r: &PdfRow| r.pdfa.is_none() || !r.output_intent);
+        let no_text = ten(&|r: &PdfRow| r.text_pages < r.pages);
+        let low_dpi = ten(&|r: &PdfRow| r.problems.iter().any(|x| x.contains("dpi")));
+        let unsigned = ten(&|r: &PdfRow| !r.signed);
+        let sig_bad = ten(&|r: &PdfRow| r.sig_valid == Some(false));
+        let no_tsa = ten(&|r: &PdfRow| r.signed && !r.tsa);
+        let no_ltv = ten(&|r: &PdfRow| r.signed && !r.ltv);
+        let no_bind = ten(&|r: &PdfRow| r.problems.iter().any(|x| x.contains("ESS signing-certificate")));
+        if !not_pdfa.is_empty() {
+            c.err_ds("PDF-KHONG-PDFA", "PDF", format!("{}/{n} tệp không phải PDF/A (TT05 Điều 8.2.a: PDF/A hai lớp)", not_pdfa.len()), not_pdfa);
         } else {
             c.ok("PDF", format!("{n}/{n} tệp khai PDF/A và có hồ sơ màu"));
         }
-        if no_text > 0 {
-            c.err("PDF", format!("{no_text}/{n} tệp có trang thiếu lớp chữ"));
+        if !no_text.is_empty() {
+            c.err_ds("PDF-THIEU-LOP-CHU", "PDF", format!("{}/{n} tệp có trang thiếu lớp chữ", no_text.len()), no_text);
         } else {
             c.ok("PDF", format!("{n}/{n} tệp có lớp chữ tìm kiếm được"));
         }
-        if low_dpi > 0 {
-            c.err("PDF", format!("{low_dpi}/{n} tệp có độ phân giải thấp hơn TT05"));
+        if !low_dpi.is_empty() {
+            c.err_ds("PDF-DPI-THAP", "PDF", format!("{}/{n} tệp có độ phân giải thấp hơn TT05", low_dpi.len()), low_dpi);
         }
-        if sig_bad > 0 {
-            c.err("Chữ ký số", format!("{sig_bad}/{n} tệp có chữ ký KHÔNG toàn vẹn / không xác minh được"));
+        let sig_bad_rong = sig_bad.is_empty();
+        if !sig_bad.is_empty() {
+            c.err_ds("KY-KHONG-TOAN-VEN", "Chữ ký số", format!("{}/{n} tệp có chữ ký KHÔNG toàn vẹn / không xác minh được", sig_bad.len()), sig_bad);
         }
-        if unsigned > 0 {
-            c.warn("Chữ ký số", format!("{unsigned}/{n} tệp chưa ký số"));
-        } else if sig_bad == 0 {
+        if !unsigned.is_empty() {
+            c.warn_ds("KY-CHUA-KY", "Chữ ký số", format!("{}/{n} tệp chưa ký số", unsigned.len()), unsigned);
+        } else if sig_bad_rong {
             c.ok("Chữ ký số", format!("{n}/{n} tệp có chữ ký số toàn vẹn"));
         }
-        let no_bind = res.pdfs.iter().filter(|r| r.problems.iter().any(|x| x.contains("ESS signing-certificate"))).count();
-        if no_bind > 0 {
-            c.warn("Chữ ký số", format!("{no_bind} chữ ký dạng adbe.pkcs7.detached không gắn chứng thư người ký (chưa đạt PAdES baseline B-B)"));
+        if !no_bind.is_empty() {
+            c.warn_ds("KY-THIEU-CHUNG-THU-ESS", "Chữ ký số", format!("{} chữ ký dạng adbe.pkcs7.detached không gắn chứng thư người ký (chưa đạt PAdES baseline B-B)", no_bind.len()), no_bind);
         }
-        if no_tsa > 0 {
-            c.warn("Chữ ký số", format!("{no_tsa} chữ ký không có dấu thời gian (TSA)"));
+        if !no_tsa.is_empty() {
+            c.warn_ds("KY-THIEU-TSA", "Chữ ký số", format!("{} chữ ký không có dấu thời gian (TSA)", no_tsa.len()), no_tsa);
         }
-        if aip && no_ltv > 0 {
-            c.warn("Chữ ký số", format!("{no_ltv} chữ ký chưa có LTV (OCSP/CRL nhúng) — gói AIP nên ký PAdES-LT/LTA"));
+        if aip && !no_ltv.is_empty() {
+            c.warn_ds("KY-THIEU-LTV", "Chữ ký số", format!("{} chữ ký chưa có LTV (OCSP/CRL nhúng) — gói AIP nên ký PAdES-LT/LTA", no_ltv.len()), no_ltv);
         }
     }
     // Nói thẳng phần CHƯA kiểm, trước khi gán findings — người đọc phải thấy nó nằm cùng chỗ
@@ -952,7 +1074,10 @@ pub fn check_loaded(mut res: PackageResult, loaded: Loaded) -> (PackageResult, O
         // Câu này dựng TỪ `bo_qua`, không viết cứng tên nhóm: thêm nhóm thứ tư thì câu tự đổi
         // theo, không để lại một dòng chữ nói thiếu.
         let ten: Vec<&str> = res.bo_qua.danh_sach().iter().map(|(_, t, _, _)| *t).collect();
+        // Mã để bên nhận GỘP dòng này vào khối "chuaKiem[]" thay vì đếm nó như một cảnh báo
+        // thứ hai cùng nghĩa — trên màn hình chữ "Chưa kiểm" đang hiện hai lần.
         c.warn(
+            "CHUA-KIEM-NOI-DUNG",
             "Chưa kiểm",
             format!(
                 "{} phép kiểm cần nội dung tệp chưa chạy ({}) — bản kê chỉ mang siêu dữ liệu. Dùng «Tự kiểm PDF/A» cho tệp mẫu, và bản kiểm đầy đủ chạy khi nộp gói thật.",
@@ -1013,6 +1138,170 @@ fn finish(mut res: PackageResult) -> PackageResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Mọi mã phát hiện phải có hướng dẫn sửa — bên nhận dựng cột «Cách sửa» từ bảng đó, thiếu
+    /// một mã là một ô trống trên màn hình nhà thầu.
+    ///
+    /// Bài này **đọc chính mã nguồn** `lib.rs` thay vì đọc một danh sách viết tay, nên nó bắt
+    /// được cả mã mới thêm vào ngày mai. Danh sách viết tay thì chính nó cũng là luật hai nơi.
+    /// Hình dáng một mã: chỉ HOA / số / gạch ngang. Tham số thứ hai là *nhóm* ("METS",
+    /// "Chữ ký số") nên có chữ thường hoặc dấu cách — nhờ đó phân biệt được hai tham số mà
+    /// không phải phân tích cú pháp Rust.
+    fn la_ma(s: &str) -> bool {
+        !s.is_empty() && s.chars().all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '-')
+    }
+
+    /// Quét mọi mã mà `lib.rs` thật sự sinh ra. Chịu được cả lời gọi một dòng và lời gọi
+    /// nhiều dòng (mã xuống hàng riêng) — đây đúng là chỗ phép quét đầu tiên đã hụt.
+    fn ma_trong_nguon() -> std::collections::BTreeSet<&'static str> {
+        let mut thay = std::collections::BTreeSet::new();
+        let nguon = include_str!("lib.rs");
+        for goi in ["c.warn(", "c.err(", "c.warn_ds(", "c.err_ds("] {
+            for doan in nguon.split(goi).skip(1) {
+                let doan = doan.trim_start();
+                let Some(doan) = doan.strip_prefix('"') else { continue };
+                let Some(ma) = doan.split('"').next() else { continue };
+                if la_ma(ma) {
+                    thay.insert(ma);
+                }
+            }
+        }
+        // Phép kiểm cả đợt dựng `Finding` bằng tay nên không đi qua `Ctx`. Chỉ lấy mã mức
+        // `Warn`/`Err`: hai mã mức `Ok` ở đó không cần hướng dẫn sửa.
+        for doan in include_str!("dot.rs").split("Finding::new(").skip(1) {
+            let Some(muc) = doan.split("Level::").nth(1).and_then(|x| x.split([',', ')', ' ']).next()) else { continue };
+            if muc != "Warn" && muc != "Err" {
+                continue;
+            }
+            let Some(ma) = doan.split(".ve(\"").nth(1).and_then(|x| x.split('"').next()) else { continue };
+            if la_ma(ma) {
+                thay.insert(ma);
+            }
+        }
+        thay
+    }
+
+    #[test]
+    fn moi_ma_deu_co_huong_dan() {
+        let thay = ma_trong_nguon();
+        assert!(thay.len() >= 61, "quét mã nguồn chỉ thấy {} mã — phép quét hỏng, không phải mã nguồn hết mã", thay.len());
+        let thieu: Vec<&&str> = thay.iter().filter(|ma| huong_dan(ma).is_none()).collect();
+        assert!(thieu.is_empty(), "{} mã chưa có hướng dẫn trong huong_dan.rs: {thieu:?}", thieu.len());
+        for ma in &thay {
+            let h = huong_dan(ma).expect(ma);
+            assert!(!h.tieu_de.is_empty() && !h.cach_sua.is_empty(), "{ma}: hướng dẫn rỗng");
+            // Tiêu đề viết cho người đi sửa gói, không phải cho người đọc mã nguồn.
+            assert!(h.cach_sua.len() > h.tieu_de.len(), "{ma}: cách sửa phải nói được việc cần làm, không chỉ nhắc lại tiêu đề");
+        }
+    }
+
+    /// Chiều ngược: bảng hướng dẫn không được chứa mã đã bỏ khỏi mã nguồn. Mã chết trong bảng
+    /// thì không ai biết để xoá, rồi tài liệu gửi nhà thầu liệt kê mã không bao giờ xuất hiện.
+    #[test]
+    fn bang_huong_dan_khong_co_ma_chet() {
+        let sinh_ra = ma_trong_nguon();
+        let bang = include_str!("huong_dan.rs");
+        let mut co_bang = 0;
+        let mut chet = Vec::new();
+        for doan in bang.split("\n        \"").skip(1) {
+            let Some(ma) = doan.split('"').next() else { continue };
+            if !la_ma(ma) {
+                continue;
+            }
+            co_bang += 1;
+            if !sinh_ra.contains(ma) {
+                chet.push(ma);
+            }
+        }
+        assert!(co_bang >= 61, "quét bảng chỉ thấy {co_bang} mã — phép quét hỏng");
+        assert!(chet.is_empty(), "mã có hướng dẫn nhưng không chỗ nào sinh ra: {chet:?}");
+    }
+
+    /// Cảnh báo "chưa kiểm" **phải** mang cờ `nop_that_thanh_loi`, các cảnh báo khác thì không.
+    ///
+    /// Cờ này là chỗ bên nhận quyết định hiện «không chặn» hay «sẽ bị trả lúc giao». Đặt sai
+    /// thì nhà thầu giao gói rồi mới biết bị trả.
+    #[test]
+    fn chi_chua_kiem_moi_co_the_thanh_loi_luc_nop_that() {
+        let h = huong_dan("CHUA-KIEM-NOI-DUNG").expect("phải có hướng dẫn");
+        assert!(h.nop_that_thanh_loi, "mã này nói phép kiểm CHƯA CHẠY, không nói đã đạt");
+        for ma in ["METS-PROFILE-KHONG-CSIP", "EAD-TRICH-YEU-TRUNG", "KY-THIEU-TSA", "PREMIS-FORMATNAME-CHUNG"] {
+            let h = huong_dan(ma).expect(ma);
+            assert!(!h.nop_that_thanh_loi, "{ma}: cảnh báo này không phụ thuộc nội dung tệp, đủ byte cũng không thành lỗi");
+        }
+    }
+
+    /// Chạy THẬT một gói qua bộ kiểm: mọi phát hiện phải có mã kèm hướng dẫn, và mấy câu
+    /// **gộp số** phải nói được chỗ bị ảnh hưởng.
+    ///
+    /// Hai test quét mã nguồn ở trên chỉ chứng minh bảng hướng dẫn kín. Bài này chứng minh
+    /// thứ khác: lúc chạy thật, `doi_tuong` có dữ liệu — chứ không phải một `Vec` rỗng mà
+    /// cổng vẽ ra cái thẻ «Chỗ bị ảnh hưởng» trắng trơn.
+    #[test]
+    fn phat_hien_gop_so_phai_noi_ro_cho_bi_anh_huong() {
+        let goc = "urn_H49_uuid_ABC";
+        let mets = br#"<mets OBJID="urn_H49_uuid_ABC" PROFILE="https://earkcsip.dilcis.eu/profile/E-ARK-CSIP.xml"><metsHdr OAISPACKAGETYPE="AIP" CREATEDATE="2026-11-17"/><structMap LABEL="CSIP"/></mets>"#;
+        let vb = |subject: &str, ngay: &str| {
+            let s = if subject.is_empty() { String::new() } else { format!("<subject>{subject}</subject>") };
+            format!("<eadDoc><arcDocCode>H49.101.01.1993.001.0000001</arcDocCode>{s}<issuedDate>{ngay}</issuedDate></eadDoc>").into_bytes()
+        };
+        let p = |x: &str| format!("{goc}/{x}");
+        let l = tu_ban_ke(
+            vec![
+                (p("METS.xml"), Some(mets.to_vec()), None),
+                (p("representations/rep1/METS.xml"), Some(mets.to_vec()), None),
+                (p("metadata/descriptive/EAD.xml"), Some(r#"<eadFile><arcFileCode>H49.101.01.1993.001</arcFileCode><title>Hồ sơ thử</title></eadFile>"#.as_bytes().to_vec()), None),
+                // Hai văn bản trùng trích yếu, một văn bản bỏ trống, một ngày chỉ ghi năm.
+                (p("representations/rep1/metadata/descriptive/d1.xml"), Some(vb("Trùng nhau", "2012")), None),
+                (p("representations/rep1/metadata/descriptive/d2.xml"), Some(vb("Trùng nhau", "09/07/2012")), None),
+                (p("representations/rep1/metadata/descriptive/d3.xml"), Some(vb("", "09/07/2012")), None),
+                (p("representations/rep1/data/a.pdf"), None, Some(1_351_408)),
+            ],
+            9_000_000,
+        );
+        let (r, _) = check_loaded(PackageResult { kind: "?".into(), ..Default::default() }, l);
+
+        // 1. Không một phát hiện nào được thiếu mã hoặc thiếu hướng dẫn — đây là điều kiện để
+        //    cổng dựng nổi cột «Cách sửa».
+        for f in r.findings.iter().filter(|f| f.level != Level::Ok) {
+            assert!(!f.code.is_empty(), "thiếu mã: {} / {}", f.group, f.message);
+            assert!(f.huong_dan().is_some(), "mã {} chưa có hướng dẫn", f.code);
+        }
+
+        let lay = |ma: &str| {
+            r.findings.iter().find(|f| f.code == ma).unwrap_or_else(|| {
+                panic!("không thấy mã {ma}; có: {:?}", r.findings.iter().map(|f| f.code.as_str()).collect::<Vec<_>>())
+            })
+        };
+        // 2. Trùng trích yếu: đúng HAI văn bản trùng nhau, không phải cả ba.
+        assert_eq!(lay("EAD-TRICH-YEU-TRUNG").doi_tuong, vec!["d1.xml", "d2.xml"]);
+        // 3. Thiếu trích yếu: đúng văn bản bỏ trống.
+        assert_eq!(lay("EAD-THIEU-TRICH-YEU").doi_tuong, vec!["d3.xml"]);
+        // 4. Ngày sai định dạng: chỉ bản ghi "2012", không kéo theo hai bản ghi đúng.
+        assert_eq!(lay("EAD-NGAY-SAI-DINH-DANG").doi_tuong, vec!["d1.xml"]);
+        // 5. Tệp mồ côi: câu chữ cắt ở 8 tệp, nhưng `doi_tuong` phải đủ để sửa.
+        let mo_coi = lay("METS-TEP-MO-COI");
+        assert_eq!(mo_coi.doi_tuong.len(), 6, "6 tệp ngoài METS.xml gốc đều mồ côi: {:?}", mo_coi.doi_tuong);
+        // 6. "Chưa kiểm" mang cờ để cổng nói «sẽ bị trả lúc giao», không nói «không chặn».
+        let ck = lay("CHUA-KIEM-NOI-DUNG");
+        assert_eq!(ck.level, Level::Warn);
+        assert!(ck.huong_dan().expect("có hướng dẫn").nop_that_thanh_loi);
+    }
+
+    /// Danh sách chỗ bị ảnh hưởng phải **cắt** và nói rõ đã cắt bao nhiêu — một gói sai quy ước
+    /// đặt tên cho ra hàng nghìn tệp cùng một mã, gửi hết thì thân phản hồi phình vô ích.
+    #[test]
+    fn danh_sach_cho_bi_anh_huong_bi_cat_va_noi_ro_da_cat()
+    {
+        let ds: Vec<String> = (0..DOI_TUONG_TOI_DA + 37).map(|i| format!("t{i}.pdf")).collect();
+        let f = gan_ds(Finding::new(Level::Err, "PDF", "nhiều".into()), ds);
+        assert_eq!(f.doi_tuong.len(), DOI_TUONG_TOI_DA);
+        assert_eq!(f.doi_tuong_bi_cat, 37);
+        // Đủ chỗ thì KHÔNG được hiện "đã cắt 0" — câu vô nghĩa trên màn hình.
+        let f = gan_ds(Finding::new(Level::Err, "PDF", "ít".into()), vec!["a.pdf".into()]);
+        assert_eq!(f.doi_tuong_bi_cat, 0);
+    }
+
     /// Kết luận **không được** nói "ĐẠT" khi còn phép kiểm chưa chạy. Đây là chỗ một dòng mã
     /// sai biến "gói chưa ai xem nội dung" thành "gói nộp được".
     #[test]
