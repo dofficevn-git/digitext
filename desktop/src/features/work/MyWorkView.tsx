@@ -235,7 +235,7 @@ export default function MyWorkView() {
 
   return (
     <section className="view active">
-      <PageHeader title="Việc của tôi" description="Gói xác nhận trường và kiểm tra chéo được giao cho bạn." actions={!lam && <IconButton label="Làm mới" icon="lamMoi" onClick={reload} />} />
+      <PageHeader title="Việc của tôi" description="Gói việc được giao cho bạn." actions={!lam && <IconButton label="Làm mới" icon="lamMoi" onClick={reload} />} />
       {lam ? (
         <LamViec
           pkg={lam.pkg}
@@ -270,7 +270,7 @@ export default function MyWorkView() {
             {loading && pkgs.length === 0 ? (
               <p className="text-sm text-fg-subtle">Đang tải…</p>
             ) : pkgs.length === 0 ? (
-              <EmptyState compact icon="goi" title="Chưa được giao gói nào" description="Khi quản trị giao việc, gói sẽ hiện ở đây." />
+              <EmptyState compact icon="goi" title="Chưa được giao gói nào" />
             ) : (
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                 {pkgs.map((p) => {

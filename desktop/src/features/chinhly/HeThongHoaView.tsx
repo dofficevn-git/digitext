@@ -201,14 +201,18 @@ export default function HeThongHoaView() {
 
   return (
     <section className="view active">
-      <PageHeader title="Hệ thống hoá hồ sơ" description="Đánh số hồ sơ chính thức, xuất mục lục tạm, gán hộp, bó, tập. Cần kết nối máy chủ." />
+      <PageHeader
+        title="Hệ thống hoá"
+        infoTitle="Hệ thống hoá hồ sơ"
+        info={<p>Đánh số hồ sơ chính thức, xuất mục lục tạm, gán hộp, bó, tập. Việc này đổi số hồ sơ của cả tập nên chỉ làm khi có máy chủ.</p>}
+      />
       <ChuaChonDuAn />
       {!canDo && <Banner tone="warning" className="mb-4">Tài khoản chưa có quyền hệ thống hoá.</Banner>}
-      <CanMayChu sync={sync} viec="Hệ thống hoá thay đổi số hồ sơ của cả tập nên chỉ làm khi có máy chủ." />
+      <CanMayChu sync={sync} viec="Hệ thống hoá cần máy chủ." />
 
       <Stepper className="mb-4" current={buoc} steps={[{ key: "xem", label: "Xem trước", hint: "Lọc và chọn thứ tự" }, { key: "ap", label: "Áp dụng đánh số" }, { key: "xuat", label: "Xuất mục lục tạm", hint: `Điền ${tenDonVi} trong Excel` }, { key: "nhap", label: "Nhập tệp đã điền" }]} />
 
-      <Card className="mb-4" title="Tập hồ sơ và thứ tự đánh số">
+      <Card className="mb-4" title="Tập hồ sơ">
         <FormGrid cols={4}>
           <Field label="Phông" required>
             <Select

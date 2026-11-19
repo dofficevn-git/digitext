@@ -19,6 +19,7 @@ export default function MultiSelect({
   value,
   onChange,
   size = "sm",
+  plain,
   disabled,
   className,
 }: {
@@ -27,6 +28,8 @@ export default function MultiSelect({
   value: readonly string[];
   onChange: (next: string[]) => void;
   size?: "md" | "sm";
+  /** Không phải bộ lọc (vd chọn cột hiển thị): không tô tím, không hiện số đang chọn. */
+  plain?: boolean;
   disabled?: boolean;
   className?: string;
 }) {
@@ -53,12 +56,12 @@ export default function MultiSelect({
           className={cn(
             "inline-flex flex-none items-center gap-1.5 rounded-md border bg-surface font-medium outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50",
             size === "sm" ? "h-7 px-2 text-sm" : "h-8 px-2.5 text-base",
-            chon.size ? "border-brand-500 text-brand-700" : "border-border text-fg hover:border-border-strong",
+            chon.size && !plain ? "border-brand-500 text-brand-700" : "border-border text-fg hover:border-border-strong",
             className,
           )}
         >
           {label}
-          {chon.size > 0 && <span className="min-w-5 rounded-full bg-brand-500 px-1.5 text-center text-xs font-semibold leading-5 text-white tabular-nums">{chon.size}</span>}
+          {chon.size > 0 && !plain && <span className="min-w-5 rounded-full bg-brand-500 px-1.5 text-center text-xs font-semibold leading-5 text-white tabular-nums">{chon.size}</span>}
           <Icon name="xuong" size={14} className="text-fg-subtle" />
         </button>
       </DropdownMenuTrigger>
@@ -74,7 +77,7 @@ export default function MultiSelect({
             ))}
           </div>
         ))}
-        {chon.size > 0 && (
+        {chon.size > 0 && !plain && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => onChange([])}>Bỏ chọn tất cả</DropdownMenuItem>

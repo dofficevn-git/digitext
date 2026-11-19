@@ -16,7 +16,7 @@ import { treeSeedFromCl } from "@/api/tree";
 import { V4at, V4aw, V4b0 } from "@/domain/hoSoTime";
 import type { V3yk, V3yr } from "@/domain/types";
 import { Icon } from "@/components/Icon";
-import { Banner, Button, Card, confirm, Dialog, EmptyState, Field, FormGrid, Help, IconButton, Input, Menu, notifyError, PageHeader, Select, Table, toast, Toolbar, type Column } from "@/ui";
+import { Banner, Button, Card, confirm, Dialog, EmptyState, Field, FormGrid, IconButton, Input, Menu, notifyError, PageHeader, Select, Table, toast, Toolbar, type Column } from "@/ui";
 import { chuaChonPhong } from "@/features/dossier/phongScope";
 import { useProject } from "@/state/project";
 import { V48w } from "./hoSoMapping";
@@ -273,7 +273,12 @@ export default function TreeView() {
     <section className="view active">
       <PageHeader
         title="Cây thư mục"
-        description="Danh mục hộp, hồ sơ của phông trên máy này để tạo thư mục quét và phát cho máy nhân viên."
+        info={
+          <>
+            <p>Danh mục hộp, hồ sơ của phông trên máy này, dùng để quét đúng vào thư mục Cơ quan › Hộp › Hồ sơ và gom tệp theo hồ sơ.</p>
+            <p>Hồ sơ lấy từ mục lục chỉnh lý (nhập tệp mục lục ở Chỉnh lý › Lập hồ sơ › Nhập mục lục hồ sơ — đủ hộp số, hồ sơ số, THBQ, mã hồ sơ). Quản trị lấy về, tạo cây, rồi phát cho dự án qua máy chủ; nơi không có máy chủ thì phát qua mạng nội bộ với mã ghép nối 6 số.</p>
+          </>
+        }
         actions={
           <>
             {canAssign && (
@@ -292,7 +297,7 @@ export default function TreeView() {
             {canCreate && (
               <Menu
                 items={[
-                  { label: "Lấy hồ sơ từ mục lục chỉnh lý", icon: "chinhly", onSelect: () => void layTuChinhLy(), disabled: !phong || !project.projectId, hint: !project.projectId ? "Chọn dự án đang làm ở thanh trên" : undefined },
+                  { label: "Lấy hồ sơ từ mục lục chỉnh lý", icon: "chinhly", onSelect: () => void layTuChinhLy(), disabled: !phong || !project.projectId, hint: !project.projectId ? "Chọn dự án trước" : undefined },
                   { label: "Thêm hồ sơ", icon: "them", onSelect: () => setDraft({ mode: "add", draft: { id: nextId(), hopSo: "", hoSoSo: "", tieuDe: "", thoiGian: "", soTo: "", thbq: "" } }), disabled: !phong },
                 ]}
               />
@@ -302,7 +307,7 @@ export default function TreeView() {
       />
 
       {canPull && (
-        <Card className="mb-4" title="Nhận cây thư mục từ quản trị" description="Quản trị phát danh mục hộp, hồ sơ; máy này nhận về để tạo thư mục quét.">
+        <Card className="mb-4" title="Nhận cây thư mục từ quản trị">
           <Toolbar>
             <Button icon="taiVe" variant="primary" loading={busy} onClick={() => void nhanCay()}>
               Nhận cây thư mục
@@ -370,11 +375,6 @@ export default function TreeView() {
         />
       </Card>
 
-      <Help className="mt-4">
-        <p>Cây thư mục trên máy dùng để quét đúng vào thư mục Cơ quan › Hộp › Hồ sơ và để gom tệp theo hồ sơ.</p>
-        <p>Hồ sơ lấy từ mục lục chỉnh lý (nhập tệp mục lục ở Chỉnh lý › Lập hồ sơ › Nhập mục lục hồ sơ — đủ hộp số, hồ sơ số, THBQ, mã hồ sơ). Quản trị lấy về, tạo cây, rồi phát cho dự án qua máy chủ; nơi không có máy chủ thì phát qua mạng nội bộ với mã ghép nối 6 số.</p>
-      </Help>
-
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)} title={draft?.mode === "add" ? "Thêm hồ sơ" : "Sửa hồ sơ"} size="md" footer={<><Button onClick={() => setDraft(null)}>Huỷ</Button><Button variant="primary" loading={busy} onClick={() => void luu()}>Lưu</Button></>}>
         {draft && (
           <FormGrid cols={2}>
@@ -426,7 +426,7 @@ export default function TreeView() {
             {lanRecv.scanning ? (
               <p className="text-sm text-fg-subtle">Đang dò máy quản trị trong mạng…</p>
             ) : lanRecv.peers.length === 0 ? (
-              <Banner tone="warning">Không thấy máy nào đang phát. Kiểm tra máy quản trị đã bấm "Phát qua mạng nội bộ" và hai máy cùng mạng, hoặc nhập thẳng địa chỉ bên dưới.</Banner>
+              <Banner tone="warning">Không thấy máy đang phát. Kiểm tra hai máy cùng mạng, hoặc nhập địa chỉ bên dưới.</Banner>
             ) : (
               <Field label="Máy quản trị" hint="Chọn máy có vân tay đúng như quản trị đọc cho bạn.">
                 <Select value={lanRecv.peer} onChange={(v) => setLanRecv({ ...lanRecv, peer: v })} disabled={lanRecv.addr.trim() !== ""} placeholder="— Chọn máy —" options={lanRecv.peers.map((p) => ({ value: p.instance, label: `${p.project || p.addr} · ${p.addr}:${p.port}${p.fingerprint ? ` · ${p.fingerprint}` : ""}` }))} />

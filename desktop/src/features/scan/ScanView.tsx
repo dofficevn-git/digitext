@@ -426,7 +426,7 @@ export default function V4p9() {
     <section className="view active">
       <PageHeader
         title="Quét tài liệu"
-        description={V27s ? `Quét vào hồ sơ: ${V27s.label}` : V280 ? `Quét vào thư mục: ${V280}` : "Chưa chọn nơi lưu. Mở hồ sơ ở Kho tài liệu hoặc Cây thư mục rồi bấm Quét vào hồ sơ."}
+        description={V27s ? `Quét vào hồ sơ: ${V27s.label}` : V280 ? `Quét vào thư mục: ${V280}` : "Chưa chọn nơi lưu. Mở hồ sơ rồi bấm Quét vào hồ sơ."}
         actions={
           !V27s && (
             <>

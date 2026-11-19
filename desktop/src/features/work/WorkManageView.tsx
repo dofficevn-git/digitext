@@ -209,8 +209,8 @@ function TaoGoi({ projectId, packages, docs, onCreated, onClose }: { projectId: 
             <Field label="Loại gói" hint={kind === "kiem_tra" ? "Cộng tác viên khác soát lại một phần mẫu của gói đã xác nhận." : "Cộng tác viên sửa và xác nhận các trường của từng tài liệu."}>
               <Select value={kind} onChange={(v) => setKind(v as WorkKind)} options={[{ value: "xac_nhan", label: KIND_LABEL.xac_nhan }, { value: "kiem_tra", label: KIND_LABEL.kiem_tra }]} />
             </Field>
-            <Field label="Tên gói" hint="Để trống thì hệ thống tự đặt">
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Field label="Tên gói">
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Để trống: tự đặt" />
             </Field>
             {kind === "kiem_tra" ? (
               <>
@@ -604,7 +604,7 @@ export default function WorkManageView() {
         <>
           <PageHeader
             title="Giao việc"
-            description="Chia tài liệu đã OCR thành gói để cộng tác viên xác nhận trường, rồi duyệt kết quả."
+            description="Chia tài liệu đã OCR thành gói cho cộng tác viên."
             actions={
               <>
                 <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />

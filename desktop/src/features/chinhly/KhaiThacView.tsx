@@ -13,7 +13,7 @@ import { Chip, ChuaChonDuAn, n, Select, tenPhong, THBQ_BADGE, useClCatalog } fro
 import { inHtml, inMucLucHoSo, inMucLucVanBan, inNhanHop, inPhuLuc, inSanPham } from "./print";
 import { KIEU_MLHS, xuatLichSu, xuatMucLucHoanThien, xuatMucLucVanBan, xuatPhuLuc, xuatTT02, xuatTT05, type KieuMLHS } from "./excelXuat";
 import VanBanPanel from "./VanBanPanel";
-import { Badge, Banner, Button, Card, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type MenuEntry } from "@/ui";
+import { Badge, Banner, Button, Card, Field, FormGrid, Input, Menu, MultiSelect, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type MenuEntry } from "@/ui";
 
 const PAGE = 100;
 const AN_MAC_DINH = ["bo_so", "tap_so", "trung_thua"];
@@ -226,12 +226,26 @@ export default function KhaiThacView() {
     <section className="view active">
       <PageHeader
         title={ketNoi ? "Kết nối dữ liệu chủ" : "Mục lục và kết xuất"}
-        description={ketNoi ? "Bước 4 Điều 9 TT 05/2025: ghép tài liệu đã quét và OCR với hồ sơ trong mục lục, tạo văn bản, duyệt rồi xuất metadata TT05." : "Bước 3 Điều 9 TT 05/2025: tra cứu hồ sơ theo phông, phòng ban, mảng, THBQ, kho, giá; kết xuất mục lục, nhãn hộp, sản phẩm, phụ lục."}
+        infoTitle={ketNoi ? "Bước 4 Điều 9 TT 05/2025" : "Bước 3 Điều 9 TT 05/2025"}
+        info={
+          <p>
+            {ketNoi
+              ? "Ghép tài liệu đã quét và OCR với hồ sơ trong mục lục, tạo văn bản, duyệt rồi xuất metadata TT05."
+              : "Tra cứu hồ sơ theo phông, phòng ban, mảng, THBQ, kho, giá; kết xuất mục lục, nhãn hộp, sản phẩm, phụ lục."}
+          </p>
+        }
         actions={
           <>
             <UiSelect size="sm" className="w-64" value={String(kieu)} onChange={(v) => setKieu(Number(v) as KieuMLHS | 0)} aria-label="Kiểu mục lục hồ sơ" options={[{ value: "0", label: "Mục lục theo số hồ sơ (mẫu kho)" }, ...KIEU_MLHS.map(([k, l]) => ({ value: String(k), label: `${k}. ${l}` }))]} />
             <Menu trigger="button" label={busy ? "Đang kết xuất…" : "Kết xuất"} items={ketXuatHien} />
-            <Menu label="Cột hiển thị" items={Object.entries(TEN_COT).map(([k, l]) => ({ label: `${anCot.has(k) ? "Hiện" : "Ẩn"} cột ${l}`, onSelect: () => setAnCot((s) => { const x = new Set(s); if (!x.delete(k)) x.add(k); return x; }) }))} />
+            <MultiSelect
+              plain
+              size="md"
+              label="Cột"
+              value={Object.keys(TEN_COT).filter((k) => !anCot.has(k))}
+              onChange={(v) => setAnCot(new Set(Object.keys(TEN_COT).filter((k) => !v.includes(k))))}
+              options={Object.entries(TEN_COT).map(([k, l]) => ({ value: k, label: l }))}
+            />
           </>
         }
       />

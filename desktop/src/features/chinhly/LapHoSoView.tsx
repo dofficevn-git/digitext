@@ -8,16 +8,23 @@ import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { clDelete, clHoSoList, clRemote, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
-import { CanMayChu, Chip, ChuaChonDuAn, n, Select, SyncBadge, SyncBadgeRow, tenPhong, THBQ_BADGE, useClCatalog, useClSync } from "./common";
+import { n, NhacChinhLy, Select, SyncBadge, SyncBadgeRow, tenPhong, THBQ_BADGE, useChuaChonDuAn, useClCatalog, useClSync } from "./common";
 import HoSoForm from "./HoSoForm";
 import VanBanPanel from "./VanBanPanel";
 import { docMauLapHoSo, xuatMauLapHoSo } from "./excel";
 import NhapMucLucDialog from "./NhapMucLucDialog";
-import { Badge, Banner, Button, Card, confirm, ErrorBanner, Field, FormGrid, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type SortState } from "@/ui";
+import { Badge, Banner, Button, CanDuAn, Card, Checkbox, confirm, FilterBar, Input, Menu, MultiSelect, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type FilterChip, type SortState } from "@/ui";
 
 const PAGE = 50;
 const SORT_KEYS: Record<string, ClHoSoFilter["sort"]> = { so_tam: "so_tam", ho_so_so: "ho_so_so", ten_mang: "mang", ten_thbq: "thbq", ngay_ket_thuc: "ngay_kt" };
 const AN_MAC_DINH = ["ma_ho_so", "so_to"];
+/** Giá trị riêng trong ô chọn THBQ cho "mọi loại có thời hạn" (cờ `thbqCoThoiHan` của bộ lọc, không phải id danh mục). */
+const CO_THOI_HAN = "@co_thoi_han";
+const TRANG_THAI: { value: "VV" | "GL" | "HET"; label: string }[] = [
+  { value: "VV", label: "Vĩnh viễn" },
+  { value: "GL", label: "Giữ lại" },
+  { value: "HET", label: "Hết hạn" },
+];
 
 export default function LapHoSoView() {
   const { session } = V460();
@@ -28,6 +35,7 @@ export default function LapHoSoView() {
   const canDelete = perms.includes("dossier.delete");
   const { cat, reload: reloadCat, error: catErr } = useClCatalog();
   const sync = useClSync();
+  const chuaDuAn = useChuaChonDuAn();
 
   const [phongId, setPhongId] = useState("");
   const [phongBanId, setPhongBanId] = useState("");
@@ -132,8 +140,19 @@ export default function LapHoSoView() {
       notifyError(e, "nhập Excel");
     }
   };
-  const toggleThbq = (id: string) => {
-    setThbqIds((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+  // Chip chỉ cho bộ lọc ĐANG BẬT (bấm × để gỡ); phông / phòng ban / mảng đã hiện ngay trong ô chọn nên không lặp lại.
+  const locDangBat: FilterChip[] = [
+    ...(coThoiHan ? [{ key: CO_THOI_HAN, label: "Có thời hạn", onRemove: () => datLoc(setCoThoiHan)(false) }] : []),
+    ...thbqIds.map((id) => ({ key: id, label: str(cat.thbq.find((t) => t.id === id), "ten") || "THBQ", onRemove: () => datLoc(setThbqIds)(thbqIds.filter((x) => x !== id)) })),
+    ...(status ? [{ key: "st", label: TRANG_THAI.find((t) => t.value === status)?.label ?? status, onRemove: () => datLoc(setStatus)("") }] : []),
+    ...(trungThua ? [{ key: "tt", label: "Trùng thừa", onRemove: () => datLoc(setTrungThua)(false) }] : []),
+  ];
+  const xoaLoc = () => {
+    setCoThoiHan(false);
+    setThbqIds([]);
+    setStatus("");
+    setTrungThua(false);
+    setQ("");
     setPage(1);
   };
 
@@ -178,10 +197,16 @@ export default function LapHoSoView() {
   const TEN_COT: Record<string, string> = { hop_so: "Hộp", ma_ho_so: "Mã hồ sơ", so_to: "Số tờ", ngay_bat_dau: "Bắt đầu", so_van_ban: "Văn bản", ten_mang: "Mảng" };
 
   return (
-    <section className="view active">
+    <section className="view active space-y-4">
       <PageHeader
-        title="Lập hồ sơ điện tử"
-        description={`Hồ sơ tạm trong dự án ${session?.projectName ?? ""}. Làm được khi mất mạng, tự đồng bộ khi có máy chủ.`}
+        title="Lập hồ sơ"
+        infoTitle="Lập hồ sơ điện tử"
+        info={
+          <>
+            <p>Hồ sơ tạm của dự án đang làm. Làm được khi mất mạng; thay đổi giữ ở máy và tự đẩy lên khi có máy chủ.</p>
+            <p>Nhập mục lục hồ sơ (menu ⋯) tự nhận phòng ban, mảng, kiểm và điền thời gian, xếp hộp. Mã hồ sơ TT05 cần số phông và số mục lục của phông (Danh mục › Phông).</p>
+          </>
+        }
         meta={<SyncBadge sync={sync} />}
         actions={
           <>
@@ -194,24 +219,23 @@ export default function LapHoSoView() {
               items={[
                 { label: sel.size > 0 ? `Xoá ${n(sel.size)} hồ sơ đã chọn` : "Xoá hồ sơ đã chọn", icon: "xoa", danger: true, disabled: !canDelete || sel.size === 0, onSelect: () => void xoaChon() },
                 "-",
-                { label: "Tải mẫu Excel lập hồ sơ", icon: "tepExcel", disabled: !phong, onSelect: () => void xuatMauLapHoSo(str(phong, "ma_du_an"), cat.thbq).catch((e) => notifyError(e, "tải mẫu")) },
+                { label: "Tải mẫu Excel", icon: "tepExcel", disabled: !phong, onSelect: () => void xuatMauLapHoSo(str(phong, "ma_du_an"), cat.thbq).catch((e) => notifyError(e, "tải mẫu")) },
                 {
                   label: "Nhập mục lục hồ sơ",
                   icon: "nhapTep",
                   // Kiểm đầu luồng (2/11/2026): mã hồ sơ TT05 cần số phông + số mục lục; xếp hộp cần quyền Hệ thống hoá.
+                  // 0.25: chỉ còn gợi ý khi CÓ VƯỚNG; cách hoạt động nằm ở nút (i) cạnh tiêu đề.
                   hint: !phong
                     ? "Chọn phông"
                     : !str(phong, "phong_so") || !str(phong, "muc_luc_so")
-                      ? "Phông chưa có số phông / số mục lục → mã hồ sơ sẽ thiếu (sửa ở Danh mục › Phông)"
+                      ? "Phông thiếu số phông, số mục lục"
                       : !perms.includes("dossier.systematize")
-                        ? "Tài khoản không có quyền Hệ thống hoá → hộp số, hồ sơ số sẽ không được xếp"
-                        : "Tự nhận phòng ban, mảng, sheet; kiểm và điền thời gian; xếp hộp ngay",
+                        ? "Thiếu quyền Hệ thống hoá: không xếp hộp"
+                        : undefined,
                   disabled: !canCreate || !phong,
                   onSelect: () => setMucLuc(true),
                 },
-                { label: "Nhập hồ sơ từ Excel (mẫu 14 cột)", icon: "nhapTep", hint: "Cần máy chủ", disabled: !canCreate || !phongId || sync?.phase === "offline", onSelect: () => fileRef.current?.click() },
-                "-",
-                ...Object.entries(TEN_COT).map(([k, l]) => ({ label: `${anCot.has(k) ? "Hiện" : "Ẩn"} cột ${l}`, onSelect: () => setAnCot((s) => { const x = new Set(s); if (!x.delete(k)) x.add(k); return x; }) })),
+                { label: "Nhập từ mẫu Excel", icon: "nhapTep", hint: sync?.phase === "offline" ? "Cần máy chủ" : undefined, disabled: !canCreate || !phongId || sync?.phase === "offline", onSelect: () => fileRef.current?.click() },
               ]}
             />
             <input
@@ -229,69 +253,77 @@ export default function LapHoSoView() {
           </>
         }
       />
-      <ChuaChonDuAn />
-      {catErr && <ErrorBanner error={catErr} className="mb-4" />}
-      <CanMayChu sync={sync} viec="Thay đổi được giữ ở máy và tự đẩy lên máy chủ khi có mạng." />
-      {cat.phong.length === 0 && !catErr && <Banner tone="info" className="mb-4">Chưa có phông nào trong dự án. Quản trị tạo phông ở Danh mục khi có máy chủ, hoặc chờ đồng bộ kéo danh mục về.</Banner>}
+      {chuaDuAn ? (
+        <Card padding="none">
+          <CanDuAn />
+        </Card>
+      ) : (
+        <>
+      <NhacChinhLy
+        sync={sync}
+        loi={catErr}
+        ngoaiTuyen="Thay đổi giữ ở máy, tự đẩy khi có mạng."
+        khac={cat.phong.length === 0 ? <Banner tone="info">Chưa có phông. Tạo phông ở Danh mục.</Banner> : undefined}
+      />
       {nhapKq && (
-        <Banner tone={nhapKq.errors.length ? "warning" : "success"} className="mb-4" onClose={() => setNhapKq(null)} detail={nhapKq.errors.length ? nhapKq.errors.join("\n") : undefined}>
+        <Banner tone={nhapKq.errors.length ? "warning" : "success"} onClose={() => setNhapKq(null)} detail={nhapKq.errors.length ? nhapKq.errors.join("\n") : undefined}>
           {nhapKq.text}
         </Banner>
       )}
 
-      <Card className="mb-4" padding="sm">
-        <FormGrid cols={4}>
-          <Field label="Phông">
-            <Select
-              size="sm"
-              value={phongId}
-              onChange={(v) => {
-                setPhongId(v);
-                setPhongBanId("");
-                setMangId("");
-                setPage(1);
-              }}
-              rows={cat.phong}
-              render={tenPhong}
-              empty="Tất cả phông"
-            />
-          </Field>
-          <Field label="Phòng ban">
-            <Select
-              size="sm"
-              value={phongBanId}
-              onChange={(v) => {
-                setPhongBanId(v);
-                setMangId("");
-                setPage(1);
-              }}
-              rows={phongBans}
-              empty="Tất cả"
-            />
-          </Field>
-          <Field label="Mảng công việc">
-            <Select size="sm" value={mangId} onChange={datLoc(setMangId)} rows={mangs} empty="Tất cả" disabled={!phongBanId} />
-          </Field>
-          <Field label="Trạng thái THBQ">
-            <UiSelect size="sm" value={status} onChange={(v) => datLoc(setStatus)(v as typeof status)} placeholder="Tất cả" options={[{ value: "VV", label: "Vĩnh viễn" }, { value: "GL", label: "Giữ lại" }, { value: "HET", label: "Hết thời hạn bảo quản" }]} />
-          </Field>
-        </FormGrid>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Input size="sm" prefix="tim" className="w-72" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm số tạm, tiêu đề, số hoặc mã hồ sơ" aria-label="Tìm hồ sơ" />
-          <span className="text-sm text-fg-subtle">THBQ:</span>
-          <Chip on={coThoiHan} onClick={() => datLoc(setCoThoiHan)(!coThoiHan)}>
-            Có thời hạn (5 đến 70 năm)
-          </Chip>
-          {cat.thbq.map((t) => (
-            <Chip key={t.id} on={thbqIds.includes(t.id)} onClick={() => toggleThbq(t.id)}>
-              {str(t, "ten")}
-            </Chip>
-          ))}
-          <Chip on={trungThua} onClick={() => datLoc(setTrungThua)(!trungThua)}>
-            Chỉ trùng thừa
-          </Chip>
-        </div>
-      </Card>
+      {/* 0.25 "ít chữ": thẻ lọc 4 ô + dải 16 chip THBQ → một hàng; chip chỉ hiện cho bộ lọc đang bật. */}
+      <FilterBar active={locDangBat} onClear={xoaLoc}>
+        <Input size="sm" prefix="tim" className="w-60" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm hồ sơ" aria-label="Tìm theo số tạm, tiêu đề, số hoặc mã hồ sơ" />
+        <Select
+          size="sm"
+          className="w-auto max-w-72"
+          ariaLabel="Phông"
+          value={phongId}
+          onChange={(v) => {
+            setPhongId(v);
+            setPhongBanId("");
+            setMangId("");
+            setPage(1);
+          }}
+          rows={cat.phong}
+          render={tenPhong}
+          empty="Mọi phông"
+        />
+        <Select
+          size="sm"
+          className="w-auto max-w-56"
+          ariaLabel="Phòng ban"
+          value={phongBanId}
+          onChange={(v) => {
+            setPhongBanId(v);
+            setMangId("");
+            setPage(1);
+          }}
+          rows={phongBans}
+          empty="Mọi phòng ban"
+        />
+        {phongBanId && <Select size="sm" className="w-auto max-w-56" ariaLabel="Mảng công việc" value={mangId} onChange={datLoc(setMangId)} rows={mangs} empty="Mọi mảng" />}
+        <MultiSelect
+          label="THBQ"
+          value={[...(coThoiHan ? [CO_THOI_HAN] : []), ...thbqIds]}
+          onChange={(v) => {
+            setCoThoiHan(v.includes(CO_THOI_HAN));
+            setThbqIds(v.filter((x) => x !== CO_THOI_HAN));
+            setPage(1);
+          }}
+          options={[{ value: CO_THOI_HAN, label: "Mọi loại có thời hạn" }, ...cat.thbq.map((t) => ({ value: t.id, label: str(t, "ten"), group: "Danh mục" }))]}
+        />
+        <UiSelect size="sm" className="w-auto" aria-label="Trạng thái thời hạn bảo quản" value={status} onChange={(v) => datLoc(setStatus)(v as typeof status)} placeholder="Trạng thái" options={TRANG_THAI} />
+        <Checkbox checked={trungThua} onChange={datLoc(setTrungThua)} text="Trùng thừa" />
+        <span className="ml-auto" />
+        <MultiSelect
+          label="Cột"
+          plain
+          value={Object.keys(TEN_COT).filter((k) => !anCot.has(k))}
+          onChange={(v) => setAnCot(new Set(Object.keys(TEN_COT).filter((k) => !v.includes(k))))}
+          options={Object.entries(TEN_COT).map(([k, l]) => ({ value: k, label: l }))}
+        />
+      </FilterBar>
 
       <Card padding="none">
         <Table
@@ -310,9 +342,11 @@ export default function LapHoSoView() {
           rowClassName={(r) => (open?.id === r.id ? "bg-brand-50" : undefined)}
           rowActions={canEdit ? (r) => <Menu size="sm" items={[{ label: "Sửa", icon: "sua", onSelect: () => setForm({ row: r }) }, { label: "Xem văn bản", icon: "taiLieu", onSelect: () => setOpen(r) }]} /> : undefined}
           pagination={{ page, pageSize: PAGE, total, onChange: setPage }}
-          state={{ loading: loading && !data, error, onRetry: reload, empty: { title: qApplied || thbqIds.length || status || trungThua ? "Không có hồ sơ nào khớp bộ lọc" : "Chưa có hồ sơ nào", action: canCreate && phongId ? <Button icon="them" onClick={() => setForm({ row: null })}>Thêm hồ sơ</Button> : undefined } }}
+          state={{ loading: loading && !data, error, onRetry: reload, empty: { title: qApplied || locDangBat.length ? "Không có hồ sơ khớp bộ lọc" : "Chưa có hồ sơ", action: canCreate && phongId && !locDangBat.length ? <Button icon="them" onClick={() => setForm({ row: null })}>Thêm hồ sơ</Button> : undefined } }}
         />
       </Card>
+        </>
+      )}
 
       {form && (
         <HoSoForm

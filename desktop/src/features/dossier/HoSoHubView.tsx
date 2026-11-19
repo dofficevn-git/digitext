@@ -24,13 +24,17 @@ export default function V4lc() {
   V41p(V1uj, { topics: ["catalog", "hoso"], enabled: isTauri() });
 
   return (
-    <section className="view active">
+    <>
       {V1ug === "danhmuccl" && <DanhMucView />}
       {V1ug === "laphoso" && <LapHoSoView />}
       {V1ug === "hethonghoa" && <HeThongHoaPane />}
       {V1ug === "dongbo" && <DongBoView />}
-      {V1ug === "sohoa" && <SoHoaPane phongs={V1uh} />}
+      {V1ug === "sohoa" && (
+        <section className="view active">
+          <SoHoaPane phongs={V1uh} />
+        </section>
+      )}
       {V1ug === "ocr" && <OcrPane />}
-    </section>
+    </>
   );
 }

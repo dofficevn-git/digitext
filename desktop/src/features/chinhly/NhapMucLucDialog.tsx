@@ -244,7 +244,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
       {buoc === 1 && pt && (
         <>
           <Button icon="tepExcel" disabled={busy} onClick={() => void taiDanhDau()}>
-            Tải tệp gốc đã đánh dấu
+            Tải tệp đánh dấu
           </Button>
           <Button icon="tepExcel" disabled={busy} onClick={() => void xuatTepDaChuyen(pt, rowsNhap, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
             Tải tệp đã chuyển
@@ -305,7 +305,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               <li>Ô THBQ trống: chọn "THBQ khi ô trống" ở bước Kiểm tra để dùng chung cho cả tệp; không chọn thì là lỗi dòng.</li>
               <li>Dòng nhóm không có I. hoặc 1. ở đầu (vd. "Sổ chứng thực") là mục nhỏ trong mảng — bỏ qua khi nhập, hồ sơ bên dưới vẫn thuộc mảng đang có.</li>
               <li>
-                "Tải tệp gốc đã đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) chỉ đánh dấu ô cần chú ý, kèm ghi chú: xanh nhạt = đã sửa (Cũ → Mới), vàng = cần xem lại, ĐỎ chữ trắng = lỗi
+                "Tải tệp đánh dấu" trả lại chính tệp của anh (tên_DADIEN.xlsx) chỉ đánh dấu ô cần chú ý, kèm ghi chú: xanh nhạt = đã sửa (Cũ → Mới), vàng = cần xem lại, ĐỎ chữ trắng = lỗi
                 phải sửa trước khi nhập. Ô đã đúng để nguyên.
               </li>
             </ul>
@@ -319,7 +319,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
             <Field label="Sheet" className="w-64" hint={pt.sheets.length > 1 ? `${n(pt.sheets.length)} sheet — tự chọn sheet có dòng tiêu đề cột` : undefined}>
               <Select size="sm" value={pt.sheet} disabled={busy || pt.sheets.length <= 1} onChange={(v) => void phanTichLai({ sheet: v })} options={pt.sheets.map((s) => ({ value: s, label: s }))} />
             </Field>
-            <Field label="THBQ khi ô trống" className="w-56" hint="Dùng cho các dòng không ghi thời hạn bảo quản">
+            <Field label="THBQ khi ô trống" className="w-56">
               <Select
                 size="sm"
                 value={thbqMacDinh}
@@ -352,7 +352,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
           {dsLoi.length > 0 && (
             <div className="space-y-2">
               <Banner tone="danger" title={`Lỗi phải sửa trước khi nhập: ${n(vanDeChan.length)} ở dòng nhóm, ${n(soDongLoi)} dòng hồ sơ`}>
-                Sửa trong Excel theo bảng dưới, hoặc bấm "Tải tệp gốc đã đánh dấu" — các ô lỗi được tô đỏ kèm ghi chú. Sửa xong lưu, đóng Excel rồi bấm "Chọn tệp khác".
+                Sửa trong Excel, hoặc bấm "Tải tệp đánh dấu" để xem ô lỗi tô đỏ. Lưu, đóng Excel rồi bấm "Chọn tệp khác".
               </Banner>
               <Table columns={colsLoi} rows={dsLoi} getRowId={(r) => `${r.dong}-${r.loai}-${r.noiDung}`} dense maxHeight={240} rowClassName={() => "bg-danger-50"} />
             </div>
@@ -362,7 +362,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               Tệp ghi phông "{pt.tenPhongTrongTep}", phông đang chọn là "{str(phong, "ten")}". Kiểm tra lại trước khi nhập.
             </Banner>
           )}
-          {offline && !chan && <Banner tone="warning">Đang mất kết nối máy chủ. Tải tệp đã chuyển để nhập sau, hoặc chờ có mạng.</Banner>}
+          {offline && !chan && <Banner tone="warning">Ngoại tuyến. Tải tệp đã chuyển để nhập sau.</Banner>}
 
           <div className="grid gap-4 sm:grid-cols-[1fr_260px]">
             <div className="rounded-md border border-border-subtle bg-gray-25 p-3">
@@ -448,7 +448,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
               {pt && (
                 <div className="flex flex-wrap gap-2">
                   <Button icon="tepExcel" onClick={() => void taiDanhDau()}>
-                    Tải tệp gốc đã đánh dấu
+                    Tải tệp đánh dấu
                   </Button>
                   <Button icon="tepExcel" onClick={() => void xuatTepDaChuyen(pt, rowsNhap, maPhong, cat.thbq).catch((e) => notifyError(e, "tải tệp đã chuyển"))}>
                     Tải tệp đã chuyển

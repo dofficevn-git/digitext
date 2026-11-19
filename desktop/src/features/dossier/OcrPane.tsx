@@ -230,7 +230,7 @@ export default function OcrPane() {
     <section className="view active">
       <PageHeader
         title="OCR & bóc tách"
-        description="Theo dõi tiến độ OCR, chạy xử lý trên máy chủ và soát, duyệt kết quả bóc tách 16 trường."
+        description="Tiến độ OCR, soát và duyệt 16 trường."
         actions={
           <>
             <Button variant="primary" icon="taiLen" loading={dangTaiLen} onClick={() => void taiPdfLen()}>
@@ -284,7 +284,7 @@ export default function OcrPane() {
                 <span className={`text-sm ${loiKhoang ? "text-danger-700" : "text-fg-subtle"}`}>{loiKhoang ?? (dangTinh ? "Đang tính số liệu…" : khoang.from || khoang.to ? `Đang xem ${khoang.from || "đầu kỳ"} đến ${khoang.to || "nay"}` : "Đang xem toàn bộ")}</span>
               </Toolbar>
             </Card>
-            <Card title="Theo dự án" description="Bấm một dòng để lọc tab Soát & duyệt theo dự án đó." padding="none">
+            <Card title="Theo dự án" description="Bấm một dòng để lọc theo dự án." padding="none">
               <Table
                 columns={cols}
                 rows={duAnRows}

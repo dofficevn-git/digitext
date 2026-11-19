@@ -103,7 +103,7 @@ export default function DriveView() {
     <section className="view active">
       <PageHeader
         title="Kho tài liệu"
-        description="Tài liệu quét và gom trên máy này, xếp theo cơ quan, hộp, hồ sơ."
+        description="Tài liệu quét và gom trên máy này."
         actions={
           <>
             {inFolder && (

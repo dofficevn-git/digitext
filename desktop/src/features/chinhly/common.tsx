@@ -7,7 +7,7 @@ import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
 import { CL_SYNC_EVENT, clCatalogList, clSyncStatus, str, type ClCatalog, type ClRow, type ClSyncStatus } from "@/api/chinhly";
 import { useProject } from "@/state/project";
-import { Badge, Banner, errorText, Select as UiSelect, Tip } from "@/ui";
+import { Badge, Banner, CanDuAn, Card, ErrorBanner, errorText, Select as UiSelect, Tip } from "@/ui";
 import type { V3y0 } from "@/domain/types";
 
 export const errText = (e: unknown) => errorText(e);
@@ -31,14 +31,14 @@ export function useClCatalog(): { cat: ClCatalog; reload: () => void; error: str
   return { cat, reload, error };
 }
 
-/** Dải nhắc khi tài khoản quản trị chưa chọn "Dự án đang làm" (chọn ở thanh trên cùng). */
+/** Tài khoản quản trị chưa chọn "Dự án đang làm": ô "Chọn dự án" gọn, chọn được ngay tại chỗ (0.25; trước là dải chữ dài). */
 export function ChuaChonDuAn() {
   const p = useProject();
   if (p.fromAccount || p.projectId || p.loading) return null;
   return (
-    <Banner tone="warning" className="mb-4">
-      Chưa chọn dự án đang làm. Chọn dự án ở ô cạnh tên bạn trên thanh trên cùng để nạp và đồng bộ dữ liệu chỉnh lý.
-    </Banner>
+    <Card padding="none" className="mb-4">
+      <CanDuAn />
+    </Card>
   );
 }
 
@@ -99,12 +99,28 @@ export function SyncBadge({ sync }: { sync: ClSyncStatus | null }) {
   );
 }
 
+/** Tài khoản quản trị chưa chọn "Dự án đang làm" → màn hiện `<CanDuAn />` thay nội dung (0.25 "ít chữ"). */
+export function useChuaChonDuAn(): boolean {
+  const p = useProject();
+  return !p.fromAccount && !p.projectId && !p.loading;
+}
+
+/**
+ * MỘT dải nhắc cho màn chỉnh lý, theo ưu tiên: lỗi danh mục → ngoại tuyến → nhắc riêng của màn (0.25 "ít chữ": trước đây
+ * các dải xếp chồng tới 4 cái). Không tự đặt lề — `space-y-4` của `section` lo khoảng cách.
+ */
+export function NhacChinhLy({ sync, loi, ngoaiTuyen, khac }: { sync: ClSyncStatus | null; loi?: string | null; ngoaiTuyen?: string; khac?: React.ReactNode }) {
+  if (loi) return <ErrorBanner error={loi} />;
+  if (ngoaiTuyen && (sync?.phase === "offline" || sync?.phase === "error")) return <Banner tone="warning">Ngoại tuyến. {ngoaiTuyen}</Banner>;
+  return khac ? <>{khac}</> : null;
+}
+
 /** Dải nhắc ngoại tuyến cho màn chỉ làm được khi có máy chủ. */
 export function CanMayChu({ sync, viec }: { sync: ClSyncStatus | null; viec: string }) {
   if (sync?.phase !== "offline" && sync?.phase !== "error") return null;
   return (
     <Banner tone="warning" className="mb-4">
-      Đang ngoại tuyến. {viec}
+      Ngoại tuyến. {viec}
     </Banner>
   );
 }
@@ -134,7 +150,10 @@ export function Select({
   render,
   size,
   className,
+  ariaLabel,
 }: {
+  /** Tên cho đọc màn hình khi ô không nằm trong `Field` (thanh lọc một hàng). */
+  ariaLabel?: string;
   value: string;
   onChange: (v: string) => void;
   rows: ClRow[];
@@ -154,6 +173,7 @@ export function Select({
       disabled={disabled}
       size={size}
       className={className}
+      aria-label={ariaLabel}
       placeholder={empty ?? undefined}
       options={rows.map((r) => ({ value: str(r, valueKey), label: render ? render(r) : str(r, labelKey) }))}
     />

@@ -199,7 +199,7 @@ export default function SoHoaPane({ phongs, mode = "taolap" }: { phongs: V40v[];
       {!dg && (
         <PageHeader
           title="Tài liệu đã quét"
-          description="Hồ sơ trên máy này với PDF đã quét; mở hồ sơ để soát OCR và nhập văn bản."
+          description="Mở hồ sơ để soát OCR và nhập văn bản."
           actions={
             <>
               <Button icon="quet" variant="primary" onClick={() => goto("scan")}>

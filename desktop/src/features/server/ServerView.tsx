@@ -385,7 +385,8 @@ export default function V4wh() {
     <section className="view active">
       <PageHeader
         title="Kho máy chủ"
-        description="Tài liệu đã đẩy lên máy chủ theo dự án, hộp, hồ sơ. Tải về, soát PDF/A. Chạy OCR và bóc trường ở mục Xử lý."
+        description="Tài liệu đã đẩy lên máy chủ."
+        info={<p>Xếp theo dự án, hộp, hồ sơ. Tải về và soát PDF/A tại đây; chạy OCR và bóc trường ở mục Xử lý.</p>}
         actions={
           tab === "cay" &&
           (
@@ -475,7 +476,7 @@ export default function V4wh() {
                 <EmptyState compact title="Chưa nạp được kho máy chủ" action={<Button onClick={() => void load(true)}>Thử lại</Button>} />
               )
             ) : tree.docCount === 0 ? (
-              <EmptyState compact icon="mayChu" title="Chưa có tài liệu trên máy chủ" description="Máy quản trị gom rồi đẩy lên ở màn Đưa lên máy chủ." />
+              <EmptyState compact icon="mayChu" title="Chưa có tài liệu trên máy chủ" description="Đẩy lên ở màn Đưa lên máy chủ." />
             ) : (
               <Table.Root className="srv-tree">
                   <thead>

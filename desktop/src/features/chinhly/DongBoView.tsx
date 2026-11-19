@@ -95,7 +95,7 @@ function XungDot({ c, onDone, defaultOpen }: { c: ClConflict; onDone: () => void
           ) : (
             <>
               <Button size="sm" variant="primary" loading={busy} onClick={() => void chot("merged")}>
-                Áp dụng lựa chọn theo trường
+                Áp dụng lựa chọn
               </Button>
               <Button size="sm" disabled={busy} onClick={() => void chot("mine")}>
                 Giữ toàn bộ của tôi
@@ -168,8 +168,9 @@ export default function DongBoView() {
   return (
     <section className="view active">
       <PageHeader
-        title="Đồng bộ và xung đột"
-        description="Dữ liệu chỉnh lý giữa máy này và máy chủ."
+        title="Đồng bộ"
+        infoTitle="Đồng bộ và xung đột"
+        info={<p>Dữ liệu chỉnh lý giữa máy này và máy chủ. Hai người sửa khác trường thì máy chủ tự gộp; chỉ khi cùng trường khác giá trị mới cần bạn chọn.</p>}
         meta={<SyncBadge sync={sync} />}
         actions={
           <Button variant="primary" icon="lamMoi" loading={busy} onClick={() => void dongBo()}>
@@ -182,7 +183,7 @@ export default function DongBoView() {
       {error != null && <ErrorBanner error={error} className="mb-4" onRetry={reload} />}
       <p className="mb-4 text-sm text-fg-subtle">{sl.title}</p>
 
-      <Card className="mb-4" title={`Xung đột cần bạn chọn (${n(conflicts.length)})`} description="Sửa khác trường với người khác thì máy chủ tự gộp, chỉ cùng trường khác giá trị mới hỏi.">
+      <Card className="mb-4" title={`Xung đột (${n(conflicts.length)})`}>
         {conflicts.length === 0 ? (
           <EmptyState compact icon="duyet" title="Không có xung đột" />
         ) : (
@@ -194,7 +195,7 @@ export default function DongBoView() {
         )}
       </Card>
 
-      <Card padding="none" title={`Thay đổi chờ đẩy hoặc bị từ chối (${n(outbox.length)})`}>
+      <Card padding="none" title={`Chờ đẩy, bị từ chối (${n(outbox.length)})`}>
         <Table
           columns={cols}
           rows={outbox}

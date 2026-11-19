@@ -101,7 +101,7 @@ function MayNhanVien() {
 
   return (
     <>
-      <PageHeader title="Đưa lên máy chủ" description="Máy này chia sẻ tài liệu đã đóng gói cho máy quản trị gom qua mạng nội bộ. Quản trị tự thu thập, bạn không phải gửi tay." />
+      <PageHeader title="Đưa lên máy chủ" description="Máy này chia sẻ tài liệu cho máy quản trị gom." info={<p>Quản trị tự thu thập tài liệu đã đóng gói qua mạng nội bộ, bạn không phải gửi tay.</p>} />
       <div className="max-w-2xl space-y-4">
         {status?.siteCodeWeak && <MaSiteYeu isAdmin={false} />}
         <Card
@@ -146,7 +146,7 @@ function MayNhanVien() {
           )}
         </Card>
         <Card title="Mã site mạng nội bộ">
-          <Field label="Mã site" hint="Để trống rồi Lưu = xoá mã và tắt chia sẻ (dùng khi máy nhận nhầm mã của site khác).">
+          <Field label="Mã site" hintAs="tip" hint="Để trống rồi Lưu = xoá mã và tắt chia sẻ (dùng khi máy nhận nhầm mã của site khác).">
             <div className="flex flex-wrap items-center gap-2">
               <Input style={{ ...MONO, width: V4qa(code) }} value={code} placeholder={SITE_PLACEHOLDER} onChange={(e) => setCode(e.target.value)} className="w-auto" />
               <Button variant="primary" loading={busy} onClick={() => void luu()}>
@@ -159,7 +159,7 @@ function MayNhanVien() {
           </button>
           {nangCao && (
             <div className="mt-2">
-              <Field label="Cổng chia sẻ cố định" hint={`Để trống = cổng chung ${V4qb}. Chỉ ghim cổng khác khi cổng chung bị chiếm hoặc tường lửa riêng.`}>
+              <Field label="Cổng chia sẻ cố định" hintAs="tip" hint={`Để trống = cổng chung ${V4qb}. Chỉ ghim cổng khác khi cổng chung bị chiếm hoặc tường lửa riêng.`}>
                 <Input value={port} placeholder={String(V4qb)} onChange={(e) => setPort(e.target.value)} className="w-40" />
               </Field>
             </div>
@@ -491,7 +491,8 @@ function MayQuanTri() {
     <>
       <PageHeader
         title="Đưa lên máy chủ"
-        description={session?.projectName ? `Gom tài liệu từ máy nhân viên hoặc ổ đĩa vào Kho rồi đẩy lên máy chủ. ${session.projectName}.` : "Gom tài liệu từ máy nhân viên hoặc ổ đĩa vào Kho rồi đẩy lên máy chủ."}
+        description={session?.projectName || undefined}
+        info={<p>Gom tài liệu từ máy nhân viên hoặc ổ đĩa vào Kho rồi đẩy lên máy chủ.</p>}
         actions={
           <>
             {pending > 0 && (
@@ -529,7 +530,7 @@ function MayQuanTri() {
 
       {tab === "gom" && (
         <div className="mt-3 max-w-3xl space-y-4">
-          <Card title="Thu thập qua mạng nội bộ" description="Máy nhân viên đã bật chia sẻ và cùng mã site sẽ được gom tự động.">
+          <Card title="Thu thập qua mạng nội bộ" description="Tự gom máy nhân viên cùng mã site.">
             <Toolbar>
               <Button variant="primary" icon="phatLan" loading={busy === "collect" || collecting} disabled={busyAny} onClick={() => void thuThap()}>
                 Thu thập
@@ -545,7 +546,7 @@ function MayQuanTri() {
               </span>
             </Toolbar>
           </Card>
-          <Card title="Mã site mạng nội bộ" description="Mọi máy trong site phải cùng một mã. Máy nhân viên tự nhận mã khi nhận cây thư mục.">
+          <Card title="Mã site mạng nội bộ" description="Mọi máy trong site dùng chung một mã.">
             <div className="flex flex-wrap items-center gap-2">
               <Input style={{ ...MONO, width: V4qa(siteCode) }} value={siteCode} placeholder={SITE_PLACEHOLDER} onChange={(e) => setSiteCode(e.target.value)} className="w-auto" aria-label="Mã site" />
               <Button loading={busy === "code"} disabled={busyAny} onClick={() => void luuMa()}>
@@ -575,12 +576,12 @@ function MayQuanTri() {
 
       {tab === "them" && (
         <div className="mt-3 max-w-3xl space-y-4">
-          <Card title="Thêm PDF có sẵn vào Kho" description={dayThang ? "Từ ổ cứng của dự án. Tệp giữ nguyên trên ổ, ghi sổ Kho rồi gửi thẳng lên máy chủ, không chép." : "Từ ổ cứng, USB hoặc thư mục quét cũ. Tệp được chép vào Kho máy này rồi đẩy lên máy chủ."}>
+          <Card title="Thêm PDF có sẵn vào Kho" description={dayThang ? "Tệp giữ nguyên trên ổ, gửi thẳng lên máy chủ." : "Tệp được chép vào Kho rồi đẩy lên máy chủ."}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Dự án đích">
                 <Select value={projectId} onChange={setProjectId} placeholder={projects.length ? "— Chọn dự án —" : "Dự án của tài khoản này"} options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} />
               </Field>
-              <Field label="Gắn theo danh mục hồ sơ" inline hint={phongs.length > 0 ? "Chỉ cho tệp lẻ: chọn phông và hồ sơ trong mục lục. Bỏ trống để máy tự nhận tên thư mục là phông." : "Tự gõ vị trí trong Kho thay vì lấy tên thư mục làm phông."}>
+              <Field label="Gắn theo danh mục hồ sơ" inline hintAs="tip" hint={phongs.length > 0 ? "Chỉ cho tệp lẻ: chọn phông và hồ sơ trong mục lục. Bỏ trống để máy tự nhận tên thư mục là phông." : "Tự gõ vị trí trong Kho thay vì lấy tên thư mục làm phông."}>
                 <Checkbox checked={theoDanhMuc} onChange={setTheoDanhMuc} disabled={busyAny} />
               </Field>
               {!theoDanhMuc ? null : phongs.length > 0 ? (

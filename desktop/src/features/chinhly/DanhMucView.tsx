@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { V460 } from "@/state";
 import { clDelete, clSave, str, type ClCatalog, type ClRow, type ClTable } from "@/api/chinhly";
 import { ChuaChonDuAn, Select, SyncBadgeRow, tenPhong, useClCatalog } from "./common";
-import { Badge, Button, Card, confirm, Dialog, ErrorBanner, Field, Help, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, Tabs, Tip, type Column } from "@/ui";
+import { Badge, Button, Card, confirm, Dialog, ErrorBanner, Field, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, Tabs, Tip, type Column } from "@/ui";
 
 type Tab = "phong" | "phong_ban" | "mang" | "thbq" | "ngon_ngu" | "loai_van_ban" | "khoi_phong";
 const TABS: [Tab, string][] = [
@@ -222,8 +222,16 @@ export default function DanhMucView() {
   return (
     <section className="view active">
       <PageHeader
-        title="Danh mục chỉnh lý"
-        description="Danh mục dùng chung toàn dự án, đồng bộ với máy chủ. Sửa được khi ngoại tuyến."
+        title="Danh mục"
+        infoTitle="Danh mục chỉnh lý"
+        info={
+          <>
+            <p>Danh mục dùng chung toàn dự án, đồng bộ với máy chủ. Sửa được khi ngoại tuyến.</p>
+            <p>
+              Mã hồ sơ = <code>Mã phông.Phông số.Năm kết thúc.Số hồ sơ[.Mục lục số]</code>. Mã văn bản theo TT05 = mã hồ sơ + số thứ tự 7 chữ số.
+            </p>
+          </>
+        }
         actions={
           canCreate && (
             <Button variant="primary" icon="them" onClick={() => setForm({ row: null })}>
@@ -260,13 +268,6 @@ export default function DanhMucView() {
             reload();
           }}
         />
-      )}
-      {tab === "phong" && (
-        <Help title="Cách tạo mã hồ sơ" className="mt-4">
-          <p>
-            Mã hồ sơ = <code>Mã phông.Phông số.Năm kết thúc.Số hồ sơ[.Mục lục số]</code>. Mã văn bản theo TT05 = mã hồ sơ + số thứ tự 7 chữ số.
-          </p>
-        </Help>
       )}
     </section>
   );
