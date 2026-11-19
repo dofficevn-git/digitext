@@ -34,7 +34,7 @@
   --side-bg: var(--color-gray-0);
   --side-bg-2: var(--color-brand-50);
   --side-bg-3: var(--color-gray-200);
-  --side-node: var(--color-gray-100);
+  --side-node: var(--color-brand-50);
   --side-text: var(--color-fg);
   --side-strong: var(--color-brand-700);
   --side-faint: var(--color-fg-subtle);
@@ -409,7 +409,7 @@ html, body, #root {
 
 .sidebar {
   grid-area: sidebar;
-  background: var(--side-bg);
+  background: linear-gradient(180deg, var(--side-bg) 0%, var(--side-bg) 45%, var(--color-brand-50) 100%);
   color: var(--side-text);
   border-right: 1px solid var(--side-line);
   display: flex;
