@@ -13,6 +13,7 @@ import { V3z9 } from "@/domain/permissions";
 import type { V3xTienIch } from "@/domain/types";
 import PdfaCheckPanel from "@/features/package/PdfaCheckPanel";
 import PackageCheckPanel from "@/features/package/PackageCheckPanel";
+import KiemChuKyPanel from "@/features/sign/KiemChuKyPanel";
 import ExternalImportPanel from "@/features/package/ExternalImportPanel";
 import KieExamplesPanel from "@/features/dossier/KieExamplesPanel";
 import ChuyenDuLieuCu from "@/features/chinhly/ChuyenDuLieuCu";
@@ -25,18 +26,20 @@ export default function TienIchHub() {
   const coGoi = V3z9(perms, "package.view");
   const coDuyet = V3z9(perms, "document.review");
   const coHoSo = V3z9(perms, "dossier.read");
+  const coKy = V3z9(perms, "sign.view");
 
   const tabs = useMemo(
     () =>
       [
         { value: "pdfa" as const, label: "Kiểm PDF/A", icon: "kiemTraPdfa" as const, show: coGoi },
+        { value: "chuky" as const, label: "Kiểm chữ ký số", icon: "kySo" as const, show: coKy },
         { value: "kiemgoi" as const, label: "Kiểm tra gói tin", icon: "kiemTra" as const, show: coGoi },
         { value: "khongoai" as const, label: "Từ kho ngoài", icon: "nhapKho" as const, show: coGoi },
         { value: "nhanh" as const, label: "Đóng gói nhanh", icon: "chay" as const, show: coGoi },
         { value: "vidu" as const, label: "Ví dụ dạy máy", icon: "danhSach" as const, show: coDuyet },
         { value: "chuyendulieu" as const, label: "Chuyển dữ liệu cũ", icon: "chuyenDoi" as const, show: coHoSo },
       ].filter((t) => t.show),
-    [coGoi, coDuyet, coHoSo],
+    [coGoi, coDuyet, coHoSo, coKy],
   );
   const tab: V3xTienIch | null = tabs.some((t) => t.value === tienIchTab) ? tienIchTab : (tabs[0]?.value ?? null);
 
@@ -62,6 +65,7 @@ export default function TienIchHub() {
           <Tabs<V3xTienIch> value={tab} onChange={gotoTienIch} items={tabs.map(({ value, label, icon }) => ({ value, label, icon }))} />
           <div className="mt-3">
             {tab === "pdfa" && <PdfaCheckPanel />}
+            {tab === "chuky" && <KiemChuKyPanel />}
             {tab === "kiemgoi" && <PackageCheckPanel />}
             {tab === "khongoai" && <ExternalImportPanel />}
             {tab === "nhanh" && <ExternalImportPanel nhanh />}

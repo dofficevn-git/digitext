@@ -144,7 +144,7 @@ Sắp theo tầng phụ thuộc, dưới không phụ thuộc trên:
 | Crate | LOC | Việc |
 | --- | --- | --- |
 | [digitext-package](../crates/digitext-package/) | 3291 | **Đóng gói SIP/AIP/DIP (E-ARK CSIP).** `mets.rs` (METS gốc + rep), `premis.rs` (PREMIS đầy đủ), `ead.rs` (EAD mô tả lưu trữ), `tt02.rs` (chuẩn VN), `builder.rs`, `validate.rs`, `schemas.rs` (+ `src/schemas/*.xsd` chép nguyên từ chuẩn, nhúng bằng `include_str!`); `examples/sample_pack.rs` dựng gói mẫu từ một PDF để soi bằng `ml/tools/check_tt05_package.py` |
-| [digitext-sign-verify](../crates/digitext-sign-verify/) | 2827 | **Ký số PAdES-LTV.** `cms.rs` (CMS/PKCS#7), `tsa.rs` (timestamp), `ocsp.rs` (kiểm thu hồi), `chain.rs` (chuỗi tin cậy), `dss.rs` (Document Security Store, 30KB — file to nhất), `pdf.rs` (nhúng chữ ký vào PDF) |
+| [digitext-sign-verify](../crates/digitext-sign-verify/) | 2827 | **Ký số PAdES-LTV.** `cms.rs` (CMS/PKCS#7), `tsa.rs` (timestamp), `ocsp.rs` (kiểm thu hồi), `chain.rs` (chuỗi tin cậy), `dss.rs` (Document Security Store, 30KB — file to nhất), `pdf.rs` (nhúng chữ ký vào PDF), `nhieu.rs` (**kiểm MỌI chữ ký trong một PDF** + kết luận từng tệp — `verify()` chỉ kiểm một chữ ký và đòi nó phủ trọn tệp, nên tệp ký nhiều lần bị kết luận "đã bị sửa sau khi ký"; đọc ghi chú đầu file trước khi sửa gì ở đây) |
 | [digitext-ocr](../crates/digitext-ocr/) | 5191 | **Crate phức tạp nhất.** Xem mục 4 |
 | [digitext-token-signpdf](../crates/digitext-token-signpdf/) | 1169 | Ký PDF bằng USB token / thẻ chữ ký số |
 | [digitext-ingest](../crates/digitext-ingest/) | 280 | Nạp file theo manifest JSON, **đối chiếu BLAKE3 + kích thước** trước khi nhận |
@@ -313,8 +313,8 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   chủ, Kho máy chủ, OCR và bóc tách, Giao việc, Việc của tôi, **Kết nối dữ liệu chủ** = `KhaiThacView` chế độ `ketnoi`
   chỉ còn Tạo văn bản từ OCR + Metadata TT05/TT02) · Ký số, đóng gói (Bước 6–7: Ký số, Đóng gói 3 tab, Thu nộp) ·
   Nghiệm thu (Bước 8: Sổ biên bản) — rồi dưới đường chia: Lưu trữ số (giữ cho bản khách hàng) · Báo cáo · **Tiện ích**
-  (`view:tienich`, hub `shell/TienIchHub.tsx`, tab `V3xTienIch`: Kiểm PDF/A, Kiểm tra gói tin, Từ kho ngoài, Đóng gói
-  nhanh, Ví dụ dạy máy, Chuyển dữ liệu cũ; cộng Tách TIFF, Kho và giá, Mượn – trả) · Quản trị. Id mục con giữ nguyên;
+  (`view:tienich`, hub `shell/TienIchHub.tsx`, tab `V3xTienIch`: Kiểm PDF/A, **Kiểm chữ ký số**, Kiểm tra gói tin, Từ kho ngoài,
+  Đóng gói nhanh, Ví dụ dạy máy, Chuyển dữ liệu cũ; cộng Tách TIFF, Kho và giá, Mượn – trả) · Quản trị. Id mục con giữ nguyên;
   `Sidebar.QUY_TRINH` định nghĩa trục; xem trước `?view=tienich&tab=…`, `?view=khogia&kg=ketnoi`. Các nhóm Giao nhận
   tài liệu (Bước 1–2), Kiểm tra sản phẩm (Bước 5) và màn Nhật ký, Nghiệm thu khối lượng sẽ thêm ở các bản sau (kế hoạch
   4 bản, migration 0024). **R2 (3/11):** nhóm Giao nhận tài liệu (`view:handover` → `records/HandoverView.tsx`: biên bản

@@ -40,6 +40,7 @@ mod storage;
 mod submission;
 mod sync;
 mod telemetry;
+mod chuky;
 mod pkgcheck;
 mod bundle;
 mod edition;
@@ -208,6 +209,8 @@ fn main() {
             signing::sign_batch_cancel,
             signing::sign_batch_pause,
             signing::sign_load_stamp,
+            chuky::chuky_quet,
+            chuky::chuky_huy,
             pkgcheck::pkgcheck_run,
             pkgcheck::pkgcheck_cancel,
             pkgcheck::pkgcheck_report,

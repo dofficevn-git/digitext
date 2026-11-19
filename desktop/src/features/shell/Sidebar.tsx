@@ -30,13 +30,18 @@ function tachBuoc(step?: string): { so?: string; moTa?: string } {
 
 /** Nút tròn của nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. Nhóm trên trục quy trình hiện SỐ BƯỚC
  *  thay icon (0.25: bỏ dòng phụ "Bước n · …" dưới tên nhóm); dải icon thu gọn vẫn dùng icon cho dễ nhận. */
-function NutNhom({ icon, lit, size = "md", so }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg"; so?: string }) {
+function NutNhom({ icon, lit, size = "md", so, vuong, trenNen }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg"; so?: string; vuong?: boolean; /** Nút nằm trên dòng đang chọn (nền tím đặc). */ trenNen?: boolean }) {
   return (
     <span
       className={cn(
-        "relative z-10 grid flex-none place-items-center rounded-full ring-1 transition-colors",
+        "relative z-10 grid flex-none place-items-center ring-1 transition-all",
+        vuong ? "rounded-lg" : "rounded-full",
         size === "lg" ? "size-9" : "size-7",
-        lit ? "bg-brand-500 text-white ring-brand-200" : "bg-[var(--side-node)] text-[var(--side-faint)] ring-[var(--side-line)] group-hover:text-[var(--side-strong)] group-hover:ring-[var(--side-line-2)]",
+        trenNen
+          ? "bg-white/20 text-white ring-white/35"
+          : lit
+          ? "bg-brand-500 text-white ring-2 ring-brand-200 shadow-[0_2px_8px_rgb(90_88_166/0.45)]"
+          : "bg-[var(--side-node)] text-brand-600 ring-brand-200 group-hover:bg-brand-100 group-hover:text-brand-700 group-hover:ring-brand-300",
       )}
     >
       {so ? <span className={cn("font-semibold tabular-nums leading-none", so.length > 1 ? "text-[10.5px]" : "text-[13px]")}>{so}</span> : <Icon name={icon} size={size === "lg" ? 17 : 15} />}
@@ -135,7 +140,7 @@ export default function Sidebar() {
   // Mục đang mở: nền sáng hơn một bậc + vạch hổ phách bên trái (màu "đang làm" của cả hệ thống).
   const tone = (active: boolean) =>
     active
-      ? "bg-[var(--side-bg-2)] text-[var(--side-strong)] font-semibold shadow-[inset_2px_0_0_var(--side-active)]"
+      ? "bg-brand-500 text-white font-semibold shadow-[0_1px_4px_rgb(90_88_166/0.4)]"
       : "text-[var(--side-text)] hover:bg-[var(--side-bg-2)]/70 hover:text-[var(--side-strong)]";
 
   const Badge = ({ n }: { n: number }) =>
@@ -166,7 +171,7 @@ export default function Sidebar() {
             aria-expanded={g.leaf ? undefined : isOpen}
             aria-current={g.leaf && active ? "page" : undefined}
           >
-            {g.icon && <NutNhom icon={g.icon} lit={active} so={so} />}
+            {g.icon && <NutNhom icon={g.icon} lit={active} so={so} vuong={!QUY_TRINH.has(g.id)} trenNen={!!g.leaf && active} />}
             <span className="min-w-0 flex-1 truncate">{g.label}</span>
             {g.leaf ? (
               <Badge n={badgeOf(g.badge)} />
@@ -218,7 +223,7 @@ export default function Sidebar() {
         aria-current={g.leaf && active ? "page" : undefined}
         onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : undefined}
       >
-        {g.icon && <NutNhom icon={g.icon} lit={active} size="lg" />}
+        {g.icon && <NutNhom icon={g.icon} lit={active} size="lg" vuong={!QUY_TRINH.has(g.id)} />}
         {cnt > 0 && <span className="absolute right-1 top-1 z-20 size-2 rounded-full bg-danger-500" aria-hidden />}
       </button>
     );
@@ -253,7 +258,7 @@ export default function Sidebar() {
   const ve = rail ? nutRail : dongNhom;
   // Đường trục: chạy qua tâm các nút tròn của nhóm quy trình (tâm = lề nút 8px + nửa nút 14px; dòng nhóm cao 40px
   // nên tâm cách mép 20px; dải icon: giữa cột).
-  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-5 bottom-5";
+  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-[50px] bottom-5";
 
   return (
     <aside className={cn("sidebar", rail && "collapsed")}>
@@ -262,6 +267,7 @@ export default function Sidebar() {
         <ul className={cn("flex flex-col", rail && "items-center")}>{dau.map(ve)}</ul>
         {truc.length > 0 && (
           <div className="relative mt-1">
+            {!rail && <p className="m-0 px-2 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-brand-400">Quy trình TT05</p>}
             <span aria-hidden className={cn("pointer-events-none absolute w-0.5 -translate-x-1/2 rounded-full bg-[var(--side-line-2)]", duongTruc)} />
             <ul className={cn("flex flex-col", rail && "items-center")} aria-label="Quy trình xử lý hồ sơ">
               {truc.map(ve)}

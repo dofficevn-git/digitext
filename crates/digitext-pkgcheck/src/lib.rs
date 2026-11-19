@@ -106,6 +106,11 @@ pub struct PdfRow {
     pub bit_depth: Option<u32>,
     pub producer: Option<String>,
     pub signed: bool,
+    /// Số chữ ký trong tệp. Công văn phát hành theo quy trình Ban Cơ yếu có tới 4 (phê duyệt,
+    /// số công văn, ngày, dấu tổ chức) — `sig_valid` là kết luận cho **tất cả**, không phải
+    /// cho một cái.
+    #[serde(default)]
+    pub so_chu_ky: usize,
     /// Chữ ký toàn vẹn (băm khớp, phủ trọn tệp). None = không ký.
     pub sig_valid: Option<bool>,
     pub signer: Option<String>,
@@ -474,36 +479,34 @@ fn check_pdf(name: &str, bytes: &[u8], aip: bool) -> PdfRow {
         }
     }
     if r.signed {
-        match digitext_sign_verify::verify(bytes) {
-            Ok(t) => {
-                // Toàn vẹn = chữ ký đúng + băm nội dung khớp. Thiếu thuộc tính ESS signing-certificate
-                // (cert_binding) chỉ là chưa đạt PAdES baseline — chữ ký adbe.pkcs7.detached của iTextSharp…
-                let intact = t.signature_ok && t.digest_ok;
-                row.sig_valid = Some(intact);
-                row.tsa = t.timestamp_present;
-                row.ltv = t.has_dss;
-                if !intact {
-                    hard.push("chữ ký số KHÔNG toàn vẹn (tệp bị sửa sau khi ký hoặc chữ ký hỏng)".into());
-                } else if !t.cert_binding_ok {
-                    soft.push("chữ ký không gắn chứng thư người ký (thiếu thuộc tính ESS signing-certificate, chưa đạt PAdES baseline)".into());
-                }
-                row.signing_time = t.timestamp_time_unix.map(fmt_unix).or_else(|| sig_m_time(bytes));
-                if !t.timestamp_present {
-                    soft.push("chữ ký không có dấu thời gian (TSA)".into());
-                }
-                if aip && !t.has_dss {
-                    soft.push("chữ ký chưa có thông tin xác minh lâu dài (LTV/DSS) — nên có với gói AIP".into());
-                }
-            }
-            Err(e) => {
-                row.sig_valid = Some(false);
-                hard.push(format!("không xác minh được chữ ký: {e}"));
+        // `kiem_tat_ca` chứ KHÔNG phải `verify`: `verify` chỉ xác minh một chữ ký và đòi nó phủ
+        // trọn tệp, nên tệp ký nhiều lần (công văn phát hành: phê duyệt → số → ngày → dấu tổ
+        // chức) bị kết luận "đã bị sửa sau khi ký" — vu oan cho văn bản hợp lệ. Đổi 19/11/2026;
+        // ghi chú đầy đủ ở đầu `sign-verify/src/nhieu.rs`.
+        let bay_gio = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        let kq = digitext_sign_verify::kiem_tat_ca(bytes);
+        let k = digitext_sign_verify::ket_luan_tep(&kq, bay_gio);
+        row.so_chu_ky = kq.so_chu_ky();
+        row.sig_valid = Some(k.loi.is_empty());
+        row.ltv = kq.co_dss;
+        // Thông tin người ký lấy từ chữ ký SAU CÙNG — con dấu cuối là thứ bên nhận đối chiếu.
+        // Chi tiết từng chữ ký thì xem Tiện ích › Kiểm chữ ký số.
+        if let Some(cuoi) = kq.chu_ky.last() {
+            row.tsa = cuoi.co_tsa;
+            row.signing_time = cuoi.thoi_diem_tsa_unix.map(fmt_unix).or_else(|| sig_m_time(bytes));
+            if let Some(ng) = &cuoi.nguoi_ky {
+                row.signer = Some(ng.signer.clone());
+                row.issuer = Some(ng.issuer.clone());
+                row.cert_until = Some(fmt_unix(ng.not_after_unix));
             }
         }
-        if let Ok(s) = digitext_sign_verify::signer_info(bytes) {
-            row.signer = Some(s.signer);
-            row.issuer = Some(s.issuer);
-            row.cert_until = Some(fmt_unix(s.not_after_unix));
+        hard.extend(k.loi);
+        soft.extend(k.canh_bao);
+        if aip && !kq.co_dss {
+            soft.push("chữ ký chưa có thông tin xác minh lâu dài (LTV/DSS) — nên có với gói AIP".into());
         }
     } else {
         soft.push("chưa ký số (TT05 Điều 8.2.a)".into());

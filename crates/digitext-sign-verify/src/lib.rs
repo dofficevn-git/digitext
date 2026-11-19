@@ -3,10 +3,12 @@
 pub mod chain;
 pub mod cms;
 pub mod dss;
+pub mod nhieu;
 pub mod ocsp;
 pub mod pdf;
 pub mod tsa;
-pub use pdf::{f_1cm, f_1cn, f_1co, f_2q1, f_2q2, f_xy, finalize, prepare, signer_info, verify, SignerInfo, Thg, Tpr};
+pub use nhieu::{co_chu_ky, kiem_tat_ca, ket_luan_tep, ChuKyPdf, KetLuanTep, KetQuaNhieu};
+pub use pdf::{f_1cm, f_1cn, f_1co, f_2q1, f_2q2, f_xy, finalize, prepare, signer_info, thoi_gian_ky, verify, SignerInfo, Thg, Tpr};
 #[derive(Debug, thiserror::Error)]
 pub enum SignError {
     #[error("lỗi DER/ASN.1: {0}")]
