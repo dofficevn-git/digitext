@@ -131,6 +131,8 @@ export interface TrangDo {
 export interface KetQuaTrang {
   daDo: number;
   khongDo: number;
+  /** Vì sao không đo được, mỗi lý do một lần (vd "ảnh JBIG2", "trang không có ảnh nhúng"). */
+  khongDoVi?: string[];
   trangTrang: TrangDo[];
   /** Rất ít mực nhưng chưa chắc trắng — nên mở ra xem. */
   trangGanTrang: TrangDo[];

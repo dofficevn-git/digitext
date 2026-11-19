@@ -1,9 +1,11 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 //! Đo chất lượng từng TRANG của một PDF đã quét: trang trắng, trang lệch, trang quét ngang.
 //!
-//! Chỉ đọc ảnh JPEG nhúng sẵn trong PDF (`digitext_pdf::page_jpeg`) — không dựng hình lại, không
+//! Chỉ đọc ảnh đã nhúng sẵn trong PDF (`digitext_pdf::page_xam`) — không dựng hình lại, không
 //! cần Docker hay poppler, nên chạy được ngay trên máy người dùng cùng lúc với kiểm PDF/A.
-//! Trang nào không phải ảnh JPEG (PDF chữ thật, ảnh CCITT/JBIG2) thì bỏ qua và đếm vào `khong_do`.
+//! Đọc được JPEG, CCITT G3/G4 (bản quét đen trắng), Flate/LZW/RunLength và ảnh không nén.
+//! Trang nào không rút được ảnh (PDF chữ thật, ảnh JPEG 2000 / JBIG2) thì đếm vào `khong_do`
+//! kèm **lý do** ở `khong_do_vi` — nói được vì sao không đo thì người dùng còn biết đường xử lý.
 //!
 //! Cách đo, cả hai đều làm trên bản xám đã rút nhỏ còn ~900 px bề ngang:
 //!
@@ -59,8 +61,11 @@ pub struct TrangDo {
 pub struct KetQuaTrang {
     /// Số trang đo được.
     pub da_do: u32,
-    /// Số trang không lấy được ảnh JPEG nên không đo.
+    /// Số trang không rút được ảnh nên không đo.
     pub khong_do: u32,
+    /// Vì sao không đo được, mỗi lý do một lần ("ảnh JBIG2", "trang không có ảnh nhúng"…).
+    #[serde(default)]
+    pub khong_do_vi: Vec<String>,
     pub trang_trang: Vec<TrangDo>,
     /// Rất ít mực nhưng chưa chắc trắng — nên mở ra xem.
     pub trang_gan_trang: Vec<TrangDo>,
@@ -121,17 +126,22 @@ fn xam_nho(jpeg: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
     let anh = image::load_from_memory_with_format(jpeg, image::ImageFormat::Jpeg).ok()?;
     let xam = anh.to_luma8();
     let (w, h) = (xam.width(), xam.height());
-    if w == 0 || h == 0 {
+    thu_nho(xam.into_raw(), w, h)
+}
+
+/// Lấy mẫu thưa cho ảnh xám về bề ngang `DO_RONG_DO`.
+fn thu_nho(xam: Vec<u8>, w: u32, h: u32) -> Option<(Vec<u8>, u32, u32)> {
+    if w == 0 || h == 0 || xam.len() < (w as usize) * (h as usize) {
         return None;
     }
     if w <= DO_RONG_DO {
-        return Some((xam.into_raw(), w, h));
+        return Some((xam, w, h));
     }
     // Lấy mẫu thưa đều — nhanh hơn nội suy và đủ cho việc đếm mực / đoán góc.
     let buoc = (w as f32 / DO_RONG_DO as f32).max(1.0);
     let nw = (w as f32 / buoc).floor().max(1.0) as u32;
     let nh = (h as f32 / buoc).floor().max(1.0) as u32;
-    let goc = xam.into_raw();
+    let goc = xam;
     let mut ra = Vec::with_capacity((nw * nh) as usize);
     for y in 0..nh {
         let sy = (y as f32 * buoc) as u32;
@@ -237,6 +247,12 @@ fn doan_goc(ds: &[(f32, f32)], w: u32, h: u32) -> (Option<f32>, bool) {
 /// Trả `None` nếu không giải nén được ảnh.
 pub fn do_mot_trang(jpeg: &[u8]) -> Option<(f32, Option<f32>, bool)> {
     let (diem, w, h) = xam_nho(jpeg)?;
+    do_anh_xam(diem, w, h)
+}
+
+/// Đo MỘT trang từ ảnh xám đã rút ra sẵn (kích thước gốc).
+pub fn do_anh_xam(xam: Vec<u8>, rong: u32, cao: u32) -> Option<(f32, Option<f32>, bool)> {
+    let (diem, w, h) = thu_nho(xam, rong, cao)?;
     let nguong = nguong_muc(&diem);
     let (ds, muc) = diem_muc(&diem, w, h, nguong);
     if muc < MUC_TRANG_TRANG {
@@ -246,17 +262,34 @@ pub fn do_mot_trang(jpeg: &[u8]) -> Option<(f32, Option<f32>, bool)> {
     Some((muc, goc, ngang))
 }
 
+/// Lý do gọn để hiện cho người dùng, bỏ phần "trang N" vì đã gộp nhiều trang.
+fn vi_sao(e: &digitext_pdf::PdfError) -> String {
+    match e {
+        digitext_pdf::PdfError::NeedsRender { reason, .. } => reason.clone(),
+        _ => "không đọc được trang".into(),
+    }
+}
+
 /// Đo mọi trang của một PDF. Trả `None` nếu không mở được tệp.
 pub fn do_pdf(bytes: &[u8], so_trang: u32) -> Option<KetQuaTrang> {
     let parsed = digitext_pdf::ParsedPdf::parse(bytes).ok()?;
     let mut kq = KetQuaTrang::default();
+    let ghi_vi = |kq: &mut KetQuaTrang, vi: String| {
+        kq.khong_do += 1;
+        if !vi.is_empty() && !kq.khong_do_vi.contains(&vi) && kq.khong_do_vi.len() < 6 {
+            kq.khong_do_vi.push(vi);
+        }
+    };
     for trang in 1..=so_trang {
-        let Ok((jpeg, _dpi)) = digitext_pdf::page_jpeg(&parsed, trang as i32) else {
-            kq.khong_do += 1;
-            continue;
+        let anh = match digitext_pdf::anh_xam::page_xam(&parsed, trang as i32) {
+            Ok(a) => a,
+            Err(e) => {
+                ghi_vi(&mut kq, vi_sao(&e));
+                continue;
+            }
         };
-        let Some((muc, goc, ngang)) = do_mot_trang(&jpeg) else {
-            kq.khong_do += 1;
+        let Some((muc, goc, ngang)) = do_anh_xam(anh.diem, anh.rong, anh.cao) else {
+            ghi_vi(&mut kq, "ảnh hỏng, không đo được".into());
             continue;
         };
         kq.da_do += 1;
@@ -344,5 +377,85 @@ mod tests {
     fn it_muc_qua_thi_khong_doan_bua() {
         let ds: Vec<(f32, f32)> = (0..50).map(|i| (i as f32, i as f32)).collect();
         assert_eq!(doan_goc(&ds, 600, 800).0, None);
+    }
+
+    /// PDF một trang mang ảnh xám 8 bit không nén — kiểu phần mềm ráp lại hay ghi ra.
+    fn pdf_anh_xam(diem: Vec<u8>, rong: u32, cao: u32) -> Vec<u8> {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let mut doc = Document::with_version("1.7");
+        let anh = doc.add_object(Stream::new(
+            dictionary! {
+                "Type" => "XObject", "Subtype" => "Image",
+                "Width" => rong as i64, "Height" => cao as i64,
+                "ColorSpace" => "DeviceGray", "BitsPerComponent" => 8,
+            },
+            diem,
+        ));
+        let pages_id = doc.new_object_id();
+        let trang = doc.add_object(dictionary! {
+            "Type" => "Page", "Parent" => pages_id,
+            "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+            "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => anh } },
+        });
+        doc.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! { "Type" => "Pages", "Count" => 1, "Kids" => vec![trang.into()] }),
+        );
+        let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+        doc.trailer.set("Root", catalog);
+        let mut ra = Vec::new();
+        doc.save_to(&mut ra).unwrap();
+        ra
+    }
+
+    /// **Trang không phải JPEG vẫn phải đo được.**
+    ///
+    /// Trước 19/11/2026 bộ đo chỉ nhận `DCTDecode` nên cả tệp ghi "không đo được" — đúng nhóm
+    /// tài liệu lưu trữ quét đen trắng, là nhóm cần soát trang trắng nhất.
+    #[test]
+    fn anh_khong_phai_jpeg_van_do_duoc_trang_trang() {
+        let (w, h) = (1000u32, 1400u32);
+        let kq = do_pdf(&pdf_anh_xam(vec![255u8; (w * h) as usize], w, h), 1).unwrap();
+        assert_eq!(kq.da_do, 1, "phải đo được, lý do bỏ qua: {:?}", kq.khong_do_vi);
+        assert_eq!(kq.khong_do, 0);
+        assert_eq!(kq.trang_trang.len(), 1, "trang toàn trắng phải bị bắt");
+
+        let co_chu = anh_gia(w, h, 12, 0.0);
+        let kq = do_pdf(&pdf_anh_xam(co_chu, w, h), 1).unwrap();
+        assert_eq!(kq.da_do, 1);
+        assert!(kq.trang_trang.is_empty(), "trang có chữ không được coi là trắng");
+    }
+
+    /// Không đo được thì phải nói VÌ SAO, đừng chỉ đếm.
+    #[test]
+    fn khong_do_duoc_thi_ghi_ly_do() {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let mut doc = Document::with_version("1.7");
+        let anh = doc.add_object(Stream::new(
+            dictionary! {
+                "Type" => "XObject", "Subtype" => "Image",
+                "Width" => 8i64, "Height" => 8i64, "Filter" => "JPXDecode",
+            },
+            vec![0u8; 32],
+        ));
+        let pages_id = doc.new_object_id();
+        let trang = doc.add_object(dictionary! {
+            "Type" => "Page", "Parent" => pages_id,
+            "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+            "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => anh } },
+        });
+        doc.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! { "Type" => "Pages", "Count" => 1, "Kids" => vec![trang.into()] }),
+        );
+        let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+        doc.trailer.set("Root", catalog);
+        let mut pdf = Vec::new();
+        doc.save_to(&mut pdf).unwrap();
+
+        let kq = do_pdf(&pdf, 1).unwrap();
+        assert_eq!(kq.da_do, 0);
+        assert_eq!(kq.khong_do, 1);
+        assert_eq!(kq.khong_do_vi, vec!["ảnh JPEG 2000".to_string()]);
     }
 }
