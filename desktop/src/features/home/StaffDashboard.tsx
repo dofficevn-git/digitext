@@ -124,7 +124,7 @@ export default function StaffDashboard() {
           icon="thanhVien"
           {...me}
           className="xl:col-span-8"
-          description="Trung bình mỗi người có làm trong ngày, không nêu tên. Ẩn những ngày nhóm chưa đủ người."
+          description="Trung bình mỗi người trong ngày, không nêu tên."
           actions={
             metrics.length > 1 ? (
               <Seg<string> value={primary} onChange={setChon} options={metrics.slice(0, 4).map((m) => ({ value: m, label: quotaLabel(m) }))} />

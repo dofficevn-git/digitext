@@ -168,7 +168,7 @@ export default function ProjectProgressView() {
     <section className="view active">
       <PageHeader
         title="Tiến độ dự án"
-        description="So tiến độ công việc với thời gian hợp đồng của từng dự án, số liệu trên máy chủ."
+        description="Tiến độ công việc so với thời gian hợp đồng."
         actions={
           <Button variant="primary" icon="tepExcel" onClick={xuat} disabled={rows.length === 0}>
             Xuất Excel

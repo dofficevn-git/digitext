@@ -9,7 +9,7 @@ import { useProject } from "@/state/project";
 import { V41t } from "@/live/useLive";
 import { traCuuBoLoc, traCuuDoc, traCuuNhatKy, traCuuTim, type DongNhatKy, type DongTraCuu, type TraCuuQuery } from "@/api/tracuu";
 import { YeuCauMoiDialog, type TaiLieuChon } from "@/features/access/AccessView";
-import { Badge, Button, Card, Checkbox, Dialog, EmptyState, ErrorBanner, Help, Input, PageHeader, Select, Table, Tabs, Tip, Toolbar, notifyError, type Column } from "@/ui";
+import { CanDuAn, Badge, Button, Card, Checkbox, Dialog, ErrorBanner, Input, PageHeader, Select, Table, Tabs, Tip, Toolbar, notifyError, type Column } from "@/ui";
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 const PAGE = 50;
@@ -54,7 +54,7 @@ function NhatKy({ projectId }: { projectId: string }) {
     { key: "ip", header: "Địa chỉ máy", width: 130, cell: (r) => r.ip ?? "—" },
   ];
   return (
-    <Card title="Nhật ký khai thác" description="Mọi lần đọc, tải bản sao và cấp gói DIP — 500 lần gần nhất." padding="none">
+    <Card title="Nhật ký khai thác" description="500 lần đọc, tải, cấp gói gần nhất." padding="none">
       <Table columns={cols} rows={data ?? []} getRowId={(r) => String(r.id)} dense state={{ loading, error, onRetry: reload, empty: { title: "Chưa có lượt khai thác nào" } }} maxHeight={560} />
     </Card>
   );
@@ -177,12 +177,20 @@ export default function TraCuuView() {
     },
   ];
 
+  const cachTim = (
+    <>
+            <p>Gõ các từ cần tìm, không cần dấu: “quyet dinh dat dai” khớp “Quyết định … đất đai”. Các từ phải xuất hiện theo đúng thứ tự gõ, có thể cách nhau.</p>
+            <p>Bật “Tìm cả trong nội dung” để tìm thêm trong lớp chữ của tài liệu; dòng khớp nội dung có trích đoạn và số trang. Chất lượng phụ thuộc lớp chữ trong gói nhập.</p>
+            <p>Tài liệu hạn chế sử dụng chỉ hiện mục lục. Muốn đọc, sao hoặc nhận gói DIP: đánh dấu văn bản rồi bấm Yêu cầu khai thác (Điều 35–42 Luật Lưu trữ 2024).</p>
+    </>
+  );
+
   if (!projectId) {
     return (
       <section className="view active">
-        <PageHeader title="Tra cứu tài liệu" />
-        <Card padding="md">
-          <EmptyState icon="duAn" title="Chọn dự án ở thanh trên" description="Tra cứu trên kho lưu trữ của dự án đang chọn." />
+        <PageHeader title="Tra cứu tài liệu" infoTitle="Cách tìm" info={cachTim} />
+        <Card padding="none">
+          <CanDuAn />
         </Card>
       </section>
     );
@@ -192,7 +200,9 @@ export default function TraCuuView() {
     <section className="view active space-y-4">
       <PageHeader
         title="Tra cứu tài liệu"
-        description={bl.data ? `Kho có ${fmt(bl.data.tongHoSo)} hồ sơ, ${fmt(bl.data.tongVanBan)} văn bản. Tìm không cần gõ dấu; tài liệu hạn chế sử dụng chỉ hiện mục lục.` : "Tìm trên mục lục hồ sơ – văn bản và nội dung tài liệu."}
+        description={bl.data ? `Kho có ${fmt(bl.data.tongHoSo)} hồ sơ, ${fmt(bl.data.tongVanBan)} văn bản.` : undefined}
+        infoTitle="Cách tìm"
+        info={cachTim}
       />
       {canBo && <Tabs items={[{ value: "tim", label: "Tra cứu", icon: "tim" }, { value: "nhatky", label: "Nhật ký khai thác", icon: "lichSu" }]} value={tab} onChange={setTab} variant="line" />}
 
@@ -208,7 +218,7 @@ export default function TraCuuView() {
                 tim();
               }}
             >
-              <Input prefix="tim" placeholder="Trích yếu, số ký hiệu, cơ quan ban hành, tiêu đề hồ sơ… (không cần dấu)" value={o} onChange={(e) => setO(e.target.value)} className="min-w-72 flex-1" aria-label="Từ cần tìm" autoFocus />
+              <Input prefix="tim" placeholder="Trích yếu, số ký hiệu, cơ quan, tiêu đề hồ sơ" value={o} onChange={(e) => setO(e.target.value)} className="min-w-72 flex-1" aria-label="Từ cần tìm" autoFocus />
               <Button type="submit" variant="primary" icon="tim">
                 Tìm
               </Button>
@@ -281,11 +291,6 @@ export default function TraCuuView() {
             />
           </Card>
 
-          <Help title="Cách tìm">
-            <p>Gõ các từ cần tìm, không cần dấu: “quyet dinh dat dai” khớp “Quyết định … đất đai”. Các từ phải xuất hiện theo đúng thứ tự gõ, có thể cách nhau.</p>
-            <p>Bật “Tìm cả trong nội dung” để tìm thêm trong lớp chữ của tài liệu; dòng khớp nội dung có trích đoạn và số trang. Chất lượng phụ thuộc lớp chữ trong gói nhập.</p>
-            <p>Tài liệu hạn chế sử dụng chỉ hiện mục lục. Muốn đọc, sao hoặc nhận gói DIP: đánh dấu văn bản rồi bấm Yêu cầu khai thác (Điều 35–42 Luật Lưu trữ 2024).</p>
-          </Help>
         </>
       )}
 

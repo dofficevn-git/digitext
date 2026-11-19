@@ -10,7 +10,7 @@ import { V460 } from "@/state";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
 import { Icon, type V41v as IconName } from "@/components/Icon";
-import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, Help, IconButton, Input, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
+import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, IconButton, Input, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
 import { V4v9 } from "./infoFlow";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -131,7 +131,13 @@ export default function V4vc() {
     <section className="view active">
       <PageHeader
         title="Cung cấp thông tin"
-        description="Yêu cầu danh mục, trích xuất hoặc thông tin tổng hợp từ tài liệu lưu trữ; xét duyệt, kết xuất và trả kết quả."
+        description="Yêu cầu danh mục, trích xuất, thông tin tổng hợp."
+        infoTitle="Quy trình cung cấp thông tin"
+        info={
+          <>
+        <p>Người dùng nêu chủ đề và mục đích (Điều 44–45) → xét duyệt trong 6 ngày làm việc, phí tính theo đơn giá (Điều 46) → thu phí nếu có → hệ thống kết xuất, người xét duyệt rà soát rồi trả kết quả (Điều 47).</p>
+          </>
+        }
         actions={
           <>
             <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
@@ -243,9 +249,6 @@ export default function V4vc() {
         </div>
       </div>
 
-      <Help className="mt-4" title="Quy trình cung cấp thông tin">
-        <p>Người dùng nêu chủ đề và mục đích (Điều 44–45) → xét duyệt trong 6 ngày làm việc, phí tính theo đơn giá (Điều 46) → thu phí nếu có → hệ thống kết xuất, người xét duyệt rà soát rồi trả kết quả (Điều 47).</p>
-      </Help>
 
       {moi && (
         <YeuCauMoiDialog

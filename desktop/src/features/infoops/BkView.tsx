@@ -8,7 +8,7 @@ import { V4v5, V4v4, V4v1, V4v2, type GoiLoi, type V4v3, type V4v0, type V4uz } 
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
 import { V4v8 } from "./infoFlow";
-import { Badge, Banner, Button, Card, Dialog, Field, Help, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Table, Textarea, Tip, toast, type Column } from "@/ui";
+import { Badge, Banner, Button, Card, Dialog, Field, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Table, Textarea, Tip, toast, type Column } from "@/ui";
 
 const fmtN = (v: number) => v.toLocaleString("vi-VN");
 const GIO_CANH_BAO = 26;
@@ -147,7 +147,13 @@ export default function V4vd() {
     <section className="view active">
       <PageHeader
         title="Bảo quản và sao lưu"
-        description="Kiểm tra toàn vẹn tài liệu định kỳ và ghi sổ các lần sao lưu."
+        description="Kiểm tra toàn vẹn định kỳ và sổ sao lưu."
+        infoTitle="Căn cứ"
+        info={
+          <>
+        <p>Kiểm tra tài liệu: Điều 29 Thông tư 05/2025/TT-BNV, mục tiêu toàn bộ trong 3 năm, danh mục tệp lỗi theo Điều 29.4.đ. Tài liệu nhập từ gói AIP còn được so mã băm BLAKE3 với lúc nhập; zip gói lưu trữ so mã băm SHA-256. Sao lưu: Điều 30, ghi loại, nguồn, phương tiện, kết quả kiểm tra sau sao lưu và nơi bảo quản.</p>
+          </>
+        }
         actions={
           canManage && (
             <>
@@ -187,7 +193,7 @@ export default function V4vd() {
       </Card>
 
       {report && report.tepLoi.length > 0 && (
-        <Card className="mb-4" tone="danger" padding="none" title={`Tệp lỗi (${fmtN(report.tepLoi.length)})`} description="Dùng danh mục này khi lập biên bản kiểm tra.">
+        <Card className="mb-4" tone="danger" padding="none" title={`Tệp lỗi (${fmtN(report.tepLoi.length)})`} description="Dùng khi lập biên bản kiểm tra.">
           <Table columns={colsLoi} rows={report.tepLoi} getRowId={(t) => t.documentId} dense maxHeight={320} />
         </Card>
       )}
@@ -202,9 +208,6 @@ export default function V4vd() {
         <Table columns={colsSaoLuu} rows={backups} getRowId={(b) => b.id} dense maxHeight={480} state={{ loading: loading && !data, empty: { title: "Chưa có lần sao lưu nào", description: "Quá 26 giờ không có sao lưu đạt, hệ thống cảnh báo quản trị.", icon: "baoquan" } }} />
       </Card>
 
-      <Help title="Căn cứ" className="mt-4">
-        <p>Kiểm tra tài liệu: Điều 29 Thông tư 05/2025/TT-BNV, mục tiêu toàn bộ trong 3 năm, danh mục tệp lỗi theo Điều 29.4.đ. Tài liệu nhập từ gói AIP còn được so mã băm BLAKE3 với lúc nhập; zip gói lưu trữ so mã băm SHA-256. Sao lưu: Điều 30, ghi loại, nguồn, phương tiện, kết quả kiểm tra sau sao lưu và nơi bảo quản.</p>
-      </Help>
 
       {moGhi && <GhiNhanDialog onClose={() => setMoGhi(false)} onDone={reload} />}
     </section>

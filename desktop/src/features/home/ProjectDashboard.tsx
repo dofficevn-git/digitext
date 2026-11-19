@@ -81,7 +81,7 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
     <div className="space-y-4">
       {header}
       <div className="grid gap-4 xl:grid-cols-12">
-        <DataCard title="Dây chuyền xử lý" icon="xuLy" {...dash} className="xl:col-span-8" description="Bốn bước so với khối lượng hợp đồng; bấm một ô để mở màn tương ứng.">
+        <DataCard title="Dây chuyền xử lý" icon="xuLy" {...dash} className="xl:col-span-8" description="So với khối lượng hợp đồng. Bấm một ô để mở màn.">
           {(p: ProjectDash) => {
             const tf = p.contract.contractFiles ?? p.counts.files;
             return (
@@ -166,7 +166,7 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
           }}
         </DataCard>
 
-        <DataCard title="Tồn đọng theo tuổi" icon="dangCho" {...dash} className="xl:col-span-4" description="Số tài liệu đang chờ ở mỗi bước, theo số ngày đã chờ.">
+        <DataCard title="Tồn đọng theo tuổi" icon="dangCho" {...dash} className="xl:col-span-4" description="Tài liệu đang chờ ở mỗi bước, theo số ngày.">
           {(p: ProjectDash) => (
             <div className="space-y-3">
               <ChartLegend items={TUOI.map((t, i) => ({ label: t, color: CHART.seq[i + 1] }))} />

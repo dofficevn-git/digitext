@@ -12,7 +12,7 @@ import type { V3xs } from "@/domain/types";
 import { roleCreate, roleDelete, roleReset, roleUpdate, rolesList, slugRole, type RoleInfo } from "@/api/roles";
 import { Icon } from "@/components/Icon";
 import { V462 as cn } from "@/lib/utils";
-import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, Help, Input, notifyError, PageHeader, Select, Skeleton, Textarea, Tip, toast } from "@/ui";
+import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, Input, notifyError, PageHeader, Select, Skeleton, Textarea, Tip, toast } from "@/ui";
 
 // Phạm vi dữ liệu do vai trò GỐC quyết định, không sửa được bằng bộ quyền: quản trị / nhân viên dự án
 // chỉ làm việc trên dự án được gán (máy chủ chặn mọi dự án khác), quản lý và quản trị hệ thống thấy mọi dự án.
@@ -119,7 +119,13 @@ export default function RolesView() {
     <section className="view active">
       <PageHeader
         title="Vai trò và quyền"
-        description="Mỗi vai trò có sẵn một bộ quyền; tạo tài khoản chỉ cần chọn vai trò. Quyền cấp / chặn riêng cho từng người vẫn làm ở Người dùng và dự án."
+        infoTitle="Cách quyền được tính"
+        info={
+          <>
+            <p>Mỗi vai trò có sẵn một bộ quyền; tạo tài khoản chỉ cần chọn vai trò. Quyền cấp / chặn riêng cho từng người vẫn làm ở Người dùng và dự án.</p>
+            <p>Quyền của một người = bộ quyền của vai trò, cộng quyền cấp riêng, trừ quyền chặn riêng (hai mục sau ở Người dùng và dự án › Phân quyền). Vai trò gốc quyết định tầng và phạm vi: Quản trị dự án và Nhân viên luôn gắn một dự án; Quản lý và Quản trị hệ thống thấy mọi dự án. Đổi bộ quyền có hiệu lực ngay trên máy chủ; máy trạm nhận khi người dùng đăng nhập lại hoặc làm mới phiên.</p>
+          </>
+        }
         actions={
           coSua && (
             <Button variant="primary" icon="them" onClick={() => setTao(true)}>
@@ -250,9 +256,6 @@ export default function RolesView() {
               </div>
             </Card>
           )}
-          <Help title="Cách quyền được tính">
-            <p>Quyền của một người = bộ quyền của vai trò, cộng quyền cấp riêng, trừ quyền chặn riêng (hai mục sau ở Người dùng và dự án › Phân quyền). Vai trò gốc quyết định tầng và phạm vi: Quản trị dự án và Nhân viên luôn gắn một dự án; Quản lý và Quản trị hệ thống thấy mọi dự án. Đổi bộ quyền có hiệu lực ngay trên máy chủ; máy trạm nhận khi người dùng đăng nhập lại hoặc làm mới phiên.</p>
-          </Help>
         </div>
       </div>
       {tao && <TaoVaiTroDialog roles={roles} myRole={myRole} onClose={() => setTao(false)} onDone={(code) => { setTao(false); setChon(code); reload(); }} />}
@@ -294,7 +297,7 @@ function TaoVaiTroDialog({ roles, myRole, onClose, onDone }: { roles: RoleInfo[]
       open
       onOpenChange={(o) => !o && !busy && onClose()}
       title="Tạo vai trò"
-      description="Vai trò mới bắt đầu bằng bộ quyền sao chép từ một vai trò có sẵn; sửa tiếp ở bảng quyền sau khi tạo."
+      description="Bộ quyền sao chép từ vai trò có sẵn, sửa tiếp sau khi tạo."
       size="md"
       footer={
         <>
@@ -314,10 +317,10 @@ function TaoVaiTroDialog({ roles, myRole, onClose, onDone }: { roles: RoleInfo[]
         <Field label="Mã" required hint="Dùng trong hệ thống, không đổi được sau khi tạo" error={name && errCode ? errCode : undefined}>
           <Input value={code} onChange={(e) => { setCodeTouched(true); setCode(e.target.value); }} />
         </Field>
-        <Field label="Vai trò gốc" required hint="Quyết định tầng và phạm vi dự án; bộ quyền không vượt tầng này">
+        <Field label="Vai trò gốc" required hintAs="tip" hint="Quyết định tầng và phạm vi dự án; bộ quyền không vượt tầng này">
           <Select value={base} onChange={(v) => { setBase(v as V3xs); setCopyFrom(""); }} options={bases.map((b) => ({ value: b, label: V3za(b) }))} />
         </Field>
-        <Field label="Sao chép bộ quyền từ" hint="Mặc định: bộ quyền của vai trò gốc">
+        <Field label="Sao chép bộ quyền từ" hintAs="tip" hint="Mặc định: bộ quyền của vai trò gốc">
           <Select value={copyFrom} onChange={setCopyFrom} placeholder={`Bộ quyền của ${V3za(base)}`} options={nguon.map((r) => ({ value: r.code, label: `${r.name} (${n(r.permissions.length)} quyền)` }))} />
         </Field>
         <Field label="Mô tả" hint="Tuỳ chọn">

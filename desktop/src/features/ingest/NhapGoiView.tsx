@@ -10,7 +10,7 @@ import { useProject } from "@/state/project";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { ingestBatchCreate, ingestBatches, ingestBatchFinish, ingestBatchItems, ingestDiscover, ingestUpload, type GoiTimThay, type GoiTrongLo, type KetQuaGoi, type KetQuaNhap, type LoNhap, type TienDoTai } from "@/api/ingest";
-import { Badge, Banner, Button, Card, Checkbox, EmptyState, ErrorBanner, Field, Help, Input, KpiRow, KpiTile, PageHeader, Table, Toolbar, toast, type Column } from "@/ui";
+import { CanDuAn, Badge, Banner, Button, Card, Checkbox, ErrorBanner, Field, Input, KpiRow, KpiTile, PageHeader, Table, Toolbar, toast, type Column } from "@/ui";
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 const mb = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} GB` : `${(b / 1024 ** 2).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} MB`);
@@ -169,12 +169,21 @@ export default function NhapGoiView() {
     { key: "ghiChu", header: "Ghi chú", className: "whitespace-normal", cell: (l) => l.ghiChu ?? "" },
   ];
 
+  const giaiThich = (
+    <>
+      <p>Tiếp nhận gói AIP/SIP đã đóng theo TT 05/2025/TT-BNV: máy chủ kiểm gói, dựng mục lục hồ sơ – văn bản và lưu tài liệu vào kho.</p>
+        <p>Mỗi gói được kiểm như Tiện ích › Kiểm tra gói tin (cấu trúc, METS, EAD, PREMIS, PDF/A, chữ ký số). Gói đạt được nhập: hồ sơ và văn bản vào mục lục (phông theo mã phông trong OBJID của gói), tài liệu vào kho, zip gốc lưu không xoá được.</p>
+        <p>Tệp chưa ký số vẫn nhận và được đếm ở cột Chưa ký; gói có chữ ký bị sửa sau khi ký luôn bị từ chối. Nhập lại một gói đã nhập không tạo bản trùng.</p>
+        <p>Bộ hồ sơ lớn giao bằng ổ cứng: cắm vào máy chủ và chạy <code>digitext-api nhap-goi --du-an &lt;mã&gt; --nguoi &lt;tên đăng nhập&gt; &lt;thư mục&gt;</code> — kết quả hiện ở bảng Các lần nhập.</p>
+    </>
+  );
+
   if (!projectId) {
     return (
       <section className="view active">
-        <PageHeader title="Nhập gói vào Hệ thống" />
-        <Card padding="md">
-          <EmptyState icon="duAn" title="Chọn dự án ở thanh trên" description="Gói được nhập vào kho của dự án đang chọn." />
+        <PageHeader title="Nhập gói" infoTitle="Điều 9 khoản 7 TT 05/2025/TT-BNV" info={giaiThich} />
+        <Card padding="none">
+          <CanDuAn />
         </Card>
       </section>
     );
@@ -183,9 +192,9 @@ export default function NhapGoiView() {
   const conCho = dongs.filter((d) => !d.laThuMuc && !d.kq).length;
   return (
     <section className="view active space-y-4">
-      <PageHeader title="Nhập gói vào Hệ thống" description="Tiếp nhận gói AIP/SIP đã đóng theo TT 05/2025/TT-BNV: máy chủ kiểm gói, dựng mục lục hồ sơ – văn bản và lưu tài liệu vào kho." />
+      <PageHeader title="Nhập gói" infoTitle="Điều 9 khoản 7 TT 05/2025/TT-BNV" info={giaiThich} />
       {!isTauri() && <Banner tone="info">Bản xem trước trên trình duyệt — chạy trong ứng dụng desktop để nhập gói thật.</Banner>}
-      <Card title="Gói cần nhập" description="Chọn tệp .zip, hoặc một thư mục (quét cả thư mục con). Gói đã nhập trước đó sẽ được báo là đã có, không nhập trùng.">
+      <Card title="Gói cần nhập" description="Tệp .zip hoặc thư mục. Gói đã nhập không nhập trùng.">
         <Toolbar>
           <Button icon="goi" onClick={() => void chon(false)} disabled={dangChay}>
             Chọn tệp gói
@@ -203,7 +212,7 @@ export default function NhapGoiView() {
           )}
         </Toolbar>
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-          <Field label="Ghi chú cho lần nhập" hint="Ví dụ: số biên bản bàn giao, đợt giao.">
+          <Field label="Ghi chú cho lần nhập" hintAs="tip" hint="Ví dụ: số biên bản bàn giao, đợt giao.">
             <Input value={ghiChu} onChange={(e) => setGhiChu(e.target.value)} disabled={dangChay} placeholder="Bàn giao lần 1 theo biên bản số …" />
           </Field>
           <Checkbox checked={nhanLoi} onChange={setNhanLoi} disabled={dangChay} text="Nhận cả gói kiểm không đạt (trừ chữ ký số hỏng)" />
@@ -233,7 +242,7 @@ export default function NhapGoiView() {
         </>
       )}
 
-      <Card padding="none" title="Các lần nhập" description="Bấm một lần nhập để xem từng gói và lý do từ chối.">
+      <Card padding="none" title="Các lần nhập" description="Bấm một lần nhập để xem từng gói.">
         <Table
           columns={loCols}
           rows={lo.data ?? []}
@@ -247,11 +256,6 @@ export default function NhapGoiView() {
         {moLo && <ChiTietLo id={moLo} />}
       </Card>
 
-      <Help title="Điều 9 khoản 7 TT 05/2025/TT-BNV — nhập Hệ thống">
-        <p>Mỗi gói được kiểm như Tiện ích › Kiểm tra gói tin (cấu trúc, METS, EAD, PREMIS, PDF/A, chữ ký số). Gói đạt được nhập: hồ sơ và văn bản vào mục lục (phông theo mã phông trong OBJID của gói), tài liệu vào kho, zip gốc lưu không xoá được.</p>
-        <p>Tệp chưa ký số vẫn nhận và được đếm ở cột Chưa ký; gói có chữ ký bị sửa sau khi ký luôn bị từ chối. Nhập lại một gói đã nhập không tạo bản trùng.</p>
-        <p>Bộ hồ sơ lớn giao bằng ổ cứng: cắm vào máy chủ và chạy <code>digitext-api nhap-goi --du-an &lt;mã&gt; --nguoi &lt;tên đăng nhập&gt; &lt;thư mục&gt;</code> — kết quả hiện ở bảng Các lần nhập.</p>
-      </Help>
     </section>
   );
 }

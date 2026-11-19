@@ -12,7 +12,7 @@ import { V4ak, type V4a9 } from "@/api/users";
 import { V4e5 } from "@/features/dossier/excel";
 import KpiSettingsDialog from "./KpiSettingsDialog";
 import type { V3y0 } from "@/domain/types";
-import { Badge, Button, Card, Dialog, Field, FormGrid, Help, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Sparkline, Table, Tip, toast, type Column } from "@/ui";
+import { Badge, Button, Card, Dialog, Field, FormGrid, Input, KpiRow, KpiTile, notifyError, PageHeader, Select, Sparkline, Table, Tip, toast, type Column } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 
@@ -218,12 +218,6 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
       >
         <Table columns={cols} rows={dong} getRowId={(d) => `${d.userId}-${d.task}`} dense rowActions={projectId ? (d) => <Button size="sm" onClick={() => setGiao(d)}>Giao</Button> : undefined} state={{ loading: loading && !data, error, onRetry: reload, empty: { title: "Chưa có số liệu trong phạm vi này", icon: "nguoi" } }} />
       </Card>
-      <Help title="Cách tính" className="mt-4">
-        <p>Quét tính theo trang người đó quét, tệp đẩy lên máy chủ đứng tên người quét. Lỗi là tài liệu của người đó bị từ chối khi xác nhận hoặc bị kiểm tra chéo chấm có lỗi. Xác nhận dữ liệu và kiểm tra nhập liệu lấy từ gói việc ở màn Giao việc; kiểm tra quét và kiểm tra xác nhận chưa có nơi ghi nhận.</p>
-        <p>
-          KPI: Xuất sắc khi hoàn thành từ {nguong.xuatSac.hoanThanh}% và lỗi tối đa {nguong.xuatSac.loi}%; Đạt khi hoàn thành từ {nguong.dat.hoanThanh}% và lỗi tối đa {nguong.dat.loi}%; còn lại là Cảnh báo lỗi. {bd ? "Ngưỡng theo cài đặt của dự án (nút Định mức)." : "Ngưỡng mặc định; chọn dự án và bấm Định mức để đặt riêng."}
-        </p>
-      </Help>
       {giao && projectId && <GiaoDialog projectId={projectId} row={giao} onClose={() => setGiao(null)} onDone={reload} />}
       {dinhMuc && projectId && <KpiSettingsDialog projectId={projectId} projectLabel={projects.find((p) => p.id === projectId)?.name} onClose={() => setDinhMuc(false)} onSaved={() => board.reload()} />}
     </>
@@ -231,7 +225,19 @@ export default function StaffReportView({ embedded }: { embedded?: boolean }) {
   if (embedded) return body;
   return (
     <section className="view active">
-      <PageHeader title="Báo cáo nhân viên" description="Sản lượng, năng suất, lỗi và KPI theo từng người, số liệu trên máy chủ." />
+      <PageHeader
+        title="Báo cáo nhân viên"
+        description="Sản lượng, năng suất, lỗi và KPI theo từng người."
+        infoTitle="Cách tính"
+        info={
+          <>
+        <p>Quét tính theo trang người đó quét, tệp đẩy lên máy chủ đứng tên người quét. Lỗi là tài liệu của người đó bị từ chối khi xác nhận hoặc bị kiểm tra chéo chấm có lỗi. Xác nhận dữ liệu và kiểm tra nhập liệu lấy từ gói việc ở màn Giao việc; kiểm tra quét và kiểm tra xác nhận chưa có nơi ghi nhận.</p>
+        <p>
+          KPI: Xuất sắc khi hoàn thành từ {nguong.xuatSac.hoanThanh}% và lỗi tối đa {nguong.xuatSac.loi}%; Đạt khi hoàn thành từ {nguong.dat.hoanThanh}% và lỗi tối đa {nguong.dat.loi}%; còn lại là Cảnh báo lỗi. {bd ? "Ngưỡng theo cài đặt của dự án (nút Định mức)." : "Ngưỡng mặc định; chọn dự án và bấm Định mức để đặt riêng."}
+        </p>
+          </>
+        }
+      />
       {body}
     </section>
   );

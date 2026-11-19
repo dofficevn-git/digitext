@@ -67,11 +67,6 @@ export default function V4x4() {
         </div>
         <div>
           <p className="login-side-title">{LUU_TRU ? "Quản lý tài liệu lưu trữ số" : "Số hoá và lưu trữ tài liệu"}</p>
-          <ol className="login-steps">
-            {(LUU_TRU ? ["Nhập Hệ thống", "Tra cứu", "Khai thác", "Bảo quản", "Tiêu huỷ"] : ["Quét", "OCR", "PDF/A", "Ký số", "Nộp lưu"]).map((b) => (
-              <li key={b}>{b}</li>
-            ))}
-          </ol>
         </div>
         <span className="text-sm text-white/70">Phiên bản {appVersion || "…"}</span>
       </aside>

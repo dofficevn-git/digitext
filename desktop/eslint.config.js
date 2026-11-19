@@ -61,6 +61,19 @@ export default tseslint.config(
     },
   },
   {
+    // Quy ước "ít chữ" 0.25 (docs/GIAO-DIEN.md): mô tả dưới tiêu đề màn ≤ 70 ký tự, phần giải thích vào `info` (nút (i)).
+    files: ["src/features/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name='PageHeader'] > JSXAttribute[name.name='description'][value.value.length>70]",
+          message: "Mô tả PageHeader tối đa 70 ký tự — chuyển phần giải thích vào prop `info`.",
+        },
+      ],
+    },
+  },
+  {
     // Provider + hook ở chung file là chủ đích cho các context — không áp react-refresh.
     files: ["src/state/**"],
     rules: { "react-refresh/only-export-components": "off" },

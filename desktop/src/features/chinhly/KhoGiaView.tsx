@@ -99,7 +99,8 @@ export default function KhoGiaView() {
     <section className="view active">
       <PageHeader
         title="Kho và giá lưu trữ"
-        description="Dùng chung toàn dự án. Giá là dải hộp của một phòng ban trong kho, hồ sơ trên giá suy ra từ số hộp."
+        description="Dùng chung toàn dự án."
+        info={<p>Giá là dải hộp của một phòng ban trong kho; hồ sơ trên giá suy ra từ số hộp.</p>}
         actions={
           can && (
             <Button variant="primary" icon="them" disabled={!online} onClick={() => mo(null)}>

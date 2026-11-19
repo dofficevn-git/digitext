@@ -9,7 +9,7 @@ import { V4ei, type V4eg } from "@/api/docs";
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
 import { BUOC_DOT, LEGAL, V4un, V4uq, V4um, V4uo, V4ul, V4up, type DotAction } from "./disposalFlow";
-import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, Help, Input, Menu, notifyError, PageHeader, prompt, Stepper, Table, Tabs, Tip, toast, type Column } from "@/ui";
+import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, Input, Menu, notifyError, PageHeader, prompt, Stepper, Table, Tabs, Tip, toast, type Column } from "@/ui";
 
 const fmtN = (v: number) => v.toLocaleString("vi-VN");
 type Tab = "danhmuc" | "dot";
@@ -176,8 +176,14 @@ export default function V4ur() {
   return (
     <section className="view active">
       <PageHeader
-        title="Tiêu huỷ tài liệu hết giá trị"
-        description="Danh mục do hệ thống quét hằng ngày, xét huỷ theo đợt qua Hội đồng, thẩm định và quyết định."
+        title="Tiêu huỷ tài liệu"
+        infoTitle="Tiêu huỷ tài liệu hết giá trị"
+        info={
+          <>
+            <p>Danh mục do hệ thống quét hằng ngày, xét huỷ theo đợt qua Hội đồng, thẩm định và quyết định.</p>
+        <p>Danh mục tài liệu hết giá trị: trùng lặp theo Điều 48.2, hết thời hạn lưu trữ theo Điều 48.3, lập danh mục theo Điều 48.4. Đợt xét huỷ: Hội đồng theo Điều 49.2, thẩm định theo Điều 49.4, quyết định theo Điều 49.6, huỷ trong hệ thống theo Điều 49.7, tự quyết theo Điều 49.8 khi không thuộc nguồn nộp lưu trữ lịch sử.</p>
+          </>
+        }
         actions={
           canReview && (
             <>
@@ -269,9 +275,6 @@ export default function V4ur() {
           </>
         )}
       </div>
-      <Help title="Căn cứ" className="mt-4">
-        <p>Danh mục tài liệu hết giá trị: trùng lặp theo Điều 48.2, hết thời hạn lưu trữ theo Điều 48.3, lập danh mục theo Điều 48.4. Đợt xét huỷ: Hội đồng theo Điều 49.2, thẩm định theo Điều 49.4, quyết định theo Điều 49.6, huỷ trong hệ thống theo Điều 49.7, tự quyết theo Điều 49.8 khi không thuộc nguồn nộp lưu trữ lịch sử.</p>
-      </Help>
       {moHan && <HanLuuTruDialog onClose={() => setMoHan(false)} />}
     </section>
   );

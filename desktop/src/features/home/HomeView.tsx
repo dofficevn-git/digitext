@@ -11,7 +11,7 @@ import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { V3zr } from "@/state/sessionCore";
 import { type V41v as IconName } from "@/components/Icon";
-import { Banner, Button, EmptyState, Seg, Tip } from "@/ui";
+import { CanDuAn, Banner, Button, Seg, Tip } from "@/ui";
 import LeaderDashboard from "./LeaderDashboard";
 import ProjectDashboard from "./ProjectDashboard";
 import StaffDashboard from "./StaffDashboard";
@@ -82,7 +82,7 @@ export default function HomeView() {
   if (!has("stats.view_project")) {
     body = <StaffDashboard />;
   } else if (!laLanhDao) {
-    body = projectId ? <ProjectDashboard projectId={projectId} /> : <EmptyState icon="duAn" title="Chưa chọn dự án" description="Chọn dự án ở ô cạnh tên bạn trên thanh trên cùng để xem tổng quan." />;
+    body = projectId ? <ProjectDashboard projectId={projectId} /> : <CanDuAn />;
   } else {
     body = (
       <>

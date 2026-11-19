@@ -12,7 +12,7 @@ import { V460 } from "@/state";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
 import { Icon } from "@/components/Icon";
-import { Badge, Banner, Button, Card, Checkbox, confirm, Dialog, EmptyState, ErrorBanner, Field, FormGrid, Help, IconButton, Input, Menu, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
+import { Badge, Banner, Button, Card, Checkbox, confirm, Dialog, EmptyState, ErrorBanner, Field, FormGrid, IconButton, Input, Menu, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
 import { V4u3, V4u5, V4u6 } from "./accessFlow";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -152,7 +152,13 @@ export default function V4u7() {
     <section className="view active">
       <PageHeader
         title="Khai thác"
-        description="Yêu cầu đọc, sao hoặc nhận gói tài liệu lưu trữ số; xét duyệt và cấp cho người dùng."
+        description="Yêu cầu đọc, sao, nhận gói tài liệu lưu trữ số."
+        infoTitle="Quy trình khai thác"
+        info={
+          <>
+        <p>Người dùng gửi yêu cầu kèm mục đích (Điều 35) → người xét duyệt chấm từng tài liệu và duyệt yêu cầu, phí tính theo đơn giá (Điều 36) → thu phí nếu có → người dùng đọc trên hệ thống có watermark (Điều 37), tải bản sao (Điều 40–41) hoặc nhận gói DIP có xác thực (Điều 42) trong hạn sử dụng.</p>
+          </>
+        }
         actions={
           <>
             <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
@@ -332,9 +338,6 @@ export default function V4u7() {
         </div>
       </div>
 
-      <Help className="mt-4" title="Quy trình khai thác">
-        <p>Người dùng gửi yêu cầu kèm mục đích (Điều 35) → người xét duyệt chấm từng tài liệu và duyệt yêu cầu, phí tính theo đơn giá (Điều 36) → thu phí nếu có → người dùng đọc trên hệ thống có watermark (Điều 37), tải bản sao (Điều 40–41) hoặc nhận gói DIP có xác thực (Điều 42) trong hạn sử dụng.</p>
-      </Help>
 
       <Dialog open={!!doc} onOpenChange={(o) => !o && setDoc(null)} title={doc?.title ?? "Bản đọc"} description="Bản đọc có watermark, không tải về." size="full" bodyClassName="p-0">
         {doc && <embed src={doc.src} type="application/pdf" className="h-full w-full" />}

@@ -176,7 +176,7 @@ function MucLuuTru() {
   };
   return (
     <div className="space-y-6">
-      <Field label="Thư mục lưu trữ" hint="PDF và ảnh quét lưu vào đây theo Cơ quan › Hộp › Hồ sơ. Đổi thư mục chỉ áp dụng cho tài liệu quét sau đó.">
+      <Field label="Thư mục lưu trữ" hintAs="tip" hint="PDF và ảnh quét lưu vào đây theo Cơ quan › Hộp › Hồ sơ. Đổi thư mục chỉ áp dụng cho tài liệu quét sau đó.">
         <div className="flex flex-wrap gap-2">
           <Input className="min-w-60 flex-1" value={dir} onChange={(e) => setDir(e.target.value)} placeholder="~/Documents/DigiText" spellCheck={false} />
           <Button icon="thuMuc" onClick={() => void chon()}>
@@ -278,7 +278,7 @@ function MucDuLieu() {
     <div className="space-y-6">
       <ChuyenDuLieuCu />
       {coStats && (
-        <Card title="Số liệu của tôi" description="Số trang quét, hồ sơ và PDF trên máy này. Gửi để quản trị thấy trong báo cáo.">
+        <Card title="Số liệu của tôi" description="Gửi để quản trị thấy trong báo cáo.">
           <p className="text-sm">{stats ? `${stats.pagesScanned.toLocaleString("vi-VN")} trang quét · ${stats.hoSoCount.toLocaleString("vi-VN")} hồ sơ · ${stats.pdfCount.toLocaleString("vi-VN")} PDF · ${(stats.pdfBytes / 1_048_576).toFixed(1)} MB` : "—"}</p>
           <Button className="mt-3" icon="thongke" loading={gui} onClick={() => void guiSoLieu()}>
             Gửi số liệu về quản trị
@@ -303,7 +303,7 @@ function MucUngDung() {
       <Field label="Phiên bản">
         <p className="text-sm">{V3wu.appName} v{appVersion || "…"}</p>
       </Field>
-      <Field label="Cập nhật phần mềm" hint="Tự kiểm tra khi mở ứng dụng, tải từ máy chủ đang kết nối.">
+      <Field label="Cập nhật phần mềm" hintAs="tip" hint="Tự kiểm tra khi mở ứng dụng, tải từ máy chủ đang kết nối.">
         <div className="flex flex-wrap items-center gap-3">
           <Button icon="lamMoi" loading={dangChay} onClick={checkForUpdates}>
             Kiểm tra cập nhật
@@ -320,7 +320,7 @@ export default function V4rs() {
   const hien = MUC.find((m) => m.key === muc) ?? MUC[0];
   return (
     <section className="view active">
-      <PageHeader title="Cài đặt" description="Máy chủ, nơi lưu trữ, máy quét, dữ liệu và cập nhật của máy này." />
+      <PageHeader title="Cài đặt" />
       <div className="settings-grid">
         <nav className="set-nav" aria-label="Mục cài đặt">
           {MUC.map((m) => (

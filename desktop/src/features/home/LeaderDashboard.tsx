@@ -78,7 +78,7 @@ export default function LeaderDashboard({ onOpenProject }: { onOpenProject: (pro
         icon="duAn"
         {...ov}
         padding="none"
-        description="Hoàn thành = trung bình 4 bước quét, PDF/A, ký số, duyệt so khối lượng hợp đồng. Dự kiến theo tốc độ 7 ngày gần nhất."
+        description="Trung bình 4 bước so hợp đồng; dự kiến theo 7 ngày gần nhất."
         actions={
           <>
             <Seg<"all" | "late"> value={loc} onChange={setLoc} options={[{ value: "all", label: "Tất cả" }, { value: "late", label: "Cần chú ý" }]} />

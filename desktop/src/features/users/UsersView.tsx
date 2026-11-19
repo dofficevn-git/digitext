@@ -15,7 +15,7 @@ import { rolesList, type RoleInfo } from "@/api/roles";
 import { V4r5, V4r6, V4r8, type V4r4 } from "./projectAdmins";
 import ProjectPurgeDialog from "./ProjectPurgeDialog";
 import { Icon } from "@/components/Icon";
-import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, Help, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, Tip, toast, Toolbar, type Column } from "@/ui";
+import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, Tip, toast, Toolbar, type Column } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 const mb = (b: number) => `${(b / 1_048_576).toFixed(1)} MB`;
@@ -98,6 +98,12 @@ export default function V4ra() {
       <PageHeader
         title="Người dùng và dự án"
         description={toanHeThong ? "Toàn hệ thống." : `Các dự án bạn phụ trách (${n(projects.length)}).`}
+        infoTitle="Khi nào quyền có hiệu lực"
+        info={
+          <>
+        <p>Quyền mới áp dụng khi người dùng đăng nhập lại, hoặc khi họ bấm "Kiểm tra kết nối" trong Cài đặt › Máy chủ.</p>
+          </>
+        }
         actions={
           <>
             <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
@@ -348,7 +354,7 @@ function StatsTab({ stats, projects, users, isSuper, projectName }: { stats: V4r
             <KpiTile label="Dung lượng" value={mb(sum.bytesUp)} />
           </KpiRow>
           {isSuper && byAdmin.length > 0 && (
-            <Card title="Theo quản trị phụ trách" description="Dự án có nhiều quản trị được tính cho từng người, nên tổng các dòng có thể lớn hơn tổng chung." padding="none">
+            <Card title="Theo quản trị phụ trách" description="Dự án nhiều quản trị được tính cho từng người." padding="none">
               <Table
                 columns={[
                   { key: "name", header: "Quản trị", cell: (g) => <b>{g.name}</b> },
@@ -603,9 +609,6 @@ function PermsDialog({ user, onClose }: { user: V4a8; onClose: () => void }) {
           ))}
         </FormGrid>
       )}
-      <Help className="mt-4" title="Khi nào quyền có hiệu lực">
-        <p>Quyền mới áp dụng khi người dùng đăng nhập lại, hoặc khi họ bấm "Kiểm tra kết nối" trong Cài đặt › Máy chủ.</p>
-      </Help>
     </Dialog>
   );
 }

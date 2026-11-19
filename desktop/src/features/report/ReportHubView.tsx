@@ -19,7 +19,7 @@ export default function V4oe() {
   if (reportTab === "nhanvien")
     return (
       <section className="view active">
-        <PageHeader title="Báo cáo nhân viên" description="Sản lượng, năng suất, lỗi và KPI theo từng người, số liệu trên máy chủ." />
+        <PageHeader title="Báo cáo nhân viên" description="Sản lượng, năng suất, lỗi và KPI theo từng người." />
         <Tabs<NhanVienTab> value={nv} onChange={setNv} items={[{ value: "sohoa", label: "Số hoá", icon: "sohoa" }, { value: "chinhly", label: "Chỉnh lý", icon: "chinhly" }]} />
         <div className="mt-3">
           {nv === "sohoa" && <StaffReportView embedded />}

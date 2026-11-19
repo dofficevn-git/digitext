@@ -52,7 +52,7 @@ export default function TienIchHub() {
 
   return (
     <section className="view active">
-      <PageHeader title="Tiện ích" description="Công cụ ngoài trục thi công TT 05/2025: kiểm tra tệp và gói, đóng gói từ kho bên ngoài, dạy máy bóc trường, chuyển dữ liệu cũ." />
+      <PageHeader title="Tiện ích" info={<p>Công cụ ngoài trục thi công TT 05/2025: kiểm tra tệp và gói, đóng gói từ kho bên ngoài, dạy máy bóc trường, chuyển dữ liệu cũ.</p>} />
       {tabs.length === 0 || !tab ? (
         <Card padding="md">
           <EmptyState icon="caiDat" title="Tài khoản chưa có quyền dùng tiện ích nào" description="Cần quyền đóng gói, duyệt OCR hoặc hồ sơ chỉnh lý." />
@@ -67,7 +67,7 @@ export default function TienIchHub() {
             {tab === "nhanh" && <ExternalImportPanel nhanh />}
             {tab === "vidu" && (duAn ? <KieExamplesPanel projectId={duAn} projects={projects} /> : <Card padding="md"><EmptyState icon="duAn" title="Chọn dự án đang làm ở thanh trên" description="Ví dụ dạy máy xếp theo dự án." /></Card>)}
             {tab === "chuyendulieu" && (
-              <Card title="Chuyển dữ liệu chỉnh lý cũ" description="Đưa dữ liệu SQLite của bản DigiText cũ vào máy chủ. Cũng có ở Cài đặt › Dữ liệu.">
+              <Card title="Chuyển dữ liệu chỉnh lý cũ" description="Đưa dữ liệu SQLite của bản cũ vào máy chủ.">
                 <ChuyenDuLieuCu />
               </Card>
             )}
