@@ -821,7 +821,7 @@ fn f_1ct(r_4zh: &[u8]) -> Option<(usize, usize)> {
     let (r_4zj, r_4zi) = f_2f8(r_4zh).ok()?;
     f_1cu(r_4zh, r_4zj, r_4zi)
 }
-fn f_1cu(r_4zm: &[u8], r_4zq: usize, r_4zo: usize) -> Option<(usize, usize)> {
+pub(crate) fn f_1cu(r_4zm: &[u8], r_4zq: usize, r_4zo: usize) -> Option<(usize, usize)> {
     let r_4zr = r_4zm.get(r_4zq..r_4zo)?;
     let mut r_4zl = 0;
     while let Some(r_4zs) = find(&r_4zr[r_4zl..], b"/Contents") {
@@ -865,7 +865,7 @@ pub(crate) fn f_1yg(r_4zy: &[u8], r_500: usize, r_502: usize) -> Option<[usize; 
         None
     }
 }
-fn f_ws(r_504: &[u8], r_507: usize, r_505: usize) -> Option<(usize, usize)> {
+pub(crate) fn f_ws(r_504: &[u8], r_507: usize, r_505: usize) -> Option<(usize, usize)> {
     let r_50a = r_504.get(r_507..r_505)?;
     let r_508 = find(r_50a, b"/ByteRange")?;
     let r_506 = r_508 + find(&r_50a[r_508..], b"[")?;
