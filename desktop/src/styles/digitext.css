@@ -393,9 +393,6 @@ html, body, #root {
   width: calc(var(--size-sidebar) - var(--do-sp-3));
   flex: none;
   color: var(--top-fg);
-  font-weight: 600;
-  font-size: var(--text-md);
-  letter-spacing: 0.01em;
 }
 .app-shell:has(.sidebar.collapsed) .topbar .brand {
   width: auto;

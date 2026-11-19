@@ -4,6 +4,7 @@
 
 import { createContext, useContext, useId, type ReactNode } from "react";
 import { V462 as cn } from "@/lib/utils";
+import InfoButton from "./InfoButton";
 
 interface FieldCtx {
   id: string;
@@ -30,6 +31,9 @@ export interface FieldProps {
   label: ReactNode;
   children: ReactNode;
   hint?: ReactNode;
+  /** "tip" (0.25 "ít chữ"): gợi ý nằm trong nút (i) cạnh nhãn thay vì dòng chữ dưới ô — dùng khi gợi ý chỉ là giải
+   *  thích thêm. Ràng buộc phải biết trước khi gõ thì để mặc định ("text"). */
+  hintAs?: "text" | "tip";
   error?: ReactNode;
   required?: boolean;
   /** Nhãn nằm bên phải control (checkbox / switch). */
@@ -39,7 +43,8 @@ export interface FieldProps {
   id?: string;
 }
 
-export default function Field({ label, children, hint, error, required, inline, className, id: idProp }: FieldProps) {
+export default function Field({ label, children, hint, hintAs = "text", error, required, inline, className, id: idProp }: FieldProps) {
+  const laTip = hintAs === "tip" && !!hint && !inline;
   const gen = useId();
   const id = idProp ?? `f-${gen}`;
   const hintId = hint ? `${id}-hint` : undefined;
@@ -66,7 +71,16 @@ export default function Field({ label, children, hint, error, required, inline, 
           </div>
         ) : (
           <>
-            {labelEl}
+            {laTip ? (
+              <div className="mb-1 flex items-center gap-1 [&>label]:mb-0">
+                {labelEl}
+                <InfoButton label="Giải thích" className="size-5">
+                  {hint}
+                </InfoButton>
+              </div>
+            ) : (
+              labelEl
+            )}
             {children}
           </>
         )}
@@ -75,8 +89,8 @@ export default function Field({ label, children, hint, error, required, inline, 
             {error}
           </p>
         )}
-        {hint && !error && (
-          <p id={hintId} className="mt-1 text-sm text-fg-subtle">
+        {hint && (laTip || !error) && (
+          <p id={hintId} className={laTip ? "sr-only" : "mt-1 text-sm text-fg-subtle"}>
             {hint}
           </p>
         )}

@@ -12,7 +12,7 @@ import BrandLogo from "./BrandLogo";
 import { LUU_TRU } from "@/config";
 import V4x3 from "./CaptchaField";
 import { V4x2 } from "./useCaptcha";
-import { Banner, Button, Field, Input, notifyError, toast } from "@/ui";
+import { Banner, Button, Field, Input, notifyError, toast, Wordmark } from "@/ui";
 
 export default function V4x4() {
   const { login, accounts, appVersion } = V460();
@@ -61,9 +61,9 @@ export default function V4x4() {
   return (
     <div className="login-screen split">
       <aside className="login-side" aria-hidden>
-        <div className="flex items-center gap-2.5 text-md font-semibold tracking-wide text-white">
-          <BrandLogo className="size-9 rounded-md bg-white p-0.5" />
-          {LUU_TRU ? "DIGITEXT LƯU TRỮ" : "DIGITEXT"}
+        <div className="flex items-center gap-3 text-white">
+          <BrandLogo className="size-10 rounded-md bg-white p-0.5" />
+          <Wordmark size="lg" />
         </div>
         <div>
           <p className="login-side-title">{LUU_TRU ? "Quản lý tài liệu lưu trữ số" : "Số hoá và lưu trữ tài liệu"}</p>

@@ -38,10 +38,12 @@ export interface ButtonProps extends React.ComponentProps<"button">, VariantProp
   iconRight?: IconName;
   loading?: boolean;
   asChild?: boolean;
+  /** Huy hiệu số sau nhãn (0.25 "ít chữ"): "Đóng gói" + 12 thay cho "Đóng gói 12 hồ sơ khớp". Không hiện khi 0 / thiếu. */
+  count?: number;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant, size, icon, iconRight, loading, asChild, children, disabled, type, ...rest },
+  { className, variant, size, icon, iconRight, loading, asChild, count, children, disabled, type, ...rest },
   ref,
 ) {
   const Comp = asChild ? Slot.Root : "button";
@@ -57,6 +59,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     >
       {loading ? <Spinner size={iconSize} /> : icon ? <Icon name={icon} size={iconSize} /> : null}
       {children}
+      {count ? (
+        <span
+          className={cn(
+            "min-w-5 rounded-full px-1.5 text-center text-xs font-semibold leading-5 tabular-nums",
+            variant === "primary" || variant === "danger" ? "bg-white/25 text-white" : "bg-brand-50 text-brand-700",
+          )}
+        >
+          {count.toLocaleString("vi-VN")}
+        </span>
+      ) : null}
       {iconRight && !loading ? <Icon name={iconRight} size={iconSize} /> : null}
     </Comp>
   );

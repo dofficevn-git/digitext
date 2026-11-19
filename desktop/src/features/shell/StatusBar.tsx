@@ -18,23 +18,33 @@ import { V47q, type V47l, type V47m } from "./statusItems";
 import { syncLabel, useClSync } from "@/features/chinhly/common";
 import { clSyncNow } from "@/api/chinhly";
 
+// 0.25 "ít chữ": trạng thái TỐT chỉ còn chấm + icon (chữ nằm trong chú thích và aria-label); có vấn đề hoặc đang kiểm
+// tra mới hiện "nhãn: giá trị" — chữ xuất hiện trên thanh nghĩa là có việc cần để ý.
 function Chip({ dot, icon, label, value, title, onClick, right }: { dot: string; icon: React.ComponentProps<typeof Icon>["name"]; label: string; value: string; title: string; onClick?: () => void; right?: boolean }) {
+  const tot = dot === "ok";
   const inner = (
     <>
       <span className={cn("dot", dot !== "unknown" && dot)} />
       <Icon name={icon} size={13} className="flex-none text-fg-subtle" />
-      <span className="text-fg-subtle">{label}:</span>
-      <b>{value}</b>
+      {!tot && (
+        <>
+          <span className="text-fg-subtle">{label}:</span>
+          <b>{value}</b>
+        </>
+      )}
     </>
   );
+  const nhan = `${label}: ${value}`;
   return (
-    <Tip text={title}>
+    <Tip text={tot ? nhan : title}>
       {onClick ? (
-        <button type="button" className={cn("stat", right && "right")} onClick={onClick}>
+        <button type="button" className={cn("stat", right && "right")} onClick={onClick} aria-label={nhan}>
           {inner}
         </button>
       ) : (
-        <div className={cn("stat", right && "right")}>{inner}</div>
+        <div className={cn("stat", right && "right")} role="status" aria-label={nhan}>
+          {inner}
+        </div>
       )}
     </Tip>
   );

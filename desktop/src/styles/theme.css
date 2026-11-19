@@ -157,6 +157,9 @@
   /* Segoe UI như Microsoft Teams / Fluent (Win11 có "Segoe UI Variable"; đều hỗ trợ dấu tiếng Việt). */
   --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "Cascadia Code", "Consolas", monospace;
+  /* 0.25 (19/11/2026): CHỈ cho logo chữ DIGITEXT (ui/Wordmark) — kiểu đậm, bè ngang như logo DIGIFILE; không dùng cho
+     chữ giao diện. Đổi phông logo: thay tệp trong assets/fonts + @font-face bên dưới. */
+  --font-display: "Russo One", "Segoe UI", sans-serif;
 
   /* Thang chữ: xs 12 / sm 13 / base 14 (sàn đọc tiếng Việt; DO365 bảng 13, menu 12) · tiêu đề theo do365-tokens.css
      md 16 · lg 20 · xl 24 · 2xl 28 · 3xl 32, dòng 1,2–1,4. Segoe UI không siết khoảng chữ (letter-spacing 0). */
@@ -234,6 +237,15 @@
 }
 
  
+/* Phông logo (OFL, assets/fonts/russo-one-OFL.txt) — chỉ ký tự Latin, đủ cho chữ DIGITEXT. */
+@font-face {
+  font-family: "Russo One";
+  src: url("../assets/fonts/russo-one-latin-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --select-chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666d78' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }

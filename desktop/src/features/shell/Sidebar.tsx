@@ -21,8 +21,16 @@ import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
 // Teams / DO365; logo + tên đã chuyển lên thanh trên).
 const QUY_TRINH = new Set(["giaonhan", "dulieuchu", "sohoa", "kiemtra", "kyso", "nghiemthu"]);
 
-/** Nút tròn mang icon nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. */
-function NutNhom({ icon, lit, size = "md" }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg" }) {
+/** `step` trong navTree = "Bước 3 · mục lục, dữ liệu chủ" → số bước cho nút tròn + phần giải thích cho chú thích. */
+function tachBuoc(step?: string): { so?: string; moTa?: string } {
+  if (!step) return {};
+  const m = /^Bước\s+([\d–-]+)\s*·\s*(.*)$/.exec(step);
+  return m ? { so: m[1], moTa: m[2] } : { moTa: step };
+}
+
+/** Nút tròn của nhóm — đặc (không trong suốt) để che đường trục chạy phía sau. Nhóm trên trục quy trình hiện SỐ BƯỚC
+ *  thay icon (0.25: bỏ dòng phụ "Bước n · …" dưới tên nhóm); dải icon thu gọn vẫn dùng icon cho dễ nhận. */
+function NutNhom({ icon, lit, size = "md", so }: { icon: NonNullable<V46s["icon"]>; lit: boolean; size?: "md" | "lg"; so?: string }) {
   return (
     <span
       className={cn(
@@ -31,7 +39,7 @@ function NutNhom({ icon, lit, size = "md" }: { icon: NonNullable<V46s["icon"]>; 
         lit ? "bg-brand-500 text-white ring-brand-200" : "bg-[var(--side-node)] text-[var(--side-faint)] ring-[var(--side-line)] group-hover:text-[var(--side-strong)] group-hover:ring-[var(--side-line-2)]",
       )}
     >
-      <Icon name={icon} size={size === "lg" ? 17 : 15} />
+      {so ? <span className={cn("font-semibold tabular-nums leading-none", so.length > 1 ? "text-[10.5px]" : "text-[13px]")}>{so}</span> : <Icon name={icon} size={size === "lg" ? 17 : 15} />}
     </span>
   );
 }
@@ -145,35 +153,31 @@ export default function Sidebar() {
     const isOpen = open.has(g.id);
     const kids = (g.children ?? []).filter(can);
     const soChuaDoc = kids.reduce((s, c) => s + badgeOf(c.badge), 0);
+    const { so } = tachBuoc(g.step);
     return (
       <li key={g.id}>
-        <button
-          type="button"
-          data-nav
-          data-group={g.leaf ? undefined : g.id}
-          className={cn(btn, g.step ? "min-h-12 gap-2.5 px-2 py-1 text-[14px]" : "h-10 gap-2.5 px-2 text-[14px]", g.leaf ? tone(active) : active ? "font-semibold text-[var(--side-strong)]" : "font-medium text-[var(--side-text)] hover:text-[var(--side-strong)]")}
-          onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
-          aria-expanded={g.leaf ? undefined : isOpen}
-          aria-current={g.leaf && active ? "page" : undefined}
-        >
-          {g.icon && <NutNhom icon={g.icon} lit={active} />}
-          {g.step ? (
-            <span className="flex min-w-0 flex-1 flex-col leading-tight">
-              <span className="truncate">{g.label}</span>
-              <span className={cn("truncate text-[11.5px] font-normal", active ? "text-brand-600" : "text-[var(--side-faint)]")}>{g.step}</span>
-            </span>
-          ) : (
+        <Tip text={g.step ? `${g.label} · ${g.step}` : undefined} side="right">
+          <button
+            type="button"
+            data-nav
+            data-group={g.leaf ? undefined : g.id}
+            className={cn(btn, "h-10 gap-2 px-2 text-[13.5px]", g.leaf ? tone(active) : active ? "font-semibold text-[var(--side-strong)]" : "font-medium text-[var(--side-text)] hover:text-[var(--side-strong)]")}
+            onClick={g.leaf ? () => gotoLeaf(g.leaf!, nav) : () => toggle(g.id)}
+            aria-expanded={g.leaf ? undefined : isOpen}
+            aria-current={g.leaf && active ? "page" : undefined}
+          >
+            {g.icon && <NutNhom icon={g.icon} lit={active} so={so} />}
             <span className="min-w-0 flex-1 truncate">{g.label}</span>
-          )}
-          {g.leaf ? (
-            <Badge n={badgeOf(g.badge)} />
-          ) : (
-            <>
-              {!isOpen && soChuaDoc > 0 && <span className="size-2 flex-none rounded-full bg-danger-500" aria-label={`${soChuaDoc} việc cần xem`} />}
-              <Icon name="moNhanh" size={14} className={cn("flex-none text-[var(--side-faint)] transition-transform duration-200", isOpen && "rotate-90")} />
-            </>
-          )}
-        </button>
+            {g.leaf ? (
+              <Badge n={badgeOf(g.badge)} />
+            ) : (
+              <>
+                {!isOpen && soChuaDoc > 0 && <span className="size-2 flex-none rounded-full bg-danger-500" aria-label={`${soChuaDoc} việc cần xem`} />}
+                <Icon name="moNhanh" size={13} className={cn("-mr-0.5 flex-none text-[var(--side-faint)] transition-transform duration-200", isOpen && "rotate-90")} />
+              </>
+            )}
+          </button>
+        </Tip>
         {!g.leaf && isOpen && (
           <ul className="mb-1.5 ml-[38px] flex flex-col gap-px">
             {kids.map((c) => {
@@ -247,9 +251,9 @@ export default function Sidebar() {
   };
 
   const ve = rail ? nutRail : dongNhom;
-  // Đường trục: chạy qua tâm các nút tròn của nhóm quy trình (tâm = lề nút 8px + nửa nút 14px; dòng nhóm cao 48px
-  // nên tâm cách mép 24px; dải icon: giữa cột).
-  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-6 bottom-6";
+  // Đường trục: chạy qua tâm các nút tròn của nhóm quy trình (tâm = lề nút 8px + nửa nút 14px; dòng nhóm cao 40px
+  // nên tâm cách mép 20px; dải icon: giữa cột).
+  const duongTruc = rail ? "left-1/2 top-[22px] bottom-[22px]" : "left-[22px] top-5 bottom-5";
 
   return (
     <aside className={cn("sidebar", rail && "collapsed")}>

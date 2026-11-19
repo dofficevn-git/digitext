@@ -8,11 +8,10 @@ import { V3z8, V3za } from "@/domain/permissions";
 import { Icon } from "@/components/Icon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { V462 as cn } from "@/lib/utils";
-import { IconButton, Kbd, Tip } from "@/ui";
+import { IconButton, Kbd, Tip, Wordmark } from "@/ui";
 import CommandPalette from "./CommandPalette";
 import ProjectSwitch from "./ProjectSwitch";
 import BrandLogo from "./BrandLogo";
-import { V3wu } from "@/config";
 import { navPath } from "./navTree";
 import { useNotifications } from "./useNotifications";
 
@@ -51,7 +50,7 @@ export default function Topbar() {
     <header className="topbar">
       <div className="brand">
         <BrandLogo className="size-8 flex-none" />
-        <span>{V3wu.appName}</span>
+        <Wordmark />
       </div>
       <nav aria-label="Vị trí" className="flex min-w-0 items-center gap-1 text-sm text-fg-subtle">
         {path.map((n, i) => (

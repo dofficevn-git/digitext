@@ -275,6 +275,11 @@ Module đáng chú ý: `scanner/` (điều khiển máy quét), `archive/`, `cat
 
 ### Frontend ([desktop/src/](../desktop/src/))
 
+**0.25 "ít chữ" (19/11/2026):** quy ước giao diện ở `docs/GIAO-DIEN.md` — mô tả màn ≤ 70 ký tự, giải thích vào nút (i)
+(`PageHeader info`, `ui/InfoButton`), `ui/CanDuAn`, `ui/FilterBar` + `ui/MultiSelect`, `Button count`, `Field hintAs`; logo chữ
+`ui/Wordmark` (phông `--font-display` Russo One đóng kèm ở `src/assets/fonts/`); menu trái một dòng (số bước trong nút tròn),
+thanh trạng thái chỉ hiện chữ khi có vấn đề. Đợt 1/4 xong.
+
 React 18 + Vite + Tailwind v4 + Radix UI (vendored trong `components/ui/`) + lucide-react.
 Xuất Excel bằng `xlsx` (cài trực tiếp từ CDN SheetJS, không qua npm registry).
 Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành phần chung.

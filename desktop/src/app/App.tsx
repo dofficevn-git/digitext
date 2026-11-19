@@ -5,9 +5,8 @@ import V4x5 from "@/features/shell/LockScreen";
 import V4x7 from "@/features/shell/UpdateOverlay";
 import { V460 } from "@/state";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ConfirmHost, Toaster } from "@/ui";
+import { ConfirmHost, Toaster, Wordmark } from "@/ui";
 import BrandLogo from "@/features/shell/BrandLogo";
-import { V3wu } from "@/config";
 
 export default function V4x8() {
   const { status, update: V3aa, dismissUpdate: V3ab } = V460();
@@ -18,7 +17,9 @@ export default function V4x8() {
         <div className="login-screen">
           <div className="login-card">
             <BrandLogo className="login-logo" />
-            <h1>{V3wu.appName}</h1>
+            <h1 className="flex justify-center text-brand-600">
+              <Wordmark size="lg" />
+            </h1>
             <div className="sub">Đang khởi động…</div>
           </div>
         </div>
