@@ -38,10 +38,10 @@ function NutNhom({ icon, lit, size = "md", so, vuong, trenNen }: { icon: NonNull
         vuong ? "rounded-lg" : "rounded-full",
         size === "lg" ? "size-9" : "size-7",
         trenNen
-          ? "bg-white/20 text-white ring-white/35"
+          ? "bg-brand-500 text-white ring-brand-300"
           : lit
-          ? "bg-brand-500 text-white ring-2 ring-brand-200 shadow-[0_2px_8px_rgb(90_88_166/0.45)]"
-          : "bg-[var(--side-node)] text-brand-600 ring-brand-200 group-hover:bg-brand-100 group-hover:text-brand-700 group-hover:ring-brand-300",
+          ? "bg-white text-brand-700 ring-2 ring-white/40 shadow-[0_0_0_4px_rgb(255_255_255/0.12)]"
+          : "bg-[var(--side-node)] text-white/85 ring-brand-400 group-hover:bg-brand-500 group-hover:text-white group-hover:ring-brand-300",
       )}
     >
       {so ? <span className={cn("font-semibold tabular-nums leading-none", so.length > 1 ? "text-[10.5px]" : "text-[13px]")}>{so}</span> : <Icon name={icon} size={size === "lg" ? 17 : 15} />}
@@ -136,12 +136,12 @@ export default function Sidebar() {
     }
   };
 
-  const btn = "group flex w-full items-center rounded-lg text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-300";
+  const btn = "group flex w-full items-center rounded-lg text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70";
   // Mục đang mở: nền sáng hơn một bậc + vạch hổ phách bên trái (màu "đang làm" của cả hệ thống).
   const tone = (active: boolean) =>
     active
-      ? "bg-brand-500 text-white font-semibold shadow-[0_1px_4px_rgb(90_88_166/0.4)]"
-      : "text-[var(--side-text)] hover:bg-[var(--side-bg-2)]/70 hover:text-[var(--side-strong)]";
+      ? "bg-white text-brand-700 font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.28)]"
+      : "text-[var(--side-text)] hover:bg-[var(--side-bg-2)] hover:text-[var(--side-strong)]";
 
   const Badge = ({ n }: { n: number }) =>
     n > 0 ? <span className="ml-auto min-w-5 rounded-full bg-danger-600 px-1.5 text-center text-xs font-semibold leading-5 text-white tabular-nums">{n > 99 ? "99+" : n}</span> : null;
@@ -267,7 +267,7 @@ export default function Sidebar() {
         <ul className={cn("flex flex-col", rail && "items-center")}>{dau.map(ve)}</ul>
         {truc.length > 0 && (
           <div className="relative mt-1">
-            {!rail && <p className="m-0 px-2 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-brand-400">Quy trình TT05</p>}
+            {!rail && <p className="m-0 px-2 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-white/50">Quy trình TT05</p>}
             <span aria-hidden className={cn("pointer-events-none absolute w-0.5 -translate-x-1/2 rounded-full bg-[var(--side-line-2)]", duongTruc)} />
             <ul className={cn("flex flex-col", rail && "items-center")} aria-label="Quy trình xử lý hồ sơ">
               {truc.map(ve)}

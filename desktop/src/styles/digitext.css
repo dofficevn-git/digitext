@@ -31,16 +31,18 @@
    
   /* 0.19 (23/10/2026): thanh menu NỀN TRẮNG kiểu Teams / DO365 (.sidebar #FFF, viền #E1DFDD, mục đang mở nền tím nhạt
      + vạch tím). Nút tròn nhóm (--side-node) đặc để che đường trục quy trình (--side-line-2). */
-  --side-bg: var(--color-gray-0);
-  --side-bg-2: var(--color-brand-50);
-  --side-bg-3: var(--color-gray-200);
-  --side-node: var(--color-brand-50);
-  --side-text: var(--color-fg);
-  --side-strong: var(--color-brand-700);
-  --side-faint: var(--color-fg-subtle);
-  --side-line: var(--color-gray-200);
-  --side-line-2: var(--color-brand-200);
-  --side-active: var(--color-brand-500);
+  /* 0.25.4 (19/11/2026): anh Hiếu chê menu trắng "đơn điệu, không điểm nhấn" → thanh bên NỀN TÍM ĐẬM chữ trắng,
+     mục đang mở là viên trắng chữ tím. Đảo quyết định "menu trắng" của 0.19. */
+  --side-bg: var(--color-brand-700);
+  --side-bg-2: rgb(255 255 255 / 0.1);
+  --side-bg-3: rgb(255 255 255 / 0.25);
+  --side-node: var(--color-brand-600);
+  --side-text: rgb(255 255 255 / 0.86);
+  --side-strong: #ffffff;
+  --side-faint: rgb(255 255 255 / 0.55);
+  --side-line: rgb(255 255 255 / 0.14);
+  --side-line-2: var(--color-brand-400);
+  --side-active: #ffffff;
   /* Thanh trên tím chạy suốt chiều ngang như DO365 (header 50px, chữ trắng, ô tìm nền trắng mờ). */
   --top-bg: var(--color-brand-500);
   --top-fg: #ffffff;
@@ -409,7 +411,7 @@ html, body, #root {
 
 .sidebar {
   grid-area: sidebar;
-  background: linear-gradient(180deg, var(--side-bg) 0%, var(--side-bg) 45%, var(--color-brand-50) 100%);
+  background: linear-gradient(180deg, var(--side-bg) 0%, var(--color-brand-900) 100%);
   color: var(--side-text);
   border-right: 1px solid var(--side-line);
   display: flex;
