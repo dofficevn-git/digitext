@@ -1178,6 +1178,7 @@ name = "digitext-pdf"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "fax",
  "image",
  "lopdf 0.43.0",
  "sha2 0.10.9",

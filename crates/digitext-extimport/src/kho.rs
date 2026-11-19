@@ -126,7 +126,8 @@ fn ap(rel: &str, bo: &str, them: &str) -> Option<String> {
 /// `ten_excel` chỉ để ghi lại trong báo cáo — KHÔNG được là đường dẫn trên máy chủ, vì báo cáo
 /// này đi thẳng ra ngoài cho nhà thầu.
 pub fn kiem_ban_ke(sheet: &Sheet, ten_excel: &str, tep: &[TepKe]) -> KetQuaKho {
-    let plan = gom(sheet, PathBuf::new());
+    // Bản kê không có đĩa để dò gốc; phần căn đầu đường dẫn do `ung_vien` lo bên dưới.
+    let plan = gom(sheet, PathBuf::new(), 0);
     let mut sink = Sink::new();
 
     // ---- phạm vi: đúng các thư mục cấp đầu mà Excel nhắc tới, y như bản đĩa chỉ quét `tops`.
