@@ -24,7 +24,7 @@ import { xuatTT05 } from "@/features/chinhly/excelXuat";
 import { PackageList } from "@/features/package/PackFromDossiers";
 import { SoBienBan, TEN_LOAI, type NguonDien, type NoiDungDien } from "@/features/records/RecordsView";
 import type { V4ta } from "@/features/records/recordForms";
-import { Badge, Button, Card, Checkbox, Dialog, EmptyState, Help, KpiRow, KpiTile, notifyError, PageHeader, Select, Table, toast, type Column } from "@/ui";
+import { CanDuAn, Badge, Button, Card, Checkbox, Dialog, KpiRow, KpiTile, notifyError, PageHeader, Select, Table, toast, type Column } from "@/ui";
 
 const n = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("vi-VN"));
 const pct = (a: number, b: number | null | undefined) => (b && b > 0 ? `${Math.min(999, Math.round((a / b) * 100))}%` : "");
@@ -426,12 +426,21 @@ export default function NghiemThuView() {
     }
   };
 
+  const giaiThich = (
+    <>
+      <p>Khối lượng theo phông (mục lục chỉnh lý và kho máy chủ) so với hợp đồng, gói AIP đã dựng, biên bản nghiệm thu và bàn giao.</p>
+        <p className="text-sm">
+          <b>Hộp, hồ sơ, tờ</b> đếm từ mục lục chỉnh lý của từng phông (Dữ liệu chủ). <b>Tệp, trang, PDF/A, ký số</b> gộp từ kho máy chủ theo thư mục phông; thư mục ghép tự động theo tên, sửa được ở cột Thư mục máy chủ. <b>Hợp đồng</b> (hộp, hồ sơ, tờ, trang, tệp) nhập ở Báo cáo › Tiến độ dự án › Hợp đồng. <b>Bộ hồ sơ nghiệm thu</b> gồm Excel khối lượng, PDF và Word mọi biên bản của dự án, mục lục TT05 từng phông, gói AIP đã dựng kèm báo cáo kiểm tra gói, ghi vào thư mục anh chọn và nén thành .zip.
+        </p>
+    </>
+  );
+
   if (!projectId) {
     return (
       <section className="view active">
-        <PageHeader title="Nghiệm thu, bàn giao" description="Bước 8 Điều 9 TT 05/2025: khối lượng so với hợp đồng, gói AIP, biên bản nghiệm thu và bàn giao." />
-        <Card padding="md">
-          <EmptyState icon="duAn" title="Chọn dự án đang làm ở thanh trên" description="Nghiệm thu tính theo dự án." />
+        <PageHeader title="Nghiệm thu, bàn giao" infoTitle="Bước 8 Điều 9 TT 05/2025" info={giaiThich} />
+        <Card padding="none">
+          <CanDuAn />
         </Card>
       </section>
     );
@@ -440,23 +449,18 @@ export default function NghiemThuView() {
     <section className="view active">
       <PageHeader
         title="Nghiệm thu, bàn giao"
-        description={`Bước 8 Điều 9 TT 05/2025: khối lượng theo phông (mục lục chỉnh lý và kho máy chủ) so với hợp đồng, gói AIP đã dựng, biên bản nghiệm thu / bàn giao. Dự án ${proj.projectLabel || ""}.`}
+        infoTitle="Bước 8 Điều 9 TT 05/2025" info={giaiThich}
         actions={
           <>
             <Button icon="tepExcel" onClick={xuatExcel} disabled={rows.length === 0}>
               Xuất Excel
             </Button>
             <Button variant="primary" icon="thuMuc" loading={!!busy} onClick={() => setMoBo(true)} disabled={rows.length === 0 || !!busy}>
-              {busy ?? "Tạo bộ hồ sơ nghiệm thu…"}
+              {busy ?? "Tạo bộ hồ sơ…"}
             </Button>
           </>
         }
       />
-      <Help title="Số liệu lấy từ đâu" className="mb-3">
-        <p className="text-sm">
-          <b>Hộp, hồ sơ, tờ</b> đếm từ mục lục chỉnh lý của từng phông (Dữ liệu chủ). <b>Tệp, trang, PDF/A, ký số</b> gộp từ kho máy chủ theo thư mục phông; thư mục ghép tự động theo tên, sửa được ở cột Thư mục máy chủ. <b>Hợp đồng</b> (hộp, hồ sơ, tờ, trang, tệp) nhập ở Báo cáo › Tiến độ dự án › Hợp đồng. <b>Bộ hồ sơ nghiệm thu</b> gồm Excel khối lượng, PDF và Word mọi biên bản của dự án, mục lục TT05 từng phông, gói AIP đã dựng kèm báo cáo kiểm tra gói, ghi vào thư mục anh chọn và nén thành .zip.
-        </p>
-      </Help>
       <KpiRow className="mb-3">
         <KpiTile label="Hộp" value={tong.hop} sub={hd?.contractBoxes != null ? `${pct(tong.hop, hd.contractBoxes)} của ${n(hd.contractBoxes)} hợp đồng` : "hợp đồng chưa nhập"} loading={dangTai} />
         <KpiTile label="Hồ sơ" value={tong.hoSo} sub={hd?.contractDossiers != null ? `${pct(tong.hoSo, hd.contractDossiers)} của ${n(hd.contractDossiers)} hợp đồng` : "hợp đồng chưa nhập"} loading={dangTai} />
@@ -469,7 +473,7 @@ export default function NghiemThuView() {
         <Table columns={cols} rows={rows} getRowId={(r) => r.phong.id} dense maxHeight={380} state={{ loading: dangTai && rows.length === 0, error: catalog.data ? mayChu.error || mlhs.error || undefined : catalog.error, onRetry: () => { catalog.reload(); mayChu.reload(); mlhs.reload(); tienDo.reload(); }, empty: { title: "Dự án chưa có phông trong Dữ liệu chủ", description: "Nhập mục lục hồ sơ (Dữ liệu chủ › Lập hồ sơ) để có khối lượng." } }} />
       </Card>
       <div className="mt-3">
-        <SoBienBan kinds={["nghiem_thu", "ban_giao_lan", "kiem_tra_san_pham"]} projectId={projectId} title="Biên bản nghiệm thu, bàn giao, kiểm tra" description="Số liệu điền sẵn từ bảng khối lượng và danh sách gói; chọn phạm vi toàn dự án hoặc một phông." nguonDien={nguonDien} nutLap="Lập biên bản…" embedded />
+        <SoBienBan kinds={["nghiem_thu", "ban_giao_lan", "kiem_tra_san_pham"]} projectId={projectId} title="Biên bản nghiệm thu, bàn giao, kiểm tra" description="Số liệu điền sẵn từ bảng khối lượng và danh sách gói." nguonDien={nguonDien} nutLap="Lập biên bản…" embedded />
       </div>
       <h2 className="mb-2 mt-4 text-lg font-semibold text-fg-strong">Gói AIP của mọi dự án</h2>
       <PackageList />

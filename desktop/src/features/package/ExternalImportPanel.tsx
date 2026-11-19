@@ -120,7 +120,7 @@ export default function ExternalImportPanel({ nhanh = false }: { nhanh?: boolean
           Kiểm mã phông, mã hồ sơ, đường dẫn, tên tệp, thiếu hoặc thừa tệp và số trang. Không kiểm độ phân giải, PDF/A, lớp chữ, chữ ký số, nên gói có thể chưa đạt Điều 8.2.a TT05. Dùng khi chủ dự án chấp nhận bản quét hiện có.
         </Banner>
       )}
-      <Card title="Nguồn dữ liệu" description="Một thư mục chia theo Phông / Hộp / Hồ sơ và một tệp Excel metadata, mỗi dòng một tài liệu.">
+      <Card title="Nguồn dữ liệu" description="Thư mục Phông / Hộp / Hồ sơ và tệp Excel metadata.">
         <FormGrid cols={2}>
           <Field label="Tệp Excel metadata">
             <div className="flex gap-2">
@@ -130,7 +130,7 @@ export default function ExternalImportPanel({ nhanh = false }: { nhanh?: boolean
               </Button>
             </div>
           </Field>
-          <Field label="Thư mục kho" hint="Chứa các đường dẫn ghi trong Excel">
+          <Field label="Thư mục kho" hintAs="tip" hint="Chứa các đường dẫn ghi trong Excel">
             <div className="flex gap-2">
               <Input value={root} onChange={(e) => setRoot(e.target.value)} placeholder="E:\…" />
               <Button onClick={() => void pickDir("Chọn thư mục kho tài liệu", setRoot)} disabled={!!busy}>
@@ -211,7 +211,7 @@ export default function ExternalImportPanel({ nhanh = false }: { nhanh?: boolean
                 <Input value={agreement} onChange={(e) => setAgreement(e.target.value)} />
               </Field>
             )}
-            <Field label="Mã cơ quan lưu trữ" hint="Để trống thì lấy đoạn đầu mã phông">
+            <Field label="Mã cơ quan lưu trữ" hintAs="tip" hint="Để trống thì lấy đoạn đầu mã phông">
               <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} placeholder="H49" />
             </Field>
             <Field label="Tên cơ quan lưu trữ">
@@ -220,7 +220,7 @@ export default function ExternalImportPanel({ nhanh = false }: { nhanh?: boolean
             <Field label="Tên cơ quan hình thành phông">
               <Input value={fondName} onChange={(e) => setFondName(e.target.value)} placeholder="UBND xã …" />
             </Field>
-            <Field label="Đơn vị đóng gói" hint="Tên công ty số hoá, nếu có">
+            <Field label="Đơn vị đóng gói" hintAs="tip" hint="Tên công ty số hoá, nếu có">
               <Input value={packagerName} onChange={(e) => setPackagerName(e.target.value)} />
             </Field>
             <Field label="Mã đơn vị đóng gói">

@@ -179,7 +179,7 @@ export default function PackageCheckPanel() {
   return (
     <div className="space-y-4">
       {!isTauri() && <Banner tone="info">Chạy trong ứng dụng desktop để kiểm tra gói tin.</Banner>}
-      <Card title="Gói cần kiểm" description="Chọn một hay nhiều tệp .zip, hoặc một thư mục (thư mục gói có METS.xml, hay thư mục chứa nhiều gói — quét cả thư mục con). Gói bị bọc thêm một lớp zip cũng đọc được.">
+      <Card title="Gói cần kiểm" description="Tệp .zip, thư mục gói, hoặc thư mục chứa nhiều gói.">
         <Toolbar>
           <Button icon="goi" onClick={() => void pickFiles()} disabled={busy !== null}>
             Chọn tệp gói
@@ -222,11 +222,11 @@ export default function PackageCheckPanel() {
               <KpiTile label="Trang" value={fmt(tong.trang)} />
             </KpiRow>
           </Card>
-          <Card padding="none" title="Kết quả" description="Bấm vào một gói để xem lỗi, cảnh báo và chi tiết từng tệp PDF.">
+          <Card padding="none" title="Kết quả" description="Bấm một gói để xem chi tiết.">
             <Table columns={cols} rows={results} getRowId={(r) => r.source} renderExpanded={(r) => <ChiTiet r={r} />} dense />
           </Card>
 
-          <Card title="Xuất báo cáo PDF" description="Thông tin đầu văn bản và khối ký — được nhớ cho lần sau.">
+          <Card title="Xuất báo cáo PDF" description="Đầu văn bản và khối ký, nhớ cho lần sau.">
             <FormGrid cols={3}>
               <Field label="Cơ quan chủ quản">
                 <Input value={header.parentOrg} onChange={setH("parentOrg")} placeholder="Có thể để trống" />

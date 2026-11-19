@@ -11,7 +11,7 @@ import { useProject } from "@/state/project";
 import { dashboardMe, dashboardProject, type DayMetrics, type Metrics } from "@/api/dashboard";
 import { V4e3 } from "@/features/dossier/excel";
 import { SoBienBan, type NguonDien, type NoiDungDien } from "@/features/records/RecordsView";
-import { BarChart, Button, Card, EmptyState, Help, KpiRow, KpiTile, PageHeader, Seg, Table, type Column } from "@/ui";
+import { CanDuAn, BarChart, Button, Card, KpiRow, KpiTile, PageHeader, Seg, Table, type Column } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 const fmtNgay = (iso: string) => {
@@ -106,12 +106,19 @@ export default function NhatKyView() {
   ];
   const bieuDo = useMemo(() => [...theoNgay].reverse().map(([d, g]) => ({ label: d, value: g.pagesScanned })), [theoNgay]);
 
+  const giaiThich = (
+    <>
+      <p>Sản lượng theo ngày của từng người (tự tổng hợp từ máy chủ) và sổ nhật ký đã chốt.</p>
+        <p className="text-sm">Số liệu từng ngày lấy từ bảng tổng hợp của máy chủ (trang quét theo tệp đưa lên, trang OCR, PDF/A, ký số, duyệt, văn bản lập). Cuối ngày bấm <b>Chốt nhật ký ngày…</b>: bảng sản lượng được điền sẵn, thêm sự việc trong ngày rồi lập — nhật ký có số, có PDF, không sửa được; sai thì lập bản bổ sung.</p>
+    </>
+  );
+
   if (!projectId) {
     return (
       <section className="view active">
-        <PageHeader title="Nhật ký số hoá" description="Bước 4 Điều 9 TT 05/2025: sản lượng theo ngày của từng người và sổ nhật ký đã chốt." />
-        <Card padding="md">
-          <EmptyState icon="duAn" title="Chọn dự án đang làm ở thanh trên" description="Nhật ký ghi theo dự án." />
+        <PageHeader title="Nhật ký số hoá" infoTitle="Bước 4 Điều 9 TT 05/2025" info={giaiThich} />
+        <Card padding="none">
+          <CanDuAn />
         </Card>
       </section>
     );
@@ -120,7 +127,7 @@ export default function NhatKyView() {
     <section className="view active">
       <PageHeader
         title="Nhật ký số hoá"
-        description={`Bước 4 Điều 9 TT 05/2025: sản lượng theo ngày của từng người (tự tổng hợp từ máy chủ) và sổ nhật ký đã chốt. Dự án ${proj.projectLabel || ""}.`}
+        infoTitle="Bước 4 Điều 9 TT 05/2025" info={giaiThich}
         actions={
           <>
             <Seg<"14" | "30" | "90"> value={days} onChange={setDays} options={[{ value: "14", label: "14 ngày" }, { value: "30", label: "30 ngày" }, { value: "90", label: "90 ngày" }]} />
@@ -130,9 +137,6 @@ export default function NhatKyView() {
           </>
         }
       />
-      <Help title="Nhật ký ghi gì" className="mb-3">
-        <p className="text-sm">Số liệu từng ngày lấy từ bảng tổng hợp của máy chủ (trang quét theo tệp đưa lên, trang OCR, PDF/A, ký số, duyệt, văn bản lập). Cuối ngày bấm <b>Chốt nhật ký ngày…</b>: bảng sản lượng được điền sẵn, thêm sự việc trong ngày rồi lập — nhật ký có số, có PDF, không sửa được; sai thì lập bản bổ sung.</p>
-      </Help>
       <KpiRow className="mb-3">
         {COT.slice(0, 6).map((c) => (
           <KpiTile key={c.key} label={`${c.label} · ${days} ngày`} value={tong[c.key]} loading={loading && !data} />
@@ -164,7 +168,7 @@ export default function NhatKyView() {
       </Card>
       {!laNhanVien && (
         <div className="mt-3">
-          <SoBienBan kinds={["nhat_ky_so_hoa"]} projectId={projectId} title="Sổ nhật ký đã chốt" description="Mỗi ngày một bản; cột Phông / ngày là ngày đã chốt." nguonDien={nguonDien} nutLap="Chốt nhật ký ngày…" embedded />
+          <SoBienBan kinds={["nhat_ky_so_hoa"]} projectId={projectId} title="Sổ nhật ký đã chốt" description="Mỗi ngày một bản." nguonDien={nguonDien} nutLap="Chốt nhật ký ngày…" embedded />
         </div>
       )}
     </section>

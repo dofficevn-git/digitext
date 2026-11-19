@@ -109,7 +109,7 @@ export default function PdfaCheckPanel() {
 
   return (
     <div className="space-y-4">
-      <Card title="Kiểm tra PDF/A" description="Chọn tệp hoặc cả thư mục để biết từng tệp là loại PDF/A nào hay không phải PDF/A, kèm lý do.">
+      <Card title="Kiểm tra PDF/A" description="Chọn tệp hoặc thư mục để biết loại PDF/A và lý do.">
         <Toolbar>
           <Button icon="tepPdf" disabled={busy} onClick={() => void pickFiles()}>
             Chọn tệp PDF

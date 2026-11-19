@@ -66,5 +66,5 @@ trong `theme.css`. `config.ts appName` vẫn dùng cho tiêu đề cửa sổ / 
 |---|---|---|
 | 1 (0.25.0) | Logo chữ, menu trái một dòng, thanh trạng thái, bộ `ui/*` (`Wordmark`, `InfoButton`, `PageHeader info`, `CanDuAn`, `FilterBar`, `MultiSelect`, `Field hintAs`, `Button count`) | mã xong 19/11/2026 |
 | 2 (0.25.0) | Dữ liệu chủ + Số hoá: Lập hồ sơ dùng `FilterBar`/`MultiSelect` + `NhacChinhLy` (một dải nhắc); mô tả → `info` ở Danh mục, Hệ thống hoá, Đồng bộ, Mục lục, Cây thư mục, Kho máy chủ, Đưa lên máy chủ; `MultiSelect plain` cho chọn cột; `HoSoHubView` hết `section` lồng | mã xong 19/11/2026, phát hành chung đợt 1 |
-| 3 (0.25.2) | Kiểm tra, Ký số, Đóng gói, Nghiệm thu, Giao nhận | chưa |
+| 3 (0.25.1) | Kiểm tra, Ký số, Đóng gói, Nghiệm thu, Giao nhận: bỏ tiền tố "Bước N Điều 9…" và khối `Help` → `PageHeader info` (một nội dung `giaiThich` cho cả nhánh chưa chọn dự án, dùng `CanDuAn`); mô tả thẻ rút gọn; hint giải thích → `hintAs="tip"` | mã xong 19/11/2026 |
 | 4 (0.25.3) | Lưu trữ số, Báo cáo, Tiện ích, Quản trị, Đăng nhập; gỡ `Help`; luật eslint chặn mô tả dài | chưa |

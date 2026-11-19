@@ -15,7 +15,7 @@ export default function DongGoiView() {
   const [tab, setTab] = useState<Tab>("hoso");
   return (
     <section className="view active">
-      <PageHeader title="Đóng gói" description="Bước 7 Điều 9 TT 05/2025: tạo gói SIP, AIP, DIP theo bố cục E-ARK từ hồ sơ đã số hoá trên máy chủ. Kiểm PDF/A, kiểm gói, đóng gói từ kho ngoài nằm ở Tiện ích." />
+      <PageHeader title="Đóng gói" infoTitle="Bước 7 Điều 9 TT 05/2025" info={<p>Tạo gói SIP, AIP, DIP theo bố cục E-ARK từ hồ sơ đã số hoá trên máy chủ. Kiểm PDF/A, kiểm gói, đóng gói từ kho ngoài nằm ở Tiện ích.</p>} />
       <Tabs<Tab>
         value={tab}
         onChange={setTab}

@@ -238,14 +238,14 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
         <Field label="Mã cơ quan lưu trữ">
           <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} />
         </Field>
-        <Field label="Tên cơ quan hình thành phông" hint="Ghi vào phần cơ quan tạo lập của gói">
+        <Field label="Tên cơ quan hình thành phông" hintAs="tip" hint="Ghi vào phần cơ quan tạo lập của gói">
           <Input value={fondName} onChange={(e) => setFondName(e.target.value)} placeholder="UBND xã …" />
         </Field>
-        <Field label="Tên cơ quan lưu trữ" hint="Ghi vào phần cơ quan lưu trữ của gói">
+        <Field label="Tên cơ quan lưu trữ" hintAs="tip" hint="Ghi vào phần cơ quan lưu trữ của gói">
           <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Lưu trữ lịch sử tỉnh …" />
         </Field>
         {kind.startsWith("sip") && (
-          <Field label="Mã yêu cầu nộp" hint="Thoả thuận nộp lưu, nếu có">
+          <Field label="Mã yêu cầu nộp" hintAs="tip" hint="Thoả thuận nộp lưu, nếu có">
             <Input value={agreement} onChange={(e) => setAgreement(e.target.value)} />
           </Field>
         )}

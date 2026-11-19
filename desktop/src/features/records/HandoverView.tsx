@@ -10,7 +10,7 @@ import { clHoSoList, str, type ClRow } from "@/api/chinhly";
 import { useClCatalog } from "@/features/chinhly/common";
 import { SoBienBan, type NguonDien, type NoiDungDien } from "./RecordsView";
 import type { V4ta } from "./recordForms";
-import { Card, EmptyState, Help, PageHeader, Tabs } from "@/ui";
+import { CanDuAn, Card, PageHeader, Tabs } from "@/ui";
 
 type Tab = "nhan" | "tra";
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -84,27 +84,31 @@ export default function HandoverView() {
     [cat.phong, phongOptions],
   );
 
-  if (!projectId) {
-    return (
-      <section className="view active">
-        <PageHeader title="Giao nhận tài liệu" description="Bước 1–2 Điều 9 TT 05/2025: khảo sát, kiểm đếm, lập biên bản giao nhận tài liệu giấy." />
-        <Card padding="md">
-          <EmptyState icon="duAn" title="Chọn dự án đang làm ở thanh trên" description="Biên bản giao nhận ghi theo dự án." />
-        </Card>
-      </section>
-    );
-  }
-  return (
-    <section className="view active">
-      <PageHeader title="Giao nhận tài liệu" description={`Bước 1–2 Điều 9 TT 05/2025: khảo sát, kiểm đếm hộp, hồ sơ, tờ và lập biên bản giao nhận tài liệu giấy; sau số hoá lập biên bản trả tài liệu gốc. Dự án ${proj.projectLabel || ""}.`} />
-      <Help title="Cách làm theo Điều 9" className="mb-3">
+  const giaiThich = (
+    <>
+      <p>Khảo sát, kiểm đếm hộp, hồ sơ, tờ và lập biên bản giao nhận tài liệu giấy; sau số hoá lập biên bản trả tài liệu gốc.</p>
         <ul className="list-disc space-y-1 pl-5 text-sm">
           <li>Khoản 1: khảo sát phông, kiểm đếm số hộp, số hồ sơ, số tờ khi nhận; chụp ảnh hiện trạng nếu cần; biên bản giao nhận là căn cứ để nhận lại tài liệu.</li>
           <li>Khoản 2: vệ sinh tài liệu, đếm lại hồ sơ, giữ nguyên trật tự — ghi kết quả vào cột Tình trạng của danh mục hộp.</li>
           <li>Điểm đ khoản 4: trả tài liệu gốc về kho có biên bản; đối chiếu với biên bản giao nhận.</li>
           <li>Nút <b>Điền từ dữ liệu</b> lấy số hộp, hồ sơ, tờ từ mục lục chỉnh lý của phông ({n(cat.phong.length)} phông có mục lục); sửa lại theo kiểm đếm thực tế trước khi lập.</li>
         </ul>
-      </Help>
+    </>
+  );
+
+  if (!projectId) {
+    return (
+      <section className="view active">
+        <PageHeader title="Giao nhận tài liệu" infoTitle="Bước 1–2 Điều 9 TT 05/2025" info={giaiThich} />
+        <Card padding="none">
+          <CanDuAn />
+        </Card>
+      </section>
+    );
+  }
+  return (
+    <section className="view active">
+      <PageHeader title="Giao nhận tài liệu" infoTitle="Bước 1–2 Điều 9 TT 05/2025" info={giaiThich} />
       <Tabs<Tab>
         value={tab}
         onChange={setTab}
@@ -114,8 +118,8 @@ export default function HandoverView() {
         ]}
       />
       <div className="mt-3">
-        {tab === "nhan" && <SoBienBan kinds={["giao_nhan_giay"]} projectId={projectId} title="Biên bản giao nhận tài liệu giấy" description="Mỗi phông (hoặc mỗi đợt bàn giao) một biên bản. Lọc theo mã phông ở cột Phông / ngày." nguonDien={nguonDien} nutLap="Lập biên bản giao nhận" embedded />}
-        {tab === "tra" && <SoBienBan kinds={["tra_tai_lieu_giay"]} projectId={projectId} title="Biên bản trả tài liệu gốc" description="Lập khi trả tài liệu giấy về kho sau khi số hoá và kiểm tra xong." nguonDien={nguonDien} nutLap="Lập biên bản trả" embedded />}
+        {tab === "nhan" && <SoBienBan kinds={["giao_nhan_giay"]} projectId={projectId} title="Biên bản giao nhận tài liệu giấy" description="Mỗi phông hoặc mỗi đợt bàn giao một biên bản." nguonDien={nguonDien} nutLap="Lập biên bản giao nhận" embedded />}
+        {tab === "tra" && <SoBienBan kinds={["tra_tai_lieu_giay"]} projectId={projectId} title="Biên bản trả tài liệu gốc" description="Lập khi trả tài liệu giấy về kho." nguonDien={nguonDien} nutLap="Lập biên bản trả" embedded />}
       </div>
     </section>
   );

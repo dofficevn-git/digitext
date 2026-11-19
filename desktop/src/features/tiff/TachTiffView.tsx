@@ -284,7 +284,16 @@ export default function TachTiffView() {
     <section className="view active">
       <PageHeader
         title="Tách TIFF"
-        description="Tách PDF đã ký số thành TIFF mỗi trang một tệp (tài liệu Đảng), lấy nguyên ảnh quét, đặt tên theo mẫu của đơn vị."
+        description="Tách PDF đã ký thành TIFF, mỗi trang một tệp."
+        infoTitle="Cách tách"
+        info={
+          <>
+            <p>Dùng cho tài liệu Đảng: lấy nguyên ảnh quét, đặt tên theo mẫu của đơn vị.</p>
+        <p>Mỗi trang PDF ra một tệp TIFF lấy nguyên ảnh quét đã nhúng: giữ đúng độ phân giải, kích thước và màu của bản quét, không co giãn, không in ô chữ ký số lên trang.</p>
+        <p>STT chạy liên tục qua các PDF (xếp theo tên) trong cùng một thư mục, sang thư mục khác đánh lại từ số bắt đầu. Chạy lại cùng cấu hình luôn ra đúng cùng tên tệp.</p>
+        <p>Xong mỗi đợt, thư mục xuất có biên bản BIEN-BAN-TACH-TIFF-*.csv (mở bằng Excel) và manifest-sha256-*.txt để đối chiếu khi bàn giao.</p>
+          </>
+        }
         actions={
           <>
             <Button variant="primary" icon="chay" loading={running} disabled={khoa || inputs.length === 0} onClick={() => void batDau()}>
@@ -390,7 +399,7 @@ export default function TachTiffView() {
                 )}
               </>
             ) : (
-              <Field label="Thư mục PDF" hint="Quét cả thư mục con; tên thư mục được chọn là gốc của cây xuất">
+              <Field label="Thư mục PDF" hintAs="tip" hint="Quét cả thư mục con; tên thư mục được chọn là gốc của cây xuất">
                 <div className="flex gap-2">
                   <Input value={folder} onChange={(e) => setFolder(e.target.value)} spellCheck={false} />
                   <Button onClick={() => void chonThuMucNguon()} disabled={khoa}>
@@ -422,7 +431,7 @@ export default function TachTiffView() {
               </Field>
             </FormGrid>
             <Checkbox checked={naming.mirror} onChange={(mirror) => setN({ mirror })} text="Giữ nguyên thư mục cha, chỉ đổi tên thư mục chứa PDF" />
-            <Field label="Mã loại văn bản Đảng" hint="Ngăn cách bằng dấu phẩy; dùng để nhận dạng tên văn bản Đảng">
+            <Field label="Mã loại văn bản Đảng" hintAs="tip" hint="Ngăn cách bằng dấu phẩy; dùng để nhận dạng tên văn bản Đảng">
               <Input value={naming.docTypeCodes.join(", ")} onChange={(e) => setN({ docTypeCodes: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} />
             </Field>
             <Field label="Thư mục lưu TIFF">
@@ -501,11 +510,6 @@ export default function TachTiffView() {
         {preview && preview.folderCount > preview.folders.length && <p className="px-3 py-2 text-sm text-fg-subtle">Chỉ hiện {fmtN(preview.folders.length)} thư mục đầu.</p>}
       </Card>
 
-      <Help title="Cách tách" className="mt-4">
-        <p>Mỗi trang PDF ra một tệp TIFF lấy nguyên ảnh quét đã nhúng: giữ đúng độ phân giải, kích thước và màu của bản quét, không co giãn, không in ô chữ ký số lên trang.</p>
-        <p>STT chạy liên tục qua các PDF (xếp theo tên) trong cùng một thư mục, sang thư mục khác đánh lại từ số bắt đầu. Chạy lại cùng cấu hình luôn ra đúng cùng tên tệp.</p>
-        <p>Xong mỗi đợt, thư mục xuất có biên bản BIEN-BAN-TACH-TIFF-*.csv (mở bằng Excel) và manifest-sha256-*.txt để đối chiếu khi bàn giao.</p>
-      </Help>
     </section>
   );
 }

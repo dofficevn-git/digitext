@@ -21,7 +21,7 @@ import { V4rv } from "@/api/packaging";
 import { writeXlsx, type Sheet } from "@/features/chinhly/excel";
 import { useProject } from "@/state/project";
 import { V4sk, V4sn, V4su, type V4sj, type V4sm } from "./packageWire";
-import { Badge, Button, Card, Dialog, EmptyState, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
+import { CanDuAn, Badge, Button, Card, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 const so = (s: string | null | undefined): string => {
@@ -486,7 +486,7 @@ export default function PackFromServer() {
   if (!projectId) {
     return (
       <Card padding="md">
-        <EmptyState icon="duAn" title="Chọn dự án đang làm ở thanh trên" description="Phông, hộp, hồ sơ để đóng gói lấy từ tài liệu đã lên máy chủ của dự án đó." />
+        <CanDuAn />
       </Card>
     );
   }
@@ -785,10 +785,10 @@ function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, on
         <Field label="Loại gói">
           <Select value={kind} onChange={(v) => setKind(v as V4sj)} options={KINDS.map((k) => ({ value: k, label: V4sk[k] }))} />
         </Field>
-        <Field label="Mã phông" hint={maTuMetadata ? `Lấy trong ${excelFond?.ten ?? "tệp metadata"}, cùng mã với mã hồ sơ` : "Fondcode trong gói; gợi ý từ tên thư mục"}>
+        <Field label="Mã phông" hintAs="tip" hint={maTuMetadata ? `Lấy trong ${excelFond?.ten ?? "tệp metadata"}, cùng mã với mã hồ sơ` : "Fondcode trong gói; gợi ý từ tên thư mục"}>
           <Input value={fondCode} readOnly={maTuMetadata} onChange={(e) => setFondCode(e.target.value)} className={maTuMetadata ? "bg-surface-sunken text-fg-subtle" : undefined} />
         </Field>
-        <Field label="Tên cơ quan hình thành phông" hint={tenTuMetadata ? "Lấy trong tệp metadata" : maTuMetadata ? "Tệp metadata không ghi tên phông — gõ cho đúng tên trên quyết định" : undefined}>
+        <Field label="Tên cơ quan hình thành phông" hintAs="tip" hint={tenTuMetadata ? "Lấy trong tệp metadata" : maTuMetadata ? "Tệp metadata không ghi tên phông — gõ cho đúng tên trên quyết định" : undefined}>
           <Input value={fondName} readOnly={tenTuMetadata} onChange={(e) => setFondName(e.target.value)} placeholder={motPhong || "UBND xã …"} className={tenTuMetadata ? "bg-surface-sunken text-fg-subtle" : undefined} />
         </Field>
         <Field label="Mã cơ quan lưu trữ">
@@ -798,11 +798,11 @@ function PackServerDialog({ rows, mucLuc, excelFond, projectId, projectLabel, on
           <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Lưu trữ lịch sử tỉnh …" />
         </Field>
         {kind.startsWith("sip") ? (
-          <Field label="Mã yêu cầu nộp" hint="Thoả thuận nộp lưu, bắt buộc với SIP">
+          <Field label="Mã yêu cầu nộp" hintAs="tip" hint="Thoả thuận nộp lưu, bắt buộc với SIP">
             <Input value={agreement} onChange={(e) => setAgreement(e.target.value)} />
           </Field>
         ) : (
-          <Field label="Thời hạn bảo quản" hint={mucLuc.size ? "Chỉ dùng cho hồ sơ không có dòng mục lục; có thì lấy THBQ trong mục lục" : "Áp cho mọi hồ sơ trong lần này"}>
+          <Field label="Thời hạn bảo quản" hintAs="tip" hint={mucLuc.size ? "Chỉ dùng cho hồ sơ không có dòng mục lục; có thì lấy THBQ trong mục lục" : "Áp cho mọi hồ sơ trong lần này"}>
             <Select value={maintenance} onChange={setMaintenance} options={THBQ} />
           </Field>
         )}

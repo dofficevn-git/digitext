@@ -12,7 +12,7 @@ import { V4t3, type V4t2 } from "@/api/records";
 import { V460 } from "@/state";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
-import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, FormGrid, Help, IconButton, Input, Menu, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
+import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, FormGrid, IconButton, Input, Menu, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
 import { V4t6, V4t7 } from "./submissionFlow";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -160,7 +160,13 @@ export default function V4t9() {
     <section className="view active">
       <PageHeader
         title="Thu nộp"
-        description="Đăng ký, xác nhận, tiếp nhận và phê duyệt tài liệu nộp vào lưu trữ lịch sử."
+        description="Tài liệu nộp vào lưu trữ lịch sử."
+        infoTitle="Quy trình thu nộp"
+        info={
+          <>
+        <p>Cơ quan nộp đăng ký (Điều 20) → lưu trữ lịch sử xác nhận hoặc từ chối (Điều 21) → nộp gói SIP và đối chiếu mục lục (Điều 22) → tiếp nhận (Điều 23) → chấm từng hồ sơ đạt / không đạt (Điều 24) → phê duyệt, chuyển SIP thành AIP, lập biên bản và trả lại hồ sơ không đạt (Điều 25).</p>
+          </>
+        }
         actions={
           <>
             <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
@@ -196,7 +202,7 @@ export default function V4t9() {
         <div className="min-w-0">
           {!selId ? (
             <Card>
-              <EmptyState icon="nhapKho" title="Chọn một lần nộp" description="Chi tiết và các bước xử lý hiện ở đây." />
+              <EmptyState icon="nhapKho" title="Chọn một lần nộp" />
             </Card>
           ) : !d ? (
             <Card>{detail.loading ? <p className="text-sm text-fg-subtle">Đang tải chi tiết…</p> : <ErrorBanner error={detail.error ?? "Không tải được chi tiết."} onRetry={detail.reload} />}</Card>
@@ -364,9 +370,6 @@ export default function V4t9() {
         </div>
       </div>
 
-      <Help className="mt-4" title="Quy trình thu nộp">
-        <p>Cơ quan nộp đăng ký (Điều 20) → lưu trữ lịch sử xác nhận hoặc từ chối (Điều 21) → nộp gói SIP và đối chiếu mục lục (Điều 22) → tiếp nhận (Điều 23) → chấm từng hồ sơ đạt / không đạt (Điều 24) → phê duyệt, chuyển SIP thành AIP, lập biên bản và trả lại hồ sơ không đạt (Điều 25).</p>
-      </Help>
 
       {dangKy && (
         <DangKyDialog

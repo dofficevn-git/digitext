@@ -458,7 +458,14 @@ export default function V4qy() {
     <section className="view active">
       <PageHeader
         title="Ký số"
-        description="Ký PAdES hàng loạt bằng USB token cho tài liệu đã có PDF/A của một dự án."
+        description="Ký PAdES hàng loạt bằng USB token."
+        infoTitle="Điều kiện ký"
+        info={
+          <>
+        <p>Chỉ tài liệu đã có bản PDF/A mới vào hàng chờ ký. Chữ ký PAdES-LTV ghi kèm chứng thư và dấu thời gian nên xác thực được lâu dài mà không cần token.</p>
+        <p>Thư viện PKCS#11 là tệp .dll do nhà cung cấp chứng thư cài cùng phần mềm token. Máy chưa cài thì không dò thấy token.</p>
+          </>
+        }
         actions={
           <>
             <Button variant="primary" icon="kySo" loading={running} disabled={khoaForm || jobs.length === 0} onClick={() => void runBatch(jobs, "Ký số")}>
@@ -512,7 +519,7 @@ export default function V4qy() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card title="Nguồn và đầu ra" description="Dự án lấy theo ô Dự án đang làm, đổi được tại đây.">
+        <Card title="Nguồn và đầu ra">
           <div className="space-y-3">
             <Field label="Dự án">
               <Select value={projectId} onChange={setProjectId} disabled={khoaForm} placeholder="Chọn dự án" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} />
@@ -522,7 +529,7 @@ export default function V4qy() {
                 <Select value={phongLoc} onChange={setPhongLoc} disabled={khoaForm} placeholder={`Tất cả phông (${dsPhong.length})`} options={dsPhong.map((p) => ({ value: p, label: p }))} />
               </Field>
             )}
-            <Field label="Thư mục lưu bản đã ký" hint="Để trống thì chỉ lưu trên máy chủ">
+            <Field label="Thư mục lưu bản đã ký" hintAs="tip" hint="Để trống thì chỉ lưu trên máy chủ">
               <div className="flex gap-2">
                 <Input value={outDir} onChange={(e) => setOutDir(e.target.value)} spellCheck={false} />
                 <Button onClick={() => void chonDauRa()} disabled={running}>
@@ -535,7 +542,7 @@ export default function V4qy() {
 
         <Card title="Token và chứng thư">
           <div className="space-y-3">
-            <Field label="Thư viện PKCS#11" hint="Để trống thì tự dò phần mềm token đã cài">
+            <Field label="Thư viện PKCS#11" hintAs="tip" hint="Để trống thì tự dò phần mềm token đã cài">
               <div className="flex gap-2">
                 <Input value={modulePath} onChange={(e) => setModulePath(e.target.value)} spellCheck={false} list="pkcs11-modules" />
                 <datalist id="pkcs11-modules">
@@ -591,7 +598,7 @@ export default function V4qy() {
               <Seg<"co" | "khong"> value={withStamp ? "co" : "khong"} onChange={(v) => setWithStamp(v === "co")} options={[{ value: "co", label: "Ký có dấu" }, { value: "khong", label: "Ký không dấu" }]} />
             </Field>
             {withStamp && (
-              <Field label="Ảnh con dấu" hint="Không chọn ảnh thì dùng dấu đỏ dựng từ chứng thư">
+              <Field label="Ảnh con dấu" hintAs="tip" hint="Không chọn ảnh thì dùng dấu đỏ dựng từ chứng thư">
                 <div className="flex flex-wrap items-center gap-2">
                   <Input className="min-w-40 flex-1" readOnly value={stampPath} placeholder="Chưa chọn ảnh" />
                   <Button onClick={() => void chonConDau()} disabled={running}>
@@ -606,7 +613,7 @@ export default function V4qy() {
                 </div>
               </Field>
             )}
-            <Field label="Tên hiển thị trên chữ ký" hint={`Để trống thì dùng tên trong chứng thư${cert?.subject ? `: ${cert.subject}` : ""}. Chỉ đổi chữ hiện trên ô chữ ký, chứng thư số không đổi.`}>
+            <Field label="Tên hiển thị trên chữ ký" hintAs="tip" hint={`Để trống thì dùng tên trong chứng thư${cert?.subject ? `: ${cert.subject}` : ""}. Chỉ đổi chữ hiện trên ô chữ ký, chứng thư số không đổi.`}>
               <Input value={tenHienThi} onChange={(e) => setTenHienThi(e.target.value)} disabled={running} maxLength={200} placeholder={cert?.subject || "Tên trong chứng thư"} />
             </Field>
             <Checkbox checked={timestamp} onChange={setTimestamp} disabled={running} text="Gắn dấu thời gian (TSA)" />
@@ -651,10 +658,6 @@ export default function V4qy() {
         )}
       </Card>
 
-      <Help title="Điều kiện ký" className="mt-4">
-        <p>Chỉ tài liệu đã có bản PDF/A mới vào hàng chờ ký. Chữ ký PAdES-LTV ghi kèm chứng thư và dấu thời gian nên xác thực được lâu dài mà không cần token.</p>
-        <p>Thư viện PKCS#11 là tệp .dll do nhà cung cấp chứng thư cài cùng phần mềm token. Máy chưa cài thì không dò thấy token.</p>
-      </Help>
 
       <Dialog open={moViTri && !!first} onOpenChange={setMoViTri} title="Vị trí chữ ký" description="Chọn trên một tệp mẫu nhẹ trong lô, áp cho cả lô." size="lg" footer={<Button variant="primary" onClick={() => setMoViTri(false)}>Xong</Button>}>
         {first && <SignPlacementPicker jobId={first.id} filename={first.filename} value={placement} onChange={setPlacement} />}

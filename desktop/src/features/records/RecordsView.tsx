@@ -332,7 +332,7 @@ export function SoBienBan({ kinds, projectId, title = "Sổ biên bản", descri
 export default function V4tk() {
   return (
     <section className="view active">
-      <PageHeader title="Sổ biên bản" description="Bước 8 Điều 9 TT 05/2025: toàn bộ biên bản của dự án — giao nhận, nhật ký, kiểm tra, nghiệm thu, thu nộp, sao lưu, sự cố — theo mẫu Phụ lục VII và Điều 9." />
+      <PageHeader title="Sổ biên bản" infoTitle="Bước 8 Điều 9 TT 05/2025" info={<p>Toàn bộ biên bản của dự án — giao nhận, nhật ký, kiểm tra, nghiệm thu, thu nộp, sao lưu, sự cố — theo mẫu Phụ lục VII và Điều 9.</p>} />
       <SoBienBan />
     </section>
   );

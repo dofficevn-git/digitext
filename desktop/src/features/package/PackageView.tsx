@@ -89,7 +89,7 @@ export default function V4sx() {
 
   return (
     <div className="space-y-4">
-      <Card title="Thông tin gói" description="Điền đầy đủ trường theo TT05, dùng khi cần kiểm soát từng giá trị.">
+      <Card title="Thông tin gói" description="Điền từng trường theo TT05.">
         <FormGrid cols={3}>
           {sel3("kind", "Loại gói", (Object.keys(V4sk) as V4sj[]).map((k) => [k, V4sk[k]]))}
           {txt("fondCode", "Mã phông", "G09")}
@@ -116,10 +116,10 @@ export default function V4sx() {
             <>
               {txt("submissionAgreement", "Mã yêu cầu nộp", "NL.BNV.2026.01", "Thoả thuận nộp lưu")}
               {txt("zipOrdinal", "Số thứ tự trong lần nộp")}
-              <Field label="Lần nộp" hint="Gắn gói vào lần nộp đang mở">
+              <Field label="Lần nộp" hintAs="tip" hint="Gắn gói vào lần nộp đang mở">
                 <Select value={subId} onChange={setSubId} placeholder="Không gắn" options={subs.map((r) => ({ value: r.id, label: `${r.maYeuCau} · ${r.orgName}` }))} />
               </Field>
-              <Field label="STT mục lục từ" hint="Để trống thì tự suy">
+              <Field label="STT mục lục từ" hintAs="tip" hint="Để trống thì tự suy">
                 <Input value={sttFrom} onChange={(e) => setSttFrom(e.target.value)} placeholder="1" />
               </Field>
               <Field label="STT mục lục đến">
@@ -151,7 +151,7 @@ export default function V4sx() {
         </FormGrid>
       </Card>
 
-      <Card title="Tài liệu trong gói" description="Nạp tài liệu đã nộp trên máy chủ, lọc theo mã hồ sơ nếu cần.">
+      <Card title="Tài liệu trong gói" description="Nạp tài liệu đã nộp trên máy chủ.">
         <Toolbar className="mb-3">
           <Field label="Mã hồ sơ trên máy chủ" className="w-72">
             <Input size="sm" value={hoSoRef} onChange={(e) => setHoSoRef(e.target.value)} placeholder="Hộp 01/Hồ sơ 001" />

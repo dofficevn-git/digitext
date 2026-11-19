@@ -13,7 +13,7 @@ import { clCatalogList, clDoiSoat, str, type ClRow, type DoiSoatHoSo, type DoiSo
 import { docsPdfaRejected, type PdfaRejectedRow } from "@/api/docs";
 import { V4e3 } from "@/features/dossier/excel";
 import { SoBienBan, type NguonDien, type NoiDungDien } from "@/features/records/RecordsView";
-import { Badge, Button, Card, Checkbox, EmptyState, Help, KpiRow, KpiTile, PageHeader, Select, Table, type Column, type KpiTone } from "@/ui";
+import { CanDuAn, Badge, Button, Card, Checkbox, EmptyState, KpiRow, KpiTile, PageHeader, Select, Table, type Column, type KpiTone } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 const KET_LUAN: Record<DoiSoatKetLuan, { label: string; tone: "ok" | "warn" | "err" | "info" | "gray" }> = {
@@ -119,12 +119,21 @@ export default function QcView() {
     [data, tk, phongChon, phongOptions, proj.projectLabel, projectId, quetLaiRows],
   );
 
+  const giaiThich = (
+    <>
+      <p>Từng hồ sơ trong mục lục đối chiếu với tài liệu đã lên máy chủ: số tờ kê khai so với trang quét, PDF/A-2b, ký số, tệp bị từ chối.</p>
+        <p className="text-sm">
+          <b>Thiếu trang</b>: trang quét ít hơn số tờ kê khai trong mục lục. <b>Nghi thừa trang</b>: quét nhiều hơn gấp đôi số tờ (tờ hai mặt thì trang bằng hai lần tờ là bình thường). <b>Chưa PDF/A</b> / <b>PDF/A cũ</b>: chưa đạt Điều 8 (PDF/A-2b). Dự án có nhiều phông cùng số hộp thì chọn thêm thư mục phông trên máy chủ. Đây là cảnh báo để xử lý, không chặn ký số hay đóng gói.
+        </p>
+    </>
+  );
+
   if (!projectId) {
     return (
       <section className="view active">
-        <PageHeader title="Kiểm tra sản phẩm" description="Bước 5 Điều 9 TT 05/2025: đối soát mục lục với tài liệu đã số hoá, kiểm Điều 8." />
-        <Card padding="md">
-          <EmptyState icon="duAn" title="Chọn dự án đang làm ở thanh trên" description="Kiểm tra theo từng phông của dự án." />
+        <PageHeader title="Kiểm tra sản phẩm" infoTitle="Bước 5 Điều 9 TT 05/2025" info={giaiThich} />
+        <Card padding="none">
+          <CanDuAn />
         </Card>
       </section>
     );
@@ -133,7 +142,7 @@ export default function QcView() {
     <section className="view active">
       <PageHeader
         title="Kiểm tra sản phẩm"
-        description={`Bước 5 Điều 9 TT 05/2025: từng hồ sơ trong mục lục đối chiếu với tài liệu đã lên máy chủ — số tờ kê khai so với trang quét, PDF/A-2b, ký số, tệp bị từ chối. Dự án ${proj.projectLabel || ""}.`}
+        infoTitle="Bước 5 Điều 9 TT 05/2025" info={giaiThich}
         actions={
           <>
             <Select size="sm" value={phongIdEff} onChange={(v) => { setPhongId(v); setThuMuc(""); }} options={phongOptions} placeholder="Chọn phông" aria-label="Phông" />
@@ -144,11 +153,6 @@ export default function QcView() {
           </>
         }
       />
-      <Help title="Cách đọc kết luận" className="mb-3">
-        <p className="text-sm">
-          <b>Thiếu trang</b>: trang quét ít hơn số tờ kê khai trong mục lục. <b>Nghi thừa trang</b>: quét nhiều hơn gấp đôi số tờ (tờ hai mặt thì trang bằng hai lần tờ là bình thường). <b>Chưa PDF/A</b> / <b>PDF/A cũ</b>: chưa đạt Điều 8 (PDF/A-2b). Dự án có nhiều phông cùng số hộp thì chọn thêm thư mục phông trên máy chủ. Đây là cảnh báo để xử lý, không chặn ký số hay đóng gói.
-        </p>
-      </Help>
       {phongOptions.length === 0 && !catalog.loading ? (
         <Card padding="md">
           <EmptyState icon="hoSo" title="Dự án chưa có phông nào trong Dữ liệu chủ" description="Nhập mục lục hồ sơ (Dữ liệu chủ › Lập hồ sơ) trước khi kiểm tra." />
@@ -199,7 +203,7 @@ export default function QcView() {
             </Card>
           </div>
           <div className="mt-3">
-            <SoBienBan kinds={["kiem_tra_san_pham"]} projectId={projectId} title="Biên bản kiểm tra sản phẩm" description="Lập sau mỗi đợt kiểm tra một phông; số liệu điền sẵn từ bảng đối soát trên." nguonDien={nguonDien} nutLap="Lập biên bản kiểm tra…" embedded />
+            <SoBienBan kinds={["kiem_tra_san_pham"]} projectId={projectId} title="Biên bản kiểm tra sản phẩm" description="Số liệu điền sẵn từ bảng đối soát." nguonDien={nguonDien} nutLap="Lập biên bản…" embedded />
           </div>
         </>
       )}
