@@ -54,6 +54,7 @@ DigiText là hệ thống **số hoá và quản lý tài liệu lưu trữ** th
 - Ký bằng **USB token** của các CA Việt Nam (tự dò thiết bị), chữ ký **hiển thị góc trên bên phải trang đầu** đúng TT05.
 - Máy chủ kiểm chuỗi chứng thư tin cậy trước khi chấp nhận chữ ký. Hỗ trợ **dấu thời gian** và **xác minh lâu dài (LTV)** để hàng chục năm sau vẫn kiểm được.
 - Trạng thái: phần mềm sẵn sàng; cần cắm token và khai báo CA của đơn vị.
+- **Kiểm chữ ký số của tệp bên ngoài** (Tiện ích): chọn thư mục hoặc tệp PDF, máy đọc **mọi** chữ ký trong từng tệp — công văn đã phát hành thường có bốn (người ký, số văn bản, ngày văn bản, dấu cơ quan) — cho biết ai ký, chứng thư do CA nào cấp và còn hạn không, ký lúc nào, nội dung còn toàn vẹn không, có dấu thời gian và LTV hay không. Xuất báo cáo Excel ba trang: tổng hợp, từng tệp, từng chữ ký.
 
 ## 8. Đóng gói theo TT05
 
