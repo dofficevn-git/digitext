@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "digitext-desktop"
-version = "0.25.0"
+version = "0.25.1"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1106,6 +1106,7 @@ dependencies = [
  "digitext-extimport",
  "digitext-pdf",
  "digitext-pkgcheck",
+ "digitext-sign-verify",
  "ed25519-dalek",
  "futures-util",
  "hkdf",

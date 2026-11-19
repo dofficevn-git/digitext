@@ -1,6 +1,6 @@
 [package]
 name = "digitext-desktop"
-version = "0.25.0"
+version = "0.25.1"
 edition = "2021"
 publish = false
 
@@ -11,6 +11,7 @@ digitext-core = { path = "../../crates/digitext-core" }
 digitext-extimport = { path = "../../crates/digitext-extimport" }
 digitext-pdf = { path = "../../crates/digitext-pdf" }
 digitext-pkgcheck = { path = "../../crates/digitext-pkgcheck" }
+digitext-sign-verify = { path = "../../crates/digitext-sign-verify" }
 tauri = { version = "2", features = [] }
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
