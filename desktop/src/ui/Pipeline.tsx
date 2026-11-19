@@ -28,7 +28,20 @@ function stateOf(s: PipelineStep, prevDone: boolean): State {
   return "wait";
 }
 
-export default function Pipeline({ steps, doneText = "Đã xong", className, extra }: { steps: PipelineStep[]; doneText?: string; className?: string; extra?: ReactNode }) {
+export default function Pipeline({
+  steps,
+  doneText = "Đã xong",
+  className,
+  extra,
+  detail,
+}: {
+  steps: PipelineStep[];
+  doneText?: string;
+  className?: string;
+  extra?: ReactNode;
+  /** Bản lớn cho trang Tổng quan: mỗi bước có nhãn + phần trăm phía trên, thanh dày hơn. */
+  detail?: boolean;
+}) {
   const states: State[] = [];
   steps.forEach((s, i) => states.push(stateOf(s, i === 0 || states[i - 1] === "done")));
   const cur = states.findIndex((st) => st !== "done");
@@ -39,13 +52,25 @@ export default function Pipeline({ steps, doneText = "Đã xong", className, ext
     : st === "err"
       ? s.error!
       : s.done > 0
-        ? `${s.label} ${fmt(s.done)}/${fmt(s.total)}${s.unit ? ` ${s.unit}` : ""} · ${Math.min(99, Math.floor((s.done / s.total) * 100))}%`
+        ? s.total > 0
+          ? `${s.label} ${fmt(s.done)}/${fmt(s.total)}${s.unit ? ` ${s.unit}` : ""} · ${Math.min(99, Math.floor((s.done / s.total) * 100))}%`
+          : `${s.label} ${fmt(s.done)}${s.unit ? ` ${s.unit}` : ""}`
         : `Chờ ${/^[A-ZĐ][a-zà-ỹ]/.test(s.label) ? s.label[0].toLowerCase() + s.label.slice(1) : s.label}`;
   const label = steps.map((x, i) => `${x.label}: ${states[i] === "done" ? "xong" : states[i] === "err" ? "lỗi" : `${fmt(x.done)}/${fmt(x.total)}`}`).join("; ");
 
   return (
     <div className={cn("min-w-[12rem]", className)}>
-      <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} role="img" aria-label={label}>
+      {detail && (
+        <div className="mb-1.5 grid gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-hidden>
+          {steps.map((x, i) => (
+            <span key={x.label} className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-sm font-medium text-fg">{x.label}</span>
+              <span className={cn("text-sm font-semibold tabular-nums", states[i] === "done" ? "text-brand-600" : states[i] === "run" && x.total > 0 ? "text-run" : "text-fg-subtle")}>{x.total > 0 ? `${Math.min(100, Math.floor((x.done / x.total) * 100))}%` : "—"}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className={cn("grid", detail ? "gap-2" : "gap-[3px]")} style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} role="img" aria-label={label}>
         {steps.map((x, i) => {
           const p = x.total > 0 ? Math.min(100, Math.floor((x.done / x.total) * 100)) : 0;
           const k = states[i];
@@ -53,7 +78,7 @@ export default function Pipeline({ steps, doneText = "Đã xong", className, ext
             <span
               key={x.label}
               title={`${x.label}: ${x.total > 0 ? `${fmt(x.done)}/${fmt(x.total)}${x.unit ? ` ${x.unit}` : ""}` : "—"}`}
-              className={cn("h-1.5 rounded-sm", k === "done" ? "bg-brand-500" : k === "err" ? "bg-danger-600" : k === "run" ? "bg-run-200" : "bg-gray-200")}
+              className={cn(detail ? "h-2 rounded-full" : "h-1.5 rounded-sm", k === "done" ? "bg-brand-500" : k === "err" ? "bg-danger-600" : k === "run" ? "bg-run-200" : "bg-gray-200")}
               style={k === "run" && p > 0 ? { background: `linear-gradient(90deg, var(--color-run-solid) ${p}%, var(--color-run-200) ${p}%)` } : undefined}
             />
           );

@@ -35,7 +35,11 @@ export function DataCard<T>({ title, icon, data, error, loading, reload, open, o
       description={description}
       title={
         <span className="flex items-center gap-2">
-          {icon && <Icon name={icon} size={16} className="text-fg-subtle" />}
+          {icon && (
+            <span className="grid size-7 flex-none place-items-center rounded-md bg-brand-50 text-brand-600" aria-hidden>
+              <Icon name={icon} size={15} />
+            </span>
+          )}
           {title}
         </span>
       }

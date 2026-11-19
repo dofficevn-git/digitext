@@ -10,8 +10,8 @@ import { V3z9 } from "@/domain/permissions";
 import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { V3zr } from "@/state/sessionCore";
-import { type V41v as IconName } from "@/components/Icon";
-import { CanDuAn, Banner, Button, Seg, Tip } from "@/ui";
+import { Icon, type V41v as IconName } from "@/components/Icon";
+import { CanDuAn, Banner, Seg, Tip } from "@/ui";
 import LeaderDashboard from "./LeaderDashboard";
 import ProjectDashboard from "./ProjectDashboard";
 import StaffDashboard from "./StaffDashboard";
@@ -72,7 +72,8 @@ export default function HomeView() {
     { nhom: "Lưu trữ số", items: [{ label: "Khai thác", icon: "tim", run: () => goto("access"), show: has("access.view") }] },
     { nhom: "Báo cáo", items: [{ label: "Tiến độ dự án", icon: "baoCao", run: () => gotoReport("sohoa"), show: has("stats.view_project") }] },
   ];
-  const nhomLoiTat = nhomGoc.map((g) => ({ ...g, items: g.items.filter((i) => i.show) })).filter((g) => g.items.length > 0);
+  const loiTat = nhomGoc.flatMap((g) => g.items.filter((i) => i.show).map((i) => ({ ...i, nhom: g.nhom })));
+  const homNay = new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" });
 
   const moDuAn = (id: string) => {
     void proj.choose(id).then(() => setMode("project"));
@@ -101,25 +102,35 @@ export default function HomeView() {
 
   return (
     <section className="view active">
-      <header className="mb-4">
-        <h1 className="m-0 text-xl font-semibold text-fg-strong">
-          {chao}, {session?.displayName ?? ""}
-        </h1>
-        <p className="mt-0.5 text-sm text-fg-subtle">{moTa}</p>
-        {nhomLoiTat.length > 0 && (
-          <nav aria-label="Lối tắt" className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {nhomLoiTat.map((g) => (
-              <div key={g.nhom} className="flex items-center gap-1.5">
-                <span className="mr-0.5 text-sm text-fg-subtle">{g.nhom}</span>
-                {g.items.map((i) => (
-                  <Button key={i.label} size="sm" icon={i.icon} onClick={i.run}>
+      <header className="relative mb-4 overflow-hidden rounded-xl px-6 py-5 text-white shadow-md" style={{ background: "linear-gradient(120deg, var(--color-brand-500) 0%, var(--color-brand-600) 55%, var(--color-brand-800) 100%)" }}>
+        <span aria-hidden className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/[0.07]" />
+        <span aria-hidden className="pointer-events-none absolute -bottom-28 right-40 size-56 rounded-full bg-white/[0.05]" />
+        <div className="relative">
+          <p className="m-0 text-xs font-medium uppercase tracking-[0.08em] text-white/65">{homNay}</p>
+          <h1 className="m-0 mt-1 text-2xl font-semibold leading-tight text-white">
+            {chao}, {session?.displayName ?? ""}
+          </h1>
+          <p className="mt-1.5 flex items-center gap-2 text-sm text-white/80">
+            <span aria-hidden className="size-2 rounded-full" style={{ background: session?.mode === "offline" ? "var(--color-run-500)" : "#7ee2a8" }} />
+            {moTa}
+          </p>
+          {loiTat.length > 0 && (
+            <nav aria-label="Lối tắt" className="mt-4 flex flex-wrap gap-2">
+              {loiTat.map((i) => (
+                <Tip key={i.label} text={i.nhom}>
+                  <button
+                    type="button"
+                    onClick={i.run}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/[0.13] px-3 text-sm font-medium text-white outline-none ring-1 ring-inset ring-white/20 transition-colors hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    <Icon name={i.icon} size={14} />
                     {i.label}
-                  </Button>
-                ))}
-              </div>
-            ))}
-          </nav>
-        )}
+                  </button>
+                </Tip>
+              ))}
+            </nav>
+          )}
+        </div>
       </header>
       {session?.mode === "offline" && offlineDays < 7 && (
         <Banner tone="warning" className="mb-4">

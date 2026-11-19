@@ -40,14 +40,14 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
     if (!d) return [];
     const p = d.pipeline;
     return [
-      { label: "Hồ sơ chỉnh lý", value: p.clHoSo, sub: `${n(p.clVanBan)} văn bản`, run: () => gotoHoSo("laphoso") },
-      { label: "Trang quét", value: p.pages, sub: `${n(p.files)} tệp đưa lên`, run: () => goto("upload") },
-      { label: "Chờ OCR", value: p.ocrPendingDocs, sub: `${n(p.ocrPendingPages)} trang${p.ocrFailedPages ? ` · ${n(p.ocrFailedPages)} trang lỗi` : ""}`, run: () => gotoHoSo("ocr"), tone: p.ocrFailedPages ? ("err" as const) : undefined },
-      { label: "Đã PDF/A", value: p.pdfaFiles, sub: `${n(p.ocrDoneDocs)} tệp OCR xong`, run: () => gotoHoSo("ocr") },
-      { label: "Chờ duyệt bóc tách", value: p.pendingReviewFiles, sub: `${n(p.approvedFiles)} đã duyệt · ${n(p.rejectedFiles)} từ chối`, run: () => gotoHoSo("ocr") },
-      { label: "Chờ ký số", value: p.toSign, sub: `${n(p.signedFiles)} đã ký${p.signFailed ? ` · ${n(p.signFailed)} lỗi` : ""}`, run: () => goto("sign"), tone: p.toSign > 0 ? ("warn" as const) : undefined },
-      { label: "Gói tin đã dựng", value: p.packagesBuilt, sub: `${n(p.docsPackaged)} tài liệu`, run: () => goto("package") },
-      { label: "Lần nộp lưu", value: p.subRegistered + p.subReceived + p.subCompleted, sub: `${n(p.subCompleted)} hoàn thành · ${n(p.subRegistered + p.subReceived)} đang xử lý`, run: () => goto("submission") },
+      { label: "Hồ sơ chỉnh lý", icon: "hoSo" as const, value: p.clHoSo, sub: `${n(p.clVanBan)} văn bản`, run: () => gotoHoSo("laphoso") },
+      { label: "Trang quét", icon: "quet" as const, value: p.pages, sub: `${n(p.files)} tệp đưa lên`, run: () => goto("upload") },
+      { label: "Chờ OCR", icon: "xuLy" as const, value: p.ocrPendingDocs, sub: `${n(p.ocrPendingPages)} trang${p.ocrFailedPages ? ` · ${n(p.ocrFailedPages)} trang lỗi` : ""}`, run: () => gotoHoSo("ocr"), tone: p.ocrFailedPages ? ("err" as const) : undefined },
+      { label: "Đã PDF/A", icon: "kiemTra" as const, value: p.pdfaFiles, sub: `${n(p.ocrDoneDocs)} tệp OCR xong`, run: () => gotoHoSo("ocr") },
+      { label: "Chờ duyệt", icon: "bienBan" as const, value: p.pendingReviewFiles, sub: `${n(p.approvedFiles)} đã duyệt · ${n(p.rejectedFiles)} từ chối`, run: () => gotoHoSo("ocr") },
+      { label: "Chờ ký số", icon: "kySo" as const, value: p.toSign, sub: `${n(p.signedFiles)} đã ký${p.signFailed ? ` · ${n(p.signFailed)} lỗi` : ""}`, run: () => goto("sign"), tone: p.toSign > 0 ? ("warn" as const) : undefined },
+      { label: "Gói tin đã dựng", icon: "goi" as const, value: p.packagesBuilt, sub: `${n(p.docsPackaged)} tài liệu`, run: () => goto("package") },
+      { label: "Lần nộp lưu", icon: "nhapKho" as const, value: p.subRegistered + p.subReceived + p.subCompleted, sub: `${n(p.subCompleted)} hoàn thành · ${n(p.subRegistered + p.subReceived)} đang xử lý`, run: () => goto("submission") },
     ];
   }, [d, goto, gotoHoSo]);
 
@@ -94,10 +94,11 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
                     { label: "Duyệt bóc tách", done: p.counts.approvedFiles, total: tf, unit: "tệp" },
                   ]}
                   doneText="Đã xong khối lượng hợp đồng"
+                  detail
                 />
-                <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+                <div className="mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
                   {chips.map((c) => (
-                    <KpiTile key={c.label} label={c.label} value={c.value} sub={c.sub} tone={c.tone} onClick={c.run} />
+                    <KpiTile key={c.label} arrow={false} icon={c.icon} label={c.label} value={c.value} sub={c.sub} tone={c.tone} onClick={c.run} />
                   ))}
                 </div>
                 <div className="mt-4">

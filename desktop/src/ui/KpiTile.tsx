@@ -23,6 +23,7 @@ export default function KpiTile({
   loading,
   error,
   extra,
+  arrow = true,
 }: {
   label: string;
   value: number | string | undefined;
@@ -36,14 +37,16 @@ export default function KpiTile({
   error?: unknown;
   /** Nội dung phụ bên phải (sparkline, badge). */
   extra?: ReactNode;
+  /** Ô bấm được có icon: hiện mũi tên bên phải (mặc định). Tắt khi ô hẹp, cần chỗ cho dòng phụ. */
+  arrow?: boolean;
 }) {
   const color = tone ? TONE_TEXT[tone] : "text-fg-strong";
   const numCls = cn("block font-semibold tabular-nums leading-tight", size === "lg" ? "text-3xl" : "text-2xl", color);
   const num = loading && value === undefined ? <Skeleton.Line className={cn("mt-1 w-16", size === "lg" ? "h-8" : "h-6")} /> : <span className={numCls}>{value === undefined ? "—" : typeof value === "number" ? value.toLocaleString("vi-VN") : value}</span>;
-  const subLine = error ? <span className="block truncate text-xs text-warning-700">Không cập nhật được</span> : sub ? <span className="block truncate text-xs text-fg-subtle">{sub}</span> : null;
+  const subLine = error ? <span className="block truncate text-xs text-warning-700">Không cập nhật được</span> : sub ? <span className={cn("block text-xs text-fg-subtle", icon ? "line-clamp-2" : "truncate")}>{sub}</span> : null;
   const body = icon ? (
     <>
-      <span className={cn("grid size-10 flex-none place-items-center rounded-md", tone ? TONE_BG[tone] : "bg-gray-100 text-fg-muted")}>
+      <span className={cn("grid size-10 flex-none place-items-center rounded-md", tone ? TONE_BG[tone] : "bg-brand-50 text-brand-600")}>
         <Icon name={icon} size={18} />
       </span>
       <span className="min-w-0 flex-1">
@@ -52,7 +55,7 @@ export default function KpiTile({
         {subLine}
       </span>
       {extra}
-      {onClick && <Icon name="sau" size={14} className="flex-none text-fg-subtle" />}
+      {onClick && arrow && <Icon name="sau" size={14} className="flex-none text-fg-subtle" />}
     </>
   ) : (
     <>
