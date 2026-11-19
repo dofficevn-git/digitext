@@ -141,6 +141,7 @@ const NAV_THI_CONG: V46s[] = [
     children: [
       { id: "tachtiff", label: "Tách TIFF", gate: "tiff", leaf: { kind: "view", view: "tiff" }, keywords: "tiff dang tach trang anh" },
       { id: "ti:pdfa", label: "Kiểm PDF/A", gate: "package", leaf: { kind: "tienich", tab: "pdfa" }, keywords: "verapdf iso 19005" },
+      { id: "ti:chuky", label: "Kiểm chữ ký số", gate: "sign", leaf: { kind: "tienich", tab: "chuky" }, keywords: "pades ltv tsa chung thu nguoi ky vgca xac minh" },
       { id: "ti:kiemgoi", label: "Kiểm tra gói tin", gate: "package", leaf: { kind: "tienich", tab: "kiemgoi" }, keywords: "pkgcheck mets premis tt05" },
       { id: "ti:khongoai", label: "Đóng gói từ kho ngoài", gate: "package", leaf: { kind: "tienich", tab: "khongoai" }, keywords: "excel metadata thu muc pdf" },
       { id: "ti:nhanh", label: "Đóng gói nhanh", gate: "package", leaf: { kind: "tienich", tab: "nhanh" }, keywords: "chi doi chieu excel" },
