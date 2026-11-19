@@ -68,3 +68,10 @@ trong `theme.css`. `config.ts appName` vẫn dùng cho tiêu đề cửa sổ / 
 | 2 (0.25.0) | Dữ liệu chủ + Số hoá: Lập hồ sơ dùng `FilterBar`/`MultiSelect` + `NhacChinhLy` (một dải nhắc); mô tả → `info` ở Danh mục, Hệ thống hoá, Đồng bộ, Mục lục, Cây thư mục, Kho máy chủ, Đưa lên máy chủ; `MultiSelect plain` cho chọn cột; `HoSoHubView` hết `section` lồng | mã xong 19/11/2026, phát hành chung đợt 1 |
 | 3 (0.25.1) | Kiểm tra, Ký số, Đóng gói, Nghiệm thu, Giao nhận: bỏ tiền tố "Bước N Điều 9…" và khối `Help` → `PageHeader info` (một nội dung `giaiThich` cho cả nhánh chưa chọn dự án, dùng `CanDuAn`); mô tả thẻ rút gọn; hint giải thích → `hintAs="tip"` | mã xong 19/11/2026 |
 | 4 (0.25.2) | Lưu trữ số, Báo cáo, Tiện ích, Quản trị, Đăng nhập: `Help` cấp màn → `PageHeader info`; `CanDuAn` ở Tra cứu, Nhập gói, Tổng quan; Đăng nhập bỏ danh sách bước; luật eslint `no-restricted-syntax` chặn `PageHeader description` literal > 70 ký tự. `Help` CÒN GIỮ cho khối gập trong hộp thoại / panel (Nhập mục lục, Kiểm gói, Kiểm PDF/A, kho ngoài, Định mức KPI, ServerJobs, Đưa lên máy chủ) và nhật ký chạy (Ký số, Tách TIFF) — không dùng ở cấp màn nữa | mã xong 19/11/2026 |
+
+## 6. Điểm nhấn (0.25.3–0.25.4, 19/11/2026)
+
+Anh Hiếu xem 0.25.2 và chê "quá cơ bản, thanh điều hướng đơn điệu". Đã đổi:
+
+- **Thanh bên nền tím đậm** (`--side-*` trong `styles/digitext.css`: brand-700 → brand-900, chữ trắng). Mục đang mở là viên trắng chữ tím; nút bước đặc `brand-600`, bước đang làm nút trắng có quầng; nhóm ngoài trục dùng ô vuông bo góc; nhãn nhỏ "Quy trình TT05". Đảo quyết định "menu trắng" của 0.19.
+- **Tổng quan**: dải chào nền tím chuyển sắc + lối tắt dạng nút tròn; ô số có biểu tượng trong ô màu (`KpiTile icon`, mặc định màu thương hiệu); `Pipeline detail` hiện nhãn + phần trăm từng bước; biểu tượng tiêu đề `DataCard` trong ô màu.
