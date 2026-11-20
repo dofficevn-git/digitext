@@ -114,7 +114,9 @@ const NAV_THI_CONG: V46s[] = [
     icon: "luuTruSo",
     gate: "access",
     children: [
-      { id: "khaithacso", label: "Khai thác", gate: "access", leaf: { kind: "view", view: "access" }, keywords: "yeu cau ban sao dip" },
+      // 20/11/2026: Tra cứu vào cả bản thi công — Khai thác chỉ là hàng yêu cầu, muốn tìm hồ sơ / văn bản phải qua đây.
+      { id: "tracuutl", label: "Tra cứu", gate: "tracuu", leaf: { kind: "view", view: "tracuu" }, keywords: "tra cuu tim kiem tai lieu van ban ho so noi dung khong dau doc ban so" },
+      { id: "khaithacso", label: "Yêu cầu khai thác", gate: "access", leaf: { kind: "view", view: "access" }, keywords: "khai thac yeu cau ban sao dip" },
       { id: "cungcap", label: "Cung cấp thông tin", gate: "info", leaf: { kind: "view", view: "info" } },
       { id: "baoquan", label: "Bảo quản và sao lưu", gate: "bk", leaf: { kind: "view", view: "bk" }, keywords: "toan ven backup" },
       { id: "huy", label: "Tiêu huỷ", gate: "disposal", leaf: { kind: "view", view: "disposal" }, keywords: "het gia tri" },
@@ -192,11 +194,11 @@ const NAV_LUU_TRU: V46s[] = [
     icon: "tim",
     gate: "tracuu",
     children: [
-      { id: "tracuutl", label: "Tra cứu tài liệu", gate: "tracuu", leaf: { kind: "view", view: "tracuu" }, keywords: "tra cuu tim kiem tai lieu van ban noi dung khong dau doc ban so" },
+      { ...mucCon("tracuutl"), label: "Tra cứu tài liệu" },
       { ...mucCon("khaithac"), label: "Mục lục hồ sơ" },
     ],
   },
-  nhom("luutruso"),
+  { ...nhom("luutruso"), children: nhom("luutruso").children?.filter((c) => c.id !== "tracuutl") },
   { id: "kholuutru", label: "Kho lưu trữ", icon: "kho", gate: "khogia", children: [mucCon("khogia"), mucCon("muontra")] },
   { id: "tienich", label: "Tiện ích", icon: "ketXuat", gate: "tienich", children: [mucCon("ti:kiemgoi"), mucCon("ti:pdfa")] },
   nhom("quantri"),

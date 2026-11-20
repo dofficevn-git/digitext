@@ -24,7 +24,11 @@ const VIEC: Record<string, string> = {
 type Loc = Omit<TraCuuQuery, "projectId" | "limit" | "offset" | "q" | "noiDung">;
 
 /** Lý do không đọc thẳng được (rỗng = đọc được). */
+/** Khoá dòng: văn bản, hoặc hồ sơ khi hồ sơ chưa lập văn bản nào. */
+const khoa = (d: DongTraCuu) => d.vanBanId ?? `hs:${d.hoSoId}`;
+
 function lyDoKhongDoc(d: DongTraCuu, canBo: boolean, docThang: boolean): string {
+  if (!d.vanBanId) return "Hồ sơ chưa lập văn bản — mới có mục lục hồ sơ";
   if (!d.documentId) return "Văn bản chưa có bản số";
   if (d.daHuy) return "Tài liệu đã tiêu huỷ — chỉ còn mục lục";
   if (canBo) return "";
@@ -101,7 +105,7 @@ export default function TraCuuView() {
     setChon((m) => {
       const out = new Map([...m].filter(([id]) => next.has(id)));
       for (const d of dong) {
-        if (next.has(d.vanBanId) && d.documentId && !out.has(d.vanBanId)) {
+        if (d.vanBanId && next.has(d.vanBanId) && d.documentId && !out.has(d.vanBanId)) {
           out.set(d.vanBanId, { id: d.documentId, filename: d.trichYeu || `${d.maHoSo}.${d.soThuTu}`, hoSoRef: d.maHoSo, pageCount: d.soTrang });
         }
       }
@@ -111,7 +115,7 @@ export default function TraCuuView() {
 
   const doc_ = async (d: DongTraCuu) => {
     if (!d.documentId) return;
-    setDangMo(d.vanBanId);
+    setDangMo(khoa(d));
     try {
       const b64 = await traCuuDoc(d.documentId);
       setDoc({ src: `data:application/pdf;base64,${b64}`, title: `${d.maHoSo} · văn bản ${d.soThuTu}` });
@@ -142,7 +146,7 @@ export default function TraCuuView() {
         </div>
       ),
     },
-    { key: "soThuTu", header: "STT", width: 56, align: "right" },
+    { key: "soThuTu", header: "STT", width: 56, align: "right", cell: (d) => d.soThuTu ?? "—" },
     { key: "loaiVb", header: "Loại", width: 110, cell: (d) => d.loaiVb ?? "—" },
     { key: "soKyHieu", header: "Số, ký hiệu", width: 120, cell: (d) => d.soKyHieu || "—" },
     { key: "ngayThang", header: "Ngày", width: 100, cell: (d) => d.ngayThang || "—" },
@@ -152,7 +156,7 @@ export default function TraCuuView() {
       className: "whitespace-normal",
       cell: (d) => (
         <div>
-          <div>{d.trichYeu || "—"}</div>
+          <div>{d.vanBanId ? d.trichYeu || "—" : <span className="text-fg-subtle">Chưa lập văn bản</span>}</div>
           {d.coQuan && <div className="text-sm text-fg-subtle">{d.coQuan}</div>}
           {d.khop === "noi_dung" && d.trichDoan && (
             <div className="mt-1 rounded bg-surface-sunken px-2 py-1 text-sm text-fg-muted">
@@ -171,7 +175,7 @@ export default function TraCuuView() {
           {d.daHuy && <Badge tone="err">Đã huỷ</Badge>}
           {d.hanChe && <Badge tone="warn">Hạn chế</Badge>}
           {d.kySo === "chua_ky" && <Badge tone="gray">Chưa ký số</Badge>}
-          {!d.documentId && <Badge tone="gray">Chưa có bản số</Badge>}
+          {!d.documentId && <Badge tone="gray">{d.vanBanId ? "Chưa có bản số" : "Chưa số hoá"}</Badge>}
         </div>
       ),
     },
@@ -257,7 +261,7 @@ export default function TraCuuView() {
           <Card padding="none">
             <div className="p-3">
               <Toolbar>
-                <span className="text-sm text-fg-muted">{kq.data ? (q ? `${fmt(kq.data.tong)} văn bản khớp “${q}”` : `${fmt(kq.data.tong)} văn bản`) : "Đang tìm…"}</span>
+                <span className="text-sm text-fg-muted">{kq.data ? (q ? `${fmt(kq.data.tong)} dòng khớp “${q}”` : `${fmt(kq.data.tong)} dòng`) : "Đang tìm…"}</span>
                 <Toolbar.Spacer />
                 {sel.size > 0 && <span className="text-sm text-fg-muted">{fmt(sel.size)} đã chọn</span>}
                 <Tip text={sel.size === 0 ? "Đánh dấu các văn bản cần khai thác trong bảng" : "Gửi yêu cầu đọc, sao hoặc cấp gói DIP cho các văn bản đã chọn"}>
@@ -272,14 +276,14 @@ export default function TraCuuView() {
             <Table
               columns={cols}
               rows={dong}
-              getRowId={(d) => d.vanBanId}
+              getRowId={khoa}
               selection={{ selected: sel, onChange: doiChon, canSelect: (d) => !!d.documentId && !d.daHuy }}
               rowActions={(d) => {
                 const why = lyDoKhongDoc(d, canBo, docThang);
                 return (
                   <Tip text={why || "Đọc bản có watermark, không tải về"}>
                     <span>
-                      <Button size="sm" icon="xem" disabled={!!why} loading={dangMo === d.vanBanId} onClick={() => void doc_(d)}>
+                      <Button size="sm" icon="xem" disabled={!!why} loading={dangMo === khoa(d)} onClick={() => void doc_(d)}>
                         Đọc
                       </Button>
                     </span>
@@ -287,7 +291,7 @@ export default function TraCuuView() {
                 );
               }}
               pagination={{ page, pageSize: PAGE, total: kq.data?.tong ?? 0, onChange: setPage }}
-              state={{ loading: kq.loading, error: kq.error, onRetry: kq.reload, empty: { title: q ? "Không có văn bản nào khớp" : "Kho chưa có văn bản", description: q ? "Thử bớt từ, bỏ bộ lọc, hoặc bật tìm cả trong nội dung." : "Nhập gói AIP để đưa tài liệu vào Hệ thống." } }}
+              state={{ loading: kq.loading, error: kq.error, onRetry: kq.reload, empty: { title: q ? "Không có hồ sơ, văn bản nào khớp" : "Kho chưa có hồ sơ", description: q ? "Thử bớt từ, bỏ bộ lọc, hoặc bật tìm cả trong nội dung." : "Lập hồ sơ ở Dữ liệu chủ hoặc nhập gói AIP." } }}
             />
           </Card>
 

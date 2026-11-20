@@ -99,7 +99,8 @@ struct TimQuery {
 #[derive(Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 struct DongTraCuu {
-    van_ban_id: Uuid,
+    /// None = hồ sơ chưa lập văn bản nào: dòng ở mức mục lục hồ sơ (20/11/2026 — trước đó hồ sơ 0 văn bản không tìm được).
+    van_ban_id: Option<Uuid>,
     ho_so_id: Uuid,
     phong_id: Uuid,
     ma_phong: String,
@@ -109,7 +110,7 @@ struct DongTraCuu {
     objid: Option<String>,
     tieu_de_ho_so: String,
     thbq: Option<String>,
-    so_thu_tu: i32,
+    so_thu_tu: Option<i32>,
     loai_vb: Option<String>,
     so_ky_hieu: Option<String>,
     ngay_thang: Option<String>,
@@ -156,25 +157,25 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
          SELECT v.id AS van_ban_id, h.id AS ho_so_id, p.id AS phong_id, p.ma_du_an AS ma_phong, p.ten AS ten_phong, \
                 COALESCE(g.ma_ho_so_goc, p.ma_du_an || '.' || COALESCE(h.ho_so_so, h.so_tam)) AS ma_ho_so, g.objid, \
                 h.tieu_de AS tieu_de_ho_so, t.ten AS thbq, v.so_thu_tu, COALESCE(lv.ten, v.loai_vb) AS loai_vb, v.so_ky_hieu, v.ngay_thang, \
-                v.co_quan_ban_hanh AS co_quan, v.trich_yeu, v.so_trang, x.che AS che_do, {HAN_CHE_SQL} AS han_che, \
+                v.co_quan_ban_hanh AS co_quan, v.trich_yeu, v.so_trang, x.che AS che_do, COALESCE({HAN_CHE_SQL}, false) AS han_che, \
                 f.document_id, d.ky_so, COALESCE(d.status = 'disposed', false) AS da_huy, \
                 CASE WHEN $2::text IS NULL THEN NULL \
                      WHEN cl_vb_tim(v.trich_yeu, v.so_ky_hieu, v.co_quan_ban_hanh, v.loai_vb, v.tu_khoa) LIKE $2 \
                        OR cl_hs_tim(h.tieu_de, h.so_ky_hieu_hs, h.tu_khoa, h.so_tam) LIKE $2 THEN 'muc_luc' \
                      ELSE 'noi_dung' END AS khop, \
                 count(*) OVER () AS tong \
-         FROM cl_van_ban v \
-         JOIN cl_ho_so h ON h.id = v.ho_so_id AND h.deleted_at IS NULL \
+         FROM cl_ho_so h \
+         LEFT JOIN cl_van_ban v ON v.ho_so_id = h.id AND v.deleted_at IS NULL \
          JOIN cl_phong p ON p.id = h.phong_id AND p.deleted_at IS NULL \
          LEFT JOIN cl_ho_so_goi g ON g.ho_so_id = h.id \
          LEFT JOIN cl_thbq t ON t.id = h.thbq_id \
          LEFT JOIN LATERAL (SELECT ten FROM cl_loai_van_ban WHERE ma = btrim(v.loai_vb) AND deleted_at IS NULL \
-                            AND (project_id IS NULL OR project_id = v.project_id) ORDER BY project_id NULLS LAST LIMIT 1) lv ON true \
+                            AND (project_id IS NULL OR project_id = h.project_id) ORDER BY project_id NULLS LAST LIMIT 1) lv ON true \
          LEFT JOIN LATERAL (SELECT document_id FROM cl_van_ban_file WHERE van_ban_id = v.id AND deleted_at IS NULL \
                             AND document_id IS NOT NULL ORDER BY so_tt NULLS LAST, created_at LIMIT 1) f ON true \
          LEFT JOIN documents d ON d.id = f.document_id \
          CROSS JOIN LATERAL (SELECT COALESCE(NULLIF(btrim(v.che_do_su_dung), ''), NULLIF(btrim(h.che_do_su_dung), '')) AS che) x \
-         WHERE v.project_id = $1 AND v.deleted_at IS NULL \
+         WHERE h.project_id = $1 AND h.deleted_at IS NULL \
            AND ($2::text IS NULL \
                 OR cl_vb_tim(v.trich_yeu, v.so_ky_hieu, v.co_quan_ban_hanh, v.loai_vb, v.tu_khoa) LIKE $2 \
                 OR cl_hs_tim(h.tieu_de, h.so_ky_hieu_hs, h.tu_khoa, h.so_tam) LIKE $2 \
@@ -185,7 +186,7 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
            AND ($6::text IS NULL OR lower(btrim(v.loai_vb)) = lower(btrim($6))) \
            AND ($7::int IS NULL OR COALESCE(extract(year FROM v.ngay_thang_sort)::int, h.nam_ket_thuc) >= $7) \
            AND ($8::int IS NULL OR COALESCE(extract(year FROM v.ngay_thang_sort)::int, h.nam_ket_thuc) <= $8) \
-           AND ($9::text IS NULL OR ($9 = 'han_che') = {HAN_CHE_SQL}) \
+           AND ($9::text IS NULL OR ($9 = 'han_che') = COALESCE({HAN_CHE_SQL}, false)) \
            AND ($11 OR d.id IS NULL OR d.status <> 'disposed') \
          ORDER BY p.ma_du_an, g.ma_ho_so_goc NULLS LAST, h.so_tam, v.so_thu_tu \
          LIMIT $12 OFFSET $13"

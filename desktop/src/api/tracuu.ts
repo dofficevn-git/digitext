@@ -4,7 +4,8 @@
 import { invoke } from "@/api/ipc";
 
 export interface DongTraCuu {
-  vanBanId: string;
+  /** null = hồ sơ chưa lập văn bản nào: dòng ở mức mục lục hồ sơ. */
+  vanBanId: string | null;
   hoSoId: string;
   phongId: string;
   maPhong: string;
@@ -13,7 +14,7 @@ export interface DongTraCuu {
   objid: string | null;
   tieuDeHoSo: string;
   thbq: string | null;
-  soThuTu: number;
+  soThuTu: number | null;
   loaiVb: string | null;
   soKyHieu: string | null;
   ngayThang: string | null;
