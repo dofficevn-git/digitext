@@ -9,6 +9,7 @@ import { V41t } from "@/live/useLive";
 import { V4ei, type V4eg } from "@/api/docs";
 import { V4to, V4tp, V4tr, V4ts, V4tu, V4tv, V4tw, V4ty, V4tz, type V4tl, type V4tn } from "@/api/access";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
 import { Icon } from "@/components/Icon";
@@ -54,6 +55,10 @@ export default function V4u7() {
   const perms = session?.permissions;
   const canReview = V3z9(perms, "access.review");
   const canRequest = V3z9(perms, "access.request");
+  // Dự án của yêu cầu: tài khoản gắn dự án, hoặc "Dự án đang làm" trên thanh trên (quản trị). Trước 20/11/2026 chỉ lấy
+  // dự án của tài khoản → quản trị gửi yêu cầu không có dự án và bước chọn tài liệu liệt kê tệp của MỌI dự án.
+  const proj = useProject();
+  const duAn = session?.projectId ?? proj.projectId ?? null;
   const [selId, setSelId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("");
@@ -71,10 +76,10 @@ export default function V4u7() {
 
   const shown = useMemo(() => {
     const k = q.trim().toLowerCase();
-    const rows = (list ?? []).filter((r) => (!statusF || r.status === statusF) && (!k || r.mucDich.toLowerCase().includes(k) || (r.requester ?? "").toLowerCase().includes(k) || KIND[r.kind].label.toLowerCase().includes(k)));
+    const rows = (list ?? []).filter((r) => (!duAn || r.projectId === duAn) && (!statusF || r.status === statusF) && (!k || r.mucDich.toLowerCase().includes(k) || (r.requester ?? "").toLowerCase().includes(k) || KIND[r.kind].label.toLowerCase().includes(k)));
     // Người xét duyệt: hàng chờ lên đầu
     return canReview ? [...rows].sort((a, b) => (a.status === "submitted" ? 0 : 1) - (b.status === "submitted" ? 0 : 1)) : rows;
-  }, [list, q, statusF, canReview]);
+  }, [list, q, statusF, canReview, duAn]);
   useEffect(() => {
     if (!selId && shown.length > 0) setSelId(shown[0].id);
   }, [shown, selId]);
@@ -164,9 +169,13 @@ export default function V4u7() {
             <IconButton label="Tải lại" icon="lamMoi" variant="secondary" loading={refreshing} onClick={reload} />
             {canReview && <Menu items={[{ label: "Đơn giá phí", icon: "thanhToan", onSelect: () => setFees(true) }]} />}
             {canRequest && (
-              <Button variant="primary" icon="them" onClick={() => setMoi(true)}>
-                Yêu cầu mới
-              </Button>
+              <Tip text={duAn ? "" : "Chọn dự án trước"}>
+                <span>
+                  <Button variant="primary" icon="them" disabled={!duAn} onClick={() => setMoi(true)}>
+                    Yêu cầu mới
+                  </Button>
+                </span>
+              </Tip>
             )}
           </>
         }
@@ -346,7 +355,7 @@ export default function V4u7() {
       {fees && <FeesDialog onClose={() => setFees(false)} />}
       {moi && (
         <YeuCauMoiDialog
-          projectId={session?.projectId ?? null}
+          projectId={duAn}
           onClose={() => setMoi(false)}
           onDone={(r) => {
             setMoi(false);
@@ -421,8 +430,12 @@ export function YeuCauMoiDialog({ projectId, onClose, onDone, chonSan }: { proje
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (step === 1 && docs === null) V4ei().then(setDocs).catch(setDocErr);
-  }, [step, docs]);
+    // Chỉ tài liệu của dự án đang làm: /documents trả mọi dự án người gọi thấy được.
+    if (step === 1 && docs === null)
+      V4ei()
+        .then((ds) => setDocs(projectId ? ds.filter((d) => d.projectId === projectId) : ds))
+        .catch(setDocErr);
+  }, [step, docs, projectId]);
 
   const body = () => ({ projectId, kind, mucDich, phuongThuc, nguoiNhan: nguoiNhan || null, soDinhDanh: soDinhDanh || null, documentIds: [...sel] });
   const errs = V4u3(body());
