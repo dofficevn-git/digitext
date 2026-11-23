@@ -10,7 +10,21 @@ use tauri::State;
 pub fn catalog_list(auth: State<'_, AuthState>, db: State<'_, Db>) -> Result<T2l, AppError> {
     auth.require_perm(Permission::CatalogRead)?;
     let r_oj = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-    Ok(store::snapshot(&r_oj)?)
+    let mut snap = store::snapshot(&r_oj)?;
+    // Phòng ban, mảng chỉ của dự án đang làm (23/11/2026): bảng cũ không có cột dự án, nhận dự án qua cl_id → cl_*.project_id.
+    // Dòng chưa đồng bộ (cl_id NULL) giữ nguyên.
+    if let Some((du_an, _)) = crate::chinhly::project::effective_with(&r_oj, &auth) {
+        let ngoai = |sql: &str| -> rusqlite::Result<std::collections::HashSet<String>> {
+            let mut st = r_oj.prepare(sql)?;
+            let v = st.query_map(rusqlite::params![du_an], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<_>>()?;
+            Ok(v)
+        };
+        let pb = ngoai("SELECT ma_dv FROM phong_ban WHERE cl_id IS NOT NULL AND cl_id NOT IN (SELECT id FROM cl_phong_ban WHERE project_id = ?1)")?;
+        let mg = ngoai("SELECT CAST(mang_cvid AS TEXT) FROM mang_cong_viec WHERE cl_id IS NOT NULL AND cl_id NOT IN (SELECT id FROM cl_mang WHERE project_id = ?1)")?;
+        snap.phong_bans.retain(|p| !pb.contains(&p.ma_dv));
+        snap.mangs.retain(|m| !mg.contains(&m.mang_cvid.to_string()) && !pb.contains(&m.ma_dv));
+    }
+    Ok(snap)
 }
 #[tauri::command]
 pub fn phong_ban_upsert(

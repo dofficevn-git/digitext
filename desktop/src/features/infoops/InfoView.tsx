@@ -7,6 +7,7 @@ import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { V4ut, V4uv, V4ux, V4uy, type V4us, type V4uw } from "@/api/infoops";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
 import { Icon, type V41v as IconName } from "@/components/Icon";
@@ -55,6 +56,9 @@ function conNgayLamViec(createdAt: string): number {
 
 export default function V4vc() {
   const { session } = V460();
+  // Dự án đang làm: của tài khoản, hoặc ô dự án trên thanh trên (quản trị không gắn dự án) — 23/11/2026.
+  const duAnChon = useProject().projectId;
+  const duAn = session?.projectId ?? duAnChon ?? null;
   const perms = session?.permissions;
   const canReview = V3z9(perms, "access.review");
   const canRequest = V3z9(perms, "access.request");
@@ -68,7 +72,7 @@ export default function V4vc() {
   const { data: list, error, loading, refreshing, reload } = V41t(load, { topics: ["info"], enabled: isTauri() });
   const shown = useMemo(() => {
     const k = q.trim().toLowerCase();
-    const rows = (list ?? []).filter((r) => (!statusF || r.status === statusF) && (!k || r.chuDe.toLowerCase().includes(k) || r.mucDich.toLowerCase().includes(k) || (r.requester ?? "").toLowerCase().includes(k)));
+    const rows = (list ?? []).filter((r) => (!duAn || r.projectId === duAn) && (!statusF || r.status === statusF) && (!k || r.chuDe.toLowerCase().includes(k) || r.mucDich.toLowerCase().includes(k) || (r.requester ?? "").toLowerCase().includes(k)));
     return canReview ? [...rows].sort((a, b) => (a.status === "submitted" ? 0 : 1) - (b.status === "submitted" ? 0 : 1)) : rows;
   }, [list, q, statusF, canReview]);
   useEffect(() => {
@@ -252,7 +256,7 @@ export default function V4vc() {
 
       {moi && (
         <YeuCauMoiDialog
-          projectId={session?.projectId ?? null}
+          projectId={duAn}
           onClose={() => setMoi(false)}
           onDone={(r) => {
             setMoi(false);

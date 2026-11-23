@@ -10,6 +10,7 @@ import { V4rw } from "@/api/packaging";
 import { V4s2, V4s3, V4s4, V4s6, V4s7, V4s9, V4sh, V4si, type V4rx, type V4rz, type V4s0, type V4s5 } from "@/api/submissions";
 import { V4t3, type V4t2 } from "@/api/records";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
 import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, FormGrid, IconButton, Input, Menu, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
@@ -48,6 +49,9 @@ const ACTION_LABEL: Record<V4s5 | "approve", { label: string; legal: string; ico
 
 export default function V4t9() {
   const { session, goto } = V460();
+  // Dự án đang làm: của tài khoản, hoặc ô dự án trên thanh trên (quản trị không gắn dự án) — 23/11/2026.
+  const duAnChon = useProject().projectId;
+  const duAn = session?.projectId ?? duAnChon ?? null;
   const perms = session?.permissions ?? [];
   const can = (p: Parameters<typeof V3z9>[1]) => V3z9(perms, p);
   const [selId, setSelId] = useState<string | null>(null);
@@ -71,7 +75,7 @@ export default function V4t9() {
 
   const shown = useMemo(() => {
     const k = q.trim().toLowerCase();
-    return (list ?? []).filter((r) => (!statusF || r.status === statusF) && (!k || r.maYeuCau.toLowerCase().includes(k) || r.orgName.toLowerCase().includes(k) || r.fondCode.toLowerCase().includes(k)));
+    return (list ?? []).filter((r) => (!duAn || r.projectId === duAn) && (!statusF || r.status === statusF) && (!k || r.maYeuCau.toLowerCase().includes(k) || r.orgName.toLowerCase().includes(k) || r.fondCode.toLowerCase().includes(k)));
   }, [list, q, statusF]);
   useEffect(() => {
     if (!selId && shown.length > 0) setSelId(shown[0].id);
@@ -373,7 +377,7 @@ export default function V4t9() {
 
       {dangKy && (
         <DangKyDialog
-          projectId={session?.projectId ?? null}
+          projectId={duAn}
           onClose={() => setDangKy(false)}
           onDone={(r) => {
             setDangKy(false);

@@ -318,7 +318,8 @@ pub fn list_ho_so(
 ) -> Result<Vec<T98>, AppError> {
     auth.require_perm(Permission::DossierRead)?;
     let r_43 = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-    Ok(db::list_ho_so(&r_43, args.phong_id.as_deref())?)
+    let du_an = crate::chinhly::project::effective_with(&r_43, &auth).map(|(p, _)| p);
+    Ok(db::list_ho_so(&r_43, args.phong_id.as_deref(), du_an.as_deref())?)
 }
 #[tauri::command]
 pub fn ho_so_delete(
@@ -357,7 +358,8 @@ pub fn ho_so_update(
 pub fn list_phong(auth: State<'_, AuthState>, db: State<'_, Db>) -> Result<Vec<db::Th9>, AppError> {
     auth.require_perm(Permission::CatalogRead)?;
     let r_48 = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-    Ok(db::list_phong(&r_48)?)
+    let du_an = crate::chinhly::project::effective_with(&r_48, &auth).map(|(p, _)| p);
+    Ok(db::list_phong(&r_48, du_an.as_deref())?)
 }
 fn f_1fx(path: &str) -> bool {
     Path::new(path)

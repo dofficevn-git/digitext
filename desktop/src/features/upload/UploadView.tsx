@@ -330,7 +330,8 @@ function MayQuanTri() {
     V4ak()
       .then((ps) => {
         setProjects(ps);
-        setProjectId((cur) => cur || project.projectId || session?.projectId || (ps.length === 1 ? ps[0].id : ""));
+        // Theo dự án đang làm trên thanh trên: trước đây giữ dự án chọn lần đầu → đổi dự án rồi vẫn thêm tệp vào dự án cũ.
+        setProjectId((cur) => project.projectId || session?.projectId || cur || (ps.length === 1 ? ps[0].id : ""));
       })
       .catch(() => setProjects([]));
   }, [project.projectId, session?.projectId]);

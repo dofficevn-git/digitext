@@ -9,11 +9,15 @@ import { isTauri } from "@/api/ipc";
 import { V4rv } from "@/api/packaging";
 import { V4s2, type V4rx } from "@/api/submissions";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { V4sk, V4sn, V4ss, V4su, type V4sj, type V4sm } from "./packageWire";
 import { Banner, Button, Card, Field, FormGrid, Input, notifyError, Select, Table, toast, Toolbar, Checkbox, type Column } from "@/ui";
 
 export default function V4sx() {
   const { session } = V460();
+  // Dự án đang làm: của tài khoản, hoặc ô dự án trên thanh trên (quản trị không gắn dự án) — 23/11/2026.
+  const duAnChon = useProject().projectId;
+  const duAn = session?.projectId ?? duAnChon ?? null;
   const [form, setForm] = useState<V4sm>(V4sn);
   const [hoSoRef, setHoSoRef] = useState("");
   const [docs, setDocs] = useState<V4eg[]>([]);
@@ -62,7 +66,7 @@ export default function V4sx() {
     if (!request || all.length > 0) return;
     setBusy("create");
     try {
-      const row = await V4rv({ projectId: session?.projectId ?? null, hoSoRef: hoSoRef.trim() || null, submissionId: isSip && subId ? subId : null, sttFrom: range.range ? range.range[0] : null, sttTo: range.range ? range.range[1] : null, request });
+      const row = await V4rv({ projectId: duAn, hoSoRef: hoSoRef.trim() || null, submissionId: isSip && subId ? subId : null, sttFrom: range.range ? range.range[0] : null, sttTo: range.range ? range.range[1] : null, request });
       toast.success(`Đã tạo yêu cầu đóng gói "${row.label}". Máy chủ đang dựng gói, xem ở tab Gói tin.`);
     } catch (e) {
       notifyError(e, "tạo gói");

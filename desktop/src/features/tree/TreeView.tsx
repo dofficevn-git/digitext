@@ -56,7 +56,8 @@ export default function TreeView() {
     V40w()
       .then((ps) => {
         setPhongs(ps);
-        setMaDa((cur) => cur || ps[0]?.maDuAn || "");
+        // Đổi dự án: phông đang chọn không còn trong danh sách của dự án mới → chọn phông đầu.
+        setMaDa((cur) => (cur && ps.some((p) => p.maDuAn === cur) ? cur : ps[0]?.maDuAn || ""));
       })
       .catch(() => {});
   }, []);

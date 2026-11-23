@@ -8,6 +8,7 @@ import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
 import { V4t0, V4t1, V4sz, type V4sy } from "@/api/records";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { taoPayloadGeneric, V4ti, V4tf, V4tg, type V4ta } from "./recordForms";
 import { Icon } from "@/components/Icon";
 import { Banner, Button, Card, Dialog, Field, FormGrid, IconButton, Input, notifyError, PageHeader, Select, Stepper, Table, Tip, toast, type Column } from "@/ui";
@@ -247,7 +248,8 @@ export function LapBienBanDialog({ onClose, onCreated, kinds, projectId, prefill
 export function SoBienBan({ kinds, projectId, title = "Sổ biên bản", description, prefill, nguonDien, nutLap = "Lập biên bản", extraActions, embedded }: { kinds?: V4ta[]; projectId?: string | null; title?: string; description?: string; prefill?: NoiDungDien; nguonDien?: NguonDien; nutLap?: string; extraActions?: ReactNode; embedded?: boolean }) {
   const { session } = V460();
   const perms = session?.permissions ?? [];
-  const pid = projectId ?? session?.projectId ?? null;
+  const duAnChon = useProject().projectId;
+  const pid = projectId ?? session?.projectId ?? duAnChon ?? null;
   // Khoá theo nội dung: màn cha hay truyền mảng `kinds` viết tại chỗ → danh tính đổi mỗi lần vẽ, hàm tải không được đổi theo.
   const kindsKey = kinds?.join(",") ?? "";
   const loader = useCallback(

@@ -378,8 +378,11 @@ pub fn f_13v(r_1ps: &Connection, id: i64) -> rusqlite::Result<bool> {
     let r_1pt = r_1ps.execute("DELETE FROM dossier WHERE id=?1", params![id])?;
     Ok(r_1pt > 0)
 }
-pub fn f_1nc(r_1pu: &Connection, f: &DossierFilter) -> rusqlite::Result<Vec<T55>> {
+/// `du_an`: chỉ hồ sơ của dự án đang làm (23/11/2026). Hồ sơ đã đồng bộ nhận dự án qua `cl_id` → `cl_ho_so.project_id`;
+/// hồ sơ chưa đồng bộ (cl_id NULL) theo phông như `db::pham_vi_phong`.
+pub fn f_1nc(r_1pu: &Connection, f: &DossierFilter, du_an: Option<&str>) -> rusqlite::Result<Vec<T55>> {
     let scan_joins = f_16z();
+    let pham_vi = crate::db::pham_vi_phong("d.ma_da", 6);
     let r_1pw = format!(
         "SELECT {DOSSIER_COLS}
          FROM dossier d LEFT JOIN phong p ON p.ma_du_an = d.ma_da
@@ -391,6 +394,9 @@ pub fn f_1nc(r_1pu: &Connection, f: &DossierFilter) -> rusqlite::Result<Vec<T55>
            AND (?5 IS NULL OR d.tieu_de LIKE '%'||?5||'%'
                            OR d.so_tam LIKE '%'||?5||'%'
                            OR IFNULL(d.ma_ho_so,'') LIKE '%'||?5||'%')
+           AND (?6 IS NULL
+                OR (d.cl_id IS NOT NULL AND d.cl_id IN (SELECT id FROM cl_ho_so WHERE project_id = ?6))
+                OR (d.cl_id IS NULL AND {pham_vi}))
          ORDER BY d.created_at DESC, d.id DESC
          LIMIT 5000"
     );
@@ -402,7 +408,8 @@ pub fn f_1nc(r_1pu: &Connection, f: &DossierFilter) -> rusqlite::Result<Vec<T55>
                 f.ma_dv_opt(),
                 f.mang_cvid,
                 f.thbq,
-                f.search_opt()
+                f.search_opt(),
+                du_an
             ],
             f_1qs,
         )?

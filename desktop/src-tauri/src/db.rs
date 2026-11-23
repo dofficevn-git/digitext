@@ -575,17 +575,29 @@ pub fn f_27b(r_1e0: &Connection, r_1e2: &str, r_1e1: &str) -> rusqlite::Result<(
     )?;
     r_1e5.commit()
 }
-pub fn list_ho_so(r_1e6: &Connection, phong_id: Option<&str>) -> rusqlite::Result<Vec<T98>> {
-    let mut r_1e8 = r_1e6.prepare(
+/// Điều kiện "phông thuộc dự án đang làm" cho bảng `phong` cũ (không có cột dự án — 23/11/2026: phông của dự án này hiện
+/// sang dự án khác). Phông của dự án = có dòng `cl_phong` cùng mã thuộc dự án đó; phông chỉ có trên máy (chưa thuộc dự án
+/// nào trong bản sao chỉnh lý: tự gõ, nhận qua mạng nội bộ) vẫn hiện để không mất dữ liệu cũ. `?{n}` = mã dự án, NULL = mọi phông.
+pub(crate) fn pham_vi_phong(cot: &str, n: u8) -> String {
+    format!(
+        "(?{n} IS NULL \
+          OR {cot} IN (SELECT ma_du_an FROM cl_phong WHERE project_id = ?{n} AND deleted_at IS NULL) \
+          OR {cot} NOT IN (SELECT ma_du_an FROM cl_phong WHERE deleted_at IS NULL AND ma_du_an IS NOT NULL))"
+    )
+}
+pub fn list_ho_so(r_1e6: &Connection, phong_id: Option<&str>, du_an: Option<&str>) -> rusqlite::Result<Vec<T98>> {
+    let mut r_1e8 = r_1e6.prepare(&format!(
         "SELECT id, phong_id, hop_so, ho_so_so, tieu_de, thoi_gian, so_to, thbq, ghi_chu,
                 nhom, nam, folder_path, pdf_path, pdf_size, page_count, status,
                 ngay_bat_dau, ngay_ket_thuc
          FROM ho_so
          WHERE (?1 IS NULL OR phong_id = ?1)
+           AND (phong_id IS NULL OR {})
          ORDER BY created_at DESC, id DESC",
-    )?;
+        pham_vi_phong("phong_id", 2)
+    ))?;
     let r_1e7 = r_1e8
-        .query_map(params![phong_id], |r| {
+        .query_map(params![phong_id, du_an], |r| {
             Ok(T98 {
                 id: r.get(0)?,
                 phong_id: r.get(1)?,
@@ -1209,12 +1221,13 @@ pub fn f_1na(r_1fr: &Connection, r_1fs: i64) -> rusqlite::Result<Vec<T2w>> {
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(r_1ft)
 }
-pub fn list_phong(r_1fv: &Connection) -> rusqlite::Result<Vec<Th9>> {
-    let mut r_1fx = r_1fv.prepare(
-        "SELECT ma_du_an, ten_du_an, ma_khoi, phong_so, muc_luc_so FROM phong ORDER BY ten_du_an",
-    )?;
+pub fn list_phong(r_1fv: &Connection, du_an: Option<&str>) -> rusqlite::Result<Vec<Th9>> {
+    let mut r_1fx = r_1fv.prepare(&format!(
+        "SELECT ma_du_an, ten_du_an, ma_khoi, phong_so, muc_luc_so FROM phong WHERE {} ORDER BY ten_du_an",
+        pham_vi_phong("ma_du_an", 1)
+    ))?;
     let r_1fw = r_1fx
-        .query_map([], |r| {
+        .query_map(params![du_an], |r| {
             Ok(Th9 {
                 ma_du_an: r.get(0)?,
                 ten_du_an: r.get(1)?,

@@ -33,6 +33,8 @@ export default function QcView() {
   const { session } = V460();
   const proj = useProject();
   const projectId = session?.projectId ?? proj.projectId ?? "";
+  // Danh sách quét lại máy chủ trả cho MỌI dự án → lọc theo mã dự án đang làm trước khi đếm vào biên bản.
+  const maDuAn = proj.projects.find((p) => p.id === projectId)?.code ?? "";
   // Danh mục phông: tải thẳng (không qua useClCatalog) để DEV xem trước được với mock.
   const taiPhong = useCallback(async () => (await clCatalogList()).phong, []);
   const catalog = V41t(taiPhong, { topics: ["chinhLy", "catalog"], enabled: isTauri() || import.meta.env.DEV, errorText: () => "Không tải được danh mục phông." });
@@ -51,7 +53,7 @@ export default function QcView() {
   const { data, error, loading, reload } = V41t(loader, { topics: ["docs", "chinhLy"], pollMs: 180_000, enabled: (isTauri() || import.meta.env.DEV) && !!projectId && !!phongIdEff, errorText: () => "Không đối soát được." });
   const taiQuetLai = useCallback(async () => (isTauri() || import.meta.env.DEV ? docsPdfaRejected() : []), []);
   const quetLai = V41t(taiQuetLai, { topics: ["docs"], pollMs: 300_000, enabled: (isTauri() || import.meta.env.DEV) && !!projectId, errorText: () => "Không tải được danh sách quét lại." });
-  const quetLaiRows = useMemo<PdfaRejectedRow[]>(() => (quetLai.data ?? []).filter((r) => !thuMuc || (r.relPath ?? "").split("/")[0]?.trim().toLowerCase() === thuMuc.toLowerCase()), [quetLai.data, thuMuc]);
+  const quetLaiRows = useMemo<PdfaRejectedRow[]>(() => (quetLai.data ?? []).filter((r) => (!maDuAn || r.projectCode === maDuAn) && (!thuMuc || (r.relPath ?? "").split("/")[0]?.trim().toLowerCase() === thuMuc.toLowerCase())), [quetLai.data, thuMuc, maDuAn]);
 
   const tk = data?.tongKet;
   const rows = useMemo(() => (data?.hoSo ?? []).filter((h) => !chiLech || h.ketLuan !== "dat"), [data, chiLech]);

@@ -47,7 +47,8 @@ pub fn dossier_list(
 ) -> Result<Vec<T55>, AppError> {
     auth.require_perm(Permission::DossierRead)?;
     let r_1mn = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-    Ok(store::f_1nc(&r_1mn, &args.filter.unwrap_or_default())?)
+    let du_an = crate::chinhly::project::effective_with(&r_1mn, &auth).map(|(p, _)| p);
+    Ok(store::f_1nc(&r_1mn, &args.filter.unwrap_or_default(), du_an.as_deref())?)
 }
 #[tauri::command]
 pub fn dossier_get(
