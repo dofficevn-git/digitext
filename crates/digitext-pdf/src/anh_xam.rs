@@ -219,8 +219,13 @@ fn giai_anh(doc: &Document, st: &Stream) -> Result<AnhXam, String> {
     let (rong, cao) = (rong as u32, cao as u32);
     let loc = danh_sach_loc(doc, &st.dict);
     match loc.last().map(Vec::as_slice) {
+        // Bản quét MRC (ảnh nền JPEG + mặt nạ chữ CCITT) hay nén chồng `[/FlateDecode /DCTDecode]`:
+        // bóc các tầng trước rồi mới tới JPEG. Gặp thật ở bản quét của Foxit / ABBYY.
         Some(b"DCTDecode") if loc.len() == 1 => tu_jpeg(&st.content),
-        Some(b"DCTDecode") => Err("ảnh JPEG nén chồng nhiều tầng".into()),
+        Some(b"DCTDecode") => {
+            let truoc = giai_nen_tang_truoc(st, &loc[..loc.len() - 1])?;
+            tu_jpeg(&truoc)
+        }
         Some(b"JPXDecode") => Err("ảnh JPEG 2000".into()),
         Some(b"JBIG2Decode") => Err("ảnh JBIG2".into()),
         Some(b"CCITTFaxDecode") => tu_ccitt(doc, st, rong, cao),
@@ -436,6 +441,19 @@ fn bang_mau(doc: &Document, a: &[Object]) -> Result<Vec<u8>, String> {
         _ => return Err("bảng màu không đọc được".into()),
     };
     Ok(byte.chunks(n.max(1)).map(xam_tu_thanh_phan).collect())
+}
+
+/// Bóc các tầng nén ĐỨNG TRƯỚC bộ mã ảnh, bằng chính bộ giải của lopdf: dựng một luồng tạm chỉ
+/// mang những bộ lọc đó rồi nhờ nó giải.
+fn giai_nen_tang_truoc(st: &Stream, truoc: &[Vec<u8>]) -> Result<Vec<u8>, String> {
+    let mut d = Dictionary::new();
+    d.set("Filter", Object::Array(truoc.iter().map(|f| Object::Name(f.clone())).collect()));
+    if let Ok(p) = st.dict.get(b"DecodeParms") {
+        d.set("DecodeParms", p.clone());
+    }
+    Stream::new(d, st.content.clone())
+        .decompressed_content()
+        .map_err(|e| format!("ảnh nén chồng nhiều tầng, không bóc được: {e}"))
 }
 
 fn giai_nen(st: &Stream, loc: &[Vec<u8>]) -> Result<Vec<u8>, String> {
