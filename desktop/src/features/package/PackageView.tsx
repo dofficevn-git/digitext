@@ -36,7 +36,7 @@ export default function V4sx() {
 
   const loadSubs = useCallback(() => {
     V4s2()
-      .then((rs) => setSubs(rs.filter((r) => r.status === "confirmed" || r.status === "awaiting_reception")))
+      .then((rs) => setSubs(rs.filter((r) => (!duAn || r.projectId === duAn) && (r.status === "confirmed" || r.status === "awaiting_reception"))))
       .catch(() => setSubs([]));
   }, []);
   V41p(loadSubs, { topics: ["submissions"], enabled: isSip && isTauri() });

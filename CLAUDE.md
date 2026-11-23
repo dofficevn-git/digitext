@@ -79,6 +79,11 @@ liên quan tới dịch vụ OCR, web KIE, hay fine-tune VietOCR.
 
 - **Migrations Postgres ở `migrations/0001`–`0026`**, áp tay theo thứ tự (không có `_sqlx_migrations`
   tự động, không có cache `.sqlx/`). Ghi chú cũ "không có migrations" là sai (sửa 2/11/2026).
+- **Bảng đời cũ ở SQLite máy trạm không có cột dự án** (`phong`, `ho_so`, `trang`, `dossier`, `van_ban`, `phong_ban`,
+  `mang_cong_viec`, `thoi_han_bq`, `kho`, `gia`). Từ 23/11/2026 `desktop/src-tauri/src/tach_du_an.rs` giữ cho các bảng này CHỈ chứa
+  dữ liệu của dự án đang làm; dự án khác nằm ở `cat_<bảng>`. Bảng cũ thêm bảng mới thì thêm vào `BANG` của tệp đó. Danh sách
+  máy chủ không nhận `projectId` (`/documents`, `/packages`, `/submissions`, `/info`, `/disposal`, `/access`) phải lọc ở desktop
+  theo `session.projectId ?? useProject().projectId`.
 - **Không có `query!` macro** — SQL chỉ nổ lúc chạy, không nổ lúc biên dịch.
 - **Quyền cài đặt hai nơi**: `digitext-core/src/permission.rs` và
   `desktop/src/domain/permissions.ts`. Sửa một bên phải sửa bên kia. Từ 22/10/2026 bộ quyền

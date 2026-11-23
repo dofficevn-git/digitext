@@ -42,18 +42,26 @@ fn chosen(conn: &Connection) -> Option<String> {
 /// Dự án hiệu lực từ phiên + lựa chọn đã lưu (cần kết nối SQLite đã khoá sẵn).
 pub fn effective_with(conn: &Connection, auth: &AuthState) -> Option<(String, String)> {
     let s = auth.snapshot()?;
-    let p = s.project_id.clone().filter(|p| !p.trim().is_empty()).or_else(|| chosen(conn))?;
-    Some((p, s.user_id))
+    let p = s.project_id.clone().filter(|p| !p.trim().is_empty()).or_else(|| chosen(conn));
+    // Bảng đời cũ chỉ chứa dữ liệu của dự án đang làm (tach_du_an.rs) — bảo đảm đúng ngăn trước khi lệnh đọc / ghi.
+    crate::tach_du_an::dam_bao(conn, p.as_deref());
+    Some((p?, s.user_id))
 }
 
 /// Dự án hiệu lực (khoá SQLite bên trong). Lỗi `no_project` khi chưa có.
 pub fn resolve(db: &Db, auth: &AuthState) -> Result<(String, String), AppError> {
     let s = auth.snapshot().ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?;
     if let Some(p) = s.project_id.clone().filter(|p| !p.trim().is_empty()) {
+        // try_lock: nơi gọi có thể đang giữ khoá SQLite (nhánh này trước đây không khoá).
+        if let Ok(g) = db.0.try_lock() {
+            crate::tach_du_an::dam_bao(&g, Some(&p));
+        }
         return Ok((p, s.user_id));
     }
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
-    match chosen(&g) {
+    let chon = chosen(&g);
+    crate::tach_du_an::dam_bao(&g, chon.as_deref());
+    match chon {
         Some(p) => Ok((p, s.user_id)),
         None => Err(AppError::new("no_project", "Tài khoản không gắn dự án — chọn \"Dự án đang làm\" ở đầu màn Chỉnh lý.")),
     }
@@ -67,6 +75,9 @@ pub fn resolve_opt(db: &Db, auth: &AuthState) -> Option<(String, String)> {
 pub async fn info(db: &State<'_, Db>, auth: &State<'_, AuthState>) -> Result<ProjectInfo, AppError> {
     let s = auth.snapshot().ok_or_else(|| AppError::new("unauthorized", "Chưa đăng nhập."))?;
     if let Some(p) = s.project_id.clone().filter(|p| !p.trim().is_empty()) {
+        if let Ok(g) = db.0.lock() {
+            crate::tach_du_an::dam_bao(&g, Some(&p));
+        }
         return Ok(ProjectInfo { project_id: Some(p), from_account: true, projects: Vec::new(), cached: false });
     }
     let fetched = f_2r7(db, auth, Perm::Admin, |base, token| async move { client::f_1eo::<Vec<client::Tl4>>(&base, &token, "/projects").await }).await;
@@ -83,7 +94,11 @@ pub async fn info(db: &State<'_, Db>, auth: &State<'_, AuthState>) -> Result<Pro
             (items, true)
         }
     };
-    let project_id = db.0.lock().ok().and_then(|g| chosen(&g));
+    let project_id = db.0.lock().ok().and_then(|g| {
+        let p = chosen(&g);
+        crate::tach_du_an::dam_bao(&g, p.as_deref());
+        p
+    });
     Ok(ProjectInfo { project_id, from_account: false, projects, cached })
 }
 
@@ -98,5 +113,7 @@ pub fn set(db: &Db, auth: &AuthState, project_id: &str) -> Result<(), AppError> 
     }
     let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
     db::f_2ei(&g, KEY, Some(p))?;
+    // Đổi dự án: cất bảng đời cũ của dự án trước, nạp của dự án này (lỗi ở đây phải báo — nếu không màn hình sẽ lẫn dự án).
+    crate::tach_du_an::chuyen(&g, p)?;
     Ok(())
 }

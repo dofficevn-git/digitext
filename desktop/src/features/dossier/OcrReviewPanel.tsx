@@ -2,6 +2,7 @@
 // Soát OCR một tệp PDF trong hồ sơ: ảnh trang bên trái (OCR bóc khung tuỳ chọn), form văn bản bên phải
 // được điền sẵn từ trường máy chủ đã bóc; bấm Lưu để ghi vào hồ sơ (tự đẩy sang chỉnh lý).
 
+import { useProject } from "@/state/project";
 import { useCallback, useEffect, useState } from "react";
 import "./ocrReview.css";
 import { V40p, V40x } from "@/api/archive";
@@ -20,6 +21,8 @@ function baseName(path: string): string {
 }
 
 export default function V4h7({ dossier, file, onBack }: { dossier: V4bm; file: V4ca; onBack: () => void }) {
+  // Tài liệu máy chủ để lấy kết quả OCR: chỉ của dự án đang làm (máy chủ trả mọi dự án; trùng tên tệp sẽ lấy nhầm).
+  const duAnOcr = useProject().projectId;
   const [pages, setPages] = useState<string[]>([]);
   const [pageErr, setPageErr] = useState<string | null>(null);
   const [draft, setDraft] = useState<V4bp>(V4cw());
@@ -54,7 +57,7 @@ export default function V4h7({ dossier, file, onBack }: { dossier: V4bm; file: V
     setVbId(mine ? mine.id : null);
     let note: string | null = null;
     try {
-      const docs = await V4ei();
+      const docs = (await V4ei()).filter((d) => !duAnOcr || d.projectId === duAnOcr);
       const doc = V4gf(docs, V4ge(dossier), file.fileName);
       if (doc) {
         const r = V4gi(d, await V4fg(doc.id));
@@ -68,7 +71,7 @@ export default function V4h7({ dossier, file, onBack }: { dossier: V4bm; file: V
     }
     setDraft(d);
     setPrefill(note);
-  }, [dossier, file.fileName]);
+  }, [dossier, file.fileName, duAnOcr]);
 
   useEffect(() => {
     let alive = true;

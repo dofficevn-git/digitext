@@ -131,7 +131,7 @@ export default function ProjectProgressView() {
   const [sua, setSua] = useState<ProjectProgress | null>(null);
   const [tatCa, setTatCa] = useState<ProjectProgress[]>([]);
   useEffect(() => {
-    if (!projectId && duAn.projectId) setProjectId(duAn.projectId);
+    if (duAn.projectId) setProjectId(duAn.projectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duAn.projectId]);
 

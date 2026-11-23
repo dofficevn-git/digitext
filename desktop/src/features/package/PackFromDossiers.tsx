@@ -13,6 +13,7 @@ import type { V3yo } from "@/domain/types";
 import { V4sk, V4sn, V4su, type V4sj, type V4sm } from "./packageWire";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useGoiDownloads } from "@/state/goiDownloads";
+import { useProject } from "@/state/project";
 import { Badge, Button, Card, collator, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, notifyError, Select, Table, Tip, toast, type Column, errorText } from "@/ui";
 
 const so = (s: string | null | undefined): number | null => {
@@ -52,6 +53,11 @@ export function PackDialog({ dossiers, thbqs, onClose }: { dossiers: V4bm[]; thb
   const [docErr, setDocErr] = useState<unknown>(null);
   const [kind, setKind] = useState<V4sj>("aip_hoso");
   const [projectId, setProjectId] = useState(() => nho("pack.projectId"));
+  // Theo "Dự án đang làm" trên thanh trên: dự án nhớ từ lần trước không được thắng dự án vừa chọn.
+  const duAnTopbar = useProject().projectId;
+  useEffect(() => {
+    if (duAnTopbar) setProjectId(duAnTopbar);
+  }, [duAnTopbar]);
   const [phong, setPhong] = useState("");
   const [orgCode, setOrgCode] = useState(() => nho("pack.archiveOrgCode"));
   const [orgName, setOrgName] = useState(() => nho("pack.archiveOrgName"));
@@ -295,7 +301,10 @@ const khoaPhong = (p: V4rt) => {
 };
 /** Danh sách gói tin trên máy chủ + tải về (một gói hoặc cả lô đã chọn). */
 export function PackageList() {
-  const { data, error, loading, refreshing, reload } = V41t(() => V4ru(), { topics: ["docs", "packages"], pollMs: 10_000, enabled: isTauri() });
+  const { data: tatCaGoi, error, loading, refreshing, reload } = V41t(() => V4ru(), { topics: ["docs", "packages"], pollMs: 10_000, enabled: isTauri() });
+  // Máy chủ trả gói của mọi dự án tài khoản thấy được → chỉ giữ gói của dự án đang làm.
+  const duAnChon = useProject().projectId;
+  const data = useMemo(() => (duAnChon ? tatCaGoi?.filter((p) => p.projectId === duAnChon) : tatCaGoi), [tatCaGoi, duAnChon]);
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("");
   const [phongF, setPhongF] = useState("");

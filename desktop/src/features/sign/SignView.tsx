@@ -106,9 +106,9 @@ export default function V4qy() {
   useEffect(() => luu("sign.signerName", tenHienThi), [tenHienThi]);
   useEffect(() => luu("sign.projectId", projectId), [projectId]);
 
-  // Mặc định theo ô "Dự án đang làm" trên Topbar khi chưa chọn gì.
+  // Luôn theo ô "Dự án đang làm" trên Topbar (trước đây chỉ lấy khi chưa chọn gì → đổi dự án rồi vẫn ký dự án cũ).
   useEffect(() => {
-    if (!projectId && duAnTopbar.projectId) setProjectId(duAnTopbar.projectId);
+    if (duAnTopbar.projectId) setProjectId(duAnTopbar.projectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duAnTopbar.projectId]);
 

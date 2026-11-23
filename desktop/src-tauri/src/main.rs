@@ -39,6 +39,7 @@ mod stats;
 mod storage;
 mod submission;
 mod sync;
+mod tach_du_an;
 mod telemetry;
 mod chuky;
 mod pkgcheck;

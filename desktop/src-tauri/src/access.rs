@@ -18,7 +18,7 @@ pub async fn access_list(
             &auth,
             Permission::AccessView,
             move |r_0, r_1| async move {
-                client::f_1eo::<serde_json::Value>(&r_0, &r_1, "/access").await
+                client::f_1eo::<serde_json::Value>(&r_0, &r_1, "/access?limit=200").await
             },
         )
         .await

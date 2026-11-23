@@ -8,6 +8,7 @@ import { V4uk, V4ui, V4uh, V4ug, V4uc, V4uf, V4ue, V4ud, type V4u9, type V4ub, t
 import { V4ei, type V4eg } from "@/api/docs";
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
+import { useProject } from "@/state/project";
 import { BUOC_DOT, LEGAL, V4un, V4uq, V4um, V4uo, V4ul, V4up, type DotAction } from "./disposalFlow";
 import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, Input, Menu, notifyError, PageHeader, prompt, Stepper, Table, Tabs, Tip, toast, type Column } from "@/ui";
 
@@ -16,11 +17,12 @@ type Tab = "danhmuc" | "dot";
 
 function HanLuuTruDialog({ onClose }: { onClose: () => void }) {
   const [docs, setDocs] = useState<V4eg[] | null>(null);
+  const duAnHan = useProject().projectId;
   const [q, setQ] = useState("");
   const [err, setErr] = useState<unknown>(null);
   useState(() => {
     V4ei()
-      .then(setDocs)
+      .then((ds) => setDocs(duAnHan ? ds.filter((d) => d.projectId === duAnHan) : ds))
       .catch((e) => setErr(e));
   });
   const datHan = async (doc: V4eg) => {
@@ -58,8 +60,11 @@ export default function V4ur() {
     return { entries, batches };
   }, []);
   const { data, error, loading, reload } = V41t(loader, { topics: ["disposal", "docs"], errorText: () => "Không tải được dữ liệu tiêu huỷ." });
-  const entries = useMemo(() => data?.entries ?? [], [data]);
-  const batches = useMemo(() => data?.batches ?? [], [data]);
+  // Máy chủ trả danh mục / đợt của mọi dự án tài khoản thấy được → chỉ giữ của dự án đang làm.
+  const duAnChon = useProject().projectId;
+  const duAn = session?.projectId ?? duAnChon ?? null;
+  const entries = useMemo(() => (data?.entries ?? []).filter((e) => !duAn || e.projectId === duAn), [data, duAn]);
+  const batches = useMemo(() => (data?.batches ?? []).filter((b) => !duAn || b.projectId === duAn), [data, duAn]);
   const [tab, setTab] = useState<Tab>("danhmuc");
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [chiTiet, setChiTiet] = useState<V4ub | null>(null);
