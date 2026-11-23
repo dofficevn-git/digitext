@@ -66,6 +66,10 @@ pub struct KetQuaTrang {
     /// Vì sao không đo được, mỗi lý do một lần ("ảnh JBIG2", "trang không có ảnh nhúng"…).
     #[serde(default)]
     pub khong_do_vi: Vec<String>,
+    /// Số trang là **chữ thật**, đọc theo lệnh vẽ chứ không đo trên ảnh quét: biết chắc trang
+    /// trắng / xoay ngang / góc nghiêng, nhưng không có lượng mực để nói "gần như trắng".
+    #[serde(default)]
+    pub trang_chu: u32,
     pub trang_trang: Vec<TrangDo>,
     /// Rất ít mực nhưng chưa chắc trắng — nên mở ra xem.
     pub trang_gan_trang: Vec<TrangDo>,
@@ -281,16 +285,45 @@ pub fn do_pdf(bytes: &[u8], so_trang: u32) -> Option<KetQuaTrang> {
         }
     };
     for trang in 1..=so_trang {
+        // `/Rotate 90` là lời khai thẳng của tệp: trang nằm ngang. Đúng với cả bản quét lẫn PDF
+        // chữ thật, nên đọc trước, không phải đoán lại từ hướng dòng chữ.
+        let xoay_ngang = matches!(digitext_pdf::noi_dung::xoay_trang(&parsed, trang as i32), 90 | 270);
         let anh = match digitext_pdf::anh_xam::page_xam(&parsed, trang as i32) {
-            Ok(a) => a,
+            Ok(a) => Some(a),
             Err(e) => {
-                ghi_vi(&mut kq, vi_sao(&e));
-                continue;
+                // Có ảnh mà chịu (JBIG2, JPEG 2000) thì KHÔNG được quay sang đọc lệnh vẽ rồi kết
+                // luận "không sao": ảnh nằm đó mà chưa ai nhìn vào thì vẫn là chưa kiểm.
+                if digitext_pdf::anh_xam::trang_co_anh(&parsed, trang as i32) {
+                    ghi_vi(&mut kq, vi_sao(&e));
+                    continue;
+                }
+                None
             }
         };
-        let Some((muc, goc, ngang)) = do_anh_xam(anh.diem, anh.rong, anh.cao) else {
-            ghi_vi(&mut kq, "ảnh hỏng, không đo được".into());
-            continue;
+        let (muc, goc, ngang) = match anh {
+            Some(a) => match do_anh_xam(a.diem, a.rong, a.cao) {
+                Some((m, g, n)) => (m, g, n || xoay_ngang),
+                None => {
+                    ghi_vi(&mut kq, "ảnh hỏng, không đo được".into());
+                    continue;
+                }
+            },
+            // Trang chữ thật: đọc thẳng lệnh vẽ. Không đếm được lượng mực nên `muc` để 0 khi trắng
+            // và đặt ngoài ngưỡng "gần trắng" khi có vẽ — con số đó không có nghĩa ở nhánh này.
+            None => match digitext_pdf::noi_dung::doc_trang(&parsed, trang as i32) {
+                Err(e) => {
+                    ghi_vi(&mut kq, vi_sao(&e));
+                    continue;
+                }
+                Ok(v) => {
+                    kq.trang_chu += 1;
+                    if v.co_ve {
+                        (MUC_GAN_TRANG, v.goc, v.ngang())
+                    } else {
+                        (0.0, None, v.ngang())
+                    }
+                }
+            },
         };
         kq.da_do += 1;
         if muc < MUC_TRANG_TRANG {
@@ -424,6 +457,94 @@ mod tests {
         let kq = do_pdf(&pdf_anh_xam(co_chu, w, h), 1).unwrap();
         assert_eq!(kq.da_do, 1);
         assert!(kq.trang_trang.is_empty(), "trang có chữ không được coi là trắng");
+    }
+
+    /// **PDF chữ thật cũng phải soát được trang trắng / lệch / ngang.**
+    ///
+    /// Tệp mẫu của anh Hiếu (pypdf, 19/11/2026) không có một ảnh nào: trang trắng là trang không
+    /// vẽ gì, trang lệch là ma trận xoay 8°, trang ngang là `/Rotate 90`. Bộ đo cũ nhìn vào ảnh
+    /// quét nên bó tay cả sáu trang.
+    #[test]
+    fn pdf_chu_that_van_soat_duoc_trang_trang_lech_va_ngang() {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let mut doc = Document::with_version("1.7");
+        let font = doc.add_object(dictionary! {
+            "Type" => "Font", "Subtype" => "Type1", "BaseFont" => "Helvetica",
+        });
+        let pages_id = doc.new_object_id();
+        // (lệnh vẽ, /Rotate)
+        let trang: Vec<(&str, i64)> = vec![
+            ("BT /F1 12 Tf 1 0 0 1 72 700 Tm (Trang binh thuong) Tj ET", 0),
+            ("BT /F1 12 Tf 14.4 TL ET", 0),
+            ("q .990268 .139173 -.139173 .990268 61 -37 cm BT /F1 12 Tf 1 0 0 1 72 700 Tm (Trang nghieng) Tj ET Q", 0),
+            ("BT /F1 12 Tf 1 0 0 1 72 700 Tm (Trang xoay ngang) Tj ET", 90),
+        ];
+        let kids: Vec<Object> = trang
+            .iter()
+            .map(|(lenh, xoay)| {
+                let ct = doc.add_object(Stream::new(dictionary! {}, lenh.as_bytes().to_vec()));
+                doc.add_object(dictionary! {
+                    "Type" => "Page", "Parent" => pages_id, "Contents" => ct, "Rotate" => *xoay,
+                    "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+                    "Resources" => dictionary! { "Font" => dictionary! { "F1" => font } },
+                })
+                .into()
+            })
+            .collect();
+        doc.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! { "Type" => "Pages", "Count" => kids.len() as i64, "Kids" => kids }),
+        );
+        let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+        doc.trailer.set("Root", catalog);
+        let mut pdf = Vec::new();
+        doc.save_to(&mut pdf).unwrap();
+
+        let kq = do_pdf(&pdf, 4).unwrap();
+        assert_eq!(kq.da_do, 4, "cả 4 trang phải soát được: {:?}", kq.khong_do_vi);
+        assert_eq!(kq.khong_do, 0);
+        assert_eq!(kq.trang_chu, 4, "cả 4 đều là trang chữ thật");
+        assert_eq!(kq.trang_trang.iter().map(|t| t.trang).collect::<Vec<_>>(), vec![2]);
+        assert_eq!(kq.trang_lech.iter().map(|t| t.trang).collect::<Vec<_>>(), vec![3]);
+        assert!((kq.trang_lech[0].goc.unwrap() + 8.0).abs() < 0.2, "góc {:?}", kq.trang_lech[0].goc);
+        assert_eq!(kq.trang_ngang, vec![4]);
+        // Trang chữ không có lượng mực nên không được rơi vào "gần như trắng".
+        assert!(kq.trang_gan_trang.is_empty(), "{:?}", kq.trang_gan_trang);
+    }
+
+    /// Trang CÓ ảnh mà bộ giải chịu thì không được quay sang đọc lệnh vẽ rồi bảo "không sao" —
+    /// ảnh nằm đó chưa ai nhìn vào thì vẫn là chưa kiểm.
+    #[test]
+    fn trang_co_anh_ma_chiu_thi_van_la_chua_kiem() {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let mut doc = Document::with_version("1.7");
+        let anh = doc.add_object(Stream::new(
+            dictionary! {
+                "Type" => "XObject", "Subtype" => "Image",
+                "Width" => 8i64, "Height" => 8i64, "Filter" => "JBIG2Decode",
+            },
+            vec![0u8; 32],
+        ));
+        let ct = doc.add_object(Stream::new(dictionary! {}, b"q 8 0 0 8 0 0 cm /Im0 Do Q".to_vec()));
+        let pages_id = doc.new_object_id();
+        let trang = doc.add_object(dictionary! {
+            "Type" => "Page", "Parent" => pages_id, "Contents" => ct,
+            "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+            "Resources" => dictionary! { "XObject" => dictionary! { "Im0" => anh } },
+        });
+        doc.objects.insert(
+            pages_id,
+            Object::Dictionary(dictionary! { "Type" => "Pages", "Count" => 1, "Kids" => vec![trang.into()] }),
+        );
+        let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+        doc.trailer.set("Root", catalog);
+        let mut pdf = Vec::new();
+        doc.save_to(&mut pdf).unwrap();
+
+        let kq = do_pdf(&pdf, 1).unwrap();
+        assert_eq!(kq.da_do, 0);
+        assert_eq!(kq.khong_do, 1);
+        assert_eq!(kq.khong_do_vi, vec!["ảnh JBIG2".to_string()]);
     }
 
     /// Không đo được thì phải nói VÌ SAO, đừng chỉ đếm.

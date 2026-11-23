@@ -1,6 +1,7 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 #![forbid(unsafe_code)]
 pub mod anh_xam;
+pub mod noi_dung;
 mod glyphless;
 mod icc;
 pub mod pdfa;

@@ -188,7 +188,8 @@ export default function PdfaCheckPanel() {
                     )}
                     {t.trangNgang.length > 0 && <div><b>Trang quét ngang 90° ({fmt(t.trangNgang.length)}):</b> {soTrang(t.trangNgang)}</div>}
                     <div className="text-xs text-fg-subtle">
-                      Đã đo {fmt(t.daDo)} trang
+                      Đã soát {fmt(t.daDo)} trang
+                      {(t.trangChu ?? 0) > 0 ? `, trong đó ${fmt(t.trangChu ?? 0)} trang chữ thật đọc theo lệnh vẽ` : ""}
                       {t.khongDo > 0 ? `, bỏ qua ${fmt(t.khongDo)} trang${(t.khongDoVi ?? []).length > 0 ? ` (${(t.khongDoVi ?? []).join("; ")})` : ""}` : ""}.
                     </div>
                   </div>
@@ -211,7 +212,8 @@ export default function PdfaCheckPanel() {
         <p>Mỗi trang được rút nhỏ về bản xám rồi lấy mức sáng ở phân vị 90 làm nền giấy, nên giấy ố vàng hay bản quét xám vẫn đo đúng. Điểm nào tối hơn nền 60 mức thì tính là mực; dưới 0,15 % diện tích coi là trang trắng, từ đó đến 0,6 % thì báo gần như trắng để người soát mở ra xem. Vùng 3 % sát mép bị bỏ qua vì gáy sách, bóng nắp máy quét và lỗ ghim đều nằm đó.</p>
         <p>Ngưỡng lấy từ 332 trang quét thật của Bắc Giang: trang ít mực nhất mà vẫn có nội dung đạt 1,14 %, tức gấp bảy lần ngưỡng trang trắng.</p>
         <p>Góc lệch đo bằng cách chiếu các điểm mực lên trục dọc ở từng góc thử từ âm 6 đến dương 6 độ: dòng chữ dồn vào ít hàng nhất ở đúng góc nghiêng. Từ 1 độ trở lên thì báo lệch. Trang nào chữ dựng đứng thì báo là quét ngang 90 độ chứ không báo lệch.</p>
-        <p>Đo được bản quét lưu dưới dạng JPEG, CCITT G3 / G4 (bản quét đen trắng), Flate, LZW, RunLength hoặc không nén; ảnh nằm trong Form XObject hay trang thừa kế tài nguyên từ nút cha cũng tìm ra. Còn trang chữ thật, ảnh JPEG 2000 và ảnh JBIG2 thì phải vẽ lại trang mới đọc được nên bị bỏ qua — số trang bỏ qua và lý do ghi ngay trong dòng của tệp.</p>
+        <p>Đo được bản quét lưu dưới dạng JPEG, CCITT G3 / G4 (bản quét đen trắng), Flate, LZW, RunLength hoặc không nén; ảnh nằm trong Form XObject hay trang thừa kế tài nguyên từ nút cha cũng tìm ra. Ảnh JPEG 2000 và ảnh JBIG2 thì phải vẽ lại trang mới đọc được nên bị bỏ qua — số trang bỏ qua và lý do ghi ngay trong dòng của tệp.</p>
+        <p>Trang không có ảnh nào, tức văn bản điện tử gốc, được soát theo lệnh vẽ của chính trang đó: không lệnh nào để lại vết thì là trang trắng, ma trận đặt chữ mang góc xoay thì là trang lệch, và <code>/Rotate 90</code> thì là trang ngang. Ba câu này là số đúng chứ không phải ước lượng, nhưng trang kiểu đó không có lượng mực nên không bao giờ rơi vào mục gần như trắng. Trang có ảnh mà máy không giải nổi thì vẫn tính là chưa soát, không đọc lệnh vẽ để kết luận thay.</p>
       </Help>
 
       <Help title="Lớp chữ không phải PDF/A">

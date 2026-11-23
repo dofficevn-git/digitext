@@ -133,6 +133,8 @@ export interface KetQuaTrang {
   khongDo: number;
   /** Vì sao không đo được, mỗi lý do một lần (vd "ảnh JBIG2", "trang không có ảnh nhúng"). */
   khongDoVi?: string[];
+  /** Số trang là chữ thật, soát theo lệnh vẽ thay vì đo trên ảnh quét. */
+  trangChu?: number;
   trangTrang: TrangDo[];
   /** Rất ít mực nhưng chưa chắc trắng — nên mở ra xem. */
   trangGanTrang: TrangDo[];

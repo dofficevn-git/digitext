@@ -68,6 +68,21 @@ pub fn page_xam(parsed: &ParsedPdf, page_no: i32) -> Result<AnhXam, PdfError> {
     Err(can_ve(ly_do_dau.unwrap_or_else(|| "ảnh không giải nén được".into())))
 }
 
+/// Trang có ảnh nhúng nào không — kể cả ảnh không giải nén được.
+///
+/// Dùng để phân biệt hai kiểu "không đo được": trang **chữ thật** (không ảnh, đọc lệnh vẽ thay)
+/// với trang **có ảnh mà chịu** (JBIG2, JPEG 2000). Trang kiểu sau không được phép đọc lệnh vẽ
+/// rồi kết luận "không sao" — ảnh nằm đó mà chưa ai nhìn vào thì vẫn là chưa kiểm.
+pub fn trang_co_anh(parsed: &ParsedPdf, page_no: i32) -> bool {
+    let doc = &parsed.0;
+    let Ok(so_trang) = u32::try_from(page_no) else { return false };
+    let Some(id) = doc.get_pages().get(&so_trang).copied() else { return false };
+    let Some(res) = tai_nguyen(doc, id) else { return false };
+    let mut anh = Vec::new();
+    gom_anh(doc, &res, 0, &mut anh);
+    !anh.is_empty()
+}
+
 // ── tìm ảnh ────────────────────────────────────────────────────────────────────────────────────
 
 /// `/Resources` của trang, đi ngược `/Parent` khi trang không tự khai (thừa kế, §7.7.3.4).
