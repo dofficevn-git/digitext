@@ -350,14 +350,44 @@ fn chon_goc(sheet: &Sheet, root: &Path) -> (PathBuf, usize) {
             .count()
     };
 
-    // Excel ghi đường dẫn tuyệt đối: **giữ nguyên thư mục người dùng chọn**, chỉ dò xem phải bỏ
-    // mấy đoạn đầu. Không được lùi gốc lên trong trường hợp này: `C:\Users\…\file.pdf` cũng
-    // "khớp" nếu lấy gốc là `C:\` và cắt đúng một đoạn — rồi bước liệt kê đĩa sẽ đi quét cả ổ C.
+    // Excel ghi đường dẫn tuyệt đối: **giữ nguyên thư mục người dùng chọn**, chỉ bỏ phần đầu để còn
+    // đường dẫn tương đối so với thư mục đó. Không được lùi gốc lên ở nhánh này:
+    // `C:\Users\…\file.pdf` cũng "khớp" nếu lấy gốc `C:\` và cắt đúng một đoạn — rồi bước
+    // liệt kê đĩa sẽ đi quét cả ổ C.
     if mau.iter().any(|v| la_doan_o_dia(&v[0])) {
+        let goc: Vec<String> = norm_rel(&root.to_string_lossy())
+            .split('\\')
+            .filter(|x| !x.is_empty())
+            .map(str::to_lowercase)
+            .collect();
+        // Chốt theo TÊN thư mục chứ không hỏi đĩa: tệp thiếu thật vẫn phải báo thiếu đúng một
+        // dòng, không được kéo cả bảng sập theo.
+        let mut phieu: BTreeMap<usize, usize> = BTreeMap::new();
+        for v in &mau {
+            let thap: Vec<String> = v.iter().map(|x| x.to_lowercase()).collect();
+            // 1. Đường dẫn nằm ngay dưới thư mục đang chọn — trường hợp thường gặp nhất.
+            if thap.len() > goc.len() && goc.iter().zip(&thap).all(|(a, b)| a == b) {
+                *phieu.entry(goc.len()).or_default() += 1;
+                continue;
+            }
+            // 2. Kho đã chép sang chỗ khác hoặc ổ đổi tên (F: thành E:): bám vào TÊN thư mục
+            //    cuối cùng của đường dẫn đã chọn, lấy lần xuất hiện SAU cùng trong đường dẫn Excel.
+            if let Some(ten) = goc.last() {
+                if let Some(i) = thap.iter().rposition(|x| x == ten) {
+                    if i + 1 < thap.len() {
+                        *phieu.entry(i + 1).or_default() += 1;
+                    }
+                }
+            }
+        }
+        // Nhiều phiếu nhất thắng; hoà thì cắt ít nhất (BTreeMap duyệt tăng dần).
+        if let Some((&cat, _)) = phieu.iter().max_by_key(|(c, n)| (**n, std::cmp::Reverse(**c))) {
+            return (root.to_path_buf(), cat);
+        }
+        // Không suy được từ tên thì hỏi đĩa, còn hơn là bỏ cuộc.
         let cat = (1..sau_nhat)
             .map(|c| (dem(root, c), c))
             .filter(|(n, _)| *n > 0)
-            // Nhiều nhất trước; hoà thì cắt ít nhất.
             .max_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)))
             .map(|(_, c)| c)
             .unwrap_or(0);
@@ -1318,6 +1348,57 @@ mod tests {
             assert!(p.starts_with(kho), "{rel} thoát ra {}", p.display());
         }
         assert_eq!(rel_to_path(kho, r"01\01\a.pdf"), Path::new(r"D:\Kho\01\01\a.pdf"));
+    }
+
+    /// **Một tệp thiếu không được kéo cả bảng sập theo.**
+    ///
+    /// Phần đầu phải cắt được suy từ TÊN thư mục đang chọn, không phải từ việc hỏi đĩa xem tệp
+    /// có thật không. Hỏi đĩa thì mấy dòng đầu trót thiếu tệp là dò trượt, rồi **mọi** dòng còn lại
+    /// thành lỗi giả — đúng cái bẫy cũ, chỉ ẩn hơn.
+    #[test]
+    fn tep_thieu_that_van_chi_la_mot_dong_loi() {
+        // Kho có thật, nhưng KHÔNG tệp nào Excel khai có trên đĩa. Hỏi đĩa thì dò trượt sạch,
+        // để nguyên đường dẫn tuyệt đối và báo "chọn sai thư mục"; cắt theo TÊN thì vẫn ra
+        // đúng hai dòng thiếu tệp — đúng nguyên nhân, đúng số lượng.
+        let goc = dung_kho("thieuhet", &[r"khac\khong lien quan.pdf"]);
+        let thieu = [
+            r"1.VAN PHONG\01\01\H49.146.01.2000.01.0000001.pdf",
+            r"1.VAN PHONG\01\01\H49.146.01.2000.01.0000002.pdf",
+        ];
+        let abs: Vec<String> = thieu.iter().map(|r| format!("{}\\{r}", goc.display())).collect();
+        let sheet = sheet_duong_dan(&abs.iter().map(String::as_str).collect::<Vec<_>>());
+
+        let plan = plan(&sheet, &goc);
+        assert_eq!(plan.root, goc);
+        assert_eq!(plan.dossiers[0].dir, r"1.VAN PHONG\01\01", "phải cắt thành đường dẫn tương đối");
+        let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
+        let ma: Vec<&str> = bc.issues.iter().map(|i| i.code).collect();
+        assert!(!ma.contains(&"EXCEL-DUONG-DAN-KHAC-MAY"), "chọn đúng thư mục rồi: {ma:?}");
+        assert_eq!(
+            ma.iter().filter(|x| **x == "TEP-KHONG-CO-TREN-DIA").count(),
+            2,
+            "đúng hai dòng thiếu tệp: {:?}",
+            bc.issues
+        );
+        let _ = std::fs::remove_dir_all(&goc);
+    }
+
+    /// Kho chép sang ổ khác (Excel ghi `F:\…`, nay cắm thành `E:\`): bám theo TÊN thư mục
+    /// cuối cùng của đường dẫn đã chọn.
+    #[test]
+    fn kho_chep_sang_o_khac_van_cat_dung_phan_dau() {
+        let duoi = [r"1.VAN PHONG\01\01\H49.146.01.2000.01.0000001.pdf"];
+        let goc = dung_kho("doito", &duoi);
+        let ten = goc.file_name().unwrap().to_string_lossy().to_string();
+        let sheet = sheet_duong_dan(&[&format!(r"F:\CSDL_Binh Lieu\Da Ky So\{ten}\\{}", duoi[0])]);
+
+        let plan = plan(&sheet, &goc);
+        assert_eq!(plan.root, goc);
+        assert_eq!(plan.dossiers[0].dir, r"1.VAN PHONG\01\01");
+        let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
+        assert_eq!(bc.files_on_disk, 1);
+        assert!(!bc.issues.iter().any(|i| i.code == "TEP-KHONG-CO-TREN-DIA"), "{:?}", bc.issues);
+        let _ = std::fs::remove_dir_all(&goc);
     }
 
     /// Chọn nhầm thư mục kho: phải nói thẳng một câu, đừng để người dùng đọc hàng trăm dòng
