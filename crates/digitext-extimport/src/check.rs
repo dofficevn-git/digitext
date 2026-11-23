@@ -44,6 +44,7 @@ impl Severity {
 pub fn huong_dan(code: &str) -> (&'static str, &'static str) {
     match code {
         "THU-MUC-GOC-KHONG-CO" => ("Chọn sai thư mục kho", "Chọn thư mục CHỨA đoạn đầu của đường dẫn trong Excel (Excel ghi UBND\\… thì chọn thư mục có UBND bên trong)."),
+        "EXCEL-DUONG-DAN-KHAC-MAY" => ("Đường dẫn trong Excel là của máy khác", "Excel ghi đường dẫn đầy đủ của máy lúc quét, mà thư mục đang chọn không chứa các tệp đó. Chọn đúng thư mục kho (thư mục chứa các thư mục hồ sơ), hoặc sửa cột «Tệp tin tài liệu» cho khớp nơi đặt tệp."),
         "EXCEL-DUONG-DAN-TUYET-DOI" => ("Excel ghi đường dẫn của máy lúc quét", "Không phải sửa gì — máy đã tự bỏ phần đầu để khớp thư mục đang chọn. Chỉ cần xem lại nếu số tệp đối chiếu không như mong đợi."),
         "TEP-KHONG-CO-TREN-DIA" => ("Excel khai tệp nhưng trên đĩa không có", "Kiểm tra lại đường dẫn ở cột «Tệp tin tài liệu» và tên tệp thật trong thư mục; chép tệp còn thiếu vào đúng chỗ hoặc xoá dòng Excel thừa."),
         "TEP-KHONG-CO-TRONG-EXCEL" => ("Trên đĩa có tệp nhưng Excel không khai", "Thêm dòng cho tệp đó vào Excel, hoặc chuyển tệp ra khỏi thư mục kho nếu không thuộc hồ sơ."),
@@ -209,9 +210,27 @@ pub fn normalize_hs_code(cell: &str) -> String {
     }
     parts.join(".")
 }
+/// Đoạn đường dẫn mang tên ổ đĩa (`E:`, `E:\`) hoặc mở đầu UNC (`\\máy`).
+///
+/// `PathBuf::push` gặp đoạn như vậy thì **vứt hết phần gốc** và nhảy sang đó. Ghép thẳng đường
+/// dẫn Excel vào thư mục kho là để tệp Excel của đơn vị khác lái máy đi đâu tuỳ ý.
+pub(crate) fn la_doan_o_dia(seg: &str) -> bool {
+    let b = seg.as_bytes();
+    (b.len() >= 2 && b[1] == b':') || seg.ends_with(':') || Path::new(seg).is_absolute()
+}
+
+/// Ghép đường dẫn TƯƠNG ĐỐI vào thư mục gốc — và giữ nó ở trong đó.
+///
+/// Đoạn tên ổ đĩa hay `..` bị bỏ qua. Không bỏ thì `rel_to_path(kho, r"E:\CSDL\a.pdf")` trả
+/// đúng `E:\CSDL\a.pdf`: đường dẫn tuyệt đối tự khớp lấy chính nó, bất kể người dùng chọn thư
+/// mục nào. Chính chỗ này làm phép dò gốc tưởng "cắt 0 đoạn là khớp hết" rồi để nguyên đường
+/// dẫn tuyệt đối, khiến bảng tệp trên đĩa rỗng và mọi dòng Excel thành lỗi giả (19/11/2026).
 pub fn rel_to_path(root: &Path, rel: &str) -> PathBuf {
     let mut p = root.to_path_buf();
     for seg in rel.split(['\\', '/']).filter(|s| !s.is_empty()) {
+        if seg == "." || seg == ".." || la_doan_o_dia(seg) {
+            continue;
+        }
         p.push(seg);
     }
     p
@@ -324,33 +343,38 @@ fn chon_goc(sheet: &Sheet, root: &Path) -> (PathBuf, usize) {
     if mau.is_empty() {
         return (root.to_path_buf(), 0);
     }
-    let mut chuoi = vec![root.to_path_buf()];
-    while chuoi.len() <= LUI_TOI_DA {
-        let Some(cha) = chuoi.last().and_then(|g| g.parent()).map(Path::to_path_buf) else { break };
-        chuoi.push(cha);
-    }
-    // Số đoạn cắt ở vòng NGOÀI: cắt ít luôn hơn cắt nhiều, và cùng số đoạn cắt thì gốc gần nhất
-    // thắng. Nhờ vậy người trỏ vào thư mục con vẫn ra kết quả cũ (lùi lên cha, không cắt gì).
     let sau_nhat = mau.iter().map(Vec::len).max().unwrap_or(1);
-    let mut tot: Option<(usize, PathBuf, usize)> = None;
-    for cat in 0..sau_nhat {
-        for g in &chuoi {
-            let n = mau
-                .iter()
-                .filter(|v| v.len() > cat + 1 && rel_to_path(g, &v[cat..].join("\\")).exists())
-                .count();
-            if n > 0 && tot.as_ref().map_or(true, |(m, _, _)| n > *m) {
-                tot = Some((n, g.clone(), cat));
-            }
-        }
-        if tot.as_ref().is_some_and(|(n, _, _)| *n == mau.len()) {
-            break;
-        }
+    let dem = |g: &Path, cat: usize| {
+        mau.iter()
+            .filter(|v| v.len() > cat + 1 && rel_to_path(g, &v[cat..].join("\\")).exists())
+            .count()
+    };
+
+    // Excel ghi đường dẫn tuyệt đối: **giữ nguyên thư mục người dùng chọn**, chỉ dò xem phải bỏ
+    // mấy đoạn đầu. Không được lùi gốc lên trong trường hợp này: `C:\Users\…\file.pdf` cũng
+    // "khớp" nếu lấy gốc là `C:\` và cắt đúng một đoạn — rồi bước liệt kê đĩa sẽ đi quét cả ổ C.
+    if mau.iter().any(|v| la_doan_o_dia(&v[0])) {
+        let cat = (1..sau_nhat)
+            .map(|c| (dem(root, c), c))
+            .filter(|(n, _)| *n > 0)
+            // Nhiều nhất trước; hoà thì cắt ít nhất.
+            .max_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)))
+            .map(|(_, c)| c)
+            .unwrap_or(0);
+        return (root.to_path_buf(), cat);
     }
-    match tot {
-        Some((_, g, c)) => (g, c),
-        None => (root.to_path_buf(), 0),
+
+    // Đường dẫn tương đối: không cắt gì, chỉ lùi gốc lên cấp cha khi người dùng trỏ vào thư
+    // mục con (…\UBND\DCXD trong khi Excel ghi từ UBND\DCXD\…) — như cũ.
+    let mut g = root.to_path_buf();
+    for _ in 0..=LUI_TOI_DA {
+        if dem(&g, 0) > 0 {
+            return (g, 0);
+        }
+        let Some(cha) = g.parent().map(Path::to_path_buf) else { break };
+        g = cha;
     }
+    (root.to_path_buf(), 0)
 }
 
 /// Bỏ `cat` đoạn đầu của một đường dẫn Excel. Đường dẫn ngắn hơn thì để nguyên — dòng đó sai
@@ -361,7 +385,9 @@ fn cat_dau(rel: &str, cat: usize) -> String {
         return r;
     }
     let seg: Vec<&str> = r.split('\\').collect();
-    if seg.len() <= cat + 1 {
+    // Chỉ cắt đường dẫn TUYỆT ĐỐI. Bảng kê lẫn lộn hai kiểu thì dòng ghi tương đối phải để
+    // nguyên, cắt vào là nát.
+    if seg.len() <= cat + 1 || !seg.first().is_some_and(|x| la_doan_o_dia(x)) {
         return r;
     }
     seg[cat..].join("\\")
@@ -1008,7 +1034,8 @@ fn liet_ke_dia(plan: &Plan, sink: &mut Sink) -> HashMap<String, (String, u64)> {
     }
     let mut disk: HashMap<String, (String, u64)> = HashMap::new();
     for t in &tops {
-        let p = plan.root.join(t);
+        // `join` cũng nhảy ra ngoài kho với đoạn tên ổ đĩa — đi qua `rel_to_path` cho chắc.
+        let p = rel_to_path(&plan.root, t);
         if !p.is_dir() {
             // Gợi ý thư mục đúng: cấp cha nào của thư mục đã chọn có tên trùng «t» thì gốc là cha của nó.
             let hint = plan
@@ -1039,6 +1066,26 @@ pub(crate) fn chay(
     threads: usize,
     progress: &(dyn Fn(usize, usize) + Sync),
 ) -> CheckReport {
+    // Dò không ra phần đầu phải cắt: nói thẳng một câu, đừng để người dùng đọc 654 dòng "không
+    // thấy tệp" rồi tự đoán.
+    if plan.tien_to_cat.is_empty() {
+        if let Some(d) = plan.dossiers.iter().find(|d| {
+            d.dir.split('\\').next().is_some_and(la_doan_o_dia)
+        }) {
+            sink.error(
+                "EXCEL-DUONG-DAN-KHAC-MAY",
+                "",
+                "",
+                None,
+                None,
+                format!(
+                    "Excel ghi đường dẫn tuyệt đối «{}», nhưng không tệp nào trong đó nằm dưới thư mục đang chọn ({})",
+                    d.dir,
+                    plan.root.display()
+                ),
+            );
+        }
+    }
     if !plan.tien_to_cat.is_empty() {
         sink.info(
             "EXCEL-DUONG-DAN-TUYET-DOI",
@@ -1231,13 +1278,20 @@ mod tests {
             r"1.VAN PHONG\01\01\H49.146.01.2000.01.0000002.pdf",
         ];
         let goc = dung_kho("tuyetdoi", &duoi);
+        // Đường dẫn THẬT của tệp trên đĩa, nguyên văn như Excel của đơn vị ghi.
+        //
+        // Phải dùng ổ đĩa CÓ THẬT chứ không phải `F:` tưởng tượng: với ổ không tồn tại thì
+        // `rel_to_path` trả đường dẫn không có thật nên phép dò gốc bỏ qua, bài kiểm đạt vì lý do
+        // sai. Ổ có thật mới lộ ra bẫy: `PathBuf::push("E:")` vứt hết gốc, đường dẫn tuyệt đối
+        // tự khớp lấy chính nó, phép dò tưởng "cắt 0 đoạn là đúng" (kho Bình Liêu, 23/11/2026).
         let tuyet_doi: Vec<String> =
-            duoi.iter().map(|r| format!(r"F:\CSDL_Binh Lieu\Da Ky So\{r}")).collect();
+            duoi.iter().map(|r| rel_to_path(&goc, r).display().to_string()).collect();
+        assert!(Path::new(&tuyet_doi[0]).is_absolute() && Path::new(&tuyet_doi[0]).exists());
         let sheet = sheet_duong_dan(&tuyet_doi.iter().map(String::as_str).collect::<Vec<_>>());
 
         let plan = plan(&sheet, &goc);
         assert_eq!(plan.root, goc, "không được đổi thư mục gốc");
-        assert_eq!(plan.tien_to_cat, r"F:\CSDL_Binh Lieu\Da Ky So");
+        assert!(!plan.tien_to_cat.is_empty(), "phải cắt phần đầu tuyệt đối");
         assert_eq!(plan.dossiers.len(), 1);
         assert_eq!(plan.dossiers[0].dir, r"1.VAN PHONG\01\01", "thư mục hồ sơ phải là đường dẫn tương đối");
 
@@ -1248,6 +1302,36 @@ mod tests {
         assert!(!ma.contains(&"TEP-KHONG-CO-TRONG-EXCEL"), "{ma:?}");
         assert_eq!(bc.files_on_disk, 2);
         assert!(ma.contains(&"EXCEL-DUONG-DAN-TUYET-DOI"), "phải nói rõ là đã cắt phần đầu: {ma:?}");
+        let _ = std::fs::remove_dir_all(&goc);
+    }
+
+    /// `rel_to_path` không được cho đường dẫn trong Excel nhảy ra ngoài thư mục kho.
+    #[test]
+    fn rel_to_path_khong_cho_nhay_ra_ngoai_kho() {
+        let kho = Path::new(r"D:\Kho");
+        for rel in [
+            r"E:\CSDL\a.pdf",
+            r"..\..\Windows\a.pdf",
+            r"C:\Windows\System32\a.pdf",
+        ] {
+            let p = rel_to_path(kho, rel);
+            assert!(p.starts_with(kho), "{rel} thoát ra {}", p.display());
+        }
+        assert_eq!(rel_to_path(kho, r"01\01\a.pdf"), Path::new(r"D:\Kho\01\01\a.pdf"));
+    }
+
+    /// Chọn nhầm thư mục kho: phải nói thẳng một câu, đừng để người dùng đọc hàng trăm dòng
+    /// "không thấy tệp" rồi tự đoán.
+    #[test]
+    fn duong_dan_tuyet_doi_khong_khop_thu_muc_dang_chon_thi_bao_ro() {
+        let duoi = [r"1.VAN PHONG\01\01\H49.146.01.2000.01.0000001.pdf"];
+        let goc = dung_kho("khacmay", &duoi);
+        let sheet = sheet_duong_dan(&[r"Z:\Kho cua may khac\01\01\H49.146.01.2000.01.0000001.pdf"]);
+        let plan = plan(&sheet, &goc);
+        assert_eq!(plan.root, goc, "không được đi tìm gốc ở chỗ khác");
+        let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
+        let ma: Vec<&str> = bc.issues.iter().map(|i| i.code).collect();
+        assert!(ma.contains(&"EXCEL-DUONG-DAN-KHAC-MAY"), "{ma:?}");
         let _ = std::fs::remove_dir_all(&goc);
     }
 
