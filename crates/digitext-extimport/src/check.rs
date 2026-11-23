@@ -409,8 +409,38 @@ fn chon_goc(sheet: &Sheet, root: &Path) -> (PathBuf, usize) {
         return (root.to_path_buf(), cat);
     }
 
-    // Đường dẫn tương đối: không cắt gì, chỉ lùi gốc lên cấp cha khi người dùng trỏ vào thư
-    // mục con (…\UBND\DCXD trong khi Excel ghi từ UBND\DCXD\…) — như cũ.
+    // Đường dẫn tương đối (`CSDL_Binh Lieu\Da Ky So\2.PHONG NOI VU\01\01\…pdf`).
+    //
+    // Đoạn ĐẦU của nó thường lặp lại ĐUÔI của thư mục đang chọn — cắt chỗ lặp đó đi. Không cắt
+    // thì phải lùi gốc lên tận `F:\` mới thấy tệp, rồi bước liệt kê đĩa đi quét **cả kho** chứ không
+    // riêng phông đã chọn: chậm, và mọi tệp của phông khác hoá "thừa tệp".
+    //
+    // Chỗ lặp có thể trùng hợp (thư mục kho tên `01`, Excel cũng mở đầu bằng `01`), nên hỏi đĩa
+    // để chọn giữa các khả năng — dài trước, rồi mới đến "không cắt gì".
+    let goc: Vec<String> = norm_rel(&root.to_string_lossy())
+        .split('\\')
+        .filter(|x| !x.is_empty())
+        .map(str::to_lowercase)
+        .collect();
+    let mut lap: Vec<usize> = Vec::new();
+    for k in (1..=goc.len()).rev() {
+        let duoi = &goc[goc.len() - k..];
+        let khop = mau
+            .iter()
+            .filter(|v| v.len() > k)
+            .any(|v| duoi.iter().zip(v).all(|(a, b)| *a == b.to_lowercase()));
+        if khop {
+            lap.push(k);
+        }
+    }
+    for k in lap.iter().copied().chain(std::iter::once(0)) {
+        if dem(root, k) > 0 {
+            return (root.to_path_buf(), k);
+        }
+    }
+
+    // Không đoạn nào khớp đĩa: người dùng trỏ vào thư mục con trong khi Excel ghi từ cấp trên
+    // (…\UBND\DCXD, Excel ghi UBND\DCXD\…) — lùi gốc lên như cũ.
     let mut g = root.to_path_buf();
     for _ in 0..=LUI_TOI_DA {
         if dem(&g, 0) > 0 {
@@ -419,35 +449,61 @@ fn chon_goc(sheet: &Sheet, root: &Path) -> (PathBuf, usize) {
         let Some(cha) = g.parent().map(Path::to_path_buf) else { break };
         g = cha;
     }
-    (root.to_path_buf(), 0)
+    // Chọn cấu trúc hợp lý nhất: tệp thiếu thật thì vẫn phải báo thiếu đúng dòng của nó.
+    (root.to_path_buf(), lap.first().copied().unwrap_or(0))
 }
 
 /// Bỏ `cat` đoạn đầu của một đường dẫn Excel. Đường dẫn ngắn hơn thì để nguyên — dòng đó sai
 /// kiểu khác, cứ để bộ kiểm báo đúng lỗi của nó.
-fn cat_dau(rel: &str, cat: usize) -> String {
-    let r = norm_rel(rel);
+/// Đoạn đầu sẽ bị cắt, lấy từ dòng Excel đầu tiên đủ dài (đã hạ chữ thường để so).
+fn tien_to_cua(sheet: &Sheet, cat: usize) -> Vec<String> {
     if cat == 0 {
+        return Vec::new();
+    }
+    sheet
+        .rows
+        .iter()
+        .filter_map(|r| r.doc_path.as_deref())
+        .map(|p| norm_rel(p).split('\\').map(str::to_lowercase).collect::<Vec<_>>())
+        .find(|v| v.len() > cat + 1)
+        .map(|v| v[..cat].to_vec())
+        .unwrap_or_default()
+}
+
+/// Bỏ `tien_to` khỏi đầu một đường dẫn Excel — **chỉ khi dòng đó thật sự mang đoạn đầu ấy**.
+///
+/// Bảng kê lẫn lộn hai kiểu (dòng tuyệt đối, dòng tương đối) thì cắt bừa là nát. Tên ổ đĩa so
+/// lỏng tay: `F:` và `E:` cũng là một, vì ổ cắm ngoài đổi chữ cái mỗi lần cắm lại.
+fn cat_dau(rel: &str, tien_to: &[String]) -> String {
+    let r = norm_rel(rel);
+    if tien_to.is_empty() {
         return r;
     }
     let seg: Vec<&str> = r.split('\\').collect();
-    // Chỉ cắt đường dẫn TUYỆT ĐỐI. Bảng kê lẫn lộn hai kiểu thì dòng ghi tương đối phải để
-    // nguyên, cắt vào là nát.
-    if seg.len() <= cat + 1 || !seg.first().is_some_and(|x| la_doan_o_dia(x)) {
+    if seg.len() <= tien_to.len() + 1 {
         return r;
     }
-    seg[cat..].join("\\")
+    let khop = tien_to.iter().zip(&seg).enumerate().all(|(i, (a, b))| {
+        let b = b.to_lowercase();
+        *a == b || (i == 0 && la_doan_o_dia(a) && la_doan_o_dia(&b))
+    });
+    if !khop {
+        return r;
+    }
+    seg[tien_to.len()..].join("\\")
 }
 
 /// Phần gom hồ sơ của [`plan`], KHÔNG chạm đĩa. Tách ra để bản kiểm theo bản kê
 /// ([`crate::kho`]) dùng lại: ở đó không có đĩa để dò nên `root` truyền rỗng.
 pub(crate) fn gom(sheet: &Sheet, root: PathBuf, cat: usize) -> Plan {
+    let tien_to = tien_to_cua(sheet, cat);
     let mut map: BTreeMap<String, Vec<Row>> = BTreeMap::new();
     let mut mlvb_skipped = 0usize;
     let mut tien_to_cat = String::new();
     for r in &sheet.rows {
-        let rel = r.doc_path.as_deref().map(|p| cat_dau(p, cat)).unwrap_or_default();
+        let rel = r.doc_path.as_deref().map(|p| cat_dau(p, &tien_to)).unwrap_or_default();
         let dir = if rel.is_empty() {
-            r.hs_dir.as_deref().map(|p| cat_dau(p, cat)).unwrap_or_else(|| format!("?dòng {}", r.line))
+            r.hs_dir.as_deref().map(|p| cat_dau(p, &tien_to)).unwrap_or_else(|| format!("?dòng {}", r.line))
         } else {
             dir_of(&rel)
         };
@@ -458,14 +514,14 @@ pub(crate) fn gom(sheet: &Sheet, root: PathBuf, cat: usize) -> Plan {
         // Ghi lại đường dẫn ĐÃ CẮT vào chính dòng: mọi bước sau (so với đĩa, so «Tệp tin hồ sơ»,
         // mở tệp để kiểm sâu) đều đọc từ đây, cắt một chỗ là xong, không sót chỗ nào.
         if let Some(p) = r.doc_path.as_deref() {
-            let moi = cat_dau(p, cat);
+            let moi = cat_dau(p, &tien_to);
             if tien_to_cat.is_empty() && moi.len() < norm_rel(p).len() {
                 tien_to_cat = norm_rel(p)[..norm_rel(p).len() - moi.len() - 1].to_string();
             }
             r.doc_path = Some(moi);
         }
         if let Some(p) = r.hs_dir.as_deref() {
-            r.hs_dir = Some(cat_dau(p, cat));
+            r.hs_dir = Some(cat_dau(p, &tien_to));
         }
         map.entry(dir).or_default().push(r);
     }
@@ -1496,18 +1552,50 @@ mod tests {
         let _ = std::fs::remove_dir_all(&goc);
     }
 
-    /// Người dùng trỏ vào thư mục CON trong khi Excel ghi từ cấp trên: vẫn phải lùi lên như cũ.
+    /// Người dùng trỏ vào thư mục CON trong khi Excel ghi đường dẫn từ cấp trên.
+    ///
+    /// Giữ đúng thư mục người dùng chọn và cắt đoạn lặp ở đầu đường dẫn Excel, thay vì lùi gốc
+    /// lên cấp cha: lùi gốc là bước liệt kê đĩa đi quét cả các thư mục anh em không ai hỏi tới.
     #[test]
-    fn tro_vao_thu_muc_con_thi_lui_len_cap_cha() {
+    fn tro_vao_thu_muc_con_thi_cat_doan_lap_o_dau() {
         let duoi = [r"UBND\HOP01\01\H49.146.01.2000.01.0000001.pdf"];
         let goc = dung_kho("trocon", &duoi);
         let sheet = sheet_duong_dan(&duoi);
         let plan = plan(&sheet, &goc.join("UBND"));
-        assert_eq!(plan.root, goc, "phải lùi lên thư mục chứa «UBND»");
-        assert_eq!(plan.tien_to_cat, "");
+        assert_eq!(plan.root, goc.join("UBND"), "phải giữ đúng thư mục đã chọn");
+        assert_eq!(plan.dossiers[0].dir, r"HOP01\01", "cắt đoạn «UBND» lặp ở đầu");
         let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
         assert_eq!(bc.files_on_disk, 1);
+        assert!(!bc.issues.iter().any(|i| i.code == "TEP-KHONG-CO-TREN-DIA"), "{:?}", bc.issues);
         let _ = std::fs::remove_dir_all(&goc);
+    }
+
+    /// **Đường dẫn không có tên ổ, lặp lại cả chuỗi thư mục kho** — đúng câu anh Hiếu hỏi 23/11/2026:
+    /// `CSDL_Binh Lieu\Da Ky So\2.PHONG NOI VU\01\01\H49…pdf`.
+    ///
+    /// Không cắt thì phải lùi gốc lên tận `F:\` mới thấy tệp, rồi quét cả 18 phông của kho — mọi
+    /// tệp phông khác hoá "thừa tệp".
+    #[test]
+    fn duong_dan_khong_co_ten_o_lap_lai_chuoi_thu_muc_kho() {
+        let duoi = [r"01\01\H49.146.01.2014.01.0000001.pdf"];
+        let nen = dung_kho("khongo", &[r"CSDL_Binh Lieu\Da Ky So\2.PHONG NOI VU\01\01\H49.146.01.2014.01.0000001.pdf"]);
+        // Thư mục kho người dùng chọn, và một phông KHÁC không được đụng tới.
+        let kho = nen.join("CSDL_Binh Lieu").join("Da Ky So").join("2.PHONG NOI VU");
+        let phong_khac = nen.join("CSDL_Binh Lieu").join("Da Ky So").join("1.VAN PHONG");
+        std::fs::create_dir_all(&phong_khac).unwrap();
+        std::fs::write(phong_khac.join("khong lien quan.pdf"), b"%PDF-1.4 x").unwrap();
+
+        let sheet = sheet_duong_dan(&[r"CSDL_Binh Lieu\Da Ky So\2.PHONG NOI VU\01\01\H49.146.01.2014.01.0000001.pdf"]);
+        let plan = plan(&sheet, &kho);
+        assert_eq!(plan.root, kho, "không được lùi gốc lên khỏi thư mục đã chọn");
+        assert_eq!(plan.dossiers[0].dir, r"01\01", "phải cắt đoạn lặp ở đầu");
+        let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
+        assert_eq!(bc.files_on_disk, 1, "chỉ được liệt kê phông đã chọn");
+        let ma: Vec<&str> = bc.issues.iter().map(|i| i.code).collect();
+        assert!(!ma.contains(&"TEP-KHONG-CO-TREN-DIA"), "{:?}", bc.issues);
+        assert!(!ma.contains(&"TEP-KHONG-CO-TRONG-EXCEL"), "phông khác không được hoá thừa tệp: {:?}", bc.issues);
+        let _ = std::fs::remove_dir_all(&nen);
+        let _ = duoi;
     }
 
     #[test]
