@@ -360,14 +360,29 @@ fn chon_goc(sheet: &Sheet, root: &Path) -> (PathBuf, usize) {
             .filter(|x| !x.is_empty())
             .map(str::to_lowercase)
             .collect();
+        // **Bỏ tên ổ đĩa ở cả hai bên trước khi so.** Ổ rời ra cắm lại là Windows đổi chữ cái
+        // (F: thành E:), mà phần còn lại của đường dẫn thì không đổi gì. Bám vào chữ cái ổ là để
+        // cùng một kho hôm nay đọc được, mai cắm cổng khác thì thành "không thấy tệp".
+        let bo_o = |v: &[String]| -> Vec<String> {
+            match v.first() {
+                Some(x) if la_doan_o_dia(x) => v[1..].to_vec(),
+                _ => v.to_vec(),
+            }
+        };
+        let goc_bo_o = bo_o(&goc);
         // Chốt theo TÊN thư mục chứ không hỏi đĩa: tệp thiếu thật vẫn phải báo thiếu đúng một
         // dòng, không được kéo cả bảng sập theo.
         let mut phieu: BTreeMap<usize, usize> = BTreeMap::new();
         for v in &mau {
             let thap: Vec<String> = v.iter().map(|x| x.to_lowercase()).collect();
             // 1. Đường dẫn nằm ngay dưới thư mục đang chọn — trường hợp thường gặp nhất.
-            if thap.len() > goc.len() && goc.iter().zip(&thap).all(|(a, b)| a == b) {
-                *phieu.entry(goc.len()).or_default() += 1;
+            //    So phần sau tên ổ: `F:\CSDL_Binh Lieu\…` và `E:\CSDL_Binh Lieu\…` là một.
+            let co_o = v.first().is_some_and(|x| la_doan_o_dia(x));
+            let thap_bo_o = bo_o(&thap);
+            if thap_bo_o.len() > goc_bo_o.len()
+                && goc_bo_o.iter().zip(&thap_bo_o).all(|(a, b)| a == b)
+            {
+                *phieu.entry(usize::from(co_o) + goc_bo_o.len()).or_default() += 1;
                 continue;
             }
             // 2. Kho đã chép sang chỗ khác hoặc ổ đổi tên (F: thành E:): bám vào TÊN thư mục
@@ -1380,6 +1395,56 @@ mod tests {
             "đúng hai dòng thiếu tệp: {:?}",
             bc.issues
         );
+        let _ = std::fs::remove_dir_all(&goc);
+    }
+
+    /// **Tên thư mục lặp lại (`…\01\01\`) thì không được cắt nhầm.**
+    ///
+    /// Kho Bình Liêu đánh hộp và hồ sơ cùng bằng số hai chữ, nên `01` xuất hiện nhiều lần trong
+    /// một đường dẫn. Bám vào lần xuất hiện SAU cùng của tên thư mục đang chọn là cắt quá tay;
+    /// phải so cả đoạn đường dẫn (sau khi bỏ tên ổ) mới chốt đúng.
+    #[test]
+    fn ten_thu_muc_lap_lai_van_cat_dung_phan_dau() {
+        let cha = dung_kho("lap", &[r"01\01\H49.146.01.2014.01.0000001.pdf"]);
+        let goc = cha.join("01"); // thư mục kho chính là “01”, bên trong lại có “01” nữa
+        let sau_o: String = norm_rel(&goc.to_string_lossy())
+            .split('\\')
+            .skip(1)
+            .collect::<Vec<_>>()
+            .join("\\");
+        let sheet =
+            sheet_duong_dan(&[&format!(r"Z:\\{sau_o}\\01\\H49.146.01.2014.01.0000001.pdf")]);
+
+        let plan = plan(&sheet, &goc);
+        assert_eq!(plan.root, goc);
+        assert_eq!(plan.dossiers[0].dir, "01", "cắt quá tay thì thư mục hồ sơ rỗng");
+        let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
+        assert_eq!(bc.files_on_disk, 1);
+        assert!(!bc.issues.iter().any(|i| i.code == "TEP-KHONG-CO-TREN-DIA"), "{:?}", bc.issues);
+        let _ = std::fs::remove_dir_all(&cha);
+    }
+
+    /// **Ổ rời ra cắm lại, Windows đổi chữ cái — vẫn phải nhận ra đúng kho.**
+    ///
+    /// Đây là ổ cắm ngoài, hôm nay F: mai E:. Chỉ phần sau tên ổ là thật, nên chỉ so phần đó.
+    #[test]
+    fn o_doi_chu_cai_van_doi_chieu_dung() {
+        let duoi = [r"01\01\H49.146.01.2014.01.0000001.pdf"];
+        let goc = dung_kho("doio", &duoi);
+        // Đường dẫn y hệt thư mục đang chọn, chỉ khác MỖI chữ cái ổ.
+        let sau_o: String = norm_rel(&goc.to_string_lossy())
+            .split('\\')
+            .skip(1)
+            .collect::<Vec<_>>()
+            .join("\\");
+        let sheet = sheet_duong_dan(&[&format!(r"Z:\\{sau_o}\\{}", duoi[0])]);
+
+        let plan = plan(&sheet, &goc);
+        assert_eq!(plan.root, goc);
+        assert_eq!(plan.dossiers[0].dir, r"01\01", "phải cắt bỏ cả tên ổ lẫn phần gốc");
+        let bc = run(&sheet, Path::new("Metadata.xlsx"), &plan, false, false, false, 1, &|_, _| {});
+        assert_eq!(bc.files_on_disk, 1);
+        assert!(!bc.issues.iter().any(|i| i.code == "TEP-KHONG-CO-TREN-DIA"), "{:?}", bc.issues);
         let _ = std::fs::remove_dir_all(&goc);
     }
 
