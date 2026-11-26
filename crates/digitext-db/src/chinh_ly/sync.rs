@@ -235,6 +235,37 @@ async fn write_history(conn: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec,
     .await
 }
 
+/// Hồ sơ đã nộp vào lưu trữ cơ quan (0031: `cho_tiep_nhan` | `da_nop`) thì mục lục của nó đóng băng: không sửa cột nghiệp vụ
+/// của hồ sơ, không thêm / sửa / xoá văn bản và tệp của nó, không xoá hồ sơ. Chốt 26/11/2026: khoá ngay khi nộp (người nộp
+/// rút phiếu thì mở). Cột `online_only` (số hồ sơ, hộp, bó/tập, giá) vẫn ghi được — hệ thống hoá là việc của lưu trữ cơ quan
+/// sau tiếp nhận — trừ `dm_dong_id` (dòng danh mục là phần kê khai của người nộp).
+///
+/// Trả `true` khi hồ sơ cha của bản ghi đang bị khoá. `server` = dòng hiện có (sửa / xoá), `new` = dòng gửi lên (thêm mới).
+async fn ho_so_bi_khoa(tx: &mut PgConnection, sp: &TableSpec, server: Option<&Row>, new: Option<&Row>) -> sqlx::Result<bool> {
+    let khoa = |tt: Option<&str>| matches!(tt, Some("cho_tiep_nhan" | "da_nop"));
+    match sp.name {
+        "cl_ho_so" => Ok(server.map_or(false, |s| khoa(rows::str_of(s, "nop_luu_trang_thai")))),
+        "cl_van_ban" => {
+            let Some(hs) = server.and_then(|r| rows::uuid_of(r, "ho_so_id")).or_else(|| new.and_then(|r| rows::uuid_of(r, "ho_so_id"))) else {
+                return Ok(false);
+            };
+            let tt: Option<Option<String>> = sqlx::query_scalar("SELECT nop_luu_trang_thai FROM cl_ho_so WHERE id = $1").bind(hs).fetch_optional(&mut *tx).await?;
+            Ok(khoa(tt.flatten().as_deref()))
+        }
+        "cl_van_ban_file" => {
+            let Some(vb) = server.and_then(|r| rows::uuid_of(r, "van_ban_id")).or_else(|| new.and_then(|r| rows::uuid_of(r, "van_ban_id"))) else {
+                return Ok(false);
+            };
+            let tt: Option<Option<String>> =
+                sqlx::query_scalar("SELECT h.nop_luu_trang_thai FROM cl_van_ban v JOIN cl_ho_so h ON h.id = v.ho_so_id WHERE v.id = $1").bind(vb).fetch_optional(&mut *tx).await?;
+            Ok(khoa(tt.flatten().as_deref()))
+        }
+        _ => Ok(false),
+    }
+}
+
+const KHOA_MSG: &str = "Hồ sơ đã nộp lưu vào lưu trữ cơ quan, không sửa được (rút phiếu nộp lưu nếu cần sửa)";
+
 async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op: &SyncOp, server: Option<Row>, offline: bool) -> sqlx::Result<OpResult> {
     let is_seed = server.as_ref().map(|r| r.get("project_id").map_or(false, Value::is_null)).unwrap_or(false);
     if is_seed && !ctx.is_super {
@@ -255,6 +286,9 @@ async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op:
             }
             if !(ctx.has_perm)(sp.perm_for(WriteOp::Delete)) {
                 return Ok(OpResult::rejected("forbidden", "Không có quyền xoá"));
+            }
+            if ho_so_bi_khoa(tx, sp, Some(&server), None).await? {
+                return Ok(OpResult::rejected("locked", KHOA_MSG));
             }
             if let Some(base) = &op.base {
                 if ver_of(base) != ver_of(&server) {
@@ -316,6 +350,9 @@ async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op:
                     if !(ctx.has_perm)(sp.perm_for(WriteOp::Insert)) {
                         return Ok(OpResult::rejected("forbidden", "Không có quyền thêm"));
                     }
+                    if ho_so_bi_khoa(tx, sp, None, Some(&new)).await? {
+                        return Ok(OpResult::rejected("locked", KHOA_MSG));
+                    }
                     validate::fill_defaults(sp.name, &mut new);
                     let errs = validate::normalize(sp.name, &mut new, true);
                     if !errs.is_empty() {
@@ -363,6 +400,11 @@ async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op:
                     };
                     if patch.is_empty() {
                         return Ok(OpResult::NoChange { ver: sver.unwrap_or(0), row: server });
+                    }
+                    // Hồ sơ đã nộp lưu: chỉ còn các cột hệ thống hoá (online_only, trừ dòng danh mục) được đổi.
+                    let dong_cot_khoa = |k: &String| sp.name != "cl_ho_so" || k == "dm_dong_id" || !sp.is_online_only(k);
+                    if patch.keys().any(dong_cot_khoa) && ho_so_bi_khoa(tx, sp, Some(&server), None).await? {
+                        return Ok(OpResult::rejected("locked", KHOA_MSG));
                     }
                     // Chuẩn hoá trên bản gộp (kiểm chéo ngày BĐ ≤ KT…), rồi chỉ giữ các cột trong patch.
                     let mut merged = server.clone();

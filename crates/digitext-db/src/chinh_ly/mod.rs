@@ -22,6 +22,8 @@ pub mod spec;
 pub mod sync;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_luu_tru;
 pub mod thong_ke;
 pub mod validate;
 

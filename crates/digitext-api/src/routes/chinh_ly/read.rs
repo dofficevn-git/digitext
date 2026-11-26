@@ -73,6 +73,9 @@ struct HoSoQ {
     hop_id: Option<Uuid>,
     #[serde(default)]
     ids: Option<String>,
+    /// 0031: chua_nop | cho_tiep_nhan | da_nop | tra_lai
+    #[serde(default)]
+    nop_luu: Option<String>,
     #[serde(default)]
     include_deleted: bool,
     #[serde(default)]
@@ -93,6 +96,8 @@ async fn list_ho_so(State(st): State<AppState>, ts: Ts, Query(q): Query<HoSoQ>) 
     let thbq_raw = q.thbq.as_deref().unwrap_or("").trim().to_owned();
     let f = ho_so::Filter {
         project_id: q.project_id,
+        pham_vi: super::pham_vi_cua(&ts),
+        nop_luu: q.nop_luu,
         phong_id: q.phong_id,
         phong_ban_id: q.phong_ban_id,
         mang_id: q.mang_id,
@@ -175,6 +180,7 @@ async fn search_van_ban(State(st): State<AppState>, ts: Ts, Query(q): Query<VbQ>
     read_access(&st, &ts, q.project_id).await?;
     let f = ho_so::VanBanFilter {
         project_id: q.project_id,
+        pham_vi: super::pham_vi_cua(&ts),
         phong_id: q.phong_id,
         phong_ban_id: q.phong_ban_id,
         ho_so_id: q.ho_so_id,

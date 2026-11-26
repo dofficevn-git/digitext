@@ -12,9 +12,13 @@ pub struct Tec {
     pub message: String,
     pub read_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    /// Khoá tham chiếu (0031): `ho_so:<id>:nhac15`, `nop_luu:<id>`, `danh_muc:<id>`… — chuông mở đúng màn, và cùng
+    /// (người, kind, ref) chỉ có một dòng (ux_notifications_ref) nên nhắc theo lịch không lặp.
+    #[sqlx(rename = "ref")]
+    pub ref_: Option<String>,
 }
 const COLS: &str =
-    "id, user_id, submission_id, info_request_id, kind, message, read_at, created_at";
+    "id, user_id, submission_id, info_request_id, kind, message, read_at, created_at, ref";
 pub async fn f_1v8(
     r_25x: &PgPool,
     user_id: Uuid,
@@ -34,6 +38,24 @@ pub async fn f_1v8(
     .execute(r_25x)
     .await?;
     Ok(r_25y.rows_affected() > 0)
+}
+/// Thông báo có khoá `ref` (0031): trùng (người, kind, ref) → bỏ qua, trả `false`. Dùng cho nhắc hạn nộp lưu, danh mục chờ
+/// duyệt lâu, quyền sử dụng sắp hết.
+pub async fn f_1v8_ref(pool: &PgPool, user_id: Uuid, kind: &str, message: &str, ref_: &str) -> sqlx::Result<bool> {
+    let r = sqlx::query("INSERT INTO notifications (id, user_id, kind, message, ref) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+        .bind(Uuid::now_v7())
+        .bind(user_id)
+        .bind(kind)
+        .bind(message)
+        .bind(ref_)
+        .execute(pool)
+        .await;
+    match r {
+        Ok(r) => Ok(r.rows_affected() > 0),
+        // Người nhận vừa bị xoá giữa lượt quét (worker quét toàn máy chủ, không khoá bảng users): không phải lỗi của lượt quét.
+        Err(sqlx::Error::Database(e)) if e.code().as_deref() == Some("23503") => Ok(false),
+        Err(e) => Err(e),
+    }
 }
 pub async fn f_1v9(
     r_25z: &PgPool,

@@ -31,6 +31,8 @@ pub struct UserDto {
     pub role: Role,
     pub role_code: Option<String>,
     pub project_id: Option<Uuid>,
+    /// Phòng ban (lưu trữ hiện hành, 0031); None = không giới hạn phạm vi.
+    pub phong_ban_id: Option<Uuid>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -44,6 +46,7 @@ impl From<User> for UserDto {
             role: r_w0.role,
             role_code: r_w0.role_code,
             project_id: r_w0.project_id,
+            phong_ban_id: r_w0.phong_ban_id,
             is_active: r_w0.is_active,
             created_at: r_w0.created_at,
         }
@@ -63,6 +66,9 @@ pub struct T3i {
     pub role_code: Option<String>,
     #[serde(default)]
     pub project_id: Option<Uuid>,
+    /// Phòng ban của người dùng (bản Lưu trữ, Điều 19). Chỉ có nghĩa khi tài khoản gắn dự án có phông chứa phòng ban đó.
+    #[serde(default)]
+    pub phong_ban_id: Option<Uuid>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,6 +82,11 @@ pub struct Tgt {
     /// Đổi vai trò: mã vai trò (hệ thống hoặc tuỳ chỉnh). Người này phải đăng nhập lại.
     #[serde(default)]
     pub role_code: Option<String>,
+    /// Gắn phòng ban; vắng = không đổi. Bỏ gắn: `boPhongBan: true`.
+    #[serde(default)]
+    pub phong_ban_id: Option<Uuid>,
+    #[serde(default)]
+    pub bo_phong_ban: bool,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -162,6 +173,7 @@ async fn f_12g(
     let r_wd = users::create(
         &r_wk.pool,
         users::Te1 {
+            phong_ban_id: r_wi.phong_ban_id,
             username: &r_wi.username,
             email: r_wi.email.as_deref(),
             display_name: &r_wi.display_name,
@@ -243,6 +255,8 @@ async fn f_20i(
             display_name: r_wt.display_name.as_deref(),
             email: r_wt.email.as_deref(),
             is_active: r_wt.is_active,
+            // Đổi phòng ban chỉ do người quản lý tài khoản (không tự đổi) — kiểm ở dưới.
+            phong_ban_id: if r_ws && r_wt.bo_phong_ban { Some(None) } else if r_ws { r_wt.phong_ban_id.map(Some) } else { None },
         },
     )
     .await?

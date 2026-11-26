@@ -31,7 +31,7 @@ use crate::extract::{f_29a, Ts};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
-use digitext_core::{Permission, Role};
+use digitext_core::{Perm, Permission, Role};
 use digitext_db::chinh_ly::{OpCtx, OpResult};
 use serde_json::json;
 use uuid::Uuid;
@@ -48,6 +48,17 @@ pub(crate) async fn project_access(st: &AppState, ts: &Ts, project: Uuid) -> Res
     } else {
         Err(ApiError::forbidden())
     }
+}
+
+/// Phạm vi phòng ban (0031, lưu trữ hiện hành): người gắn phòng ban chỉ thấy hồ sơ phòng mình + hồ sơ mình lập — trừ khi có
+/// `luutru.receive` (cán bộ lưu trữ cơ quan) hoặc vai trò gốc từ quản trị trở lên. Tài khoản không gắn phòng ban (mọi tài
+/// khoản thi công hôm nay) → `None`: hành vi y như trước.
+pub(crate) fn pham_vi_cua(ts: &Ts) -> Option<digitext_db::chinh_ly::ho_so::PhamVi> {
+    let phong_ban_id = ts.user.phong_ban_id?;
+    if ts.has_perm(Permission::LuutruReceive) || ts.user.role.allows(Perm::Admin) {
+        return None;
+    }
+    Some(digitext_db::chinh_ly::ho_so::PhamVi { phong_ban_id, user_id: ts.user.id })
 }
 
 /// Đọc: cần dossier.read hoặc catalog.read + thuộc dự án.

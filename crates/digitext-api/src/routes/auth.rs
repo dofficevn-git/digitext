@@ -43,6 +43,9 @@ pub struct UserProfile {
     pub role_code: Option<String>,
     pub role_name: String,
     pub project: Option<ProjectBrief>,
+    /// Phòng ban của người dùng (lưu trữ hiện hành, 0031) — desktop khoá bộ lọc phòng ban và màn Nộp lưu theo đây.
+    pub phong_ban_id: Option<Uuid>,
+    pub ten_phong_ban: Option<String>,
     pub grants: Vec<Permission>,
     pub denies: Vec<Permission>,
     /// Quyền hiệu lực đã tính ở máy chủ (bộ quyền vai trò ∪ cấp riêng − chặn riêng).
@@ -70,6 +73,10 @@ impl UserProfile {
             _ => user.role.display_name().to_owned(),
         };
         let preset = crate::routes::roles::preset_cached(&r_ab.pool, user).await?;
+        let ten_phong_ban: Option<String> = match user.phong_ban_id {
+            Some(pb) => sqlx::query_scalar("SELECT ten FROM cl_phong_ban WHERE id = $1").bind(pb).fetch_optional(&r_ab.pool).await?,
+            None => None,
+        };
         Ok(UserProfile {
             id: user.id,
             username: user.username.clone(),
@@ -78,6 +85,8 @@ impl UserProfile {
             role_code: user.role_code.clone(),
             role_name,
             project,
+            phong_ban_id: user.phong_ban_id,
+            ten_phong_ban,
             grants: r_a8.grants.iter().copied().collect(),
             denies: r_a8.denies.iter().copied().collect(),
             permissions: digitext_core::effective_set_with(preset.as_ref(), user.role, r_a8).into_iter().collect(),

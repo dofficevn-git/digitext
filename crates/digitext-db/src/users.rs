@@ -14,13 +14,15 @@ pub struct User {
     /// Vai trò động (bảng roles, migration 0022); None = dùng đúng vai trò gốc `role`.
     pub role_code: Option<String>,
     pub project_id: Option<Uuid>,
+    /// Phòng ban (đơn vị hình thành phông) của người dùng — lưu trữ hiện hành 0031; None = không giới hạn phạm vi.
+    pub phong_ban_id: Option<Uuid>,
     pub is_active: bool,
     pub token_version: i32,
     pub created_by: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
-const USER_COLS: &str = "id, username, email, display_name, role, role_code, project_id, \
+const USER_COLS: &str = "id, username, email, display_name, role, role_code, project_id, phong_ban_id, \
      is_active, token_version, created_by, created_at, updated_at";
 #[derive(Debug)]
 pub struct Te1<'a> {
@@ -31,6 +33,7 @@ pub struct Te1<'a> {
     pub role: Role,
     pub role_code: Option<&'a str>,
     pub project_id: Option<Uuid>,
+    pub phong_ban_id: Option<Uuid>,
     pub created_by: Option<Uuid>,
 }
 #[derive(Debug, Default)]
@@ -38,6 +41,8 @@ pub struct Tph<'a> {
     pub display_name: Option<&'a str>,
     pub email: Option<&'a str>,
     pub is_active: Option<bool>,
+    /// `Some(None)` = bỏ gắn phòng ban; `None` = không đổi.
+    pub phong_ban_id: Option<Option<Uuid>>,
 }
 pub async fn create(r_2ex: &PgPool, r_2ew: Te1<'_>) -> sqlx::Result<User> {
     sqlx::query_as::<
@@ -45,8 +50,8 @@ pub async fn create(r_2ex: &PgPool, r_2ew: Te1<'_>) -> sqlx::Result<User> {
         User,
     >(
             &format!(
-                "INSERT INTO users (id, username, email, display_name, pwd_hash, role, role_code, project_id, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING {USER_COLS}"
+                "INSERT INTO users (id, username, email, display_name, pwd_hash, role, role_code, project_id, created_by, phong_ban_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING {USER_COLS}"
             ),
         )
         .bind(Uuid::now_v7())
@@ -58,6 +63,7 @@ pub async fn create(r_2ex: &PgPool, r_2ew: Te1<'_>) -> sqlx::Result<User> {
         .bind(r_2ew.role_code)
         .bind(r_2ew.project_id)
         .bind(r_2ew.created_by)
+        .bind(r_2ew.phong_ban_id)
         .fetch_one(r_2ex)
         .await
 }
@@ -123,6 +129,7 @@ pub async fn update(r_2f5: &PgPool, id: Uuid, r_2f4: Tph<'_>) -> sqlx::Result<Op
             display_name = COALESCE($2, display_name), \
             email        = COALESCE($3, email), \
             is_active    = COALESCE($4, is_active), \
+            phong_ban_id = CASE WHEN $5::bool THEN $6 ELSE phong_ban_id END, \
             updated_at   = now() \
          WHERE id = $1 RETURNING {USER_COLS}"
     ))
@@ -130,6 +137,8 @@ pub async fn update(r_2f5: &PgPool, id: Uuid, r_2f4: Tph<'_>) -> sqlx::Result<Op
     .bind(r_2f4.display_name)
     .bind(r_2f4.email)
     .bind(r_2f4.is_active)
+    .bind(r_2f4.phong_ban_id.is_some())
+    .bind(r_2f4.phong_ban_id.flatten())
     .fetch_optional(r_2f5)
     .await
 }
@@ -185,4 +194,15 @@ pub async fn count(r_2fb: &PgPool) -> sqlx::Result<i64> {
     sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
         .fetch_one(r_2fb)
         .await
+}
+
+/// Người dùng đang hoạt động của một phòng ban trong dự án (nhận nhắc hạn nộp lưu — 0031).
+pub async fn cua_phong_ban(pool: &PgPool, project_id: Uuid, phong_ban_id: Uuid) -> sqlx::Result<Vec<Uuid>> {
+    sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM users WHERE phong_ban_id = $2 AND is_active AND (project_id = $1 OR project_id IS NULL) ORDER BY username",
+    )
+    .bind(project_id)
+    .bind(phong_ban_id)
+    .fetch_all(pool)
+    .await
 }

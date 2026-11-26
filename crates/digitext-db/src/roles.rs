@@ -206,6 +206,50 @@ pub async fn bo_sung_quyen_moi(pool: &PgPool) -> sqlx::Result<u32> {
     Ok(chen)
 }
 
+/// Ba vai trò mặc định của BẢN LƯU TRỮ (cơ quan; 26/11/2026, đóng nợ GĐ4.7): chèn khi chưa có, `is_system = false` nên quản
+/// trị sửa / xoá được như vai trò tuỳ chỉnh; đã có thì không đụng. Gọi sau `ensure_system` khi `DIGITEXT_EDITION=luu_tru`.
+/// - `nhan_vien_phong_ban` (gốc user): lập hồ sơ, nộp lưu, soạn danh mục của phòng mình, tra cứu / yêu cầu khai thác.
+/// - `can_bo_luu_tru` (gốc admin): mặc định quản trị dự án trừ duyệt danh mục và quyết định tiêu huỷ (việc của lãnh đạo).
+/// - `lanh_dao` (gốc manager): mặc định quản lý (không xoá) — có duyệt / ban hành danh mục.
+pub async fn ensure_luu_tru(pool: &PgPool) -> sqlx::Result<u32> {
+    use Permission as P;
+    let nhan_vien: BTreeSet<Permission> = [
+        P::DossierRead, P::DossierCreate, P::DossierUpdate, P::DossierExport, P::CatalogRead, P::RecordView,
+        P::LuutruSubmit, P::DanhmucEdit, P::AccessView, P::AccessRequest, P::LoanView,
+    ]
+    .into_iter()
+    .collect();
+    let mut can_bo = default_set(Role::Admin);
+    can_bo.remove(&Permission::DanhmucApprove);
+    can_bo.remove(&Permission::DisposalDecide);
+    let lanh_dao = default_set(Role::Manager);
+    let bo: [(&str, &str, &str, Role, &BTreeSet<Permission>, i32); 3] = [
+        ("nhan_vien_phong_ban", "Nhân viên phòng ban", "Lập hồ sơ của phòng mình, nộp vào lưu trữ cơ quan, soạn danh mục hồ sơ dự kiến; tra cứu và gửi yêu cầu khai thác.", Role::User, &nhan_vien, 110),
+        ("can_bo_luu_tru", "Cán bộ lưu trữ cơ quan", "Tiếp nhận hồ sơ nộp lưu, hệ thống hoá, kho / giá, bảo quản, khai thác, mượn trả; trình danh mục, không duyệt.", Role::Admin, &can_bo, 120),
+        ("lanh_dao", "Lãnh đạo", "Duyệt và ban hành danh mục hồ sơ, xem toàn bộ; không xoá dữ liệu.", Role::Manager, &lanh_dao, 130),
+    ];
+    let mut added = 0;
+    for (code, name, desc, base, perms, sort) in bo {
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM roles WHERE code = $1)").bind(code).fetch_one(pool).await?;
+        if exists {
+            continue;
+        }
+        let mut tx = pool.begin().await?;
+        sqlx::query("INSERT INTO roles (code, name, description, base_role, is_system, sort_order) VALUES ($1, $2, $3, $4, false, $5) ON CONFLICT (code) DO NOTHING")
+            .bind(code)
+            .bind(name)
+            .bind(desc)
+            .bind(base.as_str())
+            .bind(sort)
+            .execute(&mut *tx)
+            .await?;
+        set_permissions(&mut tx, code, perms).await?;
+        tx.commit().await?;
+        added += 1;
+    }
+    Ok(added)
+}
+
 fn system_description(role: Role) -> &'static str {
     match role {
         Role::SuperAdmin => "Toàn quyền: mọi dự án, mọi tài khoản, kể cả xoá dữ liệu dự án.",
