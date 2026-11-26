@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod assemble;
+pub mod bao_quan_worker;
 pub mod cli;
 pub mod config;
 pub mod corrector;

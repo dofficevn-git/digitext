@@ -10,6 +10,9 @@ pub struct T4w {
     pub batch_id: Option<Uuid>,
     pub ly_do: String,
     pub dup_of: Option<Uuid>,
+    /// 0033: cách phát hiện — ten_tep | blake3 | muc_luc | han | tay.
+    pub phat_hien: String,
+    pub dup_ho_so_id: Option<Uuid>,
     pub ghi_chu: Option<String>,
     pub status: String,
     pub created_at: DateTime<Utc>,
@@ -49,7 +52,7 @@ pub struct T4x {
     pub detail: Option<String>,
     pub created_at: DateTime<Utc>,
 }
-const ENTRY_COLS: &str = "e.id, e.project_id, e.document_id, e.batch_id, e.ly_do, e.dup_of, \
+const ENTRY_COLS: &str = "e.id, e.project_id, e.document_id, e.batch_id, e.ly_do, e.dup_of, e.phat_hien, e.dup_ho_so_id, \
      e.ghi_chu, e.status, e.created_at, e.updated_at, d.filename, d.ho_so_ref, d.page_count, \
      d.het_han_luu_tru, d.status AS doc_status";
 const BATCH_COLS: &str = "id, project_id, nam, status, hoi_dong_note, tham_dinh_note, tu_quyet, \
@@ -96,8 +99,8 @@ pub async fn f_1pf(r_224: &PgPool, batch_id: Uuid) -> sqlx::Result<Vec<T4x>> {
 }
 pub async fn f_18b(r_226: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
     let r_228: Vec<(Uuid, Uuid)> = sqlx::query_as(
-        "INSERT INTO disposal_entries (id, project_id, document_id, ly_do, dup_of) \
-         SELECT gen_random_uuid(), d.project_id, d.id, 'trung_lap', dup.id \
+        "INSERT INTO disposal_entries (id, project_id, document_id, ly_do, dup_of, phat_hien) \
+         SELECT gen_random_uuid(), d.project_id, d.id, 'trung_lap', dup.id, 'ten_tep' \
          FROM documents d \
          JOIN LATERAL ( \
              SELECT o.id FROM documents o \
@@ -132,6 +135,66 @@ pub async fn f_18b(r_226: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
     }
     Ok(r_228)
 }
+/// 0033 — trùng NỘI DUNG tệp: cùng dự án, cùng blake3, tệp tải / nhập sau vào danh mục xem xét, `dup_of` = tệp đầu
+/// (Điều 48.2). Bỏ tệp đã có dòng danh mục (bất kỳ lý do).
+pub async fn f_trung_blake3(pool: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
+    let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
+        "INSERT INTO disposal_entries (id, project_id, document_id, ly_do, dup_of, phat_hien) \
+         SELECT gen_random_uuid(), d.project_id, d.id, 'trung_lap', dup.id, 'blake3' \
+         FROM documents d \
+         JOIN LATERAL ( \
+             SELECT o.id FROM documents o \
+             WHERE o.project_id = d.project_id AND o.id <> d.id AND o.blake3 = d.blake3 \
+               AND o.status <> 'disposed' AND (o.uploaded_at, o.id) < (d.uploaded_at, d.id) \
+             ORDER BY o.uploaded_at, o.id LIMIT 1 \
+         ) dup ON true \
+         WHERE d.status <> 'disposed' AND d.blake3 <> '' \
+           AND NOT EXISTS (SELECT 1 FROM disposal_entries e WHERE e.document_id = d.id) \
+         RETURNING project_id, document_id",
+    )
+    .fetch_all(pool)
+    .await?;
+    for (p, doc) in &rows {
+        log(pool, *p, Tbb { document_id: Some(*doc), ..Default::default() }, "phat_hien_trung_lap", None, Some("Trùng nội dung tệp (mã băm BLAKE3) — Điều 48.2")).await?;
+    }
+    Ok(rows)
+}
+
+/// 0033 — trùng MỤC LỤC: hai hồ sơ cùng phông, cùng tiêu đề (không dấu), cùng số ký hiệu, cùng năm kết thúc → TÀI LIỆU của hồ
+/// sơ lập sau vào danh mục xem xét, `dup_ho_so_id` = hồ sơ gốc. Chỉ 'xem_xet', không đánh cl_ho_so.trung_thua (cột đồng bộ
+/// offline, người chỉnh lý quyết). Hồ sơ không có tài liệu nào gắn thì không có gì để đưa vào danh mục huỷ.
+/// Trả (dự án, tài liệu, hồ sơ trùng).
+pub async fn f_trung_muc_luc(pool: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid, Uuid)>> {
+    let rows: Vec<(Uuid, Uuid, Uuid)> = sqlx::query_as(
+        "WITH trung AS ( \
+             SELECT h.id AS ho_so_id, goc.id AS goc_id FROM cl_ho_so h \
+             JOIN LATERAL ( \
+                 SELECT g.id FROM cl_ho_so g \
+                 WHERE g.phong_id = h.phong_id AND g.id <> h.id AND g.deleted_at IS NULL \
+                   AND khong_dau(g.tieu_de) = khong_dau(h.tieu_de) AND btrim(coalesce(g.tieu_de, '')) <> '' \
+                   AND g.so_ky_hieu_hs IS NOT DISTINCT FROM h.so_ky_hieu_hs AND g.nam_ket_thuc IS NOT DISTINCT FROM h.nam_ket_thuc \
+                   AND (g.created_at, g.id) < (h.created_at, h.id) \
+                 ORDER BY g.created_at, g.id LIMIT 1 \
+             ) goc ON true \
+             WHERE h.deleted_at IS NULL \
+         ) \
+         INSERT INTO disposal_entries (id, project_id, document_id, ly_do, phat_hien, dup_ho_so_id) \
+         SELECT gen_random_uuid(), d.project_id, d.id, 'trung_lap', 'muc_luc', t.goc_id \
+         FROM trung t \
+         JOIN cl_van_ban v ON v.ho_so_id = t.ho_so_id AND v.deleted_at IS NULL \
+         JOIN cl_van_ban_file f ON f.van_ban_id = v.id AND f.deleted_at IS NULL AND f.document_id IS NOT NULL \
+         JOIN documents d ON d.id = f.document_id AND d.status <> 'disposed' \
+         WHERE NOT EXISTS (SELECT 1 FROM disposal_entries e WHERE e.document_id = d.id) \
+         RETURNING project_id, document_id, dup_ho_so_id",
+    )
+    .fetch_all(pool)
+    .await?;
+    for (p, doc, _) in &rows {
+        log(pool, *p, Tbb { document_id: Some(*doc), ..Default::default() }, "phat_hien_trung_lap", None, Some("Hồ sơ trùng mục lục (phông, tiêu đề, số ký hiệu, năm) — Điều 48.2, cần xem xét")).await?;
+    }
+    Ok(rows)
+}
+
 pub async fn f_1ah(r_22a: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
     // Bản Lưu trữ (GĐ4, 5/11/2026): tài liệu nhập từ gói AIP chưa có hạn lưu trữ → tính từ THBQ có thời hạn của hồ sơ và năm
     // kết thúc, cùng cách tính với `digitext_core::chinh_ly::thbq_status` (hết hạn từ 1/1 năm kết thúc + số năm). Chỉ tài liệu
@@ -149,8 +212,8 @@ pub async fn f_1ah(r_22a: &PgPool) -> sqlx::Result<Vec<(Uuid, Uuid)>> {
     .execute(r_22a)
     .await?;
     let r_22c: Vec<(Uuid, Uuid)> = sqlx::query_as(
-        "INSERT INTO disposal_entries (id, project_id, document_id, ly_do) \
-         SELECT gen_random_uuid(), d.project_id, d.id, 'het_thoi_han' \
+        "INSERT INTO disposal_entries (id, project_id, document_id, ly_do, phat_hien) \
+         SELECT gen_random_uuid(), d.project_id, d.id, 'het_thoi_han', 'han' \
          FROM documents d \
          WHERE d.het_han_luu_tru IS NOT NULL AND d.het_han_luu_tru < now() \
            AND d.status <> 'disposed' \

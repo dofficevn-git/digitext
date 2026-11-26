@@ -651,10 +651,7 @@ pub async fn f_2am(
 pub async fn f_2an(pool: &PgPool, r_3cu: Duration, r_3cv: &CancellationToken) -> sqlx::Result<()> {
     while !r_3cv.is_cancelled() {
         tokio::select! {
-            _ = r_3cv.cancelled() => break, _ = tokio::time::sleep(r_3cu) => { let dup =
-            digitext_db::disposal::f_18b(pool). await ?; let exp =
-            digitext_db::disposal::f_1ah(pool). await ?; if dup.is_empty() && exp
-            .is_empty() { continue; } tracing::info!(trung_lap = dup.len(), het_han = exp
+            _ = r_3cv.cancelled() => break, _ = tokio::time::sleep(r_3cu) => { let mut dup = digitext_db::disposal::f_18b(pool).await?; dup.extend(digitext_db::disposal::f_trung_blake3(pool).await?); dup.extend(digitext_db::disposal::f_trung_muc_luc(pool).await?.into_iter().map(|(p, d, _)| (p, d))); let exp = digitext_db::disposal::f_1ah(pool).await?; if dup.is_empty() && exp.is_empty() { continue; } tracing::info!(trung_lap = dup.len(), het_han = exp
             .len(),
             "danh mục hủy: phát hiện mới (Điều 48.2/48.3)");
             let mut per_project : std::collections::BTreeMap < uuid::Uuid, (usize, usize)
@@ -669,7 +666,7 @@ pub async fn f_2an(pool: &PgPool, r_3cu: Duration, r_3cv: &CancellationToken) ->
     }
     Ok(())
 }
-async fn check_document(
+pub(crate) async fn check_document(
     store: &dyn digitext_storage::ObjectStore,
     r_3cz: uuid::Uuid,
     doc_id: uuid::Uuid,
@@ -709,7 +706,7 @@ async fn check_document(
     Ok(())
 }
 /// Zip gói trong kho còn đúng sha256 lúc nhập/dựng (bản Lưu trữ GĐ4, 5/11/2026).
-async fn check_package(store: &dyn digitext_storage::ObjectStore, key: &str, sha256: &str) -> Result<(), String> {
+pub(crate) async fn check_package(store: &dyn digitext_storage::ObjectStore, key: &str, sha256: &str) -> Result<(), String> {
     use sha2::{Digest, Sha256};
     let bytes = match store.get(key).await {
         Ok(Some(b)) => b,
@@ -750,17 +747,9 @@ pub async fn f_2b5(
             digitext_db::projects::f_re(pool, project). await ?; let msg =
             format!("Kiểm tra tài liệu (Điều 29): phát hiện {n_loi} tệp LỖI — xem danh mục tệp lỗi và lập biên bản kiểm tra (Mục 1 Phụ lục VII)");
             for admin in admins { let _ = digitext_db::notifications::f_1v8(pool, admin,
-            None, "integrity_failed", & msg,). await ?; } } let last_ok =
-            digitext_db::ops::f_1me(pool). await ?; let overdue = match last_ok { Some(t)
-            => chrono::Utc::now() - t > chrono::Duration::hours(26), None => true, }; if
-            overdue && ! digitext_db::ops::f_ti(pool, 20). await ? { let msg = match
-            last_ok { Some(t) =>
-            format!("SAO LƯU TRỄ: lần sao lưu đạt gần nhất lúc {} — Điều 30.1.a yêu cầu sao lưu gia tăng HẰNG NGÀY",
-            t.with_timezone(& f_2qd()).format("%d/%m/%Y %H:%M")), None =>
-            "CHƯA CÓ SAO LƯU nào được ghi nhận — Điều 30.1.a yêu cầu sao lưu gia tăng hằng ngày (script vận hành báo qua POST /ops/backups)"
-            .to_string(), }; for admin in digitext_db::ops::f_rk(pool). await ? { let _ =
-            digitext_db::notifications::f_1v8(pool, admin, None, "backup_overdue", &
-            msg,). await ?; } } }
+            None, "integrity_failed", & msg,). await ?; } }
+            // 0032: cảnh báo sao lưu trễ chuyển sang bao_quan_worker::nhac_lich_sao_luu (theo từng lịch, độ trễ cho phép riêng).
+            }
         }
     }
     Ok(())

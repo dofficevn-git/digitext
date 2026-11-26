@@ -36,6 +36,11 @@ pub struct TepLoi {
     pub ten_tep: String,
     pub dia_chi: String,
     pub mo_ta_loi: Option<String>,
+    /// 0032: mã hồ sơ của tệp và biện pháp đã khắc phục (Điều 29.4.đ, g).
+    #[serde(default)]
+    pub ma_ho_so: Option<String>,
+    #[serde(default)]
+    pub khac_phuc: Option<String>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,6 +49,15 @@ pub struct Tab {
     pub dia_diem: String,
     pub ngay: String,
     pub thanh_phan: Vec<String>,
+    /// 0032 (Điều 29.2): kế hoạch kiểm tra, kỳ, phương pháp (toàn bộ / lấy mẫu), thời gian thực hiện.
+    #[serde(default)]
+    pub ke_hoach: Option<String>,
+    #[serde(default)]
+    pub ky: Option<String>,
+    #[serde(default)]
+    pub phuong_phap: Option<String>,
+    #[serde(default)]
+    pub thoi_gian: Option<String>,
     pub pham_vi: String,
     pub tong_so_tep: u64,
     pub so_dat: u64,
@@ -62,13 +76,25 @@ fn f_27h(r_10: &Tab) -> (String, Vec<FormBlock>) {
     b.push(FormBlock::SectionHeading(
         "II. PHẠM VI VÀ NỘI DUNG KIỂM TRA".into(),
     ));
+    if let Some(x) = opt("Kế hoạch kiểm tra (Điều 29.2)", &r_10.ke_hoach) {
+        b.push(x);
+    }
+    if let Some(x) = opt("Kỳ kiểm tra", &r_10.ky) {
+        b.push(x);
+    }
     b.push(field("Phạm vi kiểm tra", r_10.pham_vi.clone()));
-    b.push(
-        FormBlock::Paragraph(
-            "Nội dung kiểm tra theo khoản 3 Điều 29: (a) khả năng tiếp cận, sử dụng, cập nhật của thông tin về dữ liệu chủ; (b) quá trình bảo quản và bảo đảm an toàn thông tin; (c) tính chính xác thông tin về dữ liệu chủ với tệp tin tài liệu lưu trữ kèm theo."
-                .into(),
-        ),
-    );
+    if let Some(x) = opt("Phương pháp", &r_10.phuong_phap) {
+        b.push(x);
+    }
+    if let Some(x) = opt("Thời gian thực hiện", &r_10.thoi_gian) {
+        b.push(x);
+    }
+    b.push(FormBlock::Paragraph("Nội dung kiểm tra theo khoản 3 Điều 29:".into()));
+    b.push(FormBlock::Bullets(vec![
+        "(a) Khả năng tiếp cận, sử dụng, cập nhật của thông tin về dữ liệu chủ: dữ liệu chủ (mục lục hồ sơ, văn bản) đọc được, tìm được, sửa được bằng phần mềm.".into(),
+        "(b) Quá trình bảo quản và bảo đảm an toàn thông tin: tệp còn trong kho, mã băm khớp lúc nhập; sao lưu theo lịch; quyền truy cập đúng vai trò.".into(),
+        "(c) Tính chính xác thông tin về dữ liệu chủ với tệp tin tài liệu lưu trữ kèm theo: số trang khớp mục lục, tệp mở được, đạt PDF/A.".into(),
+    ]));
     b.push(FormBlock::SectionHeading(
         "III. KẾT QUẢ KIỂM TRA".into(),
     ));
@@ -85,15 +111,24 @@ fn f_27h(r_10: &Tab) -> (String, Vec<FormBlock>) {
                     .into(),
             ),
         );
-        b.push(FormBlock::Bullets(
-            r_10.tep_loi
+        b.push(FormBlock::Table {
+            columns: vec!["STT".into(), "Tên tệp".into(), "Mã hồ sơ".into(), "Địa chỉ lưu trữ".into(), "Mô tả lỗi".into(), "Khắc phục".into()],
+            rows: r_10
+                .tep_loi
                 .iter()
-                .map(|r_11| match &r_11.mo_ta_loi {
-                    Some(m) => format!("{} — {} ({m})", r_11.ten_tep, r_11.dia_chi),
-                    None => format!("{} — {}", r_11.ten_tep, r_11.dia_chi),
+                .enumerate()
+                .map(|(i, r_11)| {
+                    vec![
+                        (i + 1).to_string(),
+                        r_11.ten_tep.clone(),
+                        r_11.ma_ho_so.clone().unwrap_or_default(),
+                        r_11.dia_chi.clone(),
+                        r_11.mo_ta_loi.clone().unwrap_or_default(),
+                        r_11.khac_phuc.clone().unwrap_or_default(),
+                    ]
                 })
                 .collect(),
-        ));
+        });
     }
     if let Some(x) = opt(
         "Phương án khắc phục lỗi (Điều 29.4.g)",
@@ -122,6 +157,13 @@ pub struct Te6 {
     pub phuong_tien: String,
     pub ket_qua: String,
     pub nguoi_thuc_hien: String,
+    /// 0032: dung lượng, số hiệu phương tiện, nơi bảo quản (Điều 30.3).
+    #[serde(default)]
+    pub dung_luong: Option<String>,
+    #[serde(default)]
+    pub so_hieu_phuong_tien: Option<String>,
+    #[serde(default)]
+    pub noi_bao_quan: Option<String>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -137,21 +179,28 @@ fn f_27j(r_12: &Te7) -> (String, Vec<FormBlock>) {
         field("Kỳ ghi nhật ký", r_12.ky.clone()),
         FormBlock::SectionHeading("CÁC LẦN SAO LƯU".into()),
     ];
-    b.push(
-        FormBlock::Bullets(
-            r_12
-                .entries
-                .iter()
-                .map(|e| {
-                    format!(
-                        "{} | {} | nguồn: {} | phương tiện: {} | kết quả: {} | người thực hiện: {}",
-                        e.thoi_gian, e.loai, e.nguon_du_lieu, e.phuong_tien, e.ket_qua, e
-                        .nguoi_thuc_hien
-                    )
-                })
-                .collect(),
-        ),
-    );
+    // 0032: bảng thật thay gạch đầu dòng nối " | " (có dung lượng, số hiệu phương tiện, nơi bảo quản khi biên bản mới ghi).
+    let mo_rong = r_12.entries.iter().any(|e| e.dung_luong.is_some() || e.so_hieu_phuong_tien.is_some() || e.noi_bao_quan.is_some());
+    let mut columns = vec!["Thời gian".to_string(), "Loại".into(), "Nguồn dữ liệu".into(), "Phương tiện".into()];
+    if mo_rong {
+        columns.extend(["Dung lượng".to_string(), "Số hiệu PT".into(), "Nơi bảo quản".into()]);
+    }
+    columns.extend(["Kết quả".to_string(), "Người thực hiện".into()]);
+    b.push(FormBlock::Table {
+        columns,
+        rows: r_12
+            .entries
+            .iter()
+            .map(|e| {
+                let mut r = vec![e.thoi_gian.clone(), e.loai.clone(), e.nguon_du_lieu.clone(), e.phuong_tien.clone()];
+                if mo_rong {
+                    r.extend([e.dung_luong.clone().unwrap_or_default(), e.so_hieu_phuong_tien.clone().unwrap_or_default(), e.noi_bao_quan.clone().unwrap_or_default()]);
+                }
+                r.extend([e.ket_qua.clone(), e.nguoi_thuc_hien.clone()]);
+                r
+            })
+            .collect(),
+    });
     b.push(f_2f9(
         "NGƯỜI LẬP NHẬT KÝ",
         "PHỤ TRÁCH ĐƠN VỊ",
@@ -175,6 +224,15 @@ pub struct Tkj {
     pub noi_bao_quan: String,
     pub nguoi_thuc_hien: String,
     pub nguoi_kiem_tra: String,
+    /// 0032: thời gian sao lưu, dung lượng, mã băm / cách đọc lại, hạn lưu bản sao (Điều 30.3).
+    #[serde(default)]
+    pub thoi_gian: Option<String>,
+    #[serde(default)]
+    pub dung_luong: Option<String>,
+    #[serde(default)]
+    pub ma_bam: Option<String>,
+    #[serde(default)]
+    pub han_luu: Option<String>,
 }
 fn f_27k(r_13: &Tkj) -> (String, Vec<FormBlock>) {
     let mut b = f_1ga(&r_13.don_vi, &r_13.dia_diem, &r_13.ngay);
@@ -195,10 +253,22 @@ fn f_27k(r_13: &Tkj) -> (String, Vec<FormBlock>) {
     if let Some(r_14) = opt("Mô tả phương tiện", &r_13.mo_ta_phuong_tien) {
         b.push(r_14);
     }
+    if let Some(x) = opt("Thời gian sao lưu", &r_13.thoi_gian) {
+        b.push(x);
+    }
+    if let Some(x) = opt("Dung lượng bản sao", &r_13.dung_luong) {
+        b.push(x);
+    }
+    if let Some(x) = opt("Mã băm / cách kiểm đọc lại", &r_13.ma_bam) {
+        b.push(x);
+    }
     b.push(field(
         "Kết quả kiểm tra sau sao lưu (Điều 30.3.d)",
         r_13.ket_qua_kiem_tra.clone(),
     ));
+    if let Some(x) = opt("Hạn lưu bản sao", &r_13.han_luu) {
+        b.push(x);
+    }
     b.push(field(
         "Nơi bảo quản phương tiện (Điều 30.3.đ)",
         r_13.noi_bao_quan.clone(),
@@ -218,6 +288,17 @@ pub struct Tm4 {
     pub don_vi: String,
     pub dia_diem: String,
     pub ngay: String,
+    /// 0032 (Điều 31): mã sự cố, mức độ, phạm vi ảnh hưởng, dữ liệu mất, tệp kiểm sau phục hồi.
+    #[serde(default)]
+    pub ma_su_co: Option<String>,
+    #[serde(default)]
+    pub muc_do: Option<String>,
+    #[serde(default)]
+    pub pham_vi: Option<String>,
+    #[serde(default)]
+    pub du_lieu_mat: Option<String>,
+    #[serde(default)]
+    pub tep_kiem_sau_phuc_hoi: Option<String>,
     pub thoi_diem_su_co: String,
     pub mo_ta_su_co: String,
     pub nguyen_nhan: String,
@@ -231,11 +312,20 @@ pub struct Tm4 {
 fn f_27l(r_15: &Tm4) -> (String, Vec<FormBlock>) {
     let mut b = f_1ga(&r_15.don_vi, &r_15.dia_diem, &r_15.ngay);
     b.push(FormBlock::SectionHeading("I. SỰ CỐ".into()));
+    if let Some(x) = opt("Mã sự cố", &r_15.ma_su_co) {
+        b.push(x);
+    }
     b.push(field(
         "Thời điểm xảy ra sự cố",
         r_15.thoi_diem_su_co.clone(),
     ));
     b.push(field("Mô tả sự cố", r_15.mo_ta_su_co.clone()));
+    if let Some(x) = opt("Mức độ", &r_15.muc_do) {
+        b.push(x);
+    }
+    if let Some(x) = opt("Phạm vi ảnh hưởng", &r_15.pham_vi) {
+        b.push(x);
+    }
     b.push(field(
         "Nguyên nhân (Điều 31.1)",
         r_15.nguyen_nhan.clone(),
@@ -264,6 +354,12 @@ fn f_27l(r_15: &Tm4) -> (String, Vec<FormBlock>) {
         "Kết quả kiểm tra dữ liệu sau phục hồi (Điều 31.5)",
         r_15.ket_qua_kiem_tra.clone(),
     ));
+    if let Some(x) = opt("Dữ liệu mất (nếu có)", &r_15.du_lieu_mat) {
+        b.push(x);
+    }
+    if let Some(x) = opt("Tệp đã kiểm sau phục hồi", &r_15.tep_kiem_sau_phuc_hoi) {
+        b.push(x);
+    }
     b.push(f_2f9(
         "NGƯỜI XỬ LÝ SỰ CỐ",
         "PHỤ TRÁCH ĐƠN VỊ",

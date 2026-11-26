@@ -59,6 +59,7 @@ export type V3yx =
   | "disposal.decide"
   | "bk.view"
   | "bk.manage"
+  | "bk.approve"
   | "tree.view"
   | "tree.assign"
   | "stats.view"
@@ -267,6 +268,7 @@ export const V3z0: V3yz[] = [
     perms: [
       { perm: "bk.view", label: "Xem kiểm tra / sổ sao lưu" },
       { perm: "bk.manage", label: "Chạy kiểm tra / ghi nhận sao lưu" },
+      { perm: "bk.approve", label: "Duyệt kế hoạch kiểm tra" },
     ],
   },
   {
@@ -375,6 +377,7 @@ const V3z4: Record<V3yx, number> = {
   "disposal.decide": 2,
   "bk.view": 2,
   "bk.manage": 2,
+  "bk.approve": 2,
   "record.view": 1,
   "record.create": 1,
   "dossier.delete": 2,

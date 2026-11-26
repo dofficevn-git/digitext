@@ -9,6 +9,9 @@ export interface V4u8 {
   batchId: string | null;
   lyDo: "trung_lap" | "het_thoi_han";
   dupOf: string | null;
+  /** 0033 — cách phát hiện; máy chủ cũ không trả. */
+  phatHien?: "ten_tep" | "blake3" | "muc_luc" | "han" | "tay";
+  dupHoSoId?: string | null;
   ghiChu: string | null;
   status: "xem_xet" | "giu_lai" | "da_huy";
   filename: string;
@@ -50,7 +53,7 @@ export function V4uc(): Promise<V4u8[]> {
   return invoke<V4u8[]>("disposal_entries");
 }
 
-export function V4ud(): Promise<{ trungLap: number; hetThoiHan: number }> {
+export function V4ud(): Promise<{ trungLap: number; hetThoiHan: number; trungTenTep?: number; trungBlake3?: number; trungMucLuc?: number }> {
   return invoke("disposal_sweep");
 }
 

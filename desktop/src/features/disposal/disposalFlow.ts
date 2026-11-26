@@ -8,6 +8,15 @@ export const V4ul: Record<V4u8["lyDo"], string> = {
   het_thoi_han: "Hết thời hạn lưu trữ",
 };
 
+/** 0033: cách hệ thống phát hiện (cột "Phát hiện"). */
+export const PHAT_HIEN: Record<string, { label: string; hint: string }> = {
+  ten_tep: { label: "Trùng tên tệp", hint: "Cùng mã hồ sơ và tên tệp trong một dự án" },
+  blake3: { label: "Trùng nội dung", hint: "Cùng mã băm BLAKE3 — hai tệp giống hệt" },
+  muc_luc: { label: "Trùng mục lục", hint: "Hồ sơ cùng phông, tiêu đề, số ký hiệu, năm kết thúc với hồ sơ lập trước" },
+  han: { label: "Hết hạn", hint: "Quá hạn lưu trữ tính theo THBQ" },
+  tay: { label: "Đặt tay", hint: "Người dùng đặt hạn / đưa vào" },
+};
+
 export const V4um: Record<V4u8["status"], string> = {
   xem_xet: "Xem xét huỷ",
   giu_lai: "Giữ lại",

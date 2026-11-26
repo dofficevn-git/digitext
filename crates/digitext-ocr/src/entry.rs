@@ -354,6 +354,38 @@ async fn f_2gu(
             }
         })
     });
+    // 0032 bảo quản Điều 29–31 (cả hai chế độ): kế hoạch kiểm tra (cần kho), nhắc lịch sao lưu, nhắc phương tiện.
+    let bq_giay = std::env::var("DIGITEXT_BQ_GIAY").ok().and_then(|s| s.trim().parse::<u64>().ok()).filter(|g| *g >= 5);
+    let r_bq1 = r_34f.clone().map(|store| {
+        let pool = r_34m.clone();
+        let shut = shutdown.clone();
+        let giay = bq_giay.unwrap_or(3600);
+        tokio::spawn(async move {
+            if let Err(e) = crate::bao_quan_worker::thuc_hien_ke_hoach(&pool, &*store, Duration::from_secs(giay), 200, &shut).await {
+                tracing::error!(error = % e, "sweeper kế hoạch kiểm tra lỗi DB — dừng để restart");
+            }
+        })
+    });
+    let r_bq2 = {
+        let pool = r_34m.clone();
+        let shut = shutdown.clone();
+        let giay = bq_giay.unwrap_or(3600);
+        tokio::spawn(async move {
+            if let Err(e) = crate::bao_quan_worker::nhac_lich_sao_luu(&pool, Duration::from_secs(giay), &shut).await {
+                tracing::error!(error = % e, "sweeper nhắc lịch sao lưu lỗi DB — dừng để restart");
+            }
+        })
+    };
+    let r_bq3 = {
+        let pool = r_34m.clone();
+        let shut = shutdown.clone();
+        let giay = bq_giay.unwrap_or(24 * 3600);
+        tokio::spawn(async move {
+            if let Err(e) = crate::bao_quan_worker::nhac_phuong_tien(&pool, Duration::from_secs(giay), &shut).await {
+                tracing::error!(error = % e, "sweeper nhắc phương tiện lỗi DB — dừng để restart");
+            }
+        })
+    };
     let r_33x = r_34m.clone();
     let r_33y = shutdown.clone();
     let r_33w = tokio::spawn(async move {
@@ -637,7 +669,10 @@ async fn f_2gu(
             }
         }
     });
-    let mut r_344 = vec![r_347, r_34s, r_34o, r_33w, r_lt];
+    let mut r_344 = vec![r_347, r_34s, r_34o, r_33w, r_lt, r_bq2, r_bq3];
+    if let Some(h) = r_bq1 {
+        r_344.push(h);
+    }
     if let Some(h) = r_34b {
         r_344.push(h);
     }

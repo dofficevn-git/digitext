@@ -2,6 +2,7 @@
 
 pub mod access;
 pub mod auth;
+pub mod bao_quan;
 pub mod changes;
 pub mod chinh_ly;
 pub mod danh_muc_ho_so;

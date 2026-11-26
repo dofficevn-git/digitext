@@ -208,6 +208,30 @@ generic); chạy thử trên máy sạch cùng GĐ5 (nộp lưu trên hồ sơ *
 Nâng cấp máy chủ đang chạy: `digitext-api migrate` áp 0031 lúc bảo trì (DROP/CREATE view, API lỗi vài giây), rồi gán phòng ban
 cho nhân viên ở Quản trị › Người dùng.
 
+### GĐ7 — Bảo quản đủ Điều 29–31 + quét trùng Điều 48 (26/11/2026, nhánh `feat/ban-luu-tru`)
+
+Đợt 2 của kế hoạch đối chiếu Digifile. Anh chưa trả lời câu (9)–(14) nên làm theo đề xuất: không có PDF Mẫu 01–04 chính thức → suy từ
+Điều 29–31; "đơn vị" trong kế hoạch = phông của dự án; quyền duyệt riêng `bk.approve` (người duyệt khác người lập, super admin ngoại
+lệ); trùng mục lục chỉ vào danh mục "xem xét", không tự đánh `trung_thua`; xoá bản sao lưu cũ chỉ nhắc + ghi nhận; bản thi công có đủ 5 tab.
+
+Đã làm:
+- **0032**: `bk_ke_hoach` + `bk_ke_hoach_tep` (ảnh chụp tệp chốt lúc duyệt), `bk_loi`, `bk_lich_sao_luu` (3 dòng seed), `bk_phuong_tien`,
+  `bk_su_co`; `integrity_checks.nguon/ke_hoach_id`; `backup_runs` thêm 10 cột (lịch, phương tiện, đường dẫn, dung lượng, mã băm, thời gian,
+  người, đã xoá). **0033**: `disposal_entries.phat_hien/dup_ho_so_id`, chỉ mục blake3 và mục lục.
+- **Máy chủ**: `digitext-core::bao_quan` (toán + test), `digitext-db::bao_quan`, `routes/bao_quan.rs`, `disposal::f_trung_blake3/f_trung_muc_luc`
+  (vào sweep API và worker 24 h), worker `bao_quan_worker.rs` (kế hoạch 1 h, nhắc lịch 1 h thay cảnh báo 26 h cứng, nhắc phương tiện 24 h),
+  Mẫu 01–04 mở rộng, `sao-luu.ps1/.sh` ghi đủ cột và đánh dấu bản cũ đã xoá (tự nhận máy chủ chưa áp 0032).
+- **Desktop 0.25.19**: Bảo quản 5 tab, `api/baoquan.ts`, Tauri `bq_get/bq_call`, cột Phát hiện ở Tiêu huỷ, KPI ở Tổng quan, 4 mẫu biên bản
+  thêm ô tuỳ chọn.
+- **Kiểm chứng**: `cargo test -p digitext-core` (36), kịch bản `dev/luutru/thu-bao-quan.ps1` xanh trên Postgres tạm: lập → xem trước → trình →
+  duyệt chốt 3 tệp → chạy (3 lỗi vì kho trống) → hoàn thành → khắc phục → kiểm lại lỗi → bỏ qua → kết luận điền sẵn; `/ops/integrity/run`
+  không mở thêm dòng lỗi; lịch chưa có / đúng hạn / trễ 22 h, 16 bản giữ 14 → cần xoá 2 → đánh dấu; phương tiện sắp hết 100 ngày;
+  sự cố `SC-2026-001` gắn bản sao lưu, prefill Mẫu 04, báo quản trị; sweep ra 1 trùng blake3 + 1 trùng mục lục, lần hai 0.
+
+Chưa làm / cần anh: ảnh màn Digifile (Kế hoạch kiểm tra, Phương tiện, Sự cố) để so bố cục; PDF Mẫu 01–04 chính thức nếu có (hiện suy từ
+điều luật); worker chưa chạy thử thật (cùng hàm băm với API, đã kiểm qua API). Nâng cấp máy chủ: `migrate` áp 0032 + 0033 (0033 cần 0026
+trước), rồi vào Bảo quản › Sao lưu sửa lịch cho khớp giờ chạy script, Phương tiện khai ổ sao lưu kèm hạn độ bền.
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

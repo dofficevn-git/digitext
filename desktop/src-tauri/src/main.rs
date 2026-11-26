@@ -48,6 +48,7 @@ mod edition;
 mod ingest;
 mod tra_cuu;
 mod luu_tru;
+mod bao_quan;
 mod update;
 mod tiff;
 use tauri::Manager;
@@ -109,6 +110,8 @@ fn main() {
             tra_cuu::tra_cuu_doc,
             luu_tru::lt_get,
             luu_tru::lt_call,
+            bao_quan::bq_get,
+            bao_quan::bq_call,
             auth::commands::auth_validate_online,
             auth::admin::users_list,
             auth::admin::user_create,

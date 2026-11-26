@@ -11,6 +11,7 @@ import { isTauri } from "@/api/ipc";
 import { V4to, type V4tl } from "@/api/access";
 import { V4ut, V4v1, type V4us, type V4v0 } from "@/api/infoops";
 import { nopLuuTongQuan, type TongQuanNopLuu } from "@/api/luutru";
+import { bqTongQuan, type TongQuanBaoQuan } from "@/api/baoquan";
 import { useProject } from "@/state/project";
 import { type V41v as IconName } from "@/components/Icon";
 import { Badge, Banner, Button, Card, KpiRow, KpiTile, Table, type Column } from "@/ui";
@@ -33,13 +34,15 @@ export default function LuuTruHome() {
   const dungDuoc = isTauri() || import.meta.env.DEV;
 
   const loader = useCallback(async () => {
-    const [kt, tt, bq, nl] = await Promise.all([
+    const [kt, tt, bq, nl, bq2] = await Promise.all([
       coKhaiThac ? V4to() : Promise.resolve([] as V4tl[]),
       coKhaiThac ? V4ut() : Promise.resolve([] as V4us[]),
       coBaoQuan ? V4v1().catch(() => null) : Promise.resolve(null as V4v0 | null),
       (coNop || coNhan) && duAn ? nopLuuTongQuan(duAn).catch(() => null) : Promise.resolve(null as TongQuanNopLuu | null),
+      // 0032: lịch sao lưu trễ, lỗi đang mở, sự cố (máy chủ cũ → null).
+      coBaoQuan ? bqTongQuan().catch(() => null) : Promise.resolve(null as TongQuanBaoQuan | null),
     ]);
-    return { kt, tt, bq, nl };
+    return { kt, tt, bq, nl, bq2 };
   }, [coKhaiThac, coBaoQuan, coNop, coNhan, duAn]);
   const { data, loading, error, reload } = V41t(loader, {
     topics: ["access", "info", "ops", "nopLuu"],
@@ -51,6 +54,7 @@ export default function LuuTruHome() {
   const tt = data?.tt ?? [];
   const bq = data?.bq ?? null;
   const nl = data?.nl ?? null;
+  const bq2 = data?.bq2 ?? null;
   const ktCho = kt.filter((r) => r.status === "submitted").length;
   const ktHieuLuc = kt.filter((r) => r.status === "approved").length;
   const ttCho = tt.filter((r) => r.status === "submitted" || r.status === "approved").length;
@@ -122,6 +126,9 @@ export default function LuuTruHome() {
           <KpiTile icon="luuTruSo" label="Khai thác chờ duyệt" value={ktCho} tone={ktCho ? "warn" : undefined} loading={dangTai} error={data ? undefined : error} onClick={() => goto("access")} />
           <KpiTile icon="duyet" label="Khai thác đang hiệu lực" value={ktHieuLuc} loading={dangTai} onClick={() => goto("access")} />
           <KpiTile icon="thongTin" label="Cung cấp thông tin" value={ttCho} sub="yêu cầu đang xử lý" tone={ttCho ? "warn" : undefined} loading={dangTai} onClick={() => goto("info")} />
+          {coBaoQuan && bq2 && (
+            <KpiTile icon="nhacHan" label="Sao lưu trễ · lỗi mở · sự cố" value={bq2.lichTre + bq2.loiMo + bq2.suCoMo} sub={`${bq2.lichTre} lịch trễ · ${bq2.loiMo} lỗi · ${bq2.suCoMo} sự cố`} tone={bq2.lichTre || bq2.loiMo || bq2.suCoMo ? "err" : "ok"} loading={dangTai} onClick={() => goto("bk")} />
+          )}
           {coBaoQuan && (
             <KpiTile
               icon="baoquan"

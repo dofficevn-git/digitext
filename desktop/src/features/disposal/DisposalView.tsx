@@ -9,7 +9,7 @@ import { V4ei, type V4eg } from "@/api/docs";
 import { isTauri } from "@/api/ipc";
 import { V460 } from "@/state";
 import { useProject } from "@/state/project";
-import { BUOC_DOT, LEGAL, V4un, V4uq, V4um, V4uo, V4ul, V4up, type DotAction } from "./disposalFlow";
+import { BUOC_DOT, LEGAL, PHAT_HIEN, V4un, V4uq, V4um, V4uo, V4ul, V4up, type DotAction } from "./disposalFlow";
 import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, Input, Menu, notifyError, PageHeader, prompt, Stepper, Table, Tabs, Tip, toast, type Column } from "@/ui";
 
 const fmtN = (v: number) => v.toLocaleString("vi-VN");
@@ -85,7 +85,8 @@ export default function V4ur() {
   const quet = () =>
     chay(async () => {
       const r = await V4ud();
-      toast.success(`Quét xong: ${fmtN(r.trungLap)} trùng lặp, ${fmtN(r.hetThoiHan)} hết thời hạn.`);
+      const chiTiet = r.trungBlake3 !== undefined ? ` (tên tệp ${fmtN(r.trungTenTep ?? 0)}, nội dung ${fmtN(r.trungBlake3)}, mục lục ${fmtN(r.trungMucLuc ?? 0)})` : "";
+      toast.success(`Quét xong: ${fmtN(r.trungLap)} trùng lặp${chiTiet}, ${fmtN(r.hetThoiHan)} hết thời hạn.`);
       reload();
     }, "quét");
 
@@ -160,6 +161,22 @@ export default function V4ur() {
           <span>{V4ul[e.lyDo]}</span>
         </Tip>
       ),
+    },
+    {
+      key: "phatHien",
+      header: "Phát hiện",
+      width: 140,
+      // 0033: trùng tên tệp / nội dung (BLAKE3) / mục lục (hồ sơ trùng phông, tiêu đề, số ký hiệu, năm) / hết hạn.
+      cell: (e) => {
+        const p = e.phatHien ? PHAT_HIEN[e.phatHien] : undefined;
+        return p ? (
+          <Tip text={p.hint}>
+            <span><Badge tone={e.phatHien === "muc_luc" ? "warn" : "gray"}>{p.label}</Badge></span>
+          </Tip>
+        ) : (
+          "—"
+        );
+      },
     },
     { key: "ghiChu", header: "Ghi chú", className: "whitespace-normal text-fg-subtle", cell: (e) => e.ghiChu ?? "" },
     { key: "status", header: "Trạng thái", width: 120, cell: (e) => <Badge tone={e.status === "da_huy" ? "err" : e.status === "giu_lai" ? "ok" : e.batchId ? "info" : "warn"}>{e.batchId && e.status === "xem_xet" ? "Trong đợt" : V4um[e.status]}</Badge> },

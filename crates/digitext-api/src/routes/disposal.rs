@@ -34,6 +34,9 @@ pub struct EntryDto {
     pub batch_id: Option<Uuid>,
     pub ly_do: String,
     pub dup_of: Option<Uuid>,
+    /// 0033: ten_tep | blake3 | muc_luc | han | tay.
+    pub phat_hien: String,
+    pub dup_ho_so_id: Option<Uuid>,
     pub ghi_chu: Option<String>,
     pub status: String,
     pub filename: String,
@@ -52,6 +55,8 @@ impl From<T4w> for EntryDto {
             batch_id: r_c0.batch_id,
             ly_do: r_c0.ly_do,
             dup_of: r_c0.dup_of,
+            phat_hien: r_c0.phat_hien,
+            dup_ho_so_id: r_c0.dup_ho_so_id,
             ghi_chu: r_c0.ghi_chu,
             status: r_c0.status,
             filename: r_c0.filename,
@@ -182,14 +187,23 @@ async fn f_1nd(
 pub struct Tmb {
     pub trung_lap: usize,
     pub het_thoi_han: usize,
+    /// 0033: tách theo cách phát hiện (trung_lap = tổng ba nhánh).
+    pub trung_ten_tep: usize,
+    pub trung_blake3: usize,
+    pub trung_muc_luc: usize,
 }
 async fn f_2be(State(r_cr): State<AppState>, r_co: Ts) -> Result<Json<Tmb>, ApiError> {
     r_co.require_perm(Permission::DisposalReview)?;
     let r_cp = disposal::f_18b(&r_cr.pool).await?;
+    let b3 = disposal::f_trung_blake3(&r_cr.pool).await?;
+    let ml = disposal::f_trung_muc_luc(&r_cr.pool).await?;
     let r_cq = disposal::f_1ah(&r_cr.pool).await?;
     Ok(Json(Tmb {
-        trung_lap: r_cp.len(),
+        trung_lap: r_cp.len() + b3.len() + ml.len(),
         het_thoi_han: r_cq.len(),
+        trung_ten_tep: r_cp.len(),
+        trung_blake3: b3.len(),
+        trung_muc_luc: ml.len(),
     }))
 }
 #[derive(Debug, Deserialize)]

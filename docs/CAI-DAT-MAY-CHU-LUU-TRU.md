@@ -114,3 +114,19 @@ Khi nâng cấp máy chủ đang chạy:
    phòng ban). Người có phòng ban chỉ thấy hồ sơ của phòng mình; cán bộ lưu trữ và lãnh đạo để trống.
 4. Tuỳ chọn trong `conf\worker.env` (Linux: `worker.env`): `DIGITEXT_LT_NHAC_TU_NAM=2026` — chỉ nhắc hạn nộp cho hồ sơ kết thúc
    từ năm này (mặc định: năm hiện tại trừ 1), tránh dội nhắc lên hàng vạn hồ sơ cũ mới nhập.
+
+## 8. Bảo quản đủ Điều 29–31 (từ bản 0.25.19)
+
+Màn **Lưu trữ số › Bảo quản và sao lưu** có 5 tab: Tổng quan · Kế hoạch kiểm tra (Điều 29, lập – trình – duyệt – máy chủ tự kiểm, danh mục lỗi
+và khắc phục, biên bản Mẫu 01) · Sao lưu (lịch ngày / tháng / 3 năm, sổ sao lưu, bản cũ cần xoá, Mẫu 02 / 03) · Phương tiện (hạn độ bền,
+nhắc chuyển đổi trước 1 năm — Điều 30.4) · Sự cố (Điều 31, Mẫu 04).
+
+Khi nâng cấp máy chủ đang chạy:
+1. Chạy lại `cai-dat.ps1` / `./cai-dat.sh` như mục 6: cập nhật CSDL áp thêm `0032`, `0033` (không dựng lại bảng tra cứu, máy trạm không mất kết nối).
+2. Vào **Bảo quản › Sao lưu**: ba lịch mặc định đã có (gia tăng kho hằng ngày, đầy đủ CSDL hằng ngày, đầy đủ 3 năm làm tay). Sửa chu kỳ /
+   độ trễ cho phép / số bản giữ cho khớp cách cơ quan chạy sao lưu. Script `sao-luu.ps1` / `sao-luu.sh` đêm tự ghi vào lịch cùng loại và
+   đánh dấu bản cũ đã xoá; sao lưu 3 năm ra phương tiện riêng thì bấm **Ghi nhận sao lưu**.
+3. Vào **Bảo quản › Phương tiện**: khai ổ sao lưu, băng từ… kèm **hạn độ bền** nhà sản xuất công bố. Hệ thống nhắc quản trị mỗi tháng khi còn
+   dưới 1 năm.
+4. Quyền mới **Duyệt kế hoạch kiểm tra** (`bk.approve`) tự thêm cho vai trò quản trị, lãnh đạo; người lập kế hoạch không tự duyệt được.
+5. Tuỳ chọn thử nhanh: `DIGITEXT_BQ_GIAY=60` trong `worker.env` rút chu kỳ việc nền bảo quản xuống 60 giây (chỉ dùng khi thử).

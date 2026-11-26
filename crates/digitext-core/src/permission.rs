@@ -47,6 +47,8 @@ pub enum Permission {
     DisposalDecide,
     BkView,
     BkManage,
+    /// Duyệt / từ chối kế hoạch kiểm tra tài liệu (Điều 29, 0032); người duyệt khác người lập.
+    BkApprove,
     TreeView,
     TreeAssign,
     StatsView,
@@ -92,7 +94,7 @@ pub enum Permission {
     DanhmucApprove,
 }
 impl Permission {
-    pub const ALL: [Permission; 70] = [
+    pub const ALL: [Permission; 71] = [
         Permission::DossierRead,
         Permission::DossierCreate,
         Permission::DossierUpdate,
@@ -133,6 +135,7 @@ impl Permission {
         Permission::DisposalDecide,
         Permission::BkView,
         Permission::BkManage,
+        Permission::BkApprove,
         Permission::TreeView,
         Permission::TreeAssign,
         Permission::StatsView,
@@ -206,6 +209,7 @@ impl Permission {
             Permission::DisposalDecide => "disposal.decide",
             Permission::BkView => "bk.view",
             Permission::BkManage => "bk.manage",
+            Permission::BkApprove => "bk.approve",
             Permission::TreeView => "tree.view",
             Permission::TreeAssign => "tree.assign",
             Permission::StatsView => "stats.view",
@@ -286,6 +290,7 @@ impl Permission {
             | Permission::DisposalDecide
             | Permission::BkView
             | Permission::BkManage
+            | Permission::BkApprove
             | Permission::DossierDelete
             | Permission::CatalogDelete
             | Permission::DocumentList
@@ -435,11 +440,11 @@ mod quan_ly_tests {
         assert!(!Permission::ProjectAssignAdmin.granted_by_default(Role::Admin));
         assert_eq!("manager".parse::<Role>(), Ok(Role::Manager));
     }
-    /// 6 quyền lưu trữ hiện hành (26/11/2026): ALL đủ 70, chuỗi ↔ enum khớp, nhân viên phòng ban nộp/soạn nhưng không
+    /// 6 quyền lưu trữ hiện hành + bk.approve (26/11/2026): ALL đủ 71, chuỗi ↔ enum khớp, nhân viên phòng ban nộp/soạn nhưng không
     /// tiếp nhận hay trình; cán bộ (admin) có mở khoá / duyệt; khách không có gì.
     #[test]
     fn luu_tru_hien_hanh_quyen_mac_dinh() {
-        assert_eq!(Permission::ALL.len(), 70);
+        assert_eq!(Permission::ALL.len(), 71);
         for p in Permission::ALL {
             assert_eq!(p.as_str().parse::<Permission>(), Ok(p), "{p}");
         }

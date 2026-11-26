@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 pub mod access;
 pub mod audit;
+pub mod bao_quan;
 pub mod changes;
 pub mod chinh_ly;
 pub mod danh_muc_ho_so;

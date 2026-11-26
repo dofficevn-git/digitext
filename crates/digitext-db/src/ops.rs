@@ -26,17 +26,20 @@ pub async fn f_26a(
     ket_qua: &str,
     chi_tiet: Option<&str>,
 ) -> sqlx::Result<()> {
+    let id = Uuid::now_v7();
     sqlx::query(
         "INSERT INTO integrity_checks (id, project_id, document_id, ket_qua, chi_tiet) \
          VALUES ($1, $2, $3, $4, $5)",
     )
-    .bind(Uuid::now_v7())
+    .bind(id)
     .bind(project_id)
     .bind(document_id)
     .bind(ket_qua)
     .bind(chi_tiet)
     .execute(r_28v)
     .await?;
+    // 0032: danh mục lỗi có khắc phục từng dòng — mở / đóng theo kết quả lần kiểm này.
+    crate::bao_quan::ghi_loi_tu_kiem(r_28v, project_id, Some(document_id), None, id, None, ket_qua, chi_tiet).await?;
     Ok(())
 }
 pub async fn stats(r_28w: &PgPool, r_28x: Option<&[Uuid]>) -> sqlx::Result<(i64, i64, i64)> {
@@ -165,14 +168,16 @@ pub async fn goi_can_kiem(pool: &PgPool, limit: i64) -> sqlx::Result<Vec<(Uuid, 
     .await
 }
 pub async fn ghi_kiem_goi(pool: &PgPool, project_id: Uuid, package_id: Uuid, ket_qua: &str, chi_tiet: Option<&str>) -> sqlx::Result<()> {
+    let id = Uuid::now_v7();
     sqlx::query("INSERT INTO integrity_checks (id, project_id, package_id, ket_qua, chi_tiet) VALUES ($1, $2, $3, $4, $5)")
-        .bind(Uuid::now_v7())
+        .bind(id)
         .bind(project_id)
         .bind(package_id)
         .bind(ket_qua)
         .bind(chi_tiet)
         .execute(pool)
         .await?;
+    crate::bao_quan::ghi_loi_tu_kiem(pool, project_id, None, Some(package_id), id, None, ket_qua, chi_tiet).await?;
     Ok(())
 }
 /// (tổng gói còn giữ, đã kiểm trong 3 năm, lỗi ở lần kiểm gần nhất)
