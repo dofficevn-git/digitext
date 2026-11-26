@@ -54,12 +54,24 @@ $bom = New-Object System.Text.UTF8Encoding($true)
 foreach ($f in Get-ChildItem "dev\luutru\windows\*.ps1") {
   [IO.File]::WriteAllText((Join-Path $ra $f.Name), [IO.File]::ReadAllText($f.FullName), $bom)
 }
-if (Test-Path "updates-luutru\latest.json") {
-  Get-ChildItem "updates-luutru" -File | Where-Object { $_.Name -match '\.(exe|sig|json)$' } | Copy-Item -Destination "$ra\updates\"
-  Write-Host "  kèm bộ cài máy trạm: $((Get-Content updates-luutru\latest.json | ConvertFrom-Json).version)"
-} else {
-  Write-Host "  CHƯA có bộ cài máy trạm (updates-luutru\) — chạy dev\release-desktop.ps1 -Edition luutru" -ForegroundColor Yellow
+# Bộ cài máy trạm: CHỈ bản mà latest.json trỏ tới. updates-luutru\ giữ cả các bản cũ, chép hết vào gói thì kỹ thuật
+# viên ở cơ quan mở /tai-ve thấy hai ba bộ cài và cài nhầm bản cũ (gói 26/11 từng mang thêm 0.24.0 nặng 12,8 MB).
+function Chep-BoCai($dich) {
+  if (-not (Test-Path "updates-luutru\latest.json")) {
+    Write-Host "  CHƯA có bộ cài máy trạm (updates-luutru\) — chạy dev\release-desktop.ps1 -Edition luutru" -ForegroundColor Yellow
+    return
+  }
+  $lj = Get-Content "updates-luutru\latest.json" -Raw | ConvertFrom-Json
+  $exe = Split-Path -Leaf ([uri]$lj.platforms.'windows-x86_64'.url).AbsolutePath
+  $can = @("latest.json", $exe, "$exe.sig")
+  foreach ($t in $can) {
+    $p = Join-Path "updates-luutru" $t
+    if (-not (Test-Path $p)) { throw "latest.json ($($lj.version)) trỏ tới $t nhưng không có trong updates-luutru\ — dựng lại bộ cài" }
+    Copy-Item $p $dich
+  }
+  Write-Host "  kèm bộ cài máy trạm: $($lj.version) ($exe)"
 }
+Chep-BoCai "$ra\updates\"
 Copy-Item "docs\CAI-DAT-MAY-CHU-LUU-TRU.md" "$ra\HUONG-DAN-CAI-DAT.md"
 
 $zip = "$ra.zip"
@@ -85,7 +97,7 @@ if ($Linux) {
   Copy-Item "infra\compose\luutru\docker-compose.yml", "infra\compose\luutru\cai-dat.sh", "infra\compose\luutru\sao-luu.sh", "infra\compose\luutru\Dockerfile" $raL
   Copy-Item "docs\CAI-DAT-MAY-CHU-LUU-TRU.md" "$raL\HUONG-DAN-CAI-DAT.md"
   New-Item -ItemType Directory -Force "$raL\updates" | Out-Null
-  if (Test-Path "updates-luutru\latest.json") { Get-ChildItem "updates-luutru" -File | Where-Object { $_.Name -match '\.(exe|sig|json)$' } | Copy-Item -Destination "$raL\updates\" }
+  Chep-BoCai "$raL\updates\"
   $tgz = "$raL.tar.gz"
   if (Test-Path $tgz) { Remove-Item $tgz -Force }
   tar -czf $tgz -C (Join-Path $repo "dist") $tenL

@@ -107,10 +107,34 @@ if (-not $PgBin) {
 }
 if (-not $PgBin -or -not (Test-Path (Join-Path $PgBin "psql.exe"))) { Dung "không thấy PostgreSQL (psql.exe). Cài PostgreSQL 16 bản Windows trước, hoặc chỉ đường bằng -PgBin." }
 $psql = Join-Path $PgBin "psql.exe"
-$banPg = (& $psql --version) -replace '.*?(\d+)\..*', '$1'
+# "psql (PostgreSQL) 16.4" → 16. psql.exe không chạy được (thiếu bộ thư viện VC++) thì ra chuỗi rỗng, nên tách số rồi
+# kiểm bằng regex — [int] trên chuỗi không phải số là lỗi chặn đứng script bằng dòng .NET không ai đọc được.
+$banPg = "$(& $psql --version)" -replace '.*?(\d+)\..*', '$1'
 Ghi "PostgreSQL: $PgBin (bản $banPg) · địa chỉ: $DiaChi · chứng chỉ: $(if ($noiBo) { 'tự cấp (mạng nội bộ)' } else { "Let's Encrypt" })"
+if ($banPg -notmatch '^\d+$') { Dung "không chạy được $psql (--version không ra số bản). Cài lại PostgreSQL, hoặc chỉ đường bằng -PgBin." }
 if ([int]$banPg -lt 15) { Dung "cần PostgreSQL 15 trở lên (đang là $banPg) — để CSDL dùng sắp xếp tiếng Việt ICU" }
-New-Item -ItemType Directory -Force $KhoDir, $SaoLuuDir | Out-Null
+# PostgreSQL cài rồi nhưng dịch vụ chưa chạy thì mọi lỗi phía dưới đều hiện ra thành "sai mật khẩu postgres" — nói thẳng ở đây.
+$pgReady = Join-Path $PgBin "pg_isready.exe"
+if (Test-Path $pgReady) {
+  & $pgReady -h 127.0.0.1 -p $PgCong -t 10 | Out-Null
+  if ($LASTEXITCODE -ne 0) { Dung "PostgreSQL không trả lời ở 127.0.0.1:$PgCong. Mở services.msc, chạy dịch vụ postgresql-*, rồi chạy lại script (cổng khác thì thêm -PgCong)." }
+}
+# Ổ đĩa mặc định (D: kho, E: sao lưu) có thể không có trên máy chủ chủ đầu tư. New-Item trên ổ không tồn tại chỉ báo lỗi
+# rồi đi tiếp, Resolve-Path trả rỗng, api.env nhận DIGITEXT_PDF_STORE_DIR trống và API chết ở bước 4 — chặn ngay tại đây.
+foreach ($d in @(@{ P = $KhoDir; Ts = "-KhoDir"; Mo = "kho tài liệu" }, @{ P = $SaoLuuDir; Ts = "-SaoLuuDir"; Mo = "thư mục sao lưu" })) {
+  $o = [IO.Path]::GetPathRoot($d.P)
+  if (-not $o) { Dung "$($d.Ts) phải là đường dẫn tuyệt đối (đang là '$($d.P)')" }
+  if (-not (Test-Path $o)) { Dung "không có ổ $o cho $($d.Mo). Chỉ ổ khác bằng $($d.Ts) <đường dẫn> (vd $($d.Ts) C:\DigiText-$(if ($d.Ts -eq '-KhoDir') { 'Kho' } else { 'SaoLuu' }))." }
+  New-Item -ItemType Directory -Force $d.P -ErrorAction Stop | Out-Null
+}
+if ([IO.Path]::GetPathRoot($KhoDir) -eq [IO.Path]::GetPathRoot($SaoLuuDir)) {
+  Ghi "  CẢNH BÁO: kho và sao lưu cùng ổ $([IO.Path]::GetPathRoot($KhoDir)) — Điều 30 TT05 muốn sao lưu ra phương tiện riêng. Ổ này hỏng là mất cả hai." Yellow
+}
+# Việc sao lưu hằng đêm chạy dưới tài khoản SYSTEM, mà SYSTEM không mang danh tính của ai ra mạng → thư mục chia sẻ
+# \\máy\... chạy tay (tài khoản đang đăng nhập) thì được nhưng 01:00 sẽ trượt. Sao lưu vào ổ gắn trong máy rồi chép đi sau.
+if ($SaoLuuDir -like "\\*") {
+  Ghi "  CẢNH BÁO: sao lưu đặt ở thư mục mạng ($SaoLuuDir). Việc 01:00 chạy bằng SYSTEM nên sẽ KHÔNG vào được. Dùng ổ trong máy, hoặc đổi tài khoản của việc DigiText-LuuTru-SaoLuu trong Task Scheduler." Yellow
+}
 if (-not $mc["MA_DU_AN"]) { $mc["MA_DU_AN"] = $MaDuAn.Trim().ToUpper() }; if (-not $mc["QUAN_TRI"]) { $mc["QUAN_TRI"] = $QuanTri }
 $mc["DIA_CHI"] = $DiaChi; $mc["PG_BIN"] = $PgBin; $mc["KHO_DIR"] = (Resolve-Path $KhoDir).Path; $mc["SAO_LUU_DIR"] = (Resolve-Path $SaoLuuDir).Path
 Ghi-Env (Join-Path $conf "may-chu.env") $mc "Thông số máy chủ (không bí mật)"

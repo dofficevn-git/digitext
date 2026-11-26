@@ -110,8 +110,14 @@ DIP 2 tài liệu nhập → worker dựng xong (pkgcheck chỉ còn lỗi PDF/A
 sửa 1 byte (blake3) và zip sửa 1 byte (sha256); tiêu huỷ hồ sơ THBQ 5 năm → 6 tài liệu huỷ, zip gói xoá theo quyết định,
 tra cứu ẩn; huỷ 1 tài liệu của gói còn 67 → giữ zip, ghi nhật ký `giu_goi_aip`.
 
-Chưa làm: vai trò mặc định riêng cho bản Lưu trữ (dùng vai trò gốc: khách = customer, cán bộ = admin); tìm theo tên loại văn
-bản khi mục lục lưu mã (mục lục gói nhập ghi mã TT05, tra cứu hiện tên qua `cl_loai_van_ban`); gán hộp. Lớp chữ gói Diễn Xá
+Chưa làm: vai trò mặc định riêng cho bản Lưu trữ (dùng vai trò gốc: khách = customer, cán bộ = admin); gán hộp.
+
+**Tìm theo tên loại văn bản — XONG 26/11/2026.** Mục lục gói AIP ghi MÃ TT05 (gói Diễn Xá: 149 văn bản mã `32` = "Khác",
+1 văn bản mã `22` = "Công văn"), mà `cl_vb_tim` nhận chính cột `loai_vb` nên gõ "công văn" ra 0 kết quả dù cột hiển thị
+vẫn hiện đúng tên qua `cl_loai_van_ban`. Nay `GET /tra-cuu` dịch từ tìm sang danh sách mã trước (bảng loại chỉ vài chục
+dòng) rồi so bằng `=` trong câu chính, nên câu chính vẫn dùng được chỉ mục trigram trên `cl_vb_tim` — không phải LIKE
+trên tên loại của từng dòng. Đo trên 3 gói Diễn Xá đã nhập: "cong van" và "công văn" đều ra 1 (trước ra 0), "khac" ra
+149, "quyet dinh" ra 0 (đúng — không có loại đó), không có từ tìm ra 150. Dòng khớp được đánh `khop = "muc_luc"`. Lớp chữ gói Diễn Xá
 là OCR cũ sai bảng mã ("Di6n X6") — tìm nội dung chỉ tốt với gói có lớp chữ chuẩn.
 1. **Tra cứu:** migration 0026 `unaccent` + chỉ mục trigram không dấu (tiêu đề, trích yếu, số ký hiệu, cơ quan ban hành,
    lớp chữ); `GET /tra-cuu` (lọc phông, năm, THBQ, loại văn bản, chế độ sử dụng); màn Tra cứu: ô tìm chung + bộ lọc +
@@ -135,6 +141,36 @@ máy trạm có người thao tác): `cai-dat.ps1` thật với PostgreSQL bộ 
 chứng chỉ gốc + đăng nhập + tự cập nhật (updater dùng platform-verifier: kiểm có vướng thu hồi chứng chỉ như curl/schannel).
 Máy ảo Windows sạch + máy Linux Docker: cài máy chủ theo tài liệu, tải bộ cài từ `/tai-ve`, nhập gói Đầm Hà / Bắc Giang,
 tra cứu, yêu cầu khai thác → duyệt → tải bản sao, kiểm toàn vẹn, tiêu huỷ thử, phát hành bản cập nhật và xem máy trạm tự cập nhật.
+
+**Dựng lại và soát lần hai, 26/11/2026** (vẫn trên máy dev — gói đứng yên từ 9/11 trong khi code đi thêm 3 migration và
+cả bộ giao diện 0.25). Làm trước để buổi dựng máy ảo sạch không bị đốt vào lỗi dựng gói:
+
+- Gói máy chủ dựng lại: `dist\luutru-server-win-0.25.15-20261126.zip` **43,4 MB** (api 25,7 MB + worker 14,6 MB +
+  caddy 43,2 MB, 29 migration). `cargo build --release -p digitext-api -p digitext-ocr` sạch.
+- Bộ cài máy trạm bản Lưu trữ **mắc ở 0.24.0 từ 4/11** → dựng lại 0.25.15 (`release-desktop.ps1 -Edition luutru
+  -Version 0.25.15 -SkipBump`, không scp đi đâu). Trước khi lên máy sạch thì dựng lại theo phiên bản mới nhất, kẻo
+  cơ quan nhận bộ cài lạc hậu hàng chục bản.
+- Chạy thử trọn luồng nhập gói với Postgres container tạm: migrate **29/29 tệp** sạch trên CSDL trống →
+  `bootstrap-superadmin` → tạo kho `LUUTRU` → `nhap-goi` 3 gói Diễn Xá: **1 phông · 3 hồ sơ · 150 văn bản ·
+  150 tài liệu · 3 gói · 123 trang lớp chữ**, nhận cả 3 gói dù kiểm gói có lỗi. Khớp lần chạy 9/11.
+- Câu `CREATE DATABASE … LOCALE_PROVIDER icu ICU_LOCALE 'vi-VN' LOCALE 'C'` của `cai-dat.ps1` đo trên PostgreSQL 16:
+  chạy được, `datctype` ra `C` nhưng `lower()`/`upper()` tiếng Việt **vẫn đúng** (ICU lo) và sắp xếp ra đúng thứ tự
+  An · Ánh · Ăn · Âm · Bình · Dung · Đông. Không phải đổi câu.
+
+Bốn lỗi sửa luôn trong đợt soát này — đều là loại chỉ lộ ra trên máy sạch:
+
+1. **Ổ đĩa mặc định không có.** `-KhoDir D:\…` / `-SaoLuuDir E:\…` mà máy chủ cơ quan chỉ có C: thì `New-Item` chỉ
+   báo lỗi rồi đi tiếp, `Resolve-Path` trả rỗng, `api.env` nhận `DIGITEXT_PDF_STORE_DIR=` trống và API chết tận bước 4
+   với lý do không liên quan. Nay chặn ngay đầu script, nói rõ phải đổi bằng tham số nào.
+2. **PostgreSQL cài rồi nhưng dịch vụ chưa chạy** thì mọi lỗi phía dưới hiện thành "sai mật khẩu postgres". Nay gọi
+   `pg_isready.exe` trước và chỉ đường `services.msc`.
+3. **`[int]$banPg`** chết bằng dòng .NET nếu `psql --version` không ra số (psql.exe thiếu thư viện VC++). Nay kiểm regex.
+4. **Gói mang theo cả bộ cài cũ.** `dong-goi-may-chu.ps1` chép mọi `*.exe` trong `updates-luutru\` → gói 26/11 có cả
+   0.24.0 nặng 12,8 MB mà `latest.json` không trỏ tới; kỹ thuật viên mở `/tai-ve` cài nhầm được. Nay chỉ chép đúng
+   bản `latest.json` nêu, thiếu tệp thì dừng.
+
+Thêm hai cảnh báo: kho và sao lưu **cùng ổ** (Điều 30 TT05 muốn phương tiện riêng), và sao lưu đặt ở **thư mục mạng**
+`\\máy\...` — việc 01:00 chạy bằng SYSTEM nên sẽ không vào được.
 
 **Tổng ước: khoảng 5 tuần.** GĐ1 và GĐ3 cũng có ích cho bản thi công (cập nhật theo máy chủ, lệnh migrate, nhập gói).
 
