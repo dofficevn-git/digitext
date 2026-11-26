@@ -41,7 +41,7 @@ function NutNhom({ icon, lit, size = "md", so, vuong, trenNen }: { icon: NonNull
         trenNen
           ? "bg-brand-500 text-white ring-brand-300"
           : lit
-          ? "bg-white text-brand-700 ring-2 ring-white/40 shadow-[0_0_0_4px_rgb(255_255_255/0.12)]"
+          ? "bg-[var(--side-active)] text-[var(--side-active-fg)] ring-2 ring-white/40 shadow-[0_0_0_4px_rgb(255_255_255/0.12)]"
           : "bg-[var(--side-node)] text-white/85 ring-brand-400 group-hover:bg-brand-500 group-hover:text-white group-hover:ring-brand-300",
       )}
     >
@@ -141,7 +141,7 @@ export default function Sidebar() {
   // Mục đang mở: nền sáng hơn một bậc + vạch hổ phách bên trái (màu "đang làm" của cả hệ thống).
   const tone = (active: boolean) =>
     active
-      ? "bg-white text-brand-700 font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.28)]"
+      ? "bg-[var(--side-active)] text-[var(--side-active-fg)] font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.28)]"
       : "text-[var(--side-text)] hover:bg-[var(--side-bg-2)] hover:text-[var(--side-strong)]";
 
   const Badge = ({ n }: { n: number }) =>

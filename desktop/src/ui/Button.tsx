@@ -18,9 +18,9 @@ export const buttonStyles = cva(
         // do365-tokens.css .do-btn-secondary: nền trong, viền + chữ tím, hover nền tím nhạt.
         secondary: "border-brand-500 bg-transparent text-brand-600 hover:bg-brand-50 active:bg-brand-100",
         // .do-btn-primary: tím → đậm khi rê → đậm hơn khi bấm.
-        primary: "border-brand-500 bg-brand-500 text-fg-onbrand hover:bg-brand-600 hover:border-brand-600 active:bg-brand-700 active:border-brand-700",
+        primary: "border-brand-500 bg-brand-500 text-fg-onbrand hover:bg-brand-solid-hover hover:border-brand-solid-hover active:bg-brand-solid-active active:border-brand-solid-active",
         ghost: "border-transparent bg-transparent text-fg-muted hover:bg-surface-active hover:text-fg",
-        danger: "border-danger-solid bg-danger-solid text-white hover:bg-danger-700 hover:border-danger-700",
+        danger: "border-danger-solid bg-danger-solid text-white hover:bg-danger-500 hover:border-danger-500",
         dangerOutline: "border-border bg-surface text-danger-700 hover:bg-danger-50 hover:border-danger-200",
         link: "border-transparent bg-transparent text-fg-link underline-offset-4 hover:underline px-0 h-auto",
       },

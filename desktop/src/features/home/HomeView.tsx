@@ -102,7 +102,7 @@ export default function HomeView() {
 
   return (
     <section className="view active">
-      <header className="relative mb-4 overflow-hidden rounded-xl px-6 py-5 text-white shadow-md" style={{ background: "linear-gradient(120deg, var(--color-brand-500) 0%, var(--color-brand-600) 55%, var(--color-brand-800) 100%)" }}>
+      <header className="relative mb-4 overflow-hidden rounded-xl px-6 py-5 text-white shadow-md" style={{ background: "linear-gradient(120deg, var(--color-brand-500) 0%, var(--hero-2) 55%, var(--hero-3) 100%)" }}>
         <span aria-hidden className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/[0.07]" />
         <span aria-hidden className="pointer-events-none absolute -bottom-28 right-40 size-56 rounded-full bg-white/[0.05]" />
         <div className="relative">

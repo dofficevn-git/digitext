@@ -33,7 +33,7 @@
      + vạch tím). Nút tròn nhóm (--side-node) đặc để che đường trục quy trình (--side-line-2). */
   /* 0.25.4 (19/11/2026): anh Hiếu chê menu trắng "đơn điệu, không điểm nhấn" → thanh bên NỀN TÍM ĐẬM chữ trắng,
      mục đang mở là viên trắng chữ tím. Đảo quyết định "menu trắng" của 0.19. */
-  --side-bg: var(--color-brand-700);
+  --side-bg: var(--color-brand-deep);
   --side-bg-2: rgb(255 255 255 / 0.1);
   --side-bg-3: rgb(255 255 255 / 0.25);
   --side-node: var(--color-brand-600);
@@ -43,6 +43,10 @@
   --side-line: rgb(255 255 255 / 0.14);
   --side-line-2: var(--color-brand-400);
   --side-active: #ffffff;
+  --side-active-fg: var(--color-brand-700);
+  /* Dải chào ở Tổng quan (HomeView): hai chặng sau của nền chuyển sắc — nền tối đổi sang mảng đậm (nen-toi.css). */
+  --hero-2: var(--color-brand-600);
+  --hero-3: var(--color-brand-800);
   /* Thanh trên tím chạy suốt chiều ngang như DO365 (header 50px, chữ trắng, ô tìm nền trắng mờ). */
   --top-bg: var(--color-brand-500);
   --top-fg: #ffffff;
@@ -102,7 +106,7 @@ html, body, #root {
   padding: 0;
 }
 .login-side {
-  background: linear-gradient(160deg, var(--color-brand-500), var(--color-brand-700));
+  background: linear-gradient(160deg, var(--color-brand-500), var(--color-brand-deep));
   color: rgba(255, 255, 255, 0.85);
   padding: 40px 48px;
   display: flex;
@@ -411,7 +415,7 @@ html, body, #root {
 
 .sidebar {
   grid-area: sidebar;
-  background: linear-gradient(180deg, var(--side-bg) 0%, var(--color-brand-900) 100%);
+  background: linear-gradient(180deg, var(--side-bg) 0%, var(--color-brand-deepest) 100%);
   color: var(--side-text);
   border-right: 1px solid var(--side-line);
   display: flex;
@@ -624,12 +628,12 @@ button.stat:focus-visible {
   font-weight: 500;
 }
 .btn.primary:hover:not(:disabled) {
-  background: var(--color-brand-600);
-  border-color: var(--color-brand-600);
+  background: var(--color-brand-solid-hover);
+  border-color: var(--color-brand-solid-hover);
 }
 .btn.primary:active:not(:disabled) {
-  background: var(--color-brand-700);
-  border-color: var(--color-brand-700);
+  background: var(--color-brand-solid-active);
+  border-color: var(--color-brand-solid-active);
 }
 .btn.lg {
   height: calc(36px * var(--ui-scale, 1));
@@ -1895,7 +1899,7 @@ input[type="checkbox"], input[type="radio"] {
   background: var(--color-brand-500);
 }
 .lb-bar button.primary:hover {
-  background: var(--color-brand-600);
+  background: var(--color-brand-solid-hover);
 }
 .lb-stage {
   overflow: auto;

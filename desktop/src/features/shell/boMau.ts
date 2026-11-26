@@ -35,3 +35,25 @@ export function datBoMau(b: BoMau): void {
     localStorage.setItem(KHOA, b);
   } catch {}
 }
+
+// Nền tối — độc lập với bộ màu (3 bộ × 2 nền), cũng ghi nhớ theo máy. Màu ở styles/nen-toi.css.
+const KHOA_TOI = "digitext.nenToi";
+
+export function nenToiDaChon(): boolean {
+  try {
+    return localStorage.getItem(KHOA_TOI) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function apNenToi(toi: boolean): void {
+  document.documentElement.classList.toggle("dark", toi);
+}
+
+export function datNenToi(toi: boolean): void {
+  apNenToi(toi);
+  try {
+    localStorage.setItem(KHOA_TOI, toi ? "1" : "0");
+  } catch {}
+}

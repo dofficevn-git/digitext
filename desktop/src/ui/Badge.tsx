@@ -12,10 +12,10 @@ const V47x = cva(
   {
     variants: {
       tone: {
-        ok: "bg-success-100 text-success-600",
-        info: "bg-info-50 text-info-600",
-        warn: "bg-warning-50 text-warning-600",
-        err: "bg-danger-50 text-danger-600",
+        ok: "bg-success-100 text-success-600 dark:text-success-700",
+        info: "bg-info-50 text-info-600 dark:text-info-700",
+        warn: "bg-warning-50 text-warning-600 dark:text-warning-700",
+        err: "bg-danger-50 text-danger-600 dark:text-danger-700",
         gray: "bg-gray-100 text-fg-muted",
         // Đang chạy (OCR, ghép PDF/A, ký…): hổ phách — màu "đang làm" của cả hệ thống.
         run: "bg-run-bg text-run",

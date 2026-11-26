@@ -4,9 +4,9 @@ import { V462 } from "@/lib/utils";
 
 const V47v = [
   "bg-brand-500",
-  "bg-success-700",
-  "bg-warning-700",
-  "bg-info-700",
+  "bg-success-600",
+  "bg-warning-600",
+  "bg-info-600",
   "bg-gray-700",
 ] as const;
 

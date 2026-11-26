@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Nền tối bật bằng lớp `dark` trên <html> (styles/nen-toi.css), KHÔNG theo cài đặt Windows. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* 0.19 "Đồng bộ DO365 / Teams" (23/10/2026): giá trị lấy từ "DO365 Shared Design Tokens v1.0 (26/06/2026)" —
    do365-tokens.css dùng chung hệ sinh thái DOFFICE (30 % nhận diện: tím #5A58A6; 70 % Fluent/Teams: xám, bóng, bo góc,
    Segoe UI, thang chữ 14 gốc). Cam #E8772E (DO365 --do-rieng) chỉ cho "đang chạy"; cảnh báo dùng warning-* (#F7630C). */
@@ -37,6 +40,12 @@
   --color-brand-700: #3b3973;
   --color-brand-800: #2f2d5c;
   --color-brand-900: #232245;
+  /* Nền ĐẶC lúc rê / nhấn và mảng đậm (thanh bên, màn đăng nhập). Tách khỏi 600/700/900 vì ở nền tối các bậc đó là
+     màu CHỮ (sáng) — xem styles/nen-toi.css. */
+  --color-brand-solid-hover: var(--color-brand-600);
+  --color-brand-solid-active: var(--color-brand-700);
+  --color-brand-deep: var(--color-brand-700);
+  --color-brand-deepest: var(--color-brand-900);
 
   /* Biểu đồ (dashboard 22/10/2026, đổi 23/10). Phân loại: 4 màu thứ tự cố định, đã qua validator CVD của skill dataviz
      (ΔE kề nhau ≥ 8, chroma ≥ 0,1, tương phản ≥ 3:1 trên nền sáng) — chuỗi 1 luôn là tím thương hiệu. Tuần tự: một màu

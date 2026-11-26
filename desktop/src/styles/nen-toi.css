@@ -1,0 +1,172 @@
+/* NỀN TỐI (26/11/2026) — theo DO365 dark-theme.css: xanh đêm do-midnight (#06213A nền · #0B2843 thẻ · chữ trắng /
+   #C9D2DC / #93A3B5 · viền #27496B / #36597A). Bật bằng công tắc "Nền tối" trong bảng Bộ màu (ChonBoMau.tsx) → lớp
+   `dark` trên <html>, ghi nhớ theo máy. ĐỘC LẬP với bộ màu: 3 bộ × 2 nền.
+   KHÔNG bật theo cài đặt Windows (prefers-color-scheme) — app đổi màu bất ngờ là lỗi với người dùng.
+
+   Quy ước thang màu ở nền tối (để lớp Tailwind sẵn có tự đúng, không phải sửa từng màn):
+     · gray-0…300  = bề mặt + viền (đảo sang tối);  gray-600…900 = GIỮ TỐI (nền khung xem ảnh, nút tối, avatar)
+     · <màu>-50/100 = nền nhạt → nền tối pha màu;  -200/300 = viền;  -500/600 = màu đặc (chữ trắng, giữ nguyên)
+     · <màu>-700/800/900 = CHỮ → sáng lên. Vì thế ĐỪNG dùng -700 làm nền: nền đặc lúc rê chuột dùng
+       brand-solid-hover / brand-solid-active, mảng đậm (thanh bên, màn đăng nhập) dùng brand-deep / brand-deepest.
+   NẠP SAU bo-mau.css (cùng độ ưu tiên, đứng sau thì thắng phần nền/viền/chữ của bộ màu sáng). */
+
+:root.dark {
+  color-scheme: dark;
+
+  --color-gray-0: #0b2843;
+  --color-gray-25: #08243f;
+  --color-gray-50: #06213a;
+  --color-gray-100: #123455;
+  --color-gray-150: #183e63;
+  --color-gray-200: #27496b;
+  --color-gray-300: #36597a;
+  --color-gray-400: #5f7c99;
+  --color-gray-500: #93a3b5;
+  --color-gray-600: #1c3d5e;
+  --color-gray-700: #0e2e4d;
+  --color-gray-800: #04182b;
+  --color-gray-900: #020f1c;
+
+  --color-table-head: #0e2e4d;
+  --color-fg: #f3f6fa;
+  --color-fg-strong: #ffffff;
+  --color-fg-muted: #c9d2dc;
+  --color-fg-subtle: #a9b6c4;
+  --color-fg-placeholder: #93a3b5;
+  --color-fg-disabled: #5f7c99;
+  --color-fg-onbrand: #ffffff;
+  --color-border-subtle: #1d3d5e;
+  --color-border: #36597a;
+  --color-border-strong: #4a6e91;
+
+  --color-primary-foreground: #ffffff;
+  --color-destructive-foreground: #ffffff;
+  --color-secondary-foreground: #f3f6fa;
+  --color-accent-foreground: #ffffff;
+  --color-chart-target: #c9d2dc;
+
+  /* Bộ Teams (mặc định) ở nền tối — màu nhấn = tím sáng #B3AFFF của DO365 (--do-nhan-toi). */
+  --color-brand-50: #232a52;
+  --color-brand-100: #32355c;
+  --color-brand-200: #43467a;
+  --color-brand-300: #5a5c9e;
+  --color-brand-400: #7b78bf;
+  --color-brand-500: #5a58a6;
+  --color-brand-600: #b3afff;
+  --color-brand-700: #c6c3ff;
+  --color-brand-800: #d9d7ff;
+  --color-brand-900: #ecebff;
+  --color-brand-solid-hover: #6b69bd;
+  --color-brand-solid-active: #7b78bf;
+  --color-brand-deep: #312f57;
+  --color-brand-deepest: #1e1d3a;
+  --side-node: #47458a;
+  --side-active-fg: #3b3973;
+  --top-bg: var(--color-brand-deep);
+  --hero-2: var(--color-brand-deep);
+  --hero-3: var(--color-brand-deepest);
+
+  --color-success-50: #18351f;
+  --color-success-100: #1e4227;
+  --color-success-200: #2a5a36;
+  --color-success-300: #3b7a4a;
+  --color-success-700: #5fd08a;
+  --color-success-800: #8adfa9;
+  --color-danger-50: #3a1414;
+  --color-danger-100: #4a1a1a;
+  --color-danger-200: #6b2a2a;
+  --color-danger-300: #8f3a3a;
+  --color-danger-700: #f08080;
+  --color-danger-800: #f5a3a3;
+  --color-warning-50: #3a2e10;
+  --color-warning-100: #4a3a14;
+  --color-warning-200: #6b5320;
+  --color-warning-300: #8a6a2a;
+  --color-warning-700: #e0b44a;
+  --color-warning-800: #ebcb7a;
+  --color-info-50: #16304e;
+  --color-info-100: #1c3b5f;
+  --color-info-200: #2a5484;
+  --color-info-300: #3b6ea8;
+  --color-info-700: #6faae8;
+  --color-info-800: #9cc5f0;
+  --color-accent-bg: #3a2e10;
+  --color-run-50: #33281b;
+  --color-run-100: #3a2412;
+  --color-run-200: #5a3a1e;
+  --color-run-700: #ff9a5c;
+
+  /* Biểu đồ phân loại: cùng bốn sắc, bậc sáng hơn cho nền tối. */
+  --color-chart-1: #9a95f0;
+  --color-chart-2: #2cc5cb;
+  --color-chart-3: #d9a441;
+  --color-chart-4: #e07db8;
+  --color-chart-seq-1: #32355c;
+  --color-chart-seq-2: #43467a;
+  --color-chart-seq-3: #5a5c9e;
+  --color-chart-seq-4: #7b78bf;
+  --color-chart-seq-5: #b3afff;
+
+  --shadow-xs: 0 0 0 1px rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-sm: 0 0 0 1px rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 0 0 1px rgb(0 0 0 / 0.3), 0 3px 10px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 0 0 1px rgb(0 0 0 / 0.35), 0 6px 22px rgb(0 0 0 / 0.7);
+  --shadow-xl: 0 0 0 1px rgb(0 0 0 / 0.35), 0 18px 48px rgb(0 0 0 / 0.65);
+
+  --select-chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a9b6c4' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Bộ DO365 ở nền tối — cam trầm cho mảng lớn (#7A3A12), cam sáng cho chữ nhấn (DO365 --do-nhan-toi #FF6633). */
+:root.dark.theme-do365 {
+  --color-brand-50: #33281b;
+  --color-brand-100: #46321f;
+  --color-brand-200: #6b4322;
+  --color-brand-300: #9a5524;
+  --color-brand-400: #dd6a2e;
+  --color-brand-500: #c2410c;
+  --color-brand-600: #ff8a5c;
+  --color-brand-700: #ffa882;
+  --color-brand-800: #ffc4a8;
+  --color-brand-900: #ffe1d2;
+  --color-brand-solid-hover: #d4521c;
+  --color-brand-solid-active: #e0632c;
+  --color-brand-deep: #7a3a12;
+  --color-brand-deepest: #4a2209;
+  --side-node: #9e350a;
+  --side-active-fg: #7f2b09;
+  --color-chart-seq-1: #46321f;
+  --color-chart-seq-2: #6b4322;
+  --color-chart-seq-3: #9a5524;
+  --color-chart-seq-4: #dd6a2e;
+  --color-chart-seq-5: #ff8a5c;
+}
+
+/* Bộ Zalo ở nền tối — xanh trầm #0A3C86 cho mảng lớn, xanh sáng #6FAEFF cho chữ nhấn. */
+:root.dark.theme-zalo {
+  --color-brand-50: #14335c;
+  --color-brand-100: #1b4278;
+  --color-brand-200: #24579c;
+  --color-brand-300: #2f6fc4;
+  --color-brand-400: #3385ff;
+  --color-brand-500: #0068ff;
+  --color-brand-600: #6faeff;
+  --color-brand-700: #8fc0ff;
+  --color-brand-800: #b3d4ff;
+  --color-brand-900: #d9e9ff;
+  --color-brand-solid-hover: #1f7aff;
+  --color-brand-solid-active: #3d8bff;
+  --color-brand-deep: #0a3c86;
+  --color-brand-deepest: #062552;
+  --side-node: #0052cc;
+  --side-active-fg: #0041a3;
+  --color-chart-seq-1: #1b4278;
+  --color-chart-seq-2: #24579c;
+  --color-chart-seq-3: #2f6fc4;
+  --color-chart-seq-4: #3385ff;
+  --color-chart-seq-5: #6faeff;
+}
+
+:root.dark .topbar select,
+:root.dark .topbar option {
+  color: #ffffff;
+}

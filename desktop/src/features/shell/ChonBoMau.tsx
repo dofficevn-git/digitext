@@ -1,12 +1,12 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-// Nút "Giao diện" ở đáy thanh bên: bấm ra bảng chọn bộ màu (DO365 · Microsoft Teams · Zalo), như DO365.
+// Nút "Giao diện" ở đáy thanh bên: bấm ra bảng chọn bộ màu (DO365 · Microsoft Teams · Zalo) + công tắc nền tối, như DO365.
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { V462 as cn } from "@/lib/utils";
 import { Tip } from "@/ui";
-import { BO_MAU, boMauDaChon, datBoMau, type BoMau } from "./boMau";
+import { BO_MAU, boMauDaChon, datBoMau, datNenToi, nenToiDaChon, type BoMau } from "./boMau";
 
 export default function ChonBoMau() {
   const [bo, setBo] = useState<BoMau>(boMauDaChon);
@@ -14,15 +14,20 @@ export default function ChonBoMau() {
     setBo(b);
     datBoMau(b);
   };
+  const [toi, setToi] = useState<boolean>(nenToiDaChon);
+  const gatToi = () => {
+    setToi(!toi);
+    datNenToi(!toi);
+  };
 
   return (
     <DropdownMenu>
-      <Tip text="Bộ màu giao diện" side="right">
+      <Tip text="Giao diện — bộ màu và nền tối" side="right">
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             className="grid size-8 place-items-center rounded-md text-[var(--side-faint)] outline-none transition-colors hover:bg-[var(--side-bg-2)] hover:text-[var(--side-strong)] focus-visible:ring-2 focus-visible:ring-white/70 data-[state=open]:bg-[var(--side-bg-3)] data-[state=open]:text-[var(--side-strong)]"
-            aria-label="Bộ màu giao diện"
+            aria-label="Giao diện — bộ màu và nền tối"
           >
             <Icon name="bangMau" size={16} />
           </button>
@@ -59,6 +64,20 @@ export default function ChonBoMau() {
             );
           })}
         </div>
+        <div aria-hidden className="my-2 h-px bg-border-subtle" />
+        <button
+          type="button"
+          role="switch"
+          aria-checked={toi}
+          onClick={gatToi}
+          className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left text-sm text-fg outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Icon name="nenToi" size={16} className="flex-none text-fg-subtle" />
+          <span className="flex-1">Nền tối</span>
+          <span aria-hidden className={cn("relative h-5 w-9 flex-none rounded-full transition-colors", toi ? "bg-brand-500" : "bg-gray-300")}>
+            <i className={cn("absolute top-0.5 block size-4 rounded-full bg-white transition-[left]", toi ? "left-[18px]" : "left-0.5")} />
+          </span>
+        </button>
       </DropdownMenuContent>
     </DropdownMenu>
   );

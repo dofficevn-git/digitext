@@ -45,12 +45,12 @@ export default function Banner({ tone = "info", title, children, actions, onClos
             <button type="button" className="text-xs underline underline-offset-2 opacity-80 hover:opacity-100" onClick={() => setShowDetail((v) => !v)}>
               {showDetail ? "Ẩn chi tiết" : "Chi tiết"}
             </button>
-            {showDetail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-white/60 p-2 font-mono text-xs text-fg">{detail}</pre>}
+            {showDetail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-surface/60 p-2 font-mono text-xs text-fg">{detail}</pre>}
           </div>
         )}
       </div>
       {actions && <div className="flex flex-none items-center gap-1.5">{actions}</div>}
-      {onClose && <IconButton label="Đóng" icon="dong" size="sm" onClick={onClose} className="-mr-1 -mt-0.5 text-current hover:bg-black/5" noTooltip />}
+      {onClose && <IconButton label="Đóng" icon="dong" size="sm" onClick={onClose} className="-mr-1 -mt-0.5 text-current hover:bg-fg/5" noTooltip />}
     </div>
   );
 }
@@ -67,7 +67,7 @@ export function ErrorBanner({ error, ctx, onRetry, onClose, className }: { error
       className={className}
       actions={
         onRetry ? (
-          <button type="button" className="rounded border border-current/30 px-2 py-0.5 text-xs font-medium hover:bg-white/50" onClick={onRetry}>
+          <button type="button" className="rounded border border-current/30 px-2 py-0.5 text-xs font-medium hover:bg-surface/50" onClick={onRetry}>
             Thử lại
           </button>
         ) : undefined
