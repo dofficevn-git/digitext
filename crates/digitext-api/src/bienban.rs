@@ -596,7 +596,11 @@ pub struct GenericForm {
     pub title: String,
     pub blocks: Vec<GenericBlock>,
 }
-pub const GENERIC_KINDS: [&str; 6] = ["giao_nhan_giay", "tra_tai_lieu_giay", "nhat_ky_so_hoa", "kiem_tra_san_pham", "nghiem_thu", "ban_giao_lan"];
+pub const GENERIC_KINDS: [&str; 9] = [
+    "giao_nhan_giay", "tra_tai_lieu_giay", "nhat_ky_so_hoa", "kiem_tra_san_pham", "nghiem_thu", "ban_giao_lan",
+    // lưu trữ hiện hành (Điều 19, 0031):
+    "giao_nhan_nop_luu", "so_nop_luu", "danh_muc_ho_so",
+];
 pub fn is_generic(kind: &str) -> bool {
     GENERIC_KINDS.contains(&kind)
 }
@@ -628,6 +632,9 @@ pub fn f_2i2(r_1e: &str) -> &'static str {
         "kiem_tra_san_pham" => "(Theo khoản 5 Điều 9 — Thông tư 05/2025/TT-BNV: kiểm tra sản phẩm số hoá)",
         "nghiem_thu" => "(Theo khoản 8 Điều 9 — Thông tư 05/2025/TT-BNV: nghiệm thu)",
         "ban_giao_lan" => "(Theo khoản 8 Điều 9 — Thông tư 05/2025/TT-BNV: bàn giao sản phẩm)",
+        "giao_nhan_nop_luu" => "(Theo Điều 19 — Thông tư 05/2025/TT-BNV: nộp hồ sơ vào lưu trữ hiện hành)",
+        "so_nop_luu" => "(Theo Điều 19 — Thông tư 05/2025/TT-BNV: sổ nộp lưu hồ sơ vào lưu trữ hiện hành)",
+        "danh_muc_ho_so" => "(Theo khoản 4 Điều 19 — Thông tư 05/2025/TT-BNV: danh mục hồ sơ)",
         "kiem_tra" => {
             "(Mẫu theo Mục 1 Phụ lục VII — Thông tư 05/2025/TT-BNV, Điều 29)"
         }

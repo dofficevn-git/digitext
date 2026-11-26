@@ -142,6 +142,9 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::chinh_ly::router())
         .merge(crate::routes::ingest::router())
         .merge(crate::routes::tra_cuu::router())
+        // Lưu trữ hiện hành (Điều 19, 26/11/2026): có ở cả hai bản — bản thi công chỉ không có menu.
+        .merge(crate::routes::nop_luu::router())
+        .merge(crate::routes::danh_muc_ho_so::router())
         .merge(crate::routes::hooks::router());
     // Bản Lưu trữ (máy chủ cơ quan chủ đầu tư) không gắn các route chỉ dùng khi thi công số hoá.
     if crate::config::edition_luu_tru() {

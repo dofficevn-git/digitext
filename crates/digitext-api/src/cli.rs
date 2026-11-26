@@ -259,6 +259,13 @@ async fn serve() -> anyhow::Result<()> {
         Ok(_) => {}
         Err(e) => tracing::warn!(error = %e, "không bổ sung được quyền mới cho vai trò hệ thống — quản trị tick tay trong Vai trò và quyền"),
     }
+    if crate::config::edition_luu_tru() {
+        match digitext_db::roles::ensure_luu_tru(&r_22).await {
+            Ok(n) if n > 0 => tracing::info!(added = n, "bản Lưu trữ: đã chèn vai trò mặc định (nhân viên phòng ban, cán bộ lưu trữ, lãnh đạo)"),
+            Ok(_) => {}
+            Err(e) => tracing::warn!(error = %e, "không chèn được vai trò mặc định bản Lưu trữ (migration 0031 chưa áp?)"),
+        }
+    }
     crate::routes::dashboard::spawn_rollup(r_22.clone());
     f_2gs(r_22);
     axum::serve(

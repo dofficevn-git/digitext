@@ -105,7 +105,12 @@ pub async fn dong_hieu_luc(pool: &PgPool, phong: Uuid, nam: i32, phong_ban: Opti
 /// hành năm trước). Từ chối khi đang có bản chưa ban hành của cùng (phông, năm).
 pub async fn tao(pool: &PgPool, project: Uuid, phong: Uuid, nam: i32, user: Uuid, sao_chep_tu: Option<Uuid>) -> sqlx::Result<Result<DanhMucRow, String>> {
     let mut tx = pool.begin().await?;
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))").bind(format!("danh_muc:{phong}:{nam}")).execute(&mut *tx).await?;
+    // SQL khác chữ với records::create / nop_luu (xem chú thích ở nop_luu::lap về cache prepared statement của sqlx).
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('danh_muc:' || $1::text || ':' || $2::text, 0))")
+        .bind(phong.to_string())
+        .bind(nam.to_string())
+        .execute(&mut *tx)
+        .await?;
     let dang_mo: i64 = sqlx::query_scalar("SELECT count(*) FROM lt_danh_muc WHERE phong_id = $1 AND nam = $2 AND trang_thai IN ('du_thao', 'cho_duyet', 'da_duyet')")
         .bind(phong)
         .bind(nam)

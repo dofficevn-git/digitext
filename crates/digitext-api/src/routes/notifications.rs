@@ -25,6 +25,9 @@ pub struct NotificationDto {
     pub message: String,
     pub read_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    /// Khoá tham chiếu (0031): `nop_luu:<id>`, `danh_muc:<id>`, `ho_so:<id>:…` — máy trạm mở đúng màn.
+    #[serde(rename = "ref")]
+    pub ref_: Option<String>,
 }
 impl From<Tec> for NotificationDto {
     fn from(r_ka: Tec) -> Self {
@@ -35,6 +38,7 @@ impl From<Tec> for NotificationDto {
             message: r_ka.message,
             read_at: r_ka.read_at,
             created_at: r_ka.created_at,
+            ref_: r_ka.ref_,
         }
     }
 }

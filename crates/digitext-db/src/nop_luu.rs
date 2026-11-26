@@ -59,8 +59,10 @@ pub async fn lap(pool: &PgPool, p: LapPhieu<'_>) -> sqlx::Result<Result<PhieuRow
         return Ok(Err("Chưa chọn hồ sơ nào để nộp".into()));
     }
     let mut tx = pool.begin().await?;
-    // Khoá theo dự án để số phiếu trong năm không trùng khi hai người nộp cùng lúc.
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))").bind(format!("nop_luu:{}", p.project_id)).execute(&mut *tx).await?;
+    // Khoá theo dự án để số phiếu trong năm không trùng khi hai người nộp cùng lúc. Câu SQL cố ý KHÁC chữ với câu của
+    // records::create (bind uuid): sqlx cache prepared statement theo đúng chuỗi SQL trên từng kết nối, trùng chữ mà khác
+    // kiểu tham số thì "incorrect binary data format in bind parameter 1".
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('nop_luu:' || $1::text, 0))").bind(p.project_id.to_string()).execute(&mut *tx).await?;
     let hs: Vec<(Uuid, Uuid, Option<Uuid>, Option<String>, Option<DateTime<Utc>>, String)> = sqlx::query_as(
         "SELECT id, phong_id, phong_ban_id, nop_luu_trang_thai, deleted_at, so_tam FROM cl_ho_so WHERE id = ANY($1) AND project_id = $2 FOR UPDATE",
     )

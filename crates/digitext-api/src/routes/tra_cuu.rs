@@ -143,6 +143,8 @@ struct KetQuaTraCuu {
 
 async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> Result<Json<KetQuaTraCuu>, ApiError> {
     kiem_quyen(&st, &ts, q.project_id).await?;
+    // Người phòng ban (0031) chỉ tra được hồ sơ phòng mình / mình lập; cán bộ lưu trữ và quản trị thấy hết.
+    let pham_vi = super::chinh_ly::pham_vi_cua(&ts);
     let mau = match q.q.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         Some(s) => {
             let kd: String = sqlx::query_scalar("SELECT khong_dau($1)").bind(s).fetch_one(&st.pool).await?;
@@ -208,6 +210,8 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
            AND ($8::int IS NULL OR COALESCE(extract(year FROM v.ngay_thang_sort)::int, h.nam_ket_thuc) <= $8) \
            AND ($9::text IS NULL OR ($9 = 'han_che') = COALESCE({HAN_CHE_SQL}, false)) \
            AND ($11 OR d.id IS NULL OR d.status <> 'disposed') \
+           AND ($15::uuid IS NULL OR h.created_by = $16 \
+                OR (h.phong_ban_id = $15 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $17) > now()))) \
          ORDER BY p.ma_du_an, g.ma_ho_so_goc NULLS LAST, h.so_tam, v.so_thu_tu \
          LIMIT $12 OFFSET $13"
     );
@@ -226,6 +230,9 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
         .bind(limit)
         .bind(offset)
         .bind(&ma_loai)
+        .bind(pham_vi.map(|p| p.phong_ban_id))
+        .bind(pham_vi.map(|p| p.user_id))
+        .bind(digitext_core::luu_tru::QUYEN_SU_DUNG_NGAY as i32)
         .fetch_all(&st.pool)
         .await?;
     let tong = dong.first().map(|d| d.tong).unwrap_or(0);
@@ -387,6 +394,23 @@ async fn doc_tai_lieu(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>) 
     .await?;
     let (project, status, filename, che_do, trich_yeu, ma_ho_so) = row.ok_or_else(ApiError::not_found)?;
     kiem_quyen(&st, &ts, project).await?;
+    if let Some(pv) = super::chinh_ly::pham_vi_cua(&ts) {
+        // Tài liệu không nối mục lục thì không biết phòng nào → người bị giới hạn phạm vi không đọc thẳng.
+        let duoc: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id JOIN cl_ho_so h ON h.id = v.ho_so_id \
+             WHERE f.document_id = $1 AND f.deleted_at IS NULL AND (h.created_by = $3 \
+                OR (h.phong_ban_id = $2 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $4) > now()))))",
+        )
+        .bind(id)
+        .bind(pv.phong_ban_id)
+        .bind(pv.user_id)
+        .bind(digitext_core::luu_tru::QUYEN_SU_DUNG_NGAY as i32)
+        .fetch_one(&st.pool)
+        .await?;
+        if !duoc {
+            return Err(ApiError::forbidden());
+        }
+    }
     if status == "disposed" {
         return Err(ApiError::conflict("tài liệu đã tiêu huỷ theo quyết định — chỉ còn mục lục"));
     }

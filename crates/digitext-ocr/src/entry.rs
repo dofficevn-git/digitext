@@ -296,6 +296,15 @@ async fn f_2gu(
             );
         }
     });
+    // Nhắc hạn lưu trữ hiện hành (0031): cả hai chế độ; DIGITEXT_LT_NHAC_GIAY rút ngắn chu kỳ khi thử.
+    let r_lt_pool = r_34m.clone();
+    let r_lt_shut = shutdown.clone();
+    let r_lt = tokio::spawn(async move {
+        let giay = std::env::var("DIGITEXT_LT_NHAC_GIAY").ok().and_then(|s| s.trim().parse::<u64>().ok()).filter(|g| *g >= 5).unwrap_or(3600);
+        if let Err(e) = package_worker::nhac_nop_luu(&r_lt_pool, Duration::from_secs(giay), &r_lt_shut).await {
+            tracing::error!(error = % e, "sweeper nhắc hạn lưu trữ hiện hành lỗi DB — dừng để tầng trên restart");
+        }
+    });
     let r_34f = digitext_storage::f_vr(
         cfg.minio.as_ref(),
         cfg.pdf_store_bucket.as_deref(),
@@ -628,7 +637,7 @@ async fn f_2gu(
             }
         }
     });
-    let mut r_344 = vec![r_347, r_34s, r_34o, r_33w];
+    let mut r_344 = vec![r_347, r_34s, r_34o, r_33w, r_lt];
     if let Some(h) = r_34b {
         r_344.push(h);
     }

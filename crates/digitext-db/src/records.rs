@@ -33,6 +33,10 @@ pub fn f_1m5(kind: &str) -> &'static str {
         "tra_lai" => "TL",
         // Thi công số hoá Điều 9 TT05 (0024):
         "giao_nhan_giay" => "GNG",
+        // lưu trữ hiện hành (0031)
+        "giao_nhan_nop_luu" => "GNL",
+        "so_nop_luu" => "SNL",
+        "danh_muc_ho_so" => "DMH",
         "tra_tai_lieu_giay" => "TRG",
         "nhat_ky_so_hoa" => "NKS",
         "kiem_tra_san_pham" => "KTS",

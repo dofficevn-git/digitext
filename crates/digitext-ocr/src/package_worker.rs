@@ -521,6 +521,33 @@ pub async fn f_2bd(pool: &PgPool, r_3cq: Duration, r_3cr: &CancellationToken) ->
     }
     Ok(())
 }
+/// Nhắc hạn LƯU TRỮ HIỆN HÀNH (0031, 26/11/2026): hồ sơ đến / quá hạn nộp lưu, quyền sử dụng sắp hết, danh mục chờ duyệt
+/// quá 7 ngày làm việc — `digitext_db::nop_luu::quet_nhac` + `danh_muc_ho_so::nhac_cho_duyet_lau`, không lặp nhờ
+/// `notifications.ref`. Chạy ở cả hai chế độ (bản Lưu trữ chạy worker chỉ-lưu-trữ). `DIGITEXT_LT_NHAC_TU_NAM` (mặc định năm
+/// hiện tại − 1) để không dội hàng vạn hồ sơ chỉnh lý cũ; `DIGITEXT_LT_NHAC_GIAY` rút ngắn chu kỳ khi thử.
+/// Khác `f_2bd`: quét một lượt NGAY khi khởi động rồi mới ngủ — máy chủ cơ quan bật buổi sáng phải thấy nhắc ngay.
+pub async fn nhac_nop_luu(pool: &PgPool, chu_ky: Duration, tok: &CancellationToken) -> sqlx::Result<()> {
+    use chrono::Datelike;
+    let mut lan_dau = true;
+    while !tok.is_cancelled() {
+        if !lan_dau {
+            tokio::select! { _ = tok.cancelled() => break, _ = tokio::time::sleep(chu_ky) => {} }
+            if tok.is_cancelled() {
+                break;
+            }
+        }
+        lan_dau = false;
+        let hom_nay = chrono::Utc::now().with_timezone(&f_2qd()).date_naive();
+        let tu_nam = std::env::var("DIGITEXT_LT_NHAC_TU_NAM").ok().and_then(|s| s.trim().parse().ok()).unwrap_or(hom_nay.year() - 1);
+        let n = digitext_db::nop_luu::quet_nhac(pool, hom_nay, tu_nam).await?;
+        let holidays = digitext_db::workdays::f_1hg(&std::env::var("DIGITEXT_HOLIDAYS").unwrap_or_default(), hom_nay.year() - 1..=hom_nay.year());
+        let m = digitext_db::danh_muc_ho_so::nhac_cho_duyet_lau(pool, hom_nay, &holidays, 7).await?;
+        if n + m > 0 {
+            tracing::info!(nop_luu = n, danh_muc = m, "nhắc hạn lưu trữ hiện hành (Điều 19)");
+        }
+    }
+    Ok(())
+}
 /// Vòng nền quét virus từng tài liệu (0027, 5/11/2026) — để lúc đóng gói không phải quét nữa.
 ///
 /// Quét **bản đã ký số**: đó mới là bản đi vào gói. Tài liệu chưa ký thì bỏ qua, lúc đóng gói sẽ
