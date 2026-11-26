@@ -183,7 +183,7 @@ const NHAN_COT: &[(&[&str], &[&str])] = &[
     (&["tieude", "tenhoso", "noidung", "trichyeu", "nhomhoso"], &[]),
     (&["ngaybatdau", "batdau", "ngaybd", "tungay", "nbd"], &["bd"]),
     (&["ngayketthuc", "ketthuc", "ngaykt", "denngay", "nkt"], &["kt"]),
-    (&["thoigian", "ngaythang"], &["nam"]),
+    (&["thoigian", "ngaythang", "ngayhoso", "bdkt"], &["nam"]),
     (&["soto", "sotrang", "soluongto"], &["so"]),
     (&["thbq", "thoihan", "baoquan"], &[]),
     (&["ghichu"], &[]),
@@ -258,7 +258,7 @@ pub const MO_TA_COT: &[MoTaCot] = &[
     MoTaCot {
         khoa: "thoiGian",
         nhan: "Thời gian",
-        cung_nhan: &["Ngày tháng", "Năm"],
+        cung_nhan: &["Ngày tháng", "Năm", "Ngày hồ sơ (BĐ-KT)"],
         bat_buoc: false,
         kieu: "chữ",
         giai_thich: "Một ô gộp, ví dụ \"05/01/2020 - 28/12/2020\" hoặc \"2020\". Trống thì máy chủ thử đọc năm trong tiêu đề.",

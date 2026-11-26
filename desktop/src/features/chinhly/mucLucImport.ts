@@ -201,7 +201,8 @@ const NHAN_COT: { k: keyof CotMap; chua: string[]; bang?: string[] }[] = [
   { k: "tieuDe", chua: ["tieude", "tenhoso", "noidung", "trichyeu", "nhomhoso"] },
   { k: "ngayBatDau", chua: ["ngaybatdau", "batdau", "ngaybd", "tungay", "nbd"], bang: ["bd"] },
   { k: "ngayKetThuc", chua: ["ngayketthuc", "ketthuc", "ngaykt", "denngay", "nkt"], bang: ["kt"] },
-  { k: "thoiGian", chua: ["thoigian", "ngaythang"], bang: ["nam"] },
+  // "Ngày hồ sơ (BĐ-KT)" (mục lục Đảng uỷ Kim Lập, 26/11/2026): trước đây không nhận → cả cột bị bỏ, năm chỉ suy từ tiêu đề.
+  { k: "thoiGian", chua: ["thoigian", "ngaythang", "ngayhoso", "bdkt"], bang: ["nam"] },
   { k: "soTo", chua: ["soto", "sotrang", "soluongto"], bang: ["so"] },
   { k: "thbq", chua: ["thbq", "thoihan", "baoquan"] },
   { k: "ghiChu", chua: ["ghichu"] },
