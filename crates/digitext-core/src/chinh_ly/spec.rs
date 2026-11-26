@@ -37,10 +37,11 @@ pub struct TableSpec {
 /// Cột hệ thống mọi bảng sync đều có, do máy chủ quản.
 pub const SYSTEM_COLS: &[&str] = &["id", "project_id", "ver", "created_at", "created_by", "updated_at", "updated_by", "deleted_at"];
 
-/// Cột máy chủ tự tính (trigger / generated): bản đẩy lên có thì bỏ qua, không ghi, không từ chối.
-/// `cl_ho_so.vinh_vien` = loại bảo quản suy từ THBQ (migration 0015).
+/// Cột máy chủ tự tính (trigger / generated / nghiệp vụ máy chủ ghi): bản đẩy lên có thì bỏ qua, không ghi, không từ chối.
+/// `cl_ho_so.vinh_vien` = loại bảo quản suy từ THBQ (0015); `nop_luu_trang_thai` / `nop_luu_id` / `khoa_luc` = trạng thái
+/// nộp lưu hiện hành, chỉ route nộp lưu ghi (0031) — bản sao offline nhận qua pull nên UI vẫn hiện "Đã nộp lưu".
 pub fn is_derived(table: &str, col: &str) -> bool {
-    matches!((table, col), ("cl_ho_so", "vinh_vien"))
+    matches!((table, col), ("cl_ho_so", "vinh_vien" | "nop_luu_trang_thai" | "nop_luu_id" | "khoa_luc"))
 }
 
 const DM: &[&str] = &["ma", "ten", "so_tt"];
@@ -141,7 +142,8 @@ pub const TABLES: &[TableSpec] = &[
         name: "cl_ho_so",
         rank: 80,
         cols: HO_SO_COLS,
-        online_only: &["ho_so_so", "thu_tu_sap_xep", "hop_id", "bo_id", "tap_id", "gia_id"],
+        // dm_dong_id (0031): dòng danh mục hồ sơ dự kiến — bảng lt_danh_muc_dong không có trong bản sao offline nên chỉ chọn online.
+        online_only: &["ho_so_so", "thu_tu_sap_xep", "hop_id", "bo_id", "tap_id", "gia_id", "dm_dong_id"],
         parent: Some(("phong_id", "cl_phong")),
         shared: false,
         offline_write: true,

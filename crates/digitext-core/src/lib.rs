@@ -5,6 +5,7 @@ pub mod dashboard;
 pub mod doc_status;
 pub mod field;
 pub mod job;
+pub mod luu_tru;
 pub mod permission;
 pub mod review_status;
 pub mod role;

@@ -82,7 +82,13 @@ export type V3yx =
   | "dossier.systematize"
   | "khogia.manage"
   | "loan.view"
-  | "loan.manage";
+  | "loan.manage"
+  | "luutru.submit"
+  | "luutru.receive"
+  | "luutru.unlock"
+  | "danhmuc.edit"
+  | "danhmuc.submit"
+  | "danhmuc.approve";
 
 export interface V3yy {
   perm: V3yx;
@@ -184,6 +190,18 @@ export const V3z0: V3yz[] = [
       { perm: "khogia.manage", label: "Quản lý kho / giá lưu trữ, xếp hồ sơ lên giá" },
       { perm: "loan.view", label: "Xem phiếu mượn / trả hồ sơ giấy" },
       { perm: "loan.manage", label: "Lập phiếu mượn, ghi trả hồ sơ giấy" },
+    ],
+  },
+  {
+    key: "luutru",
+    label: "Lưu trữ hiện hành (Điều 19)",
+    perms: [
+      { perm: "luutru.submit", label: "Nộp hồ sơ của phòng mình vào lưu trữ cơ quan, rút phiếu khi chưa tiếp nhận" },
+      { perm: "luutru.receive", label: "Tiếp nhận / trả lại hồ sơ nộp lưu, sổ nộp lưu, xem hồ sơ toàn cơ quan" },
+      { perm: "luutru.unlock", label: "Mở khoá hồ sơ đã nộp lưu (ghi nhật ký)" },
+      { perm: "danhmuc.edit", label: "Soạn dòng danh mục hồ sơ dự kiến của phòng mình" },
+      { perm: "danhmuc.submit", label: "Lập, trình danh mục hồ sơ; lập phiên bản mới" },
+      { perm: "danhmuc.approve", label: "Duyệt, ban hành danh mục hồ sơ" },
     ],
   },
   {
@@ -384,12 +402,22 @@ const V3z4: Record<V3yx, number> = {
   "khogia.manage": 2,
   "loan.view": 1,
   "loan.manage": 1,
+  "luutru.submit": 1,
+  "luutru.receive": 1,
+  "luutru.unlock": 2,
+  "danhmuc.edit": 1,
+  "danhmuc.submit": 1,
+  "danhmuc.approve": 2,
 };
 
 // Quản lý (15/10/2026, khớp digitext-core permission.rs): như quản trị nhưng KHÔNG xoá; được gán quản trị dự án.
 const QUAN_LY_CHAN: V3yx[] = ["dossier.delete", "catalog.delete", "disposal.decide"];
 
+// Nhân viên phòng ban (26/11/2026, khớp permission.rs): nộp và soạn danh mục của phòng mình, KHÔNG tiếp nhận / trình.
+const NHAN_VIEN_CHAN: V3yx[] = ["luutru.receive", "danhmuc.submit"];
+
 export function V3z5(Vh: V3xs, Vi: V3yx): boolean {
+  if (Vh === "user" && NHAN_VIEN_CHAN.includes(Vi)) return false;
   if (Vh === "manager") {
     if (QUAN_LY_CHAN.includes(Vi)) return false;
     if (Vi === "project.assign_admin") return true;

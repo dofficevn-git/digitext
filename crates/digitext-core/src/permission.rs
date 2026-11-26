@@ -77,9 +77,22 @@ pub enum Permission {
     LoanView,
     /// Mượn / trả hồ sơ giấy: lập phiếu, ghi trả.
     LoanManage,
+    // Lưu trữ hiện hành — Điều 19 TT 05/2025 (26/11/2026, bản Lưu trữ cho cơ quan):
+    /// Nộp hồ sơ của phòng mình vào lưu trữ cơ quan, rút phiếu khi chưa tiếp nhận.
+    LuutruSubmit,
+    /// Cán bộ lưu trữ cơ quan: tiếp nhận / trả lại, sổ nộp lưu, xem hồ sơ toàn cơ quan. Tắt với vai trò gốc `user`.
+    LuutruReceive,
+    /// Mở khoá ngoại lệ hồ sơ đã nộp lưu (ghi audit).
+    LuutruUnlock,
+    /// Soạn dòng danh mục hồ sơ dự kiến của phòng mình.
+    DanhmucEdit,
+    /// Lập / trình danh mục hồ sơ, lập phiên bản mới. Tắt với vai trò gốc `user`.
+    DanhmucSubmit,
+    /// Duyệt / ban hành danh mục hồ sơ.
+    DanhmucApprove,
 }
 impl Permission {
-    pub const ALL: [Permission; 64] = [
+    pub const ALL: [Permission; 70] = [
         Permission::DossierRead,
         Permission::DossierCreate,
         Permission::DossierUpdate,
@@ -144,6 +157,12 @@ impl Permission {
         Permission::KhoGiaManage,
         Permission::LoanView,
         Permission::LoanManage,
+        Permission::LuutruSubmit,
+        Permission::LuutruReceive,
+        Permission::LuutruUnlock,
+        Permission::DanhmucEdit,
+        Permission::DanhmucSubmit,
+        Permission::DanhmucApprove,
     ];
     pub fn as_str(self) -> &'static str {
         match self {
@@ -211,6 +230,12 @@ impl Permission {
             Permission::KhoGiaManage => "khogia.manage",
             Permission::LoanView => "loan.view",
             Permission::LoanManage => "loan.manage",
+            Permission::LuutruSubmit => "luutru.submit",
+            Permission::LuutruReceive => "luutru.receive",
+            Permission::LuutruUnlock => "luutru.unlock",
+            Permission::DanhmucEdit => "danhmuc.edit",
+            Permission::DanhmucSubmit => "danhmuc.submit",
+            Permission::DanhmucApprove => "danhmuc.approve",
         }
     }
     pub fn min_perm(self) -> Perm {
@@ -249,7 +274,11 @@ impl Permission {
             | Permission::DisposalView
             | Permission::WorkExecute
             | Permission::LoanView
-            | Permission::LoanManage => Perm::Operate,
+            | Permission::LoanManage
+            | Permission::LuutruSubmit
+            | Permission::LuutruReceive
+            | Permission::DanhmucEdit
+            | Permission::DanhmucSubmit => Perm::Operate,
             Permission::SubmissionReview
             | Permission::SubmissionApprove
             | Permission::AccessReview
@@ -277,11 +306,19 @@ impl Permission {
             | Permission::DeviceRevoke
             | Permission::WorkManage
             | Permission::DossierSystematize
-            | Permission::KhoGiaManage => Perm::Admin,
+            | Permission::KhoGiaManage
+            | Permission::LuutruUnlock
+            | Permission::DanhmucApprove => Perm::Admin,
             Permission::ProjectAssignAdmin => Perm::Super,
         }
     }
     pub fn granted_by_default(self, r_1yx: Role) -> bool {
+        // Nhân viên phòng ban (26/11/2026): nộp và soạn danh mục của phòng mình, nhưng KHÔNG tiếp nhận hộ lưu trữ
+        // cơ quan và không trình danh mục — hai việc đó tầng Operate để vai trò tuỳ chỉnh "cán bộ lưu trữ" gốc user
+        // vẫn gán được, chỉ không mặc định.
+        if r_1yx == Role::User && matches!(self, Permission::LuutruReceive | Permission::DanhmucSubmit) {
+            return false;
+        }
         if r_1yx == Role::Manager {
             // Quản lý (15/10/2026): như quản trị nhưng KHÔNG xoá (hồ sơ, danh mục, quyết định tiêu huỷ;
             // xoá dữ liệu dự án chỉ super_admin ở API); được gán quản trị cho dự án.
@@ -397,6 +434,25 @@ mod quan_ly_tests {
         }
         assert!(!Permission::ProjectAssignAdmin.granted_by_default(Role::Admin));
         assert_eq!("manager".parse::<Role>(), Ok(Role::Manager));
+    }
+    /// 6 quyền lưu trữ hiện hành (26/11/2026): ALL đủ 70, chuỗi ↔ enum khớp, nhân viên phòng ban nộp/soạn nhưng không
+    /// tiếp nhận hay trình; cán bộ (admin) có mở khoá / duyệt; khách không có gì.
+    #[test]
+    fn luu_tru_hien_hanh_quyen_mac_dinh() {
+        assert_eq!(Permission::ALL.len(), 70);
+        for p in Permission::ALL {
+            assert_eq!(p.as_str().parse::<Permission>(), Ok(p), "{p}");
+        }
+        let u = Role::User;
+        assert!(Permission::LuutruSubmit.granted_by_default(u) && Permission::DanhmucEdit.granted_by_default(u));
+        assert!(!Permission::LuutruReceive.granted_by_default(u) && !Permission::DanhmucSubmit.granted_by_default(u));
+        assert!(!Permission::LuutruUnlock.granted_by_default(u) && !Permission::DanhmucApprove.granted_by_default(u));
+        assert!(allowed_for_base(u, Permission::LuutruReceive), "vai trò tuỳ chỉnh gốc user vẫn gán được tiếp nhận");
+        for p in [Permission::LuutruReceive, Permission::LuutruUnlock, Permission::DanhmucSubmit, Permission::DanhmucApprove] {
+            assert!(p.granted_by_default(Role::Admin) && p.granted_by_default(Role::Manager), "{p}");
+            assert!(!p.granted_by_default(Role::Customer), "{p}");
+        }
+        assert!(!Permission::LuutruSubmit.granted_by_default(Role::Customer));
     }
     #[test]
     fn bo_quyen_vai_tro_thay_mac_dinh_va_khong_vuot_tang() {
