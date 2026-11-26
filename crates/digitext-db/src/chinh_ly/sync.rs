@@ -487,7 +487,10 @@ pub struct Pull {
 pub const PULL_MAX: i64 = 10_000;
 
 /// Dòng của mọi bảng sync có `ver > since`, theo `ver` tăng. `since = 0` bỏ tombstone.
-pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64) -> sqlx::Result<Pull> {
+/// `pham_vi` (0031, lưu trữ hiện hành): người phòng ban chỉ kéo về hồ sơ của phòng mình hoặc mình lập, cùng văn bản / tệp /
+/// lịch sử / phiếu mượn của các hồ sơ đó — bản sao offline không được chứa hồ sơ phòng khác. Danh mục (phông, phòng ban, THBQ…)
+/// kéo đủ. `None` = như trước.
+pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64, pham_vi: Option<super::ho_so::PhamVi>) -> sqlx::Result<Pull> {
     let limit = limit.clamp(1, PULL_MAX);
     let mut tx = pool.begin().await?;
     let pruned: i64 = sqlx::query_scalar("SELECT COALESCE(max(pruned_ver), 0) FROM cl_sync_meta").fetch_one(&mut *tx).await?;
@@ -504,11 +507,26 @@ pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64) -> sq
             let shared = spec::spec(t).map_or(false, |s| s.shared);
             let scope = if shared { "(x.project_id = $1 OR x.project_id IS NULL)" } else { "x.project_id = $1" };
             let tomb = if *t == "cl_lich_su" { "" } else { " AND ($2::bigint > 0 OR x.deleted_at IS NULL)" };
-            format!("SELECT '{t}'::text AS t, x.ver, to_jsonb(x) AS row FROM {t} x WHERE {scope} AND x.ver > $2{tomb}")
+            // Phạm vi phòng ban: hồ sơ theo (phòng ban | người lập); bảng con theo hồ sơ cha.
+            const HS: &str = "(h.phong_ban_id = $4 OR h.created_by = $5)";
+            let pv = match *t {
+                "cl_ho_so" => format!(" AND ($4::uuid IS NULL OR (x.phong_ban_id = $4 OR x.created_by = $5))"),
+                "cl_van_ban" | "cl_lich_su" | "cl_muon_tra" => format!(" AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM cl_ho_so h WHERE h.id = x.ho_so_id AND {HS}))"),
+                "cl_van_ban_file" => format!(" AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM cl_van_ban v JOIN cl_ho_so h ON h.id = v.ho_so_id WHERE v.id = x.van_ban_id AND {HS}))"),
+                _ => String::new(),
+            };
+            format!("SELECT '{t}'::text AS t, x.ver, to_jsonb(x) AS row FROM {t} x WHERE {scope} AND x.ver > $2{tomb}{pv}")
         })
         .collect();
     let sql = format!("SELECT t, ver, row FROM ({}) u ORDER BY ver LIMIT $3", parts.join(" UNION ALL "));
-    let recs = sqlx::query(&sql).bind(project_id).bind(since).bind(limit + 1).fetch_all(&mut *tx).await?;
+    let recs = sqlx::query(&sql)
+        .bind(project_id)
+        .bind(since)
+        .bind(limit + 1)
+        .bind(pham_vi.map(|p| p.phong_ban_id))
+        .bind(pham_vi.map(|p| p.user_id))
+        .fetch_all(&mut *tx)
+        .await?;
     tx.commit().await?;
     let has_more = recs.len() as i64 > limit;
     let rows: Vec<PullRow> = recs

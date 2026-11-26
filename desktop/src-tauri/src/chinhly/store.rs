@@ -1082,3 +1082,31 @@ mod tests {
         assert_eq!(pending_count(&c, "p1").unwrap(), (1, 0, 0));
     }
 }
+
+/// Hồ sơ đã nộp vào lưu trữ cơ quan (0031: `nop_luu_trang_thai` = cho_tiep_nhan | da_nop) thì mục lục đóng băng. Kiểm ngay
+/// tại máy (bản sao có cột này do máy chủ sinh) để báo người dùng tức thì, thay vì ghi vào outbox rồi bị máy chủ từ chối
+/// `locked` lúc đồng bộ. `table` = bảng đang ghi; `id` = dòng đang sửa (None = thêm mới); `patch` để tìm hồ sơ cha khi thêm.
+pub fn khoa_nop_luu(conn: &Connection, table: &str, id: Option<&str>, patch: &Row) -> rusqlite::Result<Option<LocalErr>> {
+    let hs_id: Option<String> = match table {
+        "cl_ho_so" => id.map(str::to_owned),
+        "cl_van_ban" => id
+            .and_then(|i| get(conn, "cl_van_ban", i).ok().flatten())
+            .and_then(|r| r.row.get("ho_so_id").and_then(Value::as_str).map(str::to_owned))
+            .or_else(|| patch.get("ho_so_id").and_then(Value::as_str).map(str::to_owned)),
+        "cl_van_ban_file" => {
+            let vb = id
+                .and_then(|i| get(conn, "cl_van_ban_file", i).ok().flatten())
+                .and_then(|r| r.row.get("van_ban_id").and_then(Value::as_str).map(str::to_owned))
+                .or_else(|| patch.get("van_ban_id").and_then(Value::as_str).map(str::to_owned));
+            vb.and_then(|v| get(conn, "cl_van_ban", &v).ok().flatten()).and_then(|r| r.row.get("ho_so_id").and_then(Value::as_str).map(str::to_owned))
+        }
+        _ => None,
+    };
+    let Some(hs) = hs_id else { return Ok(None) };
+    let Some(h) = get(conn, "cl_ho_so", &hs)? else { return Ok(None) };
+    let tt = h.row.get("nop_luu_trang_thai").and_then(Value::as_str).unwrap_or("");
+    if matches!(tt, "cho_tiep_nhan" | "da_nop") {
+        return Ok(Some(LocalErr { field: String::new(), message: "Hồ sơ đã nộp lưu vào lưu trữ cơ quan, không sửa được (rút phiếu nộp lưu nếu cần sửa).".into() }));
+    }
+    Ok(None)
+}

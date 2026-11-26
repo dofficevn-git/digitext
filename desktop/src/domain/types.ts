@@ -33,7 +33,10 @@ export type V3xt =
   | "qc"
   | "acceptance"
   | "nhapgoi"
-  | "tracuu";
+  | "tracuu"
+  | "nopluu"
+  | "tiepnhan"
+  | "danhmuc";
 
 /** Tab trong màn Tiện ích (3/11/2026). */
 export type V3xTienIch = "pdfa" | "chuky" | "kiemgoi" | "khongoai" | "nhanh" | "vidu" | "chuyendulieu";

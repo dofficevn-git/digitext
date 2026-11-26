@@ -52,6 +52,9 @@ pub struct Tb {
     pub project_id: Option<String>,
     pub project_code: Option<String>,
     pub project_name: Option<String>,
+    /// Phòng ban (lưu trữ hiện hành, máy chủ ≥ 26/11/2026); None = không giới hạn phạm vi.
+    pub phong_ban_id: Option<String>,
+    pub ten_phong_ban: Option<String>,
     pub salt: Vec<u8>,
     pub verifier: String,
     pub secrets: Vec<u8>,
@@ -74,8 +77,8 @@ pub fn f_2nx(r_lm: &Connection, r_ll: &Tb) -> rusqlite::Result<()> {
     r_lm.execute(
         "INSERT INTO auth_account
             (user_id, username, display_name, role, project_id, project_code, project_name,
-             salt, verifier, secrets, lease_jwt, offline_expiry, last_online_at, updated_at)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13, datetime('now'))
+             salt, verifier, secrets, lease_jwt, offline_expiry, last_online_at, updated_at, phong_ban_id, ten_phong_ban)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13, datetime('now'), ?14, ?15)
          ON CONFLICT(user_id) DO UPDATE SET
             username = excluded.username,
             display_name = excluded.display_name,
@@ -83,6 +86,8 @@ pub fn f_2nx(r_lm: &Connection, r_ll: &Tb) -> rusqlite::Result<()> {
             project_id = excluded.project_id,
             project_code = excluded.project_code,
             project_name = excluded.project_name,
+            phong_ban_id = excluded.phong_ban_id,
+            ten_phong_ban = excluded.ten_phong_ban,
             salt = excluded.salt,
             verifier = excluded.verifier,
             secrets = excluded.secrets,
@@ -104,6 +109,8 @@ pub fn f_2nx(r_lm: &Connection, r_ll: &Tb) -> rusqlite::Result<()> {
             r_ll.lease_jwt,
             r_ll.offline_expiry,
             r_ll.last_online_at,
+            r_ll.phong_ban_id,
+            r_ll.ten_phong_ban,
         ],
     )?;
     Ok(())
@@ -130,10 +137,12 @@ fn f_2ak(r_ln: &rusqlite::Row<'_>) -> rusqlite::Result<Tb> {
         lease_jwt: r_ln.get(10)?,
         offline_expiry: r_ln.get(11)?,
         last_online_at: r_ln.get(12)?,
+        phong_ban_id: r_ln.get(13)?,
+        ten_phong_ban: r_ln.get(14)?,
     })
 }
 const ACCOUNT_COLS: &str = "user_id, username, display_name, role, project_id, project_code, \
-     project_name, salt, verifier, secrets, lease_jwt, offline_expiry, last_online_at";
+     project_name, salt, verifier, secrets, lease_jwt, offline_expiry, last_online_at, phong_ban_id, ten_phong_ban";
 pub fn f_1ea(r_lo: &Connection, username: &str) -> rusqlite::Result<Option<Tb>> {
     r_lo.query_row(
         &format!("SELECT {ACCOUNT_COLS} FROM auth_account WHERE username = ?1"),

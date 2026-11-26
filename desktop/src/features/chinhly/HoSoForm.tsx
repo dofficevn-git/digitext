@@ -1,10 +1,13 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Hộp thoại hồ sơ tạm (đủ trường: mô tả + TT05 + chứng từ kết thúc). Ghi vào bản sao, offline được.
 
-import { useMemo, useState } from "react";
-import { clSave, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
+import { useEffect, useMemo, useState } from "react";
+import { clRemoteSave, clSave, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
+import { dmHieuLuc, type DongHieuLuc } from "@/api/luutru";
+import { hoSoBiKhoa } from "@/features/luutru/luuTruFlow";
+import { LUU_TRU } from "@/config";
 import { errText, Select, tenPhong } from "./common";
-import { Badge, Button, Checkbox, Dialog, ErrorBanner, Field, FormGrid, Input, Kbd, Select as UiSelect, Textarea } from "@/ui";
+import { Badge, Banner, Button, Checkbox, Dialog, ErrorBanner, Field, FormGrid, Input, Kbd, Select as UiSelect, Textarea } from "@/ui";
 import { Icon } from "@/components/Icon";
 
 const CO_BAN: [string, string, "text" | "number" | "date", string?][] = [
@@ -40,7 +43,12 @@ const CT: [string, string, "text" | "number"][] = [
 ];
 const opts = (xs: [string, string][]) => xs.map(([value, l]) => ({ value, label: `${value} · ${l}` }));
 
-export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat: ClCatalog; phongId: string; row: ClRow | null; onSaved: (id: string, keepOpen: boolean) => void; onClose: () => void }) {
+export default function HoSoForm({ cat, phongId, row, duAn, offline, onSaved, onClose }: { cat: ClCatalog; phongId: string; row: ClRow | null; duAn?: string | null; offline?: boolean; onSaved: (id: string, keepOpen: boolean) => void; onClose: () => void }) {
+  const khoa = hoSoBiKhoa(row);
+  // Dòng danh mục hồ sơ (Điều 19.4): cột chỉ-trực-tuyến, ghi qua máy chủ sau khi lưu bản sao; trống = ngoài danh mục.
+  const dmBanDau = row ? str(row, "dm_dong_id") : "";
+  const [dmDong, setDmDong] = useState<string>(dmBanDau);
+  const [dongs, setDongs] = useState<DongHieuLuc[]>([]);
   const [d, setD] = useState<Record<string, unknown>>(() => (row ? { ...row } : { phong_id: phongId, trung_thua: false, che_do_su_dung: "01", tinh_trang_vat_ly: "02", muc_do_tin_cay: "03", ngon_ngu: "01" }));
   const [errs, setErrs] = useState<ClLocalErr[]>([]);
   const [busy, setBusy] = useState(false);
@@ -53,6 +61,29 @@ export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat:
 
   const phongBans = useMemo(() => cat.phong_ban.filter((p) => str(p, "phong_id") === str(d as ClRow, "phong_id")), [cat.phong_ban, d]);
   const mangs = useMemo(() => cat.mang.filter((m) => str(m, "phong_ban_id") === str(d as ClRow, "phong_ban_id")), [cat.mang, d]);
+  const dmPhong = str(d as ClRow, "phong_id");
+  const dmPb = str(d as ClRow, "phong_ban_id");
+  const dmNam = Number(/(\d{4})\s*$/.exec(g("ngay_ket_thuc"))?.[1] ?? new Date().getFullYear());
+  useEffect(() => {
+    if (!LUU_TRU || offline || !dmPhong) {
+      setDongs([]);
+      return;
+    }
+    let bo = false;
+    dmHieuLuc(dmPhong, dmNam, dmPb || null)
+      .then((r) => !bo && setDongs(r.rows))
+      .catch(() => !bo && setDongs([]));
+    return () => {
+      bo = true;
+    };
+  }, [dmPhong, dmPb, dmNam, offline]);
+  const chonDong = (id: string) => {
+    setDmDong(id);
+    const dong = dongs.find((x) => x.id === id);
+    if (!dong) return;
+    // Điền sẵn từ dòng danh mục khi ô còn trống; người lập vẫn sửa được.
+    setD((p) => ({ ...p, tieu_de: p.tieu_de || dong.tieuDe, thbq_id: p.thbq_id || dong.thbqId || p.thbq_id, mang_id: p.mang_id || dong.mangId || p.mang_id, phong_ban_id: p.phong_ban_id || dong.phongBanId }));
+  };
 
   const luu = async (keepOpen: boolean) => {
     setBusy(true);
@@ -70,7 +101,16 @@ export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat:
         if (r.errors.some((e) => CT.some((c) => c[0] === e.field))) setMoCt(true);
         return;
       }
+      if (LUU_TRU && duAn && !offline && dmDong !== dmBanDau) {
+        try {
+          await clRemoteSave("ho_so", duAn, r.id, { dm_dong_id: dmDong || null });
+        } catch (e) {
+          setErrs([{ field: "", message: `Đã lưu hồ sơ nhưng chưa gắn dòng danh mục: ${errText(e)}` }]);
+          return;
+        }
+      }
       onSaved(r.id, keepOpen);
+      if (keepOpen) setDmDong("");
       if (keepOpen) setD({ phong_id: d.phong_id, phong_ban_id: d.phong_ban_id, mang_id: d.mang_id, thbq_id: d.thbq_id, trung_thua: false, che_do_su_dung: "01", tinh_trang_vat_ly: "02", muc_do_tin_cay: "03", ngon_ngu: d.ngon_ngu });
     } catch (e) {
       setErrs([{ field: "", message: errText(e) }]);
@@ -105,7 +145,7 @@ export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat:
               Lưu và thêm tiếp
             </Button>
           )}
-          <Button variant="primary" icon="luu" loading={busy} onClick={() => void luu(false)}>
+          <Button variant="primary" icon="luu" loading={busy} disabled={khoa} onClick={() => void luu(false)}>
             Lưu <Kbd keys={["Ctrl", "Enter"]} className="ml-1" />
           </Button>
         </>
@@ -118,6 +158,7 @@ export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat:
           if (e.ctrlKey && e.key === "Enter") void luu(false);
         }}
       >
+        {khoa && <Banner tone="warning">Hồ sơ đã nộp lưu vào lưu trữ cơ quan, không sửa được. Rút phiếu nộp lưu (màn Nộp lưu) nếu cần sửa.</Banner>}
         {loiChung.length > 0 && <ErrorBanner error={loiChung.join(" ")} />}
         <FormGrid cols={4}>
           <Field label="Phông" required>
@@ -150,6 +191,11 @@ export default function HoSoForm({ cat, phongId, row, onSaved, onClose }: { cat:
           <Field label="Thời hạn bảo quản">
             <Select value={g("thbq_id")} onChange={(v) => set("thbq_id", v)} rows={cat.thbq} empty="Chưa chọn" />
           </Field>
+          {LUU_TRU && (
+            <Field label={`Dòng danh mục hồ sơ ${dmNam}`} hint={offline ? "Cần máy chủ" : dongs.length === 0 ? "Chưa có danh mục ban hành cho năm này" : "Trống = ngoài danh mục"} className="sm:col-span-2">
+              <UiSelect value={dmDong} onChange={chonDong} placeholder="Ngoài danh mục" disabled={offline || dongs.length === 0} options={dongs.map((x) => ({ value: x.id, label: `${x.maDong} · ${x.tieuDe}` }))} />
+            </Field>
+          )}
           {CO_BAN.map(([k, l, t, hint]) => (
             <Field key={k} label={l} required={k === "so_tam"} error={err(k)} hint={hint}>
               {inp(k, t)}

@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 pub struct Db(pub Mutex<Connection>);
-const C_P1: i64 = 25;
+const C_P1: i64 = 26;
 pub(crate) const C_JI: &str = r#"
 CREATE TABLE IF NOT EXISTS phong (
     ma_du_an    TEXT PRIMARY KEY,
@@ -254,6 +254,14 @@ fn migrate(r_1d1: &mut Connection) -> rusqlite::Result<()> {
             "DROP INDEX IF EXISTS ux_dossier_sotam;
              CREATE UNIQUE INDEX IF NOT EXISTS ux_dossier_sotam ON dossier (ma_da, COALESCE(thbq, 0), so_tam);",
         )?;
+    }
+    if r_1d2 < 26 {
+        // Phòng ban của tài khoản (lưu trữ hiện hành, máy chủ 0031 — 26/11/2026).
+        for c in ["phong_ban_id", "ten_phong_ban"] {
+            if !f_10n(&r_1d3, "auth_account", c)? {
+                r_1d3.execute_batch(&format!("ALTER TABLE auth_account ADD COLUMN {c} TEXT;"))?;
+            }
+        }
     }
     r_1d3.pragma_update(None, "user_version", C_P1)?;
     r_1d3.commit()?;

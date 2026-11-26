@@ -1506,7 +1506,7 @@ fn render_form(
                 let trong: Vec<f32> = (0..n)
                     .map(|i| {
                         // Tiêu đề cột đậm và không nên bị bẻ ("STT" → "ST/T"), nên tính rộng hơn chữ thường một chút.
-                        let mut m = columns.get(i).map(|c| c.chars().count() + 2).unwrap_or(0);
+                        let mut m = columns.get(i).map(|c| c.chars().count() + 4).unwrap_or(0);
                         for r in rows {
                             m = m.max(r.get(i).map(|c| c.chars().count()).unwrap_or(0));
                         }
@@ -1527,6 +1527,8 @@ fn render_form(
                         .collect()
                 };
                 let size = C_7C - 1.5;
+                // Khoảng thở trước bảng: viền trên của hàng đầu không đè lên chân chữ của dòng trước.
+                r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, 5.0);
                 let mut day = |cells: &[String], dam: bool| -> Result<(), PdfError> {
                     let goi: Vec<Vec<String>> = (0..n)
                         .map(|i| wrap_o(&r_4eu, cells.get(i).map(String::as_str).unwrap_or(""), size, xs[i].1 - C_7G * 2.0))

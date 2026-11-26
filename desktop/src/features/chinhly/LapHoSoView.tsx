@@ -10,6 +10,9 @@ import { useProject } from "@/state/project";
 import { clDelete, clHoSoList, clRemote, str, THBQ_STATUS_LABEL, type ClHoSoFilter, type ClRow } from "@/api/chinhly";
 import { n, NhacChinhLy, Select, SyncBadge, SyncBadgeRow, tenPhong, THBQ_BADGE, useChuaChonDuAn, useClCatalog, useClSync } from "./common";
 import HoSoForm from "./HoSoForm";
+import { LUU_TRU } from "@/config";
+import { nopLuuLap } from "@/api/luutru";
+import { hoSoBiKhoa, TT_HO_SO_NOP } from "@/features/luutru/luuTruFlow";
 import VanBanPanel from "./VanBanPanel";
 import { docMauLapHoSo, xuatMauLapHoSo } from "./excel";
 import NhapMucLucDialog from "./NhapMucLucDialog";
@@ -33,6 +36,9 @@ export default function LapHoSoView() {
   const canCreate = perms.includes("dossier.create");
   const canEdit = perms.includes("dossier.update");
   const canDelete = perms.includes("dossier.delete");
+  // Lưu trữ hiện hành (Điều 19): người có phòng ban chỉ thấy / nộp hồ sơ phòng mình; bộ lọc phòng ban khoá theo tài khoản.
+  const canNop = LUU_TRU && perms.includes("luutru.submit");
+  const pbKhoa = session?.phongBanId ?? null;
   const { cat, reload: reloadCat, error: catErr } = useClCatalog();
   const sync = useClSync();
   const chuaDuAn = useChuaChonDuAn();
@@ -60,6 +66,9 @@ export default function LapHoSoView() {
   useEffect(() => {
     if (!phongId && cat.phong.length > 0) setPhongId(str(cat.phong[0], "id"));
   }, [cat.phong, phongId]);
+  useEffect(() => {
+    if (pbKhoa && phongBanId !== pbKhoa) setPhongBanId(pbKhoa);
+  }, [pbKhoa, phongBanId]);
   useEffect(() => {
     const t = window.setTimeout(() => {
       setQApplied(q.trim());
@@ -116,6 +125,20 @@ export default function LapHoSoView() {
       reload();
     } catch (e) {
       notifyError(e, "xoá hồ sơ");
+    }
+  };
+
+  const nopLuuChon = async () => {
+    if (sel.size === 0 || !duAnDangChon) return;
+    const ok = await confirm({ title: `Nộp ${n(sel.size)} hồ sơ vào lưu trữ cơ quan?`, body: "Hồ sơ khoá không sửa được cho tới khi lưu trữ cơ quan tiếp nhận hoặc bạn rút phiếu ở màn Nộp lưu.", confirmLabel: "Nộp lưu" });
+    if (!ok) return;
+    try {
+      const p = await nopLuuLap({ projectId: duAnDangChon, phongBanId: pbKhoa ?? (phongBanId || null), hoSoIds: [...sel] });
+      setSel(new Set());
+      toast.success(`Đã lập phiếu nộp lưu ${p.ma_phieu} (${n(p.so_ho_so)} hồ sơ).`);
+      reload();
+    } catch (e) {
+      notifyError(e, "nộp lưu");
     }
   };
 
@@ -192,6 +215,20 @@ export default function LapHoSoView() {
       },
     },
     { key: "so_van_ban", header: "Văn bản", align: "right", width: 80, cell: (r) => str(r, "so_van_ban") },
+    ...(LUU_TRU
+      ? [
+          {
+            key: "nop_luu",
+            header: "Nộp lưu",
+            width: 120,
+            cell: (r: ClRow) => {
+              const tt = str(r, "nop_luu_trang_thai");
+              const m = tt ? TT_HO_SO_NOP[tt] : undefined;
+              return m ? <Badge tone={m.tone}>{m.label}</Badge> : null;
+            },
+          } satisfies Column<ClRow>,
+        ]
+      : []),
   ];
   const colsHien = cols.filter((c) => !anCot.has(c.key));
   const TEN_COT: Record<string, string> = { hop_so: "Hộp", ma_ho_so: "Mã hồ sơ", so_to: "Số tờ", ngay_bat_dau: "Bắt đầu", so_van_ban: "Văn bản", ten_mang: "Mảng" };
@@ -217,6 +254,9 @@ export default function LapHoSoView() {
             )}
             <Menu
               items={[
+                ...(canNop
+                  ? [{ label: sel.size > 0 ? `Nộp lưu ${n(sel.size)} hồ sơ đã chọn` : "Nộp lưu hồ sơ đã chọn", icon: "nhapKho" as const, disabled: sel.size === 0 || sync?.phase === "offline", hint: sync?.phase === "offline" ? "Cần máy chủ" : undefined, onSelect: () => void nopLuuChon() }]
+                  : []),
                 { label: sel.size > 0 ? `Xoá ${n(sel.size)} hồ sơ đã chọn` : "Xoá hồ sơ đã chọn", icon: "xoa", danger: true, disabled: !canDelete || sel.size === 0, onSelect: () => void xoaChon() },
                 "-",
                 { label: "Tải mẫu Excel", icon: "tepExcel", disabled: !phong, onSelect: () => void xuatMauLapHoSo(str(phong, "ma_du_an"), cat.thbq).catch((e) => notifyError(e, "tải mẫu")) },
@@ -301,6 +341,7 @@ export default function LapHoSoView() {
           }}
           rows={phongBans}
           empty="Mọi phòng ban"
+          disabled={!!pbKhoa}
         />
         {phongBanId && <Select size="sm" className="w-auto max-w-56" ariaLabel="Mảng công việc" value={mangId} onChange={datLoc(setMangId)} rows={mangs} empty="Mọi mảng" />}
         <MultiSelect
@@ -337,10 +378,10 @@ export default function LapHoSoView() {
             setPage(1);
           }}
           clientSort={false}
-          selection={canDelete ? { selected: sel, onChange: setSel } : undefined}
+          selection={canDelete || canNop ? { selected: sel, onChange: setSel } : undefined}
           onRowClick={(r) => setOpen(r)}
           rowClassName={(r) => (open?.id === r.id ? "bg-brand-50" : undefined)}
-          rowActions={canEdit ? (r) => <Menu size="sm" items={[{ label: "Sửa", icon: "sua", onSelect: () => setForm({ row: r }) }, { label: "Xem văn bản", icon: "taiLieu", onSelect: () => setOpen(r) }]} /> : undefined}
+          rowActions={canEdit ? (r) => <Menu size="sm" items={[{ label: hoSoBiKhoa(r) ? "Xem" : "Sửa", icon: hoSoBiKhoa(r) ? "xem" : "sua", onSelect: () => setForm({ row: r }) }, { label: "Xem văn bản", icon: "taiLieu", onSelect: () => setOpen(r) }]} /> : undefined}
           pagination={{ page, pageSize: PAGE, total, onChange: setPage }}
           state={{ loading: loading && !data, error, onRetry: reload, empty: { title: qApplied || locDangBat.length ? "Không có hồ sơ khớp bộ lọc" : "Chưa có hồ sơ", action: canCreate && phongId && !locDangBat.length ? <Button icon="them" onClick={() => setForm({ row: null })}>Thêm hồ sơ</Button> : undefined } }}
         />
@@ -353,6 +394,8 @@ export default function LapHoSoView() {
           cat={cat}
           phongId={phongId}
           row={form.row}
+          duAn={duAnDangChon}
+          offline={sync?.phase === "offline"}
           onClose={() => setForm(null)}
           onSaved={(_id, keepOpen) => {
             if (!keepOpen) setForm(null);
@@ -361,7 +404,7 @@ export default function LapHoSoView() {
           }}
         />
       )}
-      {open && <VanBanPanel cat={cat} hoSo={open} canEdit={canEdit} onClose={() => setOpen(null)} />}
+      {open && <VanBanPanel cat={cat} hoSo={open} canEdit={canEdit && !hoSoBiKhoa(open)} onClose={() => setOpen(null)} />}
       {mucLuc && phong && (
         <NhapMucLucDialog
           cat={cat}

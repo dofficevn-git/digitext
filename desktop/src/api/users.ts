@@ -12,6 +12,7 @@ export interface V4a8 {
   role: V3xs;
   roleCode?: string | null;
   projectId: string | null;
+  phongBanId?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -35,6 +36,7 @@ export interface V4aa {
   /** Vai trò động (mã trong bảng roles); có thì vai trò gốc lấy theo vai trò đó. */
   roleCode?: string | null;
   projectId?: string | null;
+  phongBanId?: string | null;
 }
 
 export interface V4ab {
@@ -43,6 +45,9 @@ export interface V4ab {
   email?: string | null;
   /** Đổi vai trò (mã vai trò); người này phải đăng nhập lại. */
   roleCode?: string | null;
+  /** Gắn phòng ban (0031); `boPhongBan` gỡ về không phòng ban. */
+  phongBanId?: string | null;
+  boPhongBan?: boolean;
 }
 
 export function V4ac(Vpn?: string | null): Promise<V4a8[]> {

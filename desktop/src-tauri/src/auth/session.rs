@@ -17,6 +17,8 @@ pub struct Tr {
     pub project_id: Option<String>,
     pub project_code: Option<String>,
     pub project_name: Option<String>,
+    pub phong_ban_id: Option<String>,
+    pub ten_phong_ban: Option<String>,
     pub mode: SessionMode,
     pub offline_expiry: String,
     pub locked: bool,

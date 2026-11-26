@@ -98,3 +98,19 @@ Có thể nhập lại nhiều lần: gói nào đã nhập sẽ được báo "
 Kho tài liệu khôi phục bằng cách chép ngược thư mục `kho` trong ổ sao lưu.
 
 Màn **Lưu trữ số › Bảo quản và sao lưu** trên máy trạm hiện kết quả các lần sao lưu đêm và kết quả kiểm tra toàn vẹn tài liệu cùng gói AIP.
+
+## 7. Lưu trữ hiện hành (từ bản 0.25.18)
+
+Bản này thêm nhóm **Lưu trữ hiện hành** (Điều 19 TT 05/2025/TT-BNV): phòng ban lập hồ sơ theo **Danh mục hồ sơ** của năm,
+**nộp lưu** vào lưu trữ cơ quan trong 60 ngày kể từ ngày kết thúc hồ sơ; lưu trữ cơ quan **tiếp nhận**, biên bản giao nhận
+và sổ nộp lưu lập tự động.
+
+Khi nâng cấp máy chủ đang chạy:
+1. Chạy lại `cai-dat.ps1` (Windows) hoặc `./cai-dat.sh` (Linux) như mục 6. Bước cập nhật cấu trúc CSDL áp thêm tệp `0031`
+   (dựng lại một bảng tra cứu — máy trạm có thể mất kết nối vài giây), nên làm ngoài giờ.
+2. API tự tạo ba vai trò mẫu nếu chưa có: **Nhân viên phòng ban**, **Cán bộ lưu trữ**, **Lãnh đạo**. Sửa bộ quyền ở
+   Quản trị › Vai trò và quyền.
+3. Ở Quản trị › Người dùng, **gắn phòng ban** cho nhân viên các phòng (trước đó tạo phòng ban ở Lưu trữ hiện hành › Phông,
+   phòng ban). Người có phòng ban chỉ thấy hồ sơ của phòng mình; cán bộ lưu trữ và lãnh đạo để trống.
+4. Tuỳ chọn trong `conf\worker.env` (Linux: `worker.env`): `DIGITEXT_LT_NHAC_TU_NAM=2026` — chỉ nhắc hạn nộp cho hồ sơ kết thúc
+   từ năm này (mặc định: năm hiện tại trừ 1), tránh dội nhắc lên hàng vạn hồ sơ cũ mới nhập.

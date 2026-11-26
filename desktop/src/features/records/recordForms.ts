@@ -4,7 +4,7 @@
 // "generic": máy trạm dựng sẵn các khối (đoạn, ô, bảng, chữ ký) trong payload, máy chủ chỉ in PDF — thêm mẫu mới chỉ cần
 // thêm object ở đây (kind phải có trong CHECK của bảng records, migration 0024).
 
-export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa" | "kiem_tra_san_pham" | "nghiem_thu" | "ban_giao_lan";
+export type V4ta = "kiem_tra" | "nhat_ky_sao_luu" | "sao_luu" | "su_co" | "thu_nop_truc_tiep" | "giao_nhan_giay" | "tra_tai_lieu_giay" | "nhat_ky_so_hoa" | "kiem_tra_san_pham" | "nghiem_thu" | "ban_giao_lan" | "giao_nhan_nop_luu" | "so_nop_luu" | "danh_muc_ho_so";
 
 export interface V4tb {
   key: string;
@@ -423,6 +423,100 @@ export const V4tf: V4te[] = [
       },
     ],
     generic: { refKey: "lan", signLeft: "ĐẠI DIỆN BÊN GIAO", signRight: "ĐẠI DIỆN BÊN NHẬN", tieuDe: "Biên bản bàn giao sản phẩm số hoá tài liệu lưu trữ" },
+  },
+  // Lưu trữ hiện hành (Điều 19, 26/11/2026). Máy chủ tự lập ba mẫu này khi tiếp nhận / in sổ / ban hành danh mục
+  // (routes/nop_luu.rs, routes/danh_muc_ho_so.rs); mẫu ở đây để sổ biên bản hiện tên và để lập tay khi cần.
+  {
+    kind: "giao_nhan_nop_luu",
+    label: "Biên bản giao nhận hồ sơ nộp lưu",
+    description: "Đơn vị nộp hồ sơ vào lưu trữ cơ quan; lưu trữ cơ quan kiểm nhận từng hồ sơ.",
+    legal: "Điều 19 (Khoản 1, 2)",
+    fields: [
+      t("benGiao", "Đơn vị nộp lưu"),
+      t("benNhan", "Lưu trữ cơ quan"),
+      t("maPhieu", "Số phiếu nộp lưu", true, { hint: "Dùng để lọc sổ biên bản" }),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày giao nhận", false, { hint: NGAY }),
+      n("tongHoSo", "Tổng số hồ sơ"),
+      t("tongVanBan", "Tổng số văn bản", true),
+      t("nguoiGiao", "Người giao"),
+      t("nguoiNhan", "Người nhận"),
+      t("ghiChu", "Ghi chú", true, { multiline: true }),
+    ],
+    lists: [
+      {
+        key: "danhMucHoSo",
+        label: "Danh mục hồ sơ nộp lưu",
+        legal: "Điều 19.2: kiểm nhận từng hồ sơ",
+        columns: [
+          { key: "hoSoSo", label: "Hồ sơ số" },
+          { key: "tieuDe", label: "Tiêu đề hồ sơ" },
+          { key: "thoiGian", label: "Thời gian", optional: true },
+          { key: "soTo", label: "Số tờ", optional: true },
+          { key: "thbq", label: "THBQ", optional: true },
+          { key: "ketQua", label: "Kết quả", optional: true },
+          { key: "lyDo", label: "Lý do", optional: true },
+        ],
+        minRows: 1,
+      },
+    ],
+    generic: { refKey: "maPhieu", signLeft: "ĐẠI DIỆN ĐƠN VỊ NỘP", signRight: "LƯU TRỮ CƠ QUAN", tieuDe: "Biên bản giao nhận hồ sơ nộp lưu vào lưu trữ cơ quan" },
+  },
+  {
+    kind: "so_nop_luu",
+    label: "Sổ nộp lưu hồ sơ",
+    description: "Sổ theo năm của lưu trữ cơ quan: mỗi phiếu nộp lưu đã tiếp nhận một dòng.",
+    legal: "Điều 19",
+    fields: [t("coQuan", "Cơ quan, tổ chức"), t("nam", "Năm", false, { hint: "Dùng để lọc sổ biên bản" }), t("nguoiLap", "Người lập sổ"), t("diaDiem", "Địa điểm"), t("ngay", "Ngày lập", false, { hint: NGAY }), t("ghiChu", "Ghi chú", true, { multiline: true })],
+    lists: [
+      {
+        key: "cacPhieu",
+        label: "Các phiếu nộp lưu",
+        columns: [
+          { key: "ngay", label: "Ngày" },
+          { key: "donVi", label: "Đơn vị nộp" },
+          { key: "soPhieu", label: "Số phiếu" },
+          { key: "soHoSo", label: "HS nộp" },
+          { key: "nhan", label: "Nhận", optional: true },
+          { key: "traLai", label: "Trả lại", optional: true },
+          { key: "bienBan", label: "Biên bản", optional: true },
+        ],
+        minRows: 1,
+      },
+    ],
+    generic: { refKey: "nam", signLeft: "NGƯỜI LẬP SỔ", signRight: "LƯU TRỮ CƠ QUAN", tieuDe: "Sổ nộp lưu hồ sơ vào lưu trữ cơ quan" },
+  },
+  {
+    kind: "danh_muc_ho_so",
+    label: "Danh mục hồ sơ ban hành",
+    description: "Bản in danh mục hồ sơ dự kiến của cơ quan sau khi ban hành (số quyết định, ngày).",
+    legal: "Điều 19 (Khoản 4)",
+    fields: [
+      t("coQuan", "Cơ quan, tổ chức"),
+      t("phong", "Phông"),
+      t("nam", "Năm", false, { hint: "Dùng để lọc sổ biên bản" }),
+      t("soQuyetDinh", "Số quyết định ban hành"),
+      t("ngayBanHanh", "Ngày ban hành", false, { hint: NGAY }),
+      t("nguoiTrinh", "Người trình", true),
+      t("nguoiDuyet", "Người duyệt", true),
+      t("diaDiem", "Địa điểm"),
+      t("ngay", "Ngày lập", false, { hint: NGAY }),
+    ],
+    lists: [
+      {
+        key: "dong",
+        label: "Dòng danh mục",
+        columns: [
+          { key: "phongBan", label: "Phòng ban" },
+          { key: "maDong", label: "Số, ký hiệu" },
+          { key: "tieuDe", label: "Tiêu đề hồ sơ dự kiến" },
+          { key: "thbq", label: "THBQ", optional: true },
+          { key: "nguoiLap", label: "Người lập", optional: true },
+        ],
+        minRows: 1,
+      },
+    ],
+    generic: { refKey: "nam", signLeft: "NGƯỜI LẬP", signRight: "THỦ TRƯỞNG CƠ QUAN", tieuDe: "Danh mục hồ sơ" },
   },
 ];
 

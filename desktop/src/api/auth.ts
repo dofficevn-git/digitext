@@ -14,6 +14,9 @@ export interface V3zc {
   projectId: string | null;
   projectCode: string | null;
   projectName: string | null;
+  /** Phòng ban của người dùng (0031, bản Lưu trữ): có thì danh sách hồ sơ chỉ còn phòng mình. */
+  phongBanId?: string | null;
+  tenPhongBan?: string | null;
   mode: V3zb;
 
   offlineExpiry: string;

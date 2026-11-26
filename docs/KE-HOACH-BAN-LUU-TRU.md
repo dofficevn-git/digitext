@@ -174,6 +174,40 @@ Thêm hai cảnh báo: kho và sao lưu **cùng ổ** (Điều 30 TT05 muốn ph
 
 **Tổng ước: khoảng 5 tuần.** GĐ1 và GĐ3 cũng có ích cho bản thi công (cập nhật theo máy chủ, lệnh migrate, nhập gói).
 
+### GĐ6 — Lưu trữ hiện hành, Điều 19 TT 05/2025 (26/11/2026, nhánh `feat/ban-luu-tru`)
+
+Bối cảnh: so với Digifile 2023 bản TT05 (`D:\Digifile`, khảo sát 26/11), DigiText Lưu trữ thiếu nghiệp vụ **lưu trữ của cơ
+quan** — trước hết là nộp hồ sơ vào lưu trữ cơ quan và danh mục hồ sơ. Anh Hiếu chốt: bản Lưu trữ phục vụ cả lưu trữ
+hiện hành lẫn lưu trữ lịch sử. Kế hoạch đầy đủ 4 đợt (Lưu trữ hiện hành → Bảo quản Điều 29–31 → Báo cáo TT05 + mượn trả +
+kho → PL VI + biểu mẫu + quyền theo phông) ở tệp kế hoạch phiên làm việc; đợt 1 đã xong.
+
+Chốt nghiệp vụ (26/11): hạn nộp **60 ngày lịch kể từ ngày kết thúc hồ sơ** (chỉ ghi năm → 31/12, ghi tháng → cuối tháng);
+**khoá ngay khi nộp** (rút phiếu được khi chưa tiếp nhận); **một danh mục / phông / năm, mỗi phòng ban soạn phần mình**;
+**một người một phòng ban, một phông**; nhắc 15/7/1 ngày cho người lập và cả phòng, quá hạn nhắc theo tuần, chỉ từ năm
+`DIGITEXT_LT_NHAC_TU_NAM` (mặc định năm hiện tại − 1); đơn vị nộp còn đọc hồ sơ 360 ngày sau tiếp nhận (gồm PDF); chỉ bản
+Lưu trữ có menu, bản thi công vẫn có route.
+
+Đã làm:
+- **Dữ liệu** `migrations/0031_luu_tru_hien_hanh.sql`: `lt_nop_luu`, `lt_nop_luu_ho_so`, `lt_danh_muc`, `lt_danh_muc_dong`;
+  `cl_ho_so` + `nop_luu_trang_thai | nop_luu_id | khoa_luc` (máy chủ sinh) + `dm_dong_id` (chỉ trực tuyến); `users.phong_ban_id`;
+  `notifications.ref` + chỉ mục duy nhất; hàm `cl_date_end_of()`; view `cl_ho_so_v` dựng lại (có `ngay_kt_cuoi`, `dm_ma_dong`,
+  `nop_luu_ma_phieu`). 6 quyền mới `luutru.submit | receive | unlock`, `danhmuc.edit | submit | approve` (`Permission::ALL` 70,
+  `permissions.ts` cùng lúc); `user` không có `receive` / `danhmuc.submit`. Vai trò mặc định bản Lưu trữ `roles::ensure_luu_tru`:
+  `nhan_vien_phong_ban`, `can_bo_luu_tru`, `lanh_dao` (sửa được ở Vai trò và quyền) — đóng nợ GĐ4.
+- **Máy chủ**: `digitext-db/nop_luu.rs`, `danh_muc_ho_so.rs`; khoá sửa trong `apply_inner`; phạm vi phòng ban `PhamVi` ở
+  `/cl/ho-so`, `/tra-cuu`, `/cl/sync` pull; `routes/nop_luu.rs`, `routes/danh_muc_ho_so.rs`; biên bản generic GNL / SNL / DMH
+  (bảng kẻ viền thật trong PDF — `FormBlock::Table`, DOCX theo); worker `nhac_nop_luu`. Test `chinh_ly/tests_luu_tru.rs` 3/3
+  (khoá + rút + tiếp nhận; phạm vi + 360 ngày + nhắc không lặp + pull theo phòng; danh mục trọn luồng). Kịch bản API trọn luồng
+  (super admin · nhân viên phòng A · cán bộ LT) chạy xanh trên Postgres container tạm.
+- **Desktop 0.25.18**: nhóm menu Lưu trữ hiện hành, ba màn `features/luutru/`, ô Dòng danh mục + khoá ở `HoSoForm`, nộp lưu
+  từ `LapHoSoView`, ô Phòng ban ở Người dùng, KPI + lối tắt ở Tổng quan, 3 mẫu biên bản ở sổ; Tauri `lt_get`/`lt_call`,
+  `store::khoa_nop_luu` báo ngay khi sửa hồ sơ đã nộp (kể cả offline), session mang phòng ban (SQLite 26).
+
+Chưa làm / cần anh: ảnh màn Digifile để so bố cục; mẫu biên bản giao nhận và sổ nộp lưu theo phụ lục TT05 (hiện là mẫu
+generic); chạy thử trên máy sạch cùng GĐ5 (nộp lưu trên hồ sơ **lập mới** — hồ sơ nhập gói là `archived`, không đụng).
+Nâng cấp máy chủ đang chạy: `digitext-api migrate` áp 0031 lúc bảo trì (DROP/CREATE view, API lỗi vài giây), rồi gán phòng ban
+cho nhân viên ở Quản trị › Người dùng.
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

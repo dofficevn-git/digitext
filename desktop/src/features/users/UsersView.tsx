@@ -15,6 +15,9 @@ import { rolesList, type RoleInfo } from "@/api/roles";
 import { V4r5, V4r6, V4r8, type V4r4 } from "./projectAdmins";
 import ProjectPurgeDialog from "./ProjectPurgeDialog";
 import { Icon } from "@/components/Icon";
+import { LUU_TRU } from "@/config";
+import { str, type ClRow } from "@/api/chinhly";
+import { useClCatalog } from "@/features/chinhly/common";
 import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, Tip, toast, Toolbar, type Column } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -28,6 +31,10 @@ export default function V4ra() {
   const isSuper = session?.role === "super_admin";
   // Quản lý (manager) thấy và điều hành mọi dự án như super_admin, trừ xoá.
   const toanHeThong = isSuper || session?.role === "manager";
+  // Bản Lưu trữ (0031): người dùng gắn phòng ban → chỉ thấy hồ sơ phòng mình. Danh mục phòng ban lấy từ bản sao chỉnh lý.
+  const { cat } = useClCatalog();
+  const phongBans = useMemo(() => (LUU_TRU ? cat.phong_ban : []), [cat.phong_ban]);
+  const tenPhongBan = useCallback((id: string | null | undefined) => (id ? str(phongBans.find((p) => p.id === id), "ten") || "Phòng ban đã xoá" : ""), [phongBans]);
   const me = session?.userId ?? "";
   const [tab, setTab] = useState<Tab>("users");
   const [dlg, setDlg] = useState<DialogState>(null);
@@ -84,6 +91,7 @@ export default function V4ra() {
           <div className="text-xs text-fg-subtle">
             {u.username}
             {u.email ? ` · ${u.email}` : ""}
+            {u.phongBanId ? ` · ${tenPhongBan(u.phongBanId)}` : ""}
           </div>
         </div>
       ),
@@ -196,6 +204,7 @@ export default function V4ra() {
 
       {(dlg?.kind === "create" || dlg?.kind === "edit") && (
         <UserDialog
+          phongBans={phongBans}
           me={me}
           roles={roles}
           mode={dlg.kind}
@@ -394,7 +403,7 @@ function vaiTroDuocTao(myRole: string): V3xs[] {
   return ["user"];
 }
 
-function UserDialog({ mode, myRole, me, roles, projects, user, onClose, onDone }: { mode: "create" | "edit"; myRole: string; me: string; roles: RoleInfo[]; projects: V4a9[]; user?: V4a8; onClose: () => void; onDone: () => void }) {
+function UserDialog({ mode, myRole, me, roles, projects, phongBans, user, onClose, onDone }: { mode: "create" | "edit"; myRole: string; me: string; roles: RoleInfo[]; projects: V4a9[]; phongBans: ClRow[]; user?: V4a8; onClose: () => void; onDone: () => void }) {
   const duocTao = vaiTroDuocTao(myRole);
   const toanHeThong = myRole === "super_admin" || myRole === "manager";
   const [username, setUsername] = useState(user?.username ?? "");
@@ -406,6 +415,7 @@ function UserDialog({ mode, myRole, me, roles, projects, user, onClose, onDone }
   const banDau = user?.roleCode ?? user?.role ?? "user";
   const [roleCode, setRoleCode] = useState<string>(banDau);
   const [projectId, setProjectId] = useState(user?.projectId ?? (projects.length === 1 ? projects[0].id : ""));
+  const [phongBanId, setPhongBanId] = useState(user?.phongBanId ?? "");
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
   const chon = chonDuoc.find((r) => r.code === roleCode) ?? chonDuoc.find((r) => r.code === "user") ?? chonDuoc[0];
@@ -428,11 +438,11 @@ function UserDialog({ mode, myRole, me, roles, projects, user, onClose, onDone }
     setBusy(true);
     try {
       if (mode === "create") {
-        const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, roleCode: effCode, projectId: askProject ? projectId || null : null });
+        const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, roleCode: effCode, projectId: askProject ? projectId || null : null, phongBanId: phongBanId || null });
         if (toanHeThong && effRole === "admin" && projectId) await V4an(projectId, created.id);
         toast.success(`Đã tạo tài khoản ${username.trim()}.`);
       } else if (user) {
-        await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null, roleCode: doiVaiTro ? effCode : null });
+        await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null, roleCode: doiVaiTro ? effCode : null, phongBanId: phongBanId || null, boPhongBan: !phongBanId && !!user.phongBanId });
         toast.success(doiVaiTro ? "Đã lưu. Người này phải đăng nhập lại để nhận vai trò mới." : "Đã lưu thông tin tài khoản.");
       }
       onDone();
@@ -472,6 +482,11 @@ function UserDialog({ mode, myRole, me, roles, projects, user, onClose, onDone }
           </Field>
         )}
         {mode === "edit" && doiVaiTro && (effRole === "user" || effRole === "admin") && !user?.projectId && <p className="text-xs text-warning-700">Tài khoản chưa gắn dự án — gắn dự án trước khi đổi sang vai trò theo dự án.</p>}
+        {phongBans.length > 0 && (
+          <Field label="Phòng ban" hint="Nhân viên phòng ban chỉ thấy và nộp lưu hồ sơ của phòng mình. Để trống với cán bộ lưu trữ, lãnh đạo.">
+            <Select value={phongBanId} onChange={setPhongBanId} placeholder="— Không gắn phòng ban —" options={phongBans.map((p) => ({ value: p.id, label: str(p, "ma_don_vi") ? `${str(p, "ma_don_vi")} · ${str(p, "ten")}` : str(p, "ten") }))} />
+          </Field>
+        )}
         {askProject && (
           <Field label="Dự án" required hint={projects.length === 0 ? "Chưa có dự án nào — tạo dự án trước." : effRole === "admin" ? "Quản trị dự án chỉ phụ trách một dự án." : undefined} error={touched ? errs.projectId : undefined}>
             <Select value={projectId} onChange={setProjectId} placeholder="— Chọn dự án —" options={projects.map((p) => ({ value: p.id, label: `${p.code} · ${p.name}` }))} disabled={projects.length === 0} />

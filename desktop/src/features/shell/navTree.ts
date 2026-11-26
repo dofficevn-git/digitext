@@ -17,7 +17,7 @@ export type V46r =
   | { kind: "report"; tab: V3xx }
   | { kind: "tienich"; tab: V3xTienIch };
 
-export type NavBadge = "clConflicts" | "myWork" | "notifications";
+export type NavBadge = "clConflicts" | "myWork" | "notifications" | "nopLuu";
 
 export interface V46s {
   id: string;
@@ -187,6 +187,20 @@ const NAV_LUU_TRU: V46s[] = [
     icon: "nhapKho",
     gate: "nhapgoi",
     children: [{ id: "nhapgoi", label: "Nhập gói AIP", gate: "nhapgoi", leaf: { kind: "view", view: "nhapgoi" }, keywords: "nhap he thong goi aip sip tt05 dieu 9 khoan 7 tiep nhan" }],
+  },
+  // Lưu trữ hiện hành (Điều 19, 26/11/2026): phòng ban lập hồ sơ theo danh mục, nộp vào lưu trữ cơ quan sau 60 ngày.
+  {
+    id: "luutruhienhanh",
+    label: "Lưu trữ hiện hành",
+    icon: "hoSo",
+    gate: "dossier",
+    children: [
+      { ...mucCon("danhmuccl"), label: "Phông, phòng ban" },
+      { id: "danhmuc", label: "Danh mục hồ sơ", gate: "danhmuc", leaf: { kind: "view", view: "danhmuc" }, keywords: "danh muc ho so du kien dieu 19 ban hanh" },
+      mucCon("laphoso"),
+      { id: "nopluu", label: "Nộp lưu", gate: "nopluu", leaf: { kind: "view", view: "nopluu" }, keywords: "nop luu ho so luu tru co quan 60 ngay han" },
+      { id: "tiepnhan", label: "Tiếp nhận nộp lưu", gate: "tiepnhan", leaf: { kind: "view", view: "tiepnhan" }, badge: "nopLuu", keywords: "tiep nhan phieu nop luu bien ban giao nhan so nop luu" },
+    ],
   },
   {
     id: "tracuu",

@@ -146,6 +146,8 @@ pub struct T3h {
     pub role_code: Option<String>,
     #[serde(default)]
     pub project_id: Option<String>,
+    #[serde(default)]
+    pub phong_ban_id: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -157,6 +159,10 @@ pub struct Tp6 {
     pub email: Option<String>,
     #[serde(default)]
     pub role_code: Option<String>,
+    #[serde(default)]
+    pub phong_ban_id: Option<String>,
+    #[serde(default)]
+    pub bo_phong_ban: Option<bool>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -261,6 +267,9 @@ pub async fn user_create(
     if let Some(rc) = args.role_code.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         body["roleCode"] = serde_json::Value::String(rc.to_string());
     }
+    if let Some(pb) = args.phong_ban_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        body["phongBanId"] = serde_json::Value::String(pb.to_string());
+    }
     f_2r8(&db, &auth, Permission::UserCreate, move |r_c6, r_c9| {
         let body = body.clone();
         async move { client::f_23d::<Tl6>(&r_c6, &r_c9, "/users", &body).await }
@@ -288,6 +297,12 @@ pub async fn user_update(
     }
     if let Some(rc) = args.role_code.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         body["roleCode"] = serde_json::Value::String(rc.to_string());
+    }
+    if let Some(pb) = args.phong_ban_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        body["phongBanId"] = serde_json::Value::String(pb.to_string());
+    }
+    if args.bo_phong_ban == Some(true) {
+        body["boPhongBan"] = serde_json::Value::Bool(true);
     }
     f_2r8(&db, &auth, Permission::UserUpdate, move |r_ca, r_ce| {
         let (id, body) = (id.clone(), body.clone());

@@ -47,6 +47,7 @@ mod bundle;
 mod edition;
 mod ingest;
 mod tra_cuu;
+mod luu_tru;
 mod update;
 mod tiff;
 use tauri::Manager;
@@ -106,6 +107,8 @@ fn main() {
             tra_cuu::tra_cuu_bo_loc,
             tra_cuu::tra_cuu_nhat_ky,
             tra_cuu::tra_cuu_doc,
+            luu_tru::lt_get,
+            luu_tru::lt_call,
             auth::commands::auth_validate_online,
             auth::admin::users_list,
             auth::admin::user_create,

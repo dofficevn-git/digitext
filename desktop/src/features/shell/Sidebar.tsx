@@ -75,7 +75,7 @@ export default function Sidebar() {
   const narrow = useNarrowViewport();
   const rail = shouldUseRail(collapsed, narrow);
 
-  const badgeOf = (b?: NavBadge): number => (b === "clConflicts" ? notif.clConflicts : b === "myWork" ? notif.myWork : b === "notifications" ? notif.unread : 0);
+  const badgeOf = (b?: NavBadge): number => (b === "clConflicts" ? notif.clConflicts : b === "myWork" ? notif.myWork : b === "notifications" ? notif.unread : b === "nopLuu" ? notif.nopLuu : 0);
 
   const toggle = (id: string) =>
     setOpen((s) => {

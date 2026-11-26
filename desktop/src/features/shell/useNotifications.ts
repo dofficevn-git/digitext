@@ -11,6 +11,8 @@ import { V4sc, V4se, type V4sa } from "@/api/submissions";
 import { clConflicts } from "@/api/chinhly";
 import { V43i } from "@/api/lansync";
 import { workMyPackages } from "@/api/work";
+import { nopLuuTongQuan } from "@/api/luutru";
+import { useProject } from "@/state/project";
 
 export interface NotificationCounts {
   unread: number;
@@ -18,6 +20,8 @@ export interface NotificationCounts {
   clConflicts: number;
   collectedRejected: number;
   myWork: number;
+  /** Phiếu nộp lưu chờ cán bộ lưu trữ tiếp nhận (Điều 19). */
+  nopLuu: number;
   total: number;
   loading: boolean;
   markAllRead: () => Promise<void>;
@@ -30,6 +34,7 @@ interface Raw {
   clConflicts: number;
   collectedRejected: number;
   myWork: number;
+  nopLuu: number;
 }
 
 export function useNotifications(): NotificationCounts {
@@ -39,14 +44,18 @@ export function useNotifications(): NotificationCounts {
   const canCl = V3z9(perms, "dossier.read");
   const canCollect = V3z9(perms, "upload.execute");
   const canWork = V3z9(perms, "work.execute");
+  const canNopLuu = V3z9(perms, "luutru.receive");
+  const duAnChon = useProject().projectId;
+  const duAn = session?.projectId ?? duAnChon ?? null;
   const enabled = isTauri() && !!session && !session.locked;
 
   const load = useCallback(async (): Promise<Raw> => {
-    const [n, c, g, w] = await Promise.all([
+    const [n, c, g, w, nl] = await Promise.all([
       canNotif ? V4sc().catch(() => null) : null,
       canCl ? clConflicts().catch(() => []) : [],
       canCollect ? V43i(1).catch(() => null) : null,
       canWork ? workMyPackages().catch(() => []) : [],
+      canNopLuu && duAn ? nopLuuTongQuan(duAn).catch(() => null) : null,
     ]);
     return {
       unread: n?.unread ?? 0,
@@ -54,10 +63,11 @@ export function useNotifications(): NotificationCounts {
       clConflicts: c.length,
       collectedRejected: g?.rejected ?? 0,
       myWork: w.filter((p) => p.status !== "closed" && p.nPending > 0).length,
+      nopLuu: nl?.phieuChoTiepNhan ?? 0,
     };
-  }, [canNotif, canCl, canCollect, canWork]);
+  }, [canNotif, canCl, canCollect, canWork, canNopLuu, duAn]);
 
-  const { data, loading, reload } = V41t(load, { topics: ["submissions", "access", "info", "clSync", "collected", "work"], enabled, pollMs: 60_000 });
+  const { data, loading, reload } = V41t(load, { topics: ["submissions", "access", "info", "clSync", "collected", "work", "nopLuu"], enabled, pollMs: 60_000 });
 
   const markAllRead = useCallback(async () => {
     await V4se();
@@ -71,6 +81,7 @@ export function useNotifications(): NotificationCounts {
       clConflicts: data?.clConflicts ?? 0,
       collectedRejected: data?.collectedRejected ?? 0,
       myWork: data?.myWork ?? 0,
+      nopLuu: data?.nopLuu ?? 0,
       total: (data?.unread ?? 0) + (data?.clConflicts ?? 0) + (data?.collectedRejected ?? 0),
       loading,
       markAllRead,

@@ -54,7 +54,7 @@ async fn pull(State(st): State<AppState>, ts: Ts, Query(q): Query<PullQ>) -> Res
             tracing::warn!(error = %e, "không dọn được tombstone chỉnh lý");
         }
     }
-    Ok(Json(cl::sync::pull(&st.pool, q.project_id, q.since.max(0), q.limit).await?))
+    Ok(Json(cl::sync::pull(&st.pool, q.project_id, q.since.max(0), q.limit, super::pham_vi_cua(&ts)).await?))
 }
 
 #[derive(Debug, Deserialize)]

@@ -110,6 +110,10 @@ pub fn cl_save(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, ta
     let id = id.map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()).unwrap_or_else(|| uuid::Uuid::now_v7().to_string());
     let exists = store::get(&g, sp.name, &id)?.is_some();
     auth.require_perm(sp.perm_for(if exists { WriteOp::Update } else { WriteOp::Insert }))?;
+    // Hồ sơ đã nộp lưu (0031): báo ngay, không để outbox bị máy chủ từ chối sau. Cột hệ thống hoá vẫn đi đường online.
+    if let Some(l) = store::khoa_nop_luu(&g, sp.name, if exists { Some(id.as_str()) } else { None }, &patch)? {
+        return Ok(SaveResult { ok: false, id, row: None, errors: vec![l] });
+    }
     let mut patch = patch;
     if !exists {
         // bổ sung mặc định như máy chủ
@@ -161,6 +165,9 @@ pub fn cl_delete(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, 
     let (project, user) = project_of(&db, &auth)?;
     let n = {
         let g = db.0.lock().map_err(|_| AppError::DbPoisoned)?;
+        if let Some(l) = store::khoa_nop_luu(&g, sp.name, Some(&id), &store::Row::new())? {
+            return Err(AppError::new("locked", &l.message));
+        }
         let n = store::delete_local(&g, sp, &id, &store::Who { project_id: &project, user_id: &user })?;
         super::legacy::prune_legacy(&g)?;
         n

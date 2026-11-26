@@ -63,6 +63,10 @@ export const V3x9 = [
   "clSync",
 
   "work",
+
+  "nopLuu",
+
+  "danhMuc",
 ] as const;
 
 export type V3xa = (typeof V3x9)[number];
@@ -143,6 +147,7 @@ export const V3xc: readonly string[] = [
   "tra_cuu_bo_loc",
   "tra_cuu_nhat_ky",
   "tra_cuu_doc",
+  "lt_get",
   "ops_backups",
   "ops_backup_report",
   "ocr_fields_list",
@@ -347,6 +352,7 @@ export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
   cl_outbox_retry: ["clSync"],
   cl_outbox_discard: ["chinhLy", "clSync"],
   cl_remote: ["chinhLy"],
+  lt_call: ["nopLuu", "danhMuc", "chinhLy", "notifications", "records"],
   cl_migrate_run: ["chinhLy", "clSync", "dossier", "catalog"],
   cl_project_set: ["chinhLy", "clSync", "dossier", "catalog", "khogia", "work"],
   work_create_package: ["work"],

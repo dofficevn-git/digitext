@@ -105,6 +105,11 @@ pub struct UserProfile {
     /// Quyền hiệu lực máy chủ đã tính (gồm bộ quyền vai trò động); máy chủ cũ không gửi → tự tính như trước.
     #[serde(default)]
     pub permissions: Option<Vec<Permission>>,
+    /// Phòng ban (lưu trữ hiện hành, máy chủ ≥ 26/11/2026).
+    #[serde(default)]
+    pub phong_ban_id: Option<String>,
+    #[serde(default)]
+    pub ten_phong_ban: Option<String>,
 }
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]

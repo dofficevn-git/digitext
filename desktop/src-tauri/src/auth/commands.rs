@@ -55,6 +55,8 @@ fn f_2ds(r_ho: &Tb, r_hp: SessionMode, locked: bool, r_hq: Vec<Permission>) -> T
         project_id: r_ho.project_id.clone(),
         project_code: r_ho.project_code.clone(),
         project_name: r_ho.project_name.clone(),
+        phong_ban_id: r_ho.phong_ban_id.clone(),
+        ten_phong_ban: r_ho.ten_phong_ban.clone(),
         mode: r_hp,
         offline_expiry: r_ho.offline_expiry.clone(),
         locked,
@@ -276,6 +278,8 @@ async fn f_10p(
         project_id: r_ip.user.project.as_ref().map(|p| p.id.clone()),
         project_code: r_ip.user.project.as_ref().map(|p| p.code.clone()),
         project_name: r_ip.user.project.as_ref().map(|p| p.name.clone()),
+        phong_ban_id: r_ip.user.phong_ban_id.clone(),
+        ten_phong_ban: r_ip.user.ten_phong_ban.clone(),
         salt: r_iq.to_vec(),
         verifier: r_il.verifier_hex.clone(),
         secrets: r_ir,
@@ -662,6 +666,8 @@ pub(super) async fn f_26h(
             account.project_id = r_k4.user.project.as_ref().map(|p| p.id.clone());
             account.project_code = r_k4.user.project.as_ref().map(|p| p.code.clone());
             account.project_name = r_k4.user.project.as_ref().map(|p| p.name.clone());
+            account.phong_ban_id = r_k4.user.phong_ban_id.clone();
+            account.ten_phong_ban = r_k4.user.ten_phong_ban.clone();
             {
                 let guard = r_k2.0.lock().map_err(|_| AppError::DbPoisoned)?;
                 store::f_2nx(&guard, &account)?;

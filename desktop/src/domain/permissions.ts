@@ -474,6 +474,9 @@ const V3z7: Record<V3xt, V3yx> = {
   acceptance: "stats.view_project",
   nhapgoi: "submission.approve",
   tracuu: "access.request",
+  nopluu: "luutru.submit",
+  tiepnhan: "luutru.receive",
+  danhmuc: "danhmuc.edit",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

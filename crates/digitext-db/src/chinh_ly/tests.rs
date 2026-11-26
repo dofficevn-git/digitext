@@ -165,20 +165,20 @@ async fn pull_theo_ver_tombstone_va_xoa_khoi_phuc() {
     // STT trùng
     let d = sync::apply_op(&pool, &c, &upsert("cl_van_ban", Uuid::now_v7(), json!({"ho_so_id": hs, "so_thu_tu": 1, "trich_yeu": "VB 1b"}))).await.unwrap();
     assert!(matches!(d, OpResult::Rejected { reason, .. } if reason == "unique:ux_cl_van_ban_stt"));
-    let p0 = sync::pull(&pool, fx.project, 0, 1000).await.unwrap();
+    let p0 = sync::pull(&pool, fx.project, 0, 1000, None).await.unwrap();
     let tables: Vec<&str> = p0.rows.iter().map(|r| r.table.as_str()).collect();
     assert!(tables.contains(&"cl_phong") && tables.contains(&"cl_ho_so") && tables.contains(&"cl_van_ban") && tables.contains(&"cl_lich_su"));
     assert!(tables.contains(&"cl_thbq"), "bảng mã dùng chung phải được kéo về");
     assert!(!p0.has_more && !p0.full);
     let cursor = p0.next;
     // phân trang
-    let p1 = sync::pull(&pool, fx.project, 0, 2).await.unwrap();
+    let p1 = sync::pull(&pool, fx.project, 0, 2, None).await.unwrap();
     assert_eq!(p1.rows.len(), 2);
     assert!(p1.has_more);
     // xoá hồ sơ → cascade văn bản (mềm), tombstone xuất hiện khi since > 0
     let del = SyncOp { op_id: None, table: "cl_ho_so".into(), id: hs, op: OpKind::Delete, base: None, new: Row::new(), if_ver: None, edited_at: None };
     assert!(matches!(sync::apply_op(&pool, &c, &del).await.unwrap(), OpResult::Applied { .. }));
-    let p2 = sync::pull(&pool, fx.project, cursor, 1000).await.unwrap();
+    let p2 = sync::pull(&pool, fx.project, cursor, 1000, None).await.unwrap();
     let dead: Vec<&sync::PullRow> = p2.rows.iter().filter(|r| r.table != "cl_lich_su" && !r.row["deleted_at"].is_null()).collect();
     assert_eq!(dead.len(), 2, "{:?}", p2.rows);
     // sửa dòng đã xoá → deleted_on_server
@@ -197,7 +197,7 @@ async fn pull_theo_ver_tombstone_va_xoa_khoi_phuc() {
     sqlx::query("UPDATE cl_ho_so SET deleted_at = now() - interval '100 days' WHERE id = $1").bind(hs).execute(&pool).await.unwrap();
     let pruned = sync::prune(&pool, 90).await.unwrap();
     assert!(pruned >= 2);
-    let p3 = sync::pull(&pool, fx.project, 1, 10).await.unwrap();
+    let p3 = sync::pull(&pool, fx.project, 1, 10, None).await.unwrap();
     assert!(p3.full);
     cleanup(&pool, &fx).await;
 }

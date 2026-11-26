@@ -10,6 +10,8 @@ import { V41t } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
 import { V4to, type V4tl } from "@/api/access";
 import { V4ut, V4v1, type V4us, type V4v0 } from "@/api/infoops";
+import { nopLuuTongQuan, type TongQuanNopLuu } from "@/api/luutru";
+import { useProject } from "@/state/project";
 import { type V41v as IconName } from "@/components/Icon";
 import { Badge, Banner, Button, Card, KpiRow, KpiTile, Table, type Column } from "@/ui";
 
@@ -23,18 +25,24 @@ export default function LuuTruHome() {
   const has = (p: Parameters<typeof V3z9>[1]) => V3z9(session?.permissions, p);
   const coKhaiThac = has("access.view");
   const coBaoQuan = has("bk.view");
+  // Lưu trữ hiện hành (Điều 19): phòng ban thấy hạn nộp của mình; cán bộ lưu trữ thấy phiếu chờ tiếp nhận.
+  const coNop = has("luutru.submit");
+  const coNhan = has("luutru.receive");
+  const duAnChon = useProject().projectId;
+  const duAn = session?.projectId ?? duAnChon ?? null;
   const dungDuoc = isTauri() || import.meta.env.DEV;
 
   const loader = useCallback(async () => {
-    const [kt, tt, bq] = await Promise.all([
+    const [kt, tt, bq, nl] = await Promise.all([
       coKhaiThac ? V4to() : Promise.resolve([] as V4tl[]),
       coKhaiThac ? V4ut() : Promise.resolve([] as V4us[]),
       coBaoQuan ? V4v1().catch(() => null) : Promise.resolve(null as V4v0 | null),
+      (coNop || coNhan) && duAn ? nopLuuTongQuan(duAn).catch(() => null) : Promise.resolve(null as TongQuanNopLuu | null),
     ]);
-    return { kt, tt, bq };
-  }, [coKhaiThac, coBaoQuan]);
+    return { kt, tt, bq, nl };
+  }, [coKhaiThac, coBaoQuan, coNop, coNhan, duAn]);
   const { data, loading, error, reload } = V41t(loader, {
-    topics: ["access", "info", "ops"],
+    topics: ["access", "info", "ops", "nopLuu"],
     enabled: dungDuoc,
     errorText: () => "Không lấy được việc chờ xử lý.",
   });
@@ -42,6 +50,7 @@ export default function LuuTruHome() {
   const kt = data?.kt ?? [];
   const tt = data?.tt ?? [];
   const bq = data?.bq ?? null;
+  const nl = data?.nl ?? null;
   const ktCho = kt.filter((r) => r.status === "submitted").length;
   const ktHieuLuc = kt.filter((r) => r.status === "approved").length;
   const ttCho = tt.filter((r) => r.status === "submitted" || r.status === "approved").length;
@@ -62,6 +71,9 @@ export default function LuuTruHome() {
 
   type LoiTat = { label: string; icon: IconName; run: () => void; show: boolean };
   const loiTat = ([
+    { label: "Danh mục hồ sơ", icon: "danhmuc", run: () => goto("danhmuc"), show: has("danhmuc.edit") },
+    { label: "Nộp lưu", icon: "nhapKho", run: () => goto("nopluu"), show: coNop },
+    { label: "Tiếp nhận nộp lưu", icon: "duyet", run: () => goto("tiepnhan"), show: coNhan },
     { label: "Nhập gói AIP", icon: "nhapKho", run: () => goto("nhapgoi"), show: has("submission.approve") },
     { label: "Tra cứu tài liệu", icon: "tim", run: () => goto("tracuu"), show: has("access.request") || has("access.review") },
     { label: "Mục lục hồ sơ", icon: "danhmuc", run: () => gotoKhoGia("khaithac"), show: has("dossier.read") || has("catalog.read") },
@@ -96,6 +108,14 @@ export default function LuuTruHome() {
         <Banner tone="warning" className="mb-4">
           Đang ngoại tuyến: không tra cứu và khai thác được trên máy chủ lưu trữ. Kết nối mạng rồi đăng nhập lại.
         </Banner>
+      )}
+      {(coNop || coNhan) && duAn && (
+        <KpiRow className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <KpiTile icon="canhBao" label="Hồ sơ quá hạn nộp lưu" value={nl?.quaHan ?? 0} tone={nl?.quaHan ? "err" : nl ? "ok" : undefined} loading={dangTai} onClick={() => goto("nopluu")} />
+          <KpiTile icon="nhacHan" label="Đến hạn nộp trong 15 ngày" value={nl?.denHan ?? 0} tone={nl?.denHan ? "warn" : undefined} loading={dangTai} onClick={() => goto("nopluu")} />
+          <KpiTile icon="hoSo" label="Hồ sơ chưa nộp lưu" value={nl?.chuaNop ?? 0} loading={dangTai} onClick={() => goto("nopluu")} />
+          <KpiTile icon="dangCho" label="Phiếu nộp lưu chờ tiếp nhận" value={nl?.phieuChoTiepNhan ?? 0} tone={nl?.phieuChoTiepNhan ? "warn" : undefined} loading={dangTai} onClick={() => goto(coNhan ? "tiepnhan" : "nopluu")} />
+        </KpiRow>
       )}
       {coKhaiThac && (
         <KpiRow className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
