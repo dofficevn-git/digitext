@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "digitext-desktop"
-version = "0.25.15"
+version = "0.25.16"
 dependencies = [
  "aes-gcm",
  "argon2",
