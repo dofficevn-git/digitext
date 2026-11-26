@@ -586,7 +586,7 @@ pub enum GenericBlock {
     Paragraph { text: String },
     Field { label: String, value: String },
     Bullets { items: Vec<String> },
-    /// Bảng: dựng thành dòng tiêu đề + mỗi hàng một gạch đầu dòng, cột nối bằng " | " (digitext_pdf chưa có bảng thật).
+    /// Bảng có viền thật ở cả PDF (`FormBlock::Table`, 26/11/2026) và Word. Trước 26/11 PDF hạ thành gạch đầu dòng nối " | ".
     Table { columns: Vec<String>, rows: Vec<Vec<String>> },
     Signatures { left: Vec<String>, right: Vec<String> },
 }
@@ -614,12 +614,7 @@ fn render_generic(f: &GenericForm) -> Result<(String, Vec<FormBlock>), String> {
             GenericBlock::Paragraph { text } => out.push(FormBlock::Paragraph(text.clone())),
             GenericBlock::Field { label, value } => out.push(field(label, value.clone())),
             GenericBlock::Bullets { items } => out.push(FormBlock::Bullets(items.clone())),
-            GenericBlock::Table { columns, rows } => {
-                if !columns.is_empty() {
-                    out.push(FormBlock::Paragraph(columns.join(" | ")));
-                }
-                out.push(FormBlock::Bullets(rows.iter().map(|r| r.join(" | ")).collect()));
-            }
+            GenericBlock::Table { columns, rows } => out.push(FormBlock::Table { columns: columns.clone(), rows: rows.clone() }),
             GenericBlock::Signatures { left, right } => out.push(FormBlock::Signatures { left: left.clone(), right: right.clone() }),
         }
     }
@@ -709,7 +704,9 @@ mod generic_tests {
         });
         let (title, blocks) = render("giao_nhan_giay", &v).expect("render");
         assert_eq!(title, "Biên bản giao nhận tài liệu giấy");
-        assert_eq!(blocks.len(), 5);
+        // 4 khối vào → 4 khối ra: bảng giữ là một `FormBlock::Table` (trước 26/11 bị tách thành đoạn + gạch đầu dòng = 5).
+        assert_eq!(blocks.len(), 4);
+        assert!(matches!(&blocks[2], FormBlock::Table { columns, rows } if columns.len() == 2 && rows.len() == 2));
         assert!(render("giao_nhan_giay", &serde_json::json!({"title": "x", "blocks": []})).is_err());
         assert!(render("kiem_tra", &v).is_err());
         assert!(!f_2i2("nghiem_thu").is_empty());

@@ -77,7 +77,7 @@ liên quan tới dịch vụ OCR, web KIE, hay fine-tune VietOCR.
 
 ## Bẫy đã biết
 
-- **Migrations Postgres ở `migrations/0001`–`0026`**, áp tay theo thứ tự (không có `_sqlx_migrations`
+- **Migrations Postgres ở `migrations/0001`–`0030`**, áp bằng `digitext-api migrate` hoặc tay theo thứ tự (không có `_sqlx_migrations`
   tự động, không có cache `.sqlx/`). Ghi chú cũ "không có migrations" là sai (sửa 2/11/2026).
 - **Bảng đời cũ ở SQLite máy trạm không có cột dự án** (`phong`, `ho_so`, `trang`, `dossier`, `van_ban`, `phong_ban`,
   `mang_cong_viec`, `thoi_han_bq`, `kho`, `gia`). Từ 23/11/2026 `desktop/src-tauri/src/tach_du_an.rs` giữ cho các bảng này CHỈ chứa

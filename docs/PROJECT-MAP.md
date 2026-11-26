@@ -419,13 +419,14 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0026` (sửa 5/11/2026; 0025 = nhập gói AIP, 0026 = tra cứu không dấu / kiểm gói / huỷ gói)
+### Schema Postgres: `migrations/0001`–`0030` (sửa 26/11/2026)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
-(0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05: mở CHECK `records.kind` + cột `ref`,
-`project_contracts.contract_boxes/dossiers/sheets`) — ghi chú cũ "không có migrations"
-là sai. Không có cache `.sqlx/` offline và không có `_sqlx_migrations` tự động: áp tay theo
-thứ tự (xem `docs/CHUYEN-MAY-OCR-PC.md` cách áp bằng `docker exec psql`).
+(0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05, 0025 nhập gói AIP, 0026 tra cứu không dấu /
+kiểm gói / huỷ gói, 0027 quét virus, 0028–0029 webhook dự án, 0030 `permissions_seen` — API tự bổ sung quyền MỚI vào vai trò hệ
+thống lúc khởi động, `roles::bo_sung_quyen_moi`) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
+Áp bằng `digitext-api migrate` (bảng `_digitext_migrations`, 9/11/2026; máy chủ đã áp tay thì `migrate --da-ap-den <NNNN>` một lần)
+hoặc tay theo thứ tự bằng `psql -f` (xem `docs/CHUYEN-MAY-OCR-PC.md`).
 
 ### Truy vấn không được kiểm tại thời điểm biên dịch
 

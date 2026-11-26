@@ -161,6 +161,51 @@ pub async fn ensure_system(pool: &PgPool) -> sqlx::Result<u32> {
     Ok(added)
 }
 
+/// Bổ sung QUYỀN MỚI (có trong `Permission::ALL`, chưa có trong bảng `permissions_seen` — 0030) vào các vai trò hệ thống
+/// theo mặc định của vai trò gốc, rồi ghi nhận là đã biết. Không đụng quyền đã biết (quản trị cố ý bỏ thì vẫn bỏ), không
+/// đụng vai trò tuỳ chỉnh (bộ quyền do người lập chọn tay). Trả số cặp (vai trò, quyền) đã chèn.
+///
+/// Máy chủ chưa áp 0030 → không có bảng → trả 0, không lỗi: hành vi y như trước (quản trị tick tay).
+pub async fn bo_sung_quyen_moi(pool: &PgPool) -> sqlx::Result<u32> {
+    let co_bang: Option<String> = sqlx::query_scalar("SELECT to_regclass('permissions_seen')::text").fetch_one(pool).await?;
+    if co_bang.is_none() {
+        return Ok(0);
+    }
+    let da_biet: Vec<String> = sqlx::query_scalar("SELECT permission FROM permissions_seen").fetch_all(pool).await?;
+    let moi: Vec<Permission> = Permission::ALL.into_iter().filter(|p| !da_biet.iter().any(|d| d == p.as_str())).collect();
+    if moi.is_empty() {
+        return Ok(0);
+    }
+    let mut tx = pool.begin().await?;
+    let mut chen = 0u32;
+    for p in &moi {
+        for role in Role::ALL {
+            if !p.granted_by_default(role) {
+                continue;
+            }
+            // Chỉ vai trò hệ thống, và chỉ khi dòng vai trò đã tồn tại (ensure_system chạy trước).
+            let n = sqlx::query(
+                "INSERT INTO role_permissions (role_code, permission) \
+                 SELECT code, $2 FROM roles WHERE code = $1 AND is_system \
+                 ON CONFLICT DO NOTHING",
+            )
+            .bind(role.as_str())
+            .bind(p.as_str())
+            .execute(&mut *tx)
+            .await?
+            .rows_affected();
+            chen += n as u32;
+        }
+        sqlx::query("INSERT INTO permissions_seen (permission) VALUES ($1) ON CONFLICT DO NOTHING").bind(p.as_str()).execute(&mut *tx).await?;
+    }
+    if chen > 0 {
+        // Bump updated_at để trigger tg_roles_changed (0022) báo máy trạm nạp lại vai trò.
+        sqlx::query("UPDATE roles SET updated_at = now() WHERE is_system").execute(&mut *tx).await?;
+    }
+    tx.commit().await?;
+    Ok(chen)
+}
+
 fn system_description(role: Role) -> &'static str {
     match role {
         Role::SuperAdmin => "Toàn quyền: mọi dự án, mọi tài khoản, kể cả xoá dữ liệu dự án.",

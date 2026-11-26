@@ -97,11 +97,14 @@ struct Layout<'a> {
     face: ttf_parser::Face<'a>,
     pages: Vec<Page>,
     y: f32,
+    /// Khổ trang (rộng, cao) — A4 dọc hoặc ngang (báo cáo nhiều cột, 26/11/2026).
+    pw: f32,
+    ph: f32,
 }
 impl<'a> Layout<'a> {
     fn new_page(&mut self) {
         self.pages.push(Page::new());
-        self.y = C_0 - MARGIN;
+        self.y = self.ph - MARGIN;
     }
     fn ensure(&mut self, h: f32) {
         if self.y - h < BOTTOM {
@@ -137,16 +140,24 @@ impl<'a> Layout<'a> {
         Ok(f_2bf(&f_2eo(&self.face, s)?, size))
     }
     fn centered(&mut self, s: &str, size: f32, bold: bool, c: (f32, f32, f32), lead: f32) -> Result<(), PdfError> {
-        for line in self.wrap(s, size, C_1 - MARGIN * 2.0)? {
+        for line in self.wrap(s, size, self.pw - MARGIN * 2.0)? {
             self.ensure(lead);
             self.y -= lead;
             let w = self.width(&line, size)?;
-            let x = ((C_1 - w) / 2.0).max(MARGIN);
+            let x = ((self.pw - w) / 2.0).max(MARGIN);
             let y = self.y;
             let (face, page) = (&self.face, self.pages.last_mut().expect("có trang"));
             page.text(face, &line, size, x, y, bold, c)?;
         }
         Ok(())
+    }
+    /// Chiều cao một hàng bảng sẽ chiếm (để biết trước có vừa trang không mà lặp lại tiêu đề cột).
+    fn row_height(&self, cells: &[(f32, f32, String, bool, Option<(f32, f32, f32)>)], size: f32) -> Result<f32, PdfError> {
+        let mut lines = 1usize;
+        for c in cells {
+            lines = lines.max(self.wrap(&c.2, size, c.1 - PAD * 2.0)?.len());
+        }
+        Ok(lines as f32 * LEAD + PAD * 2.0)
     }
     /// Một hàng bảng: các ô (x, w, text, bold, fill); trả chiều cao đã vẽ. Tự sang trang nếu thiếu chỗ.
     fn row(&mut self, cells: &[(f32, f32, String, bool, Option<(f32, f32, f32)>)], size: f32) -> Result<(), PdfError> {
@@ -229,12 +240,21 @@ fn clean_block(face: &ttf_parser::Face<'_>, b: &ManualBlock) -> ManualBlock {
     }
 }
 
+/// A4 dọc.
 pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, PdfError> {
+    render_manual_kho(blocks, font, false)
+}
+/// A4 ngang — báo cáo thống kê nhiều cột, sổ.
+pub fn render_manual_ngang(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, PdfError> {
+    render_manual_kho(blocks, font, true)
+}
+fn render_manual_kho(blocks: &[ManualBlock], font: &[u8], ngang: bool) -> Result<Vec<u8>, PdfError> {
     let face = ttf_parser::Face::parse(font, 0).map_err(|e| PdfError::BadFont(e.to_string()))?;
     let cleaned: Vec<ManualBlock> = blocks.iter().map(|b| clean_block(&face, b)).collect();
     let blocks = &cleaned;
-    let cw = C_1 - MARGIN * 2.0;
-    let mut lay = Layout { face, pages: Vec::new(), y: 0.0 };
+    let (pw, ph) = if ngang { (C_0, C_1) } else { (C_1, C_0) };
+    let cw = pw - MARGIN * 2.0;
+    let mut lay = Layout { face, pages: Vec::new(), y: 0.0, pw, ph };
     lay.new_page();
     let mut all_text: Vec<String> = Vec::new();
     for b in blocks {
@@ -243,6 +263,8 @@ pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, Pdf
                 all_text.push(t.clone());
                 lay.y -= 6.0;
                 lay.centered(t, 15.0, true, BLUE, 20.0)?;
+                // Khoảng thở dưới tiêu đề: bảng/khối ngay sau không đè lên chữ (báo cáo không có Subtitle/SectionBar).
+                lay.y -= 6.0;
             }
             ManualBlock::Subtitle(t) => {
                 all_text.push(t.clone());
@@ -289,13 +311,18 @@ pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, Pdf
                 for h in headers {
                     all_text.push(h.clone());
                 }
-                let hdr: Vec<_> = headers.iter().enumerate().map(|(i, h)| (xs[i].0, xs[i].1, h.clone(), true, Some(CELL))).collect();
+                let hdr: Vec<_> = headers.iter().enumerate().take(xs.len()).map(|(i, h)| (xs[i].0, xs[i].1, h.clone(), true, Some(CELL))).collect();
                 lay.row(&hdr, BODY)?;
                 for r in rows {
                     for c in r {
                         all_text.push(c.clone());
                     }
-                    let cells: Vec<_> = r.iter().enumerate().map(|(i, c)| (xs[i].0, xs[i].1, c.clone(), false, None)).collect();
+                    let cells: Vec<_> = r.iter().enumerate().take(xs.len()).map(|(i, c)| (xs[i].0, xs[i].1, c.clone(), false, None)).collect();
+                    // Hàng không vừa trang → sang trang và in lại tiêu đề cột, kẻo trang sau là bảng không đầu.
+                    if lay.y - lay.row_height(&cells, BODY)? < BOTTOM && !hdr.is_empty() {
+                        lay.new_page();
+                        lay.row(&hdr, BODY)?;
+                    }
                     lay.row(&cells, BODY)?;
                 }
             }
@@ -409,7 +436,7 @@ pub fn render_manual(blocks: &[ManualBlock], font: &[u8]) -> Result<Vec<u8>, Pdf
         let cs = doc.add_object(Stream::new(dictionary! {}, bytes));
         let pid = doc.add_object(dictionary! {
             "Type" => "Page", "Parent" => pages_id,
-            "MediaBox" => vec![0.into(), 0.into(), C_1.into(), C_0.into()],
+            "MediaBox" => vec![0.into(), 0.into(), pw.into(), ph.into()],
             "Contents" => cs,
             "Resources" => dictionary! { "Font" => dictionary! { "F0" => font_id } },
         });
@@ -451,4 +478,46 @@ mod tests {
         let pdf = render_manual(&blocks, &font).expect("tờ hướng dẫn phải dựng được với chữ bẩn");
         assert!(pdf.starts_with(b"%PDF-"));
     }
+    /// Xuất bảng A4 NGANG dài nhiều trang để NHÌN: tiêu đề cột phải lặp lại ở đầu mỗi trang.
+    ///   $env:NGANG_RA="D:\tmp\ngang.pdf"; cargo test -p digitext-pdf xuat_ngang_de_xem -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn xuat_ngang_de_xem() {
+        let font = crate::sans_font().and_then(|p| std::fs::read(p).ok()).expect("cần font hệ thống");
+        let rows: Vec<Vec<String>> = (1..=70)
+            .map(|i| {
+                vec![
+                    i.to_string(),
+                    format!("H49.132.{:02}", i % 9 + 1),
+                    format!("Phông số {i} — UBND huyện"),
+                    (i * 37).to_string(),
+                    (i * 412).to_string(),
+                    (i * 9).to_string(),
+                    if i % 3 == 0 { "Vĩnh viễn".into() } else { "20 năm".into() },
+                    "2015 – 2024".into(),
+                ]
+            })
+            .collect();
+        let blocks = vec![
+            ManualBlock::OfficialHeader {
+                left: vec!["*LƯU TRỮ LỊCH SỬ TỈNH QUẢNG NINH".into()],
+                right: vec!["*CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(), "Độc lập - Tự do - Hạnh phúc".into()],
+                dated: "Quảng Ninh, ngày 26 tháng 11 năm 2026".into(),
+            },
+            ManualBlock::Title("BÁO CÁO TỔNG HỢP THEO PHÔNG".into()),
+            ManualBlock::KeyValue(vec![("Kỳ báo cáo".into(), "Năm 2026".into())]),
+            ManualBlock::Table {
+                headers: ["STT", "Mã phông", "Tên phông", "Hồ sơ", "Trang", "Hộp", "THBQ", "Thời gian"].iter().map(|s| s.to_string()).collect(),
+                widths: vec![1.0, 2.0, 6.0, 1.5, 1.5, 1.2, 2.0, 2.5],
+                rows,
+            },
+            ManualBlock::Signatures { left: ("NGƯỜI LẬP".into(), "".into(), "".into()), right: ("LÃNH ĐẠO".into(), "(Ký, ghi rõ họ tên)".into(), "".into()) },
+            ManualBlock::Footer("DigiText — in 26/11/2026".into()),
+        ];
+        let pdf = render_manual_ngang(&blocks, &font).unwrap();
+        let ra = std::env::var("NGANG_RA").unwrap_or_else(|_| "ngang-xem.pdf".into());
+        std::fs::write(&ra, &pdf).unwrap();
+        println!("đã ghi {ra} ({} byte)", pdf.len());
+    }
 }
+

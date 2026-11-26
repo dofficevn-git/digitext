@@ -254,6 +254,11 @@ async fn serve() -> anyhow::Result<()> {
         Ok(_) => {}
         Err(e) => tracing::warn!(error = %e, "không chèn được vai trò hệ thống (migration 0022 chưa áp?) — dùng mặc định trong code"),
     }
+    match digitext_db::roles::bo_sung_quyen_moi(&r_22).await {
+        Ok(n) if n > 0 => tracing::info!(added = n, "vai trò hệ thống: đã bổ sung quyền mới theo mặc định (permissions_seen, 0030)"),
+        Ok(_) => {}
+        Err(e) => tracing::warn!(error = %e, "không bổ sung được quyền mới cho vai trò hệ thống — quản trị tick tay trong Vai trò và quyền"),
+    }
     crate::routes::dashboard::spawn_rollup(r_22.clone());
     f_2gs(r_22);
     axum::serve(

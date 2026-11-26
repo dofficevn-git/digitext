@@ -1350,6 +1350,21 @@ pub enum FormBlock {
         left: Vec<String>,
         right: Vec<String>,
     },
+    /// Bảng có viền (26/11/2026): tiêu đề cột đậm, bề rộng cột theo chữ dài nhất của cột (kẹp 3–40 ký tự), mỗi hàng là
+    /// một khối không tách trang. Trước đó biên bản generic phải hạ bảng thành gạch đầu dòng nối " | ".
+    Table {
+        columns: Vec<String>,
+        rows: Vec<Vec<String>>,
+    },
+}
+/// Một hàng bảng đã xuống dòng sẵn: `cells[i]` là các dòng chữ của ô i, `xs[i]` = (x, bề rộng) của cột i.
+struct HangBang {
+    cells: Vec<Vec<String>>,
+    xs: Vec<(f32, f32)>,
+    dam: bool,
+    size: f32,
+    /// Chiều cao hàng (bằng `Tan.leading`), giữ lại để vẽ lại tiêu đề cột ở đầu trang mới.
+    cao: f32,
 }
 struct Tan {
     text: String,
@@ -1357,10 +1372,41 @@ struct Tan {
     center: bool,
     indent: f32,
     leading: f32,
+    /// Hàng bảng: `leading` là cả chiều cao hàng, `text` để trống; vẽ viền + chữ trong ô thay cho một dòng chữ.
+    row: Option<HangBang>,
 }
 const C_7E: f32 = 56.0;
 const C_7C: f32 = 11.5;
 const C_7D: f32 = 17.0;
+/// Giãn dòng và lề trong ô bảng của biên bản.
+const C_7F: f32 = 12.5;
+const C_7G: f32 = 3.5;
+/// Xuống dòng trong ô bảng: theo dấu cách, rồi cắt theo ký tự cho từ dài không có dấu cách (mã hồ sơ, tên tệp, mã băm)
+/// để chữ không tràn sang ô bên.
+fn wrap_o(face: &ttf_parser::Face<'_>, s: &str, size: f32, width: f32) -> Result<Vec<String>, PdfError> {
+    let mut out = Vec::new();
+    for para in s.split('\n') {
+        for line in f_2rm(face, para, size, width, "")? {
+            if f_2bf(&f_2eo(face, &line)?, size) <= width {
+                out.push(line);
+                continue;
+            }
+            let mut cur = String::new();
+            for ch in line.chars() {
+                cur.push(ch);
+                if f_2bf(&f_2eo(face, &cur)?, size) > width && cur.chars().count() > 1 {
+                    let last = cur.pop().expect("có ký tự");
+                    out.push(std::mem::take(&mut cur));
+                    cur.push(last);
+                }
+            }
+            if !cur.is_empty() {
+                out.push(cur);
+            }
+        }
+    }
+    Ok(out)
+}
 fn f_2rm(
     r_4ej: &ttf_parser::Face<'_>,
     text: &str,
@@ -1414,73 +1460,106 @@ fn render_form(
     let r_4eu = ttf_parser::Face::parse(r_4ex, 0).map_err(|e| PdfError::BadFont(e.to_string()))?;
     let r_4f1 = C_1 - C_7E * 2.0;
     let mut r_4f0: Vec<Tan> = Vec::new();
-    let mut r_4f6 = |text: String, size: f32, center: bool, indent: f32, leading: f32| {
-        r_4f0.push(Tan {
-            text,
-            size,
-            center,
-            indent,
-            leading,
-        });
+    let r_4f6 = |r_4f0: &mut Vec<Tan>, text: String, size: f32, center: bool, indent: f32, leading: f32| {
+        r_4f0.push(Tan { text, size, center, indent, leading, row: None });
     };
     if quoc_hieu {
-        r_4f6(
-            "CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(),
-            12.0,
-            true,
-            0.0,
-            C_7D,
-        );
-        r_4f6(
-            "Độc lập - Tự do - Hạnh phúc".into(),
-            11.5,
-            true,
-            0.0,
-            C_7D,
-        );
-        r_4f6(String::new(), C_7C, false, 0.0, C_7D);
+        r_4f6(&mut r_4f0, "CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(), 12.0, true, 0.0, C_7D);
+        r_4f6(&mut r_4f0, "Độc lập - Tự do - Hạnh phúc".into(), 11.5, true, 0.0, C_7D);
+        r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, C_7D);
     }
-    r_4f6(r_4fc.to_uppercase(), 14.0, true, 0.0, C_7D + 3.0);
+    r_4f6(&mut r_4f0, r_4fc.to_uppercase(), 14.0, true, 0.0, C_7D + 3.0);
     if let Some(r_4f9) = r_4fa {
-        r_4f6(r_4f9.to_string(), 10.5, true, 0.0, C_7D);
+        r_4f6(&mut r_4f0, r_4f9.to_string(), 10.5, true, 0.0, C_7D);
     }
-    r_4f6(String::new(), C_7C, false, 0.0, C_7D);
+    r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, C_7D);
     for r_4en in r_4eo {
         match r_4en {
             FormBlock::SectionHeading(r_4ey) => {
-                r_4f6(String::new(), C_7C, false, 0.0, 6.0);
+                r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, 6.0);
                 for l in f_2rm(&r_4eu, r_4ey, 12.5, r_4f1, "")? {
-                    r_4f6(l, 12.5, false, 0.0, C_7D + 2.0);
+                    r_4f6(&mut r_4f0, l, 12.5, false, 0.0, C_7D + 2.0);
                 }
             }
             FormBlock::Paragraph(r_4fb) => {
                 for l in f_2rm(&r_4eu, r_4fb, C_7C, r_4f1, "")? {
-                    r_4f6(l, C_7C, false, 0.0, C_7D);
+                    r_4f6(&mut r_4f0, l, C_7C, false, 0.0, C_7D);
                 }
             }
             FormBlock::Field { label, value } => {
                 let full = format!("{label}: {value}");
                 for l in f_2rm(&r_4eu, &full, C_7C, r_4f1 - 12.0, "    ")? {
-                    r_4f6(l, C_7C, false, 12.0, C_7D);
+                    r_4f6(&mut r_4f0, l, C_7C, false, 12.0, C_7D);
                 }
             }
             FormBlock::Bullets(r_4ez) => {
                 for item in r_4ez {
                     let full = format!("- {item}");
                     for l in f_2rm(&r_4eu, &full, C_7C, r_4f1 - 24.0, "  ")? {
-                        r_4f6(l, C_7C, false, 24.0, C_7D);
+                        r_4f6(&mut r_4f0, l, C_7C, false, 24.0, C_7D);
                     }
                 }
             }
+            FormBlock::Table { columns, rows } => {
+                let n = columns.len().max(rows.iter().map(|r| r.len()).max().unwrap_or(0)).max(1);
+                // Bề rộng cột theo chữ dài nhất của cột, kẹp 3–40 ký tự: bảng biên bản ngắn, không bắt người lập khai bề rộng.
+                let trong: Vec<f32> = (0..n)
+                    .map(|i| {
+                        // Tiêu đề cột đậm và không nên bị bẻ ("STT" → "ST/T"), nên tính rộng hơn chữ thường một chút.
+                        let mut m = columns.get(i).map(|c| c.chars().count() + 2).unwrap_or(0);
+                        for r in rows {
+                            m = m.max(r.get(i).map(|c| c.chars().count()).unwrap_or(0));
+                        }
+                        m.clamp(4, 40) as f32
+                    })
+                    .collect();
+                let tong: f32 = trong.iter().sum();
+                let xs: Vec<(f32, f32)> = {
+                    let mut x = C_7E;
+                    trong
+                        .iter()
+                        .map(|t| {
+                            let w = r_4f1 * t / tong;
+                            let r = (x, w);
+                            x += w;
+                            r
+                        })
+                        .collect()
+                };
+                let size = C_7C - 1.5;
+                let mut day = |cells: &[String], dam: bool| -> Result<(), PdfError> {
+                    let goi: Vec<Vec<String>> = (0..n)
+                        .map(|i| wrap_o(&r_4eu, cells.get(i).map(String::as_str).unwrap_or(""), size, xs[i].1 - C_7G * 2.0))
+                        .collect::<Result<_, _>>()?;
+                    let lines = goi.iter().map(|g| g.len().max(1)).max().unwrap_or(1) as f32;
+                    let cao = lines * C_7F + C_7G * 2.0;
+                    r_4f0.push(Tan {
+                        text: String::new(),
+                        size,
+                        center: false,
+                        indent: 0.0,
+                        leading: cao,
+                        row: Some(HangBang { cells: goi, xs: xs.clone(), dam, size, cao }),
+                    });
+                    Ok(())
+                };
+                if !columns.is_empty() {
+                    day(columns, true)?;
+                }
+                for r in rows {
+                    day(r, false)?;
+                }
+                r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, 6.0);
+            }
             FormBlock::Signatures { left, right } => {
-                r_4f6(String::new(), C_7C, false, 0.0, C_7D);
+                r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, C_7D);
                 let r_4f7 = left.len().max(right.len());
                 for i in 0..r_4f7 {
                     let l = left.get(i).cloned().unwrap_or_default();
                     let r = right.get(i).cloned().unwrap_or_default();
-                    r_4f6(format!("{l}\u{0009}{r}"), C_7C, false, -1.0, C_7D);
+                    r_4f6(&mut r_4f0, format!("{l}\u{0009}{r}"), C_7C, false, -1.0, C_7D);
                 }
-                r_4f6(String::new(), C_7C, false, 0.0, 60.0);
+                r_4f6(&mut r_4f0, String::new(), C_7C, false, 0.0, 60.0);
             }
         }
     }
@@ -1489,7 +1568,8 @@ fn render_form(
     let mut r_4fd: Vec<(char, u16, u16)> = Vec::new();
     let mut r_4f8 = std::collections::BTreeSet::new();
     for line in &r_4f0 {
-        for c in line.text.chars().filter(|c| *c != '\u{0009}') {
+        let trong_o = line.row.iter().flat_map(|h| h.cells.iter().flatten()).map(String::as_str);
+        for c in std::iter::once(line.text.as_str()).chain(trong_o).flat_map(str::chars).filter(|c| *c != '\u{0009}') {
             if r_4f8.insert(c) {
                 let run = f_2eo(&r_4eu, &c.to_string())?;
                 let (gid, r_4em) = run.glyphs[0];
@@ -1535,12 +1615,56 @@ fn render_form(
         ));
         Ok(())
     };
+    // Vẽ một hàng bảng có đáy ở `y`: viền từng ô rồi chữ trong ô (ET → nét vẽ → BT, vì cả trang là một khối chữ).
+    let ve_hang = |ops: &mut Vec<Operation>, hang: &HangBang, y: f32| -> Result<(), PdfError> {
+        let top = y + hang.cao;
+        ops.push(Operation::new("ET", vec![]));
+        ops.push(Operation::new("RG", vec![0.into(), 0.into(), 0.into()]));
+        ops.push(Operation::new("w", vec![0.5.into()]));
+        for (x, w) in &hang.xs {
+            ops.push(Operation::new("re", vec![(*x).into(), y.into(), (*w).into(), hang.cao.into()]));
+            ops.push(Operation::new("S", vec![]));
+        }
+        ops.push(Operation::new("BT", vec![]));
+        if hang.dam {
+            // Chữ đậm giả bằng tô + viền (Tr 2), như manual.rs — font chỉ có một mặt.
+            ops.push(Operation::new("w", vec![(hang.size * 0.035).into()]));
+            ops.push(Operation::new("Tr", vec![2.into()]));
+        }
+        for (i, (x, _)) in hang.xs.iter().enumerate() {
+            let mut yy = top - C_7G - hang.size;
+            for l in hang.cells.get(i).map(|v| v.as_slice()).unwrap_or(&[]) {
+                r_4et(ops, l, hang.size, x + C_7G, yy)?;
+                yy -= C_7F;
+            }
+        }
+        if hang.dam {
+            ops.push(Operation::new("Tr", vec![0.into()]));
+        }
+        Ok(())
+    };
+    // Tiêu đề cột của bảng đang in — lặp lại ở đầu trang mới khi bảng tràn trang.
+    let mut dau_bang: Option<&HangBang> = None;
     for line in &r_4f0 {
         y -= line.leading;
         if y < C_7E {
             r_4ev(&mut doc, &mut ops, &mut page_ids);
             y = C_0 - C_7E - line.leading;
+            if let (Some(hang), Some(dau)) = (&line.row, dau_bang) {
+                if !hang.dam {
+                    y -= dau.cao;
+                    ve_hang(&mut ops, dau, y + line.leading)?;
+                }
+            }
         }
+        if let Some(hang) = &line.row {
+            if hang.dam {
+                dau_bang = Some(hang);
+            }
+            ve_hang(&mut ops, hang, y)?;
+            continue;
+        }
+        dau_bang = None;
         if line.text.is_empty() {
             continue;
         }
@@ -1838,5 +1962,60 @@ mod khoi_ky_mau {
         doc.trailer.set("Root", cat);
         doc.save(&out).unwrap();
         println!("{lines:?} w={w} h={h}");
+    }
+}
+
+#[cfg(test)]
+mod bang_bien_ban_tests {
+    use super::*;
+
+    /// Biên bản có bảng: hàng dài (xuống dòng trong ô, mã băm không dấu cách) và nhiều hàng tới mức phải sang trang.
+    /// Mỗi hàng là một khối: trang nào cũng mở bằng viền hàng, không có hàng bị cắt đôi. Ở đây chỉ kiểm dựng được
+    /// và ra nhiều hơn một trang; nhìn bằng mắt thì chạy `xuat_bang_de_xem`.
+    #[test]
+    fn bien_ban_co_bang_dung_duoc_va_sang_trang() {
+        let Some(font) = sans_font().and_then(|p| std::fs::read(p).ok()) else {
+            return; // máy không có font hệ thống: bỏ qua
+        };
+        let mut rows = Vec::new();
+        for i in 1..=60 {
+            rows.push(vec![
+                i.to_string(),
+                format!("H49.132.02.2017.01.{i:07}"),
+                "Hồ sơ Hội nghị tổng kết công tác năm của Ủy ban nhân dân huyện và phương hướng nhiệm vụ năm sau".into(),
+                "3f2a9c1e8d7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f".into(),
+                if i % 7 == 0 { "Lỗi".into() } else { "Đạt".into() },
+            ]);
+        }
+        let blocks = vec![
+            FormBlock::Paragraph("Kiểm tra toàn vẹn theo kế hoạch năm 2026.".into()),
+            FormBlock::Table {
+                columns: vec!["STT".into(), "Mã hồ sơ".into(), "Tiêu đề".into(), "Mã băm".into(), "Kết quả".into()],
+                rows,
+            },
+            FormBlock::Signatures { left: vec!["NGƯỜI KIỂM TRA".into()], right: vec!["LÃNH ĐẠO".into()] },
+        ];
+        let pdf = f_ve("BIÊN BẢN KIỂM TRA", Some("(Mẫu 01)"), &blocks, &font).expect("biên bản có bảng phải dựng được");
+        assert!(pdf.starts_with(b"%PDF-"));
+        let doc = lopdf::Document::load_mem(&pdf).expect("PDF đọc lại được");
+        assert!(doc.get_pages().len() >= 2, "60 hàng phải tràn sang trang 2, ra {} trang", doc.get_pages().len());
+        // Bảng rỗng cột (hàng lệch số ô) không được làm hỏng.
+        let pdf2 = f_ve("B", None, &[FormBlock::Table { columns: vec![], rows: vec![vec!["a".into()], vec!["b".into(), "c".into()]] }], &font).expect("bảng không tiêu đề");
+        assert!(pdf2.starts_with(b"%PDF-"));
+    }
+
+    /// Xuất ra tệp để NHÌN:  $env:BANG_RA="D:\tmp\bang.pdf"; cargo test -p digitext-pdf xuat_bang_de_xem -- --ignored
+    #[test]
+    #[ignore]
+    fn xuat_bang_de_xem() {
+        let font = sans_font().and_then(|p| std::fs::read(p).ok()).expect("cần font hệ thống");
+        let rows: Vec<Vec<String>> = (1..=40)
+            .map(|i| vec![i.to_string(), format!("H49.132.02.2017.01.{i:07}"), "Hồ sơ Hội nghị tổng kết công tác năm".into(), "Đạt".into()])
+            .collect();
+        let blocks = vec![FormBlock::Table { columns: vec!["STT".into(), "Mã hồ sơ".into(), "Tiêu đề".into(), "Kết quả".into()], rows }];
+        let pdf = f_ve("BIÊN BẢN KIỂM TRA", None, &blocks, &font).unwrap();
+        let ra = std::env::var("BANG_RA").unwrap_or_else(|_| "bang-xem.pdf".into());
+        std::fs::write(&ra, &pdf).unwrap();
+        println!("đã ghi {ra} ({} byte)", pdf.len());
     }
 }

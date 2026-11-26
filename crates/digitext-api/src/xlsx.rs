@@ -14,8 +14,95 @@
 //!   giác xanh "number stored as text".
 //! - Bỏ qua `docProps/*`: Excel và LibreOffice đều mở được tệp không có chúng.
 
-use digitext_mucluc::mau::{cot_ten, Kieu, SheetMau};
+use digitext_mucluc::mau::{cot_ten, Kieu, SheetMau, O};
 use std::io::Write;
+
+/// Một cột của bảng xuất Excel ở máy chủ (báo cáo thống kê, sổ mượn trả, sổ nộp lưu, danh sách hồ sơ theo kho/giá).
+#[derive(Debug, Clone)]
+pub struct CotBang {
+    pub ten: String,
+    /// Bề rộng cột, đơn vị "ký tự" của Excel.
+    pub rong: f64,
+    /// Ghi dạng số (cộng được trong Excel). Ô không phân tích được thành số vẫn ra chữ, tệp không hỏng.
+    pub so: bool,
+    /// Căn giữa (ngày tháng, mã, số hộp).
+    pub giua: bool,
+    /// Mã dạng chữ ("01", "H49.132") — bảo Excel đừng gắn tam giác "number stored as text" lên từng ô.
+    pub ma: bool,
+}
+
+impl CotBang {
+    pub fn chu(ten: &str, rong: f64) -> Self {
+        Self { ten: ten.into(), rong, so: false, giua: false, ma: false }
+    }
+    pub fn so(ten: &str, rong: f64) -> Self {
+        Self { ten: ten.into(), rong, so: true, giua: true, ma: false }
+    }
+    pub fn ma(ten: &str, rong: f64) -> Self {
+        Self { ten: ten.into(), rong, so: false, giua: true, ma: true }
+    }
+}
+
+/// Một sheet dạng BẢNG (26/11/2026 — nhóm 0 kế hoạch Digifile TT05): vài dòng đầu gộp ngang hết cột (tên cơ quan / phông,
+/// tên báo cáo, bộ lọc), dòng tiêu đề cột, dữ liệu, dòng tổng (tuỳ chọn). Chỗ nào cần "một bảng ra Excel" thì gọi đây rồi
+/// `dong_goi` — không mỗi báo cáo tự xếp ô một kiểu.
+pub fn sheet_bang(ten: &str, dau: &[String], cot: &[CotBang], rows: &[Vec<String>], tong: Option<&[String]>) -> SheetMau {
+    let n = cot.len().max(1);
+    let cuoi = cot_ten(n - 1);
+    let mut out: Vec<Vec<O>> = Vec::with_capacity(dau.len() + rows.len() + 3);
+    let mut cao: Vec<Option<f64>> = Vec::with_capacity(out.capacity());
+    let mut gop = Vec::new();
+    for (i, d) in dau.iter().enumerate() {
+        let mut hang = vec![O { v: d.clone(), kieu: if i == 0 { Kieu::Tieu } else { Kieu::Dan }, so: false }];
+        hang.resize_with(n, O::default);
+        out.push(hang);
+        cao.push(None);
+        if n > 1 {
+            gop.push(format!("A{r}:{cuoi}{r}", r = out.len()));
+        }
+    }
+    if !dau.is_empty() {
+        out.push(vec![O::default(); n]);
+        cao.push(None);
+    }
+    out.push(cot.iter().map(|c| O { v: c.ten.clone(), kieu: Kieu::TieuDeCot, so: false }).collect());
+    cao.push(Some(30.0));
+    let dong_tieu_de = out.len() as u32;
+    let dau_du_lieu = out.len() + 1;
+    for r in rows {
+        out.push(
+            cot.iter()
+                .enumerate()
+                .map(|(i, c)| O { v: r.get(i).cloned().unwrap_or_default(), kieu: if c.giua { Kieu::OGiua } else { Kieu::O }, so: c.so })
+                .collect(),
+        );
+        cao.push(None);
+    }
+    if let Some(t) = tong {
+        out.push(cot.iter().enumerate().map(|(i, c)| O { v: t.get(i).cloned().unwrap_or_default(), kieu: Kieu::Nhom, so: c.so }).collect());
+        cao.push(None);
+    }
+    let cuoi_du_lieu = out.len();
+    let bo_qua_loi_so = if rows.is_empty() {
+        Vec::new()
+    } else {
+        cot.iter()
+            .enumerate()
+            .filter(|(_, c)| c.ma)
+            .map(|(i, _)| format!("{c}{a}:{c}{b}", c = cot_ten(i), a = dau_du_lieu, b = cuoi_du_lieu))
+            .collect()
+    };
+    SheetMau {
+        ten: ten.to_string(),
+        rong: cot.iter().map(|c| c.rong).collect(),
+        rows: out,
+        cao,
+        gop,
+        dong_bang: Some(dong_tieu_de + 1),
+        bo_qua_loi_so,
+        luoi: false,
+    }
+}
 
 /// Thoát ký tự cho nội dung XML, và bỏ các ký tự điều khiển XML 1.0 không chấp nhận (ô Excel
 /// không bao giờ nên có chúng, nhưng tên THBQ là dữ liệu người dùng nhập).
@@ -260,6 +347,37 @@ mod tests {
 
     /// Dùng lại hàm của `digitext-mucluc` — hai bản tính tên cột lệch nhau thì vùng gộp ô trỏ
     /// sai chỗ, mà Excel không kêu.
+    /// Bảng báo cáo đóng gói xong phải đọc lại được bằng bộ đọc Excel của repo, đúng số dòng, đúng chữ, ô mã không bị
+    /// đổi thành số, và dòng tổng nằm cuối.
+    #[test]
+    fn sheet_bang_dong_goi_xong_doc_lai_duoc() {
+        let cot = [CotBang::ma("Mã phông", 14.0), CotBang::chu("Tên phông", 40.0), CotBang::so("Hồ sơ", 10.0), CotBang::so("Trang", 10.0)];
+        let rows = vec![
+            vec!["01".to_string(), "UBND huyện Bình Liêu".to_string(), "120".to_string(), "4567".to_string()],
+            vec!["H49.132".to_string(), "Phòng Nội vụ".to_string(), "30".to_string(), "890".to_string()],
+        ];
+        let tong = ["".to_string(), "Tổng".to_string(), "150".to_string(), "5457".to_string()];
+        let sheet = sheet_bang(
+            "Theo phông",
+            &["Lưu trữ lịch sử tỉnh Quảng Ninh".to_string(), "BÁO CÁO TỔNG HỢP THEO PHÔNG".to_string(), "Năm 2026".to_string()],
+            &cot,
+            &rows,
+            Some(&tong),
+        );
+        assert_eq!(sheet.gop, vec!["A1:D1", "A2:D2", "A3:D3"], "ba dòng đầu gộp hết 4 cột");
+        assert_eq!(sheet.dong_bang, Some(6), "đóng băng tới hết dòng tiêu đề cột (dòng 5)");
+        assert_eq!(sheet.bo_qua_loi_so, vec!["A6:A8"], "cột mã bỏ cảnh báo từ dòng dữ liệu đầu tới dòng tổng");
+        let tep = dong_goi(&[sheet]).expect("đóng gói được");
+        let so = digitext_mucluc::doc_so_tu_bytes(&tep, None).expect("bộ đọc mở được");
+        assert_eq!(so.sheet, "Theo phông");
+        let chu: Vec<String> = so.rows.iter().flatten().map(|c| c.to_string()).collect();
+        assert!(chu.iter().any(|c| c == "01"), "mã '01' phải còn là chữ, không thành 1: {chu:?}");
+        assert!(chu.iter().any(|c| c == "UBND huyện Bình Liêu"));
+        assert!(chu.iter().any(|c| c == "Tổng"));
+        // Hai ô số trên cùng một dòng tổng: 150 và 5457 (đọc ra có thể là "150" hay "150.0" tuỳ bộ đọc — chỉ cần có mặt).
+        assert!(chu.iter().any(|c| c.starts_with("5457")), "{chu:?}");
+    }
+
     #[test]
     fn ten_cot_excel() {
         assert_eq!(cot_ten(0), "A");

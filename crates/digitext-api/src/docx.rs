@@ -25,6 +25,7 @@ pub fn from_form(blocks: &[FormBlock]) -> Vec<DocBlock> {
             FormBlock::Paragraph(t) => DocBlock::Paragraph(t.clone()),
             FormBlock::Field { label, value } => DocBlock::Field { label: label.clone(), value: value.clone() },
             FormBlock::Bullets(v) => DocBlock::Bullets(v.clone()),
+            FormBlock::Table { columns, rows } => DocBlock::Table { columns: columns.clone(), rows: rows.clone() },
             FormBlock::Signatures { left, right } => DocBlock::Signatures { left: left.clone(), right: right.clone() },
         })
         .collect()
