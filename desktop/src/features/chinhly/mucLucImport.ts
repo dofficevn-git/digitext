@@ -385,7 +385,7 @@ export function phanTichMucLuc(rows: unknown[][], opts: TuyChonMucLuc): PhanTich
     if (pbHienTai) pbHienTai.soHoSo++;
     if (mangHienTai) mangHienTai.soHoSo++;
     // Số tờ chỉ nhận số tự nhiên (anh Hiếu 5/10/2026); "47 tờ" / "47tờ" / "47 TỜ" / "47 to" nhận là 47 (16/10/2026).
-    // 2/11/2026: "18 quyển", "3,5", thiếu số tờ ở VV/≥20 năm → CẢNH BÁO (vẫn nhập, số tờ để trống, giá trị gốc
+    // 2/11/2026: "18 quyển", "3,5" → CẢNH BÁO (vẫn nhập, số tờ để trống, giá trị gốc
     // giữ ở Ghi chú) — mục lục cũ ghi "quyển" hàng trăm dòng, chặn thì không nhập được tệp nào.
     const soToGoc = lay(r, "soTo").trim();
     let soTo = soToGoc.normalize("NFC").replace(/^(\d+)\s*(tờ|to)\.?$/iu, "$1");
@@ -396,9 +396,12 @@ export function phanTichMucLuc(rows: unknown[][], opts: TuyChonMucLuc): PhanTich
       ghiChu = [ghiChu, `Số tờ gốc: ${soToGoc}`].filter(Boolean).join("; ");
       soTo = "";
     } else if (soTo && +soTo === 0) {
-      canhBao.push("Số tờ 0 — để trống");
+      // Số tờ 0 ở tài liệu phải đánh số tờ cũng là thiếu số tờ → chặn như ô trống.
+      if (phaiDanhSoTo) loi.push(`Thiếu số tờ — tài liệu bảo quản ${thbq} phải đánh số tờ (ô ghi 0)`);
+      else canhBao.push("Số tờ 0 — để trống");
       soTo = "";
-    } else if (!soTo && phaiDanhSoTo) canhBao.push(`Thiếu số tờ — tài liệu bảo quản ${thbq} phải đánh số tờ`);
+      // 26/11/2026 (anh Hiếu): thiếu số tờ ở tài liệu vĩnh viễn / từ 20 năm là LỖI CHẶN, tô đỏ — trước đó chỉ cảnh báo.
+    } else if (!soTo && phaiDanhSoTo) loi.push(`Thiếu số tờ — tài liệu bảo quản ${thbq} phải đánh số tờ`);
     out.rows.push({ dong, hopSo: hopHienTai, hoSoSo, tieuDe, thoiGianGoc, soTo, thbqGoc, thbq, vinhVien, ghiChu, phongBan: pbHienTai, mang: mangHienTai, tg, loi, canhBao });
   }
 

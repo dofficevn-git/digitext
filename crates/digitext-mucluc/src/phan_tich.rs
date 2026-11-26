@@ -544,10 +544,16 @@ pub fn phan_tich_muc_luc(rows: &[Vec<Data>], o: &TuyChon<'_>) -> PhanTich {
                 .join("; ");
             so_to = String::new();
         } else if la_so && so_to.parse::<u128>().unwrap_or(1) == 0 {
-            canh_bao.push("Số tờ 0 — để trống".into());
+            // Số tờ 0 ở tài liệu phải đánh số tờ cũng là thiếu số tờ → chặn như ô trống.
+            if phai_danh_so_to {
+                loi.push(format!("Thiếu số tờ — tài liệu bảo quản {} phải đánh số tờ (ô ghi 0)", thbq.as_deref().unwrap_or("")));
+            } else {
+                canh_bao.push("Số tờ 0 — để trống".into());
+            }
             so_to = String::new();
         } else if so_to.is_empty() && phai_danh_so_to {
-            canh_bao.push(format!("Thiếu số tờ — tài liệu bảo quản {} phải đánh số tờ", thbq.as_deref().unwrap_or("")));
+            // 26/11/2026 (anh Hiếu): thiếu số tờ ở tài liệu vĩnh viễn / từ 20 năm là LỖI CHẶN, tô đỏ — trước đó chỉ cảnh báo.
+            loi.push(format!("Thiếu số tờ — tài liệu bảo quản {} phải đánh số tờ", thbq.as_deref().unwrap_or("")));
         }
 
         out.rows.push(DongHoSo {
@@ -763,7 +769,7 @@ mod tests {
             tieu_de_cot(),
             hs("1", "1", "A năm 2020", "2020", "47 tờ", "Vĩnh viễn"),
             hs("1", "2", "B năm 2020", "2020", "18 quyển", "Vĩnh viễn"),
-            hs("1", "3", "C năm 2020", "2020", "0", "Vĩnh viễn"),
+            hs("1", "3", "C năm 2020", "2020", "0", "10 năm"),
         ]);
         assert_eq!(pt.rows[0].so_to, "47", "\"47 tờ\" phải nhận là 47");
         assert_eq!(pt.rows[1].so_to, "", "\"18 quyển\" để trống");
@@ -772,6 +778,22 @@ mod tests {
         assert_eq!(pt.rows[2].so_to, "");
         assert!(pt.rows[2].canh_bao.iter().any(|c| c == "Số tờ 0 — để trống"));
         assert_eq!(pt.so_loi, 0, "số tờ sai chỉ là cảnh báo, không chặn");
+    }
+
+    /// 26/11/2026: tài liệu vĩnh viễn / từ 20 năm thiếu số tờ (trống hoặc 0) là lỗi chặn; dưới 20 năm thì không.
+    #[test]
+    fn thieu_so_to_tu_20_nam_la_loi_chan() {
+        let pt = chay(vec![
+            tieu_de_cot(),
+            hs("1", "1", "A năm 2020", "2020", "", "Vĩnh viễn"),
+            hs("1", "2", "B năm 2020", "2020", "0", "20 năm"),
+            hs("1", "3", "C năm 2020", "2020", "", "10 năm"),
+        ]);
+        assert!(pt.rows[0].loi.iter().any(|l| l.starts_with("Thiếu số tờ")));
+        assert!(pt.rows[1].loi.iter().any(|l| l.starts_with("Thiếu số tờ")));
+        assert!(pt.rows[2].loi.is_empty());
+        assert!(!pt.rows[2].canh_bao.iter().any(|c| c.contains("số tờ")));
+        assert_eq!(pt.so_loi, 2);
     }
 
     #[test]

@@ -171,13 +171,13 @@ pub fn huong_dan() -> Vec<MucHuongDan> {
                 "Thiếu thời hạn bảo quản, khi không chọn THBQ mặc định cho cả tệp.".to_string(),
                 "Thời hạn bảo quản không có trong Danh mục — xem sheet \"Danh mục THBQ\", phải viết đúng tên ở đó.".to_string(),
                 "Hồ sơ số trùng với một dòng khác trong cùng tệp, cùng loại bảo quản.".to_string(),
+                "Tài liệu bảo quản vĩnh viễn hoặc từ 20 năm trở lên mà không có số tờ (ô trống hoặc ghi 0).".to_string(),
             ],
         },
         MucHuongDan {
             tieu_de: "Những thứ chỉ là cảnh báo (vẫn nhập được)".to_string(),
             y: vec![
                 "Số tờ ghi kèm đơn vị lạ (\"18 quyển\"): bỏ qua số tờ, ghi lại nguyên văn vào Ghi chú.".to_string(),
-                "Tài liệu bảo quản vĩnh viễn hoặc từ 20 năm trở lên mà không có số tờ.".to_string(),
                 "Thời gian suy ra từ năm trong tiêu đề vì ô thời gian để trống.".to_string(),
             ],
         },
