@@ -1,0 +1,72 @@
+/* BỘ MÀU (26/11/2026) — lấy từ DO365 (D:\DO365-MASTER\02_EXECUTION\frontend\web\src\bo-mau.css, anh P chốt 19/11/2026):
+   ba bộ DO365 (cam logo DOFFICE) · Microsoft Teams (tím, mặc định) · Zalo (xanh). Người dùng chọn ở nút bảng màu đáy
+   thanh bên (features/shell/ChonBoMau.tsx), ghi nhớ theo MÁY (localStorage), không phải theo tài khoản.
+
+   Cách hoạt động: mặc định (không lớp nào) = bộ Teams, đúng như trước khi có tính năng — tệp này không đụng tới nó.
+   Chọn bộ khác = gắn `theme-do365` / `theme-zalo` lên <html>. PHẢI là <html>, không phải <body>: các token dẫn xuất
+   (--color-primary, --color-surface-selected, --side-bg, --top-bg…) khai ở :root bằng var() nên chỉ tính lại khi token
+   gốc đổi ngay trên :root.
+
+   Chỉ đặt lại token GỐC: dải brand-50…900 (màu nhấn, thanh trên, thanh bên) và nền/viền/chữ trung tính cho khớp sắc.
+   Mã chính (500 / 600 / 50, nền trang, viền, chữ) là của DO365; các bậc còn lại của dải brand nội suy từ đó.
+   KHÔNG đổi: màu trạng thái (success/warning/danger/info), cam "đang chạy" (run-*), bốn màu biểu đồ phân loại
+   (chart-1..4 đã qua kiểm mù màu — đổi theo bộ là mất bảo đảm đó).
+   Nền tối: DO365 có, DigiText CHƯA có (cần rà riêng) — không nằm trong tệp này.
+
+   NẠP SAU CÙNG (main.tsx). */
+
+/* ───────── Bộ DO365 — cam logo DOFFICE #C2410C (chữ trắng 5,2:1) ───────── */
+:root.theme-do365 {
+  --color-brand-50: #fdefe6;
+  --color-brand-100: #fbdcc8;
+  --color-brand-200: #f6bc98;
+  --color-brand-300: #ee9462;
+  --color-brand-400: #dd6a2e;
+  --color-brand-500: #c2410c;
+  --color-brand-600: #9e350a;
+  --color-brand-700: #7f2b09;
+  --color-brand-800: #632208;
+  --color-brand-900: #471806;
+
+  --color-gray-50: #f6f6f8;
+  --color-gray-100: #eff0f3;
+  --color-gray-150: #e6e8ec;
+  --color-gray-200: #d8dce2;
+  --color-table-head: #fbf3ee;
+
+  --color-fg: #1b1f24;
+  --color-fg-muted: #3d4651;
+  --color-fg-subtle: #5b6470;
+  --color-fg-placeholder: #5b6470;
+  --color-border-subtle: #e6e8ec;
+  --color-border: #cfd4db;
+  --color-border-strong: #bcc3cc;
+}
+
+/* ───────── Bộ Zalo — xanh #0068FF (chữ trắng 4,7:1) ───────── */
+:root.theme-zalo {
+  --color-brand-50: #e5f0ff;
+  --color-brand-100: #cce0ff;
+  --color-brand-200: #99c2ff;
+  --color-brand-300: #66a3ff;
+  --color-brand-400: #3385ff;
+  --color-brand-500: #0068ff;
+  --color-brand-600: #0052cc;
+  --color-brand-700: #0041a3;
+  --color-brand-800: #00317a;
+  --color-brand-900: #002152;
+
+  --color-gray-50: #ebedf0;
+  --color-gray-100: #f1f3f5;
+  --color-gray-150: #e4e7eb;
+  --color-gray-200: #d4d9e0;
+  --color-table-head: #eef4fd;
+
+  --color-fg: #081c36;
+  --color-fg-muted: #34435a;
+  --color-fg-subtle: #5a6981;
+  --color-fg-placeholder: #5a6981;
+  --color-border-subtle: #e4e7eb;
+  --color-border: #cbd2db;
+  --color-border-strong: #b7c0cc;
+}

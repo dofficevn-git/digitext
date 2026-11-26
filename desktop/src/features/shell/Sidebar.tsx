@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Tip } from "@/ui";
 import { gotoLeaf, leafActive, NAV_TREE, type NavBadge, type V46s } from "./navTree";
 import { getOpenGroups, setOpenGroups, V46v, V46w } from "./sidebarPrefs";
+import ChonBoMau from "./ChonBoMau";
 import { TOGGLE_SIDEBAR_EVENT } from "./Topbar";
 import { useNotifications } from "./useNotifications";
 import { shouldUseRail, useNarrowViewport } from "./useNarrowViewport";
@@ -283,6 +284,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="side-foot">
+        <ChonBoMau />
         {!narrow && (
           <Tip text={collapsed ? "Mở rộng thanh bên (Ctrl+B)" : "Thu gọn thanh bên (Ctrl+B)"} side="right">
             <button
