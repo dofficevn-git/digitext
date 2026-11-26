@@ -30,7 +30,7 @@
 // dưới mà chưa có dòng mảng "1. …" → tự tạo mảng "Vấn đề chung" (mã 00) nhét các hồ sơ đó vào, không báo lỗi nữa.
 // 2/11/2026 (23 mục lục thật của Bắc Giang, test/MLHS): tên cột so sau khi bỏ dấu + bỏ mọi khoảng trắng ("TH\nBQ",
 // "BĐ"/"KT" tách cột, "SỐ" = số tờ, "Hồ sơ mới", "Cặp số", "Trích yếu"); thời gian không bắt buộc có cột (suy từ
-// tiêu đề); tự chọn sheet có dòng tiêu đề (sheet đầu thường là bìa); tệp không có dòng "I." → phòng ban "Chung" (00);
+// tiêu đề); tự chọn sheet có dòng tiêu đề (sheet đầu thường là bìa); tệp không có dòng "I." → CHẶN (26/11, trước đó tự tạo "Chung");
 // số tờ không phải số / thiếu số tờ / hộp lẫn hai loại chỉ là CẢNH BÁO (vẫn nhập); THBQ trống → THBQ mặc định chọn
 // cho cả tệp. Vẫn chặn: hồ sơ số trùng cùng loại, thiếu tiêu đề, thời gian không suy được (12/10).
 
@@ -293,16 +293,14 @@ export function phanTichMucLuc(rows: unknown[][], opts: TuyChonMucLuc): PhanTich
   const demThbq = new Map<string, number>();
   const tenVv = new Set((opts.thbqVinhVien ?? ["Vĩnh viễn"]).map((t) => t.toLowerCase()));
 
-  // Tệp không có dòng phòng ban "I. …" nào (22/23 mục lục Bắc Giang) → một phòng ban "Chung" (00) cho cả tệp; mảng
-  // "1. …" nếu có vẫn nhận bên trong; không có mảng → "Vấn đề chung" như thường lệ.
+  // 26/11/2026 (anh Hiếu): KHÔNG tự tạo phòng ban "Chung" nữa — thiếu mảng thì tạo "Vấn đề chung" được, thiếu phòng
+  // ban thì không. Cờ chỉ còn để hộp thoại giải thích; từng hồ sơ nhận lỗi chặn "Chưa có dòng phòng ban" ở dưới.
   const coDongPhongBan = rows.slice(hd.dong).some((r) => {
     const rr = r ?? [];
     return !soChuan(hd.cot.hoSoSo === undefined ? "" : cellText(rr[hd.cot.hoSoSo])) && RE_PHONG_BAN.test(cellText(rr[hd.cot.tieuDe ?? -1]).replace(/\s+/g, " ").trim());
   });
   if (!coDongPhongBan) {
     out.khongChiaPhongBan = true;
-    pbHienTai = { dong: hd.dong, stt: 0, ma: MA_PHONG_BAN_CHUNG, ten: PHONG_BAN_CHUNG, mangs: [], soHoSo: 0, tuDong: true };
-    out.phongBans.push(pbHienTai);
   }
 
   for (let i = hd.dong; i < rows.length; i++) {

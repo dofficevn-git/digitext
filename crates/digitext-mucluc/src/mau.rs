@@ -149,7 +149,7 @@ pub fn huong_dan() -> Vec<MucHuongDan> {
                 "Dòng mở đầu bằng số rồi dấu chấm là MẢNG CÔNG VIỆC: \"1. Công tác tổ chức cán bộ\".".to_string(),
                 "Hồ sơ phải nằm DƯỚI một dòng phòng ban. Hồ sơ nằm trên dòng phòng ban đầu tiên là lỗi chặn.".to_string(),
                 "Hồ sơ nằm ngay dưới phòng ban mà chưa có dòng mảng nào thì máy chủ tự xếp vào mảng \"Vấn đề chung\".".to_string(),
-                "Tệp không có dòng phòng ban nào thì toàn bộ hồ sơ vào phòng ban \"Chung\" (mã 00) — vẫn nhập được.".to_string(),
+                "Tệp không có dòng phòng ban nào thì KHÔNG nhập được: thêm dòng \"I. <tên phòng ban>\" phía trên các hồ sơ.".to_string(),
             ],
         },
         MucHuongDan {

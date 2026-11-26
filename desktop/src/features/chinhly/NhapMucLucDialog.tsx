@@ -298,7 +298,7 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
           <Help title="Hệ thống làm gì với tệp">
             <ul className="list-disc space-y-1 pl-5 text-sm">
               <li>Tự chọn sheet có dòng tiêu đề cột (bỏ qua sheet bìa); đổi sheet được ở bước Kiểm tra. Nhận cột theo tên: Hộp số / Cặp số, Hồ sơ số / Số HS / Hồ sơ mới, Tiêu đề / Nội dung / Trích yếu, Thời gian hoặc hai cột BĐ – KT, Số tờ / SỐ, THBQ / Thời hạn, Ghi chú.</li>
-              <li>Tự nhận phòng ban (I., II.…) và mảng công việc (1., 2.…); chưa có trong Danh mục thì tạo mới với mã 01, 02… theo thứ tự. Tệp không có dòng I. nào → cả tệp vào phòng ban "Chung" (00).</li>
+              <li>Tự nhận phòng ban (I., II.…) và mảng công việc (1., 2.…); chưa có trong Danh mục thì tạo mới với mã 01, 02… theo thứ tự. Tệp không có dòng I. nào thì không nhập được — thêm dòng "I. Tên phòng ban" phía trên hồ sơ.</li>
               <li>Kiểm cột thời gian: ô trống, sai định dạng, ngày đầu sau ngày cuối, năm không khớp năm ghi ở tiêu đề. Tự điền: chỉ năm → cả năm, chỉ tháng → cả tháng, một ngày → lặp lại, mốc sai → suy từ năm trong ô hoặc tiêu đề. Không có cột thời gian thì suy từ năm trong tiêu đề.</li>
               <li>Số tạm = Hồ sơ số trong tệp. Hộp số và Hồ sơ số ghi vào hồ sơ; có quyền Hệ thống hoá thì xếp hộp ngay (hộp chỉ ghi ở dòng đầu hộp cũng được — mang xuống).</li>
               <li>Số tờ chỉ nhận số tự nhiên (vd. 12 hoặc 12 tờ). Ghi kèm chữ như &quot;01 quyển&quot; là cảnh báo: vẫn nhập, số tờ để trống, giá trị gốc ghi vào Ghi chú — ô đó tô vàng trong tệp đánh dấu.</li>
@@ -335,8 +335,8 @@ export default function NhapMucLucDialog({ cat, phong, offline, onClose, onImpor
             <span className="text-sm text-fg-subtle">Tệp: {tenTep}</span>
           </Toolbar>
           {pt.khongChiaPhongBan && (
-            <Banner tone="info">
-              Tệp không có dòng phòng ban "I. …" — toàn bộ hồ sơ vào phòng ban <b>Chung</b> (mã 00){pt.phongBans[0]?.mangs.some((m) => !m.tuDong) ? ", mảng theo các dòng \"1. …\" trong tệp" : ", mảng \"Vấn đề chung\""}. Hộp vẫn xếp theo số hộp trong tệp.
+            <Banner tone="danger">
+              Tệp chưa có dòng phòng ban. Thêm một dòng <b>I. Tên phòng ban</b> phía trên các hồ sơ rồi chọn lại tệp.
             </Banner>
           )}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-7">

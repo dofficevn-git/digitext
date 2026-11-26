@@ -332,23 +332,15 @@ pub fn phan_tich_muc_luc(rows: &[Vec<Data>], o: &TuyChon<'_>) -> PhanTich {
         o.thbq_vinh_vien.iter().map(|t| t.to_lowercase()).collect()
     };
 
-    // Tệp không có dòng phòng ban "I. …" nào → một phòng ban "Chung" (00) cho cả tệp.
     let co_dong_phong_ban = rows.iter().skip(dong_td).any(|r| {
         so_chuan(&lay(r, cot.ho_so_so, false)).is_empty()
             && re_phong_ban().is_match(&gon_cach(&lay(r, cot.tieu_de, false)))
     });
+    // 26/11/2026 (anh Hiếu): KHÔNG tự tạo phòng ban "Chung" nữa — thiếu mảng thì tạo "Vấn đề chung" được,
+    // thiếu phòng ban thì không. Cờ chỉ còn để hộp thoại giải thích; từng hồ sơ nhận lỗi chặn
+    // "Chưa có dòng phòng ban" ở dưới.
     if !co_dong_phong_ban {
         out.khong_chia_phong_ban = true;
-        out.phong_bans.push(NhomPhongBan {
-            dong: dong_td,
-            stt: 0,
-            ma: MA_PHONG_BAN_CHUNG.into(),
-            ten: PHONG_BAN_CHUNG.into(),
-            mangs: Vec::new(),
-            so_ho_so: 0,
-            tu_dong: true,
-        });
-        pb_idx = Some(0);
     }
 
     for (i, r) in rows.iter().enumerate().skip(dong_td) {
@@ -668,22 +660,22 @@ mod tests {
     fn tieu_de_cot() -> Vec<Data> {
         vec![o("Hộp số"), o("Hồ sơ số"), o("Tiêu đề hồ sơ"), o("Thời gian"), o("Số tờ"), o("THBQ"), o("Ghi chú")]
     }
+    /// Dòng phòng ban: từ 26/11/2026 hồ sơ không có phòng ban phía trên là lỗi chặn.
+    fn pb() -> Vec<Data> {
+        vec![o(""), o(""), o("I. Phòng A"), o(""), o(""), o(""), o("")]
+    }
     fn hs(hop: &str, so: &str, td: &str, tg: &str, to: &str, bq: &str) -> Vec<Data> {
         vec![o(hop), o(so), o(td), o(tg), o(to), o(bq), o("")]
     }
 
     #[test]
-    fn khong_co_dong_phong_ban_thi_tu_tao_chung() {
+    fn khong_co_dong_phong_ban_thi_chan() {
         let pt = chay(vec![tieu_de_cot(), hs("1", "1", "Hồ sơ năm 2020", "2020", "10", "Vĩnh viễn")]);
         assert!(pt.khong_chia_phong_ban);
-        assert_eq!(pt.phong_bans.len(), 1);
-        assert_eq!((pt.phong_bans[0].ma.as_str(), pt.phong_bans[0].ten.as_str()), ("00", "Chung"));
+        assert!(pt.phong_bans.is_empty(), "không tự tạo phòng ban \"Chung\"");
         assert_eq!(pt.rows.len(), 1);
-        assert_eq!(pt.so_loi, 0);
-        // không có dòng mảng → tự tạo "Vấn đề chung"
-        assert_eq!(pt.phong_bans[0].mangs.len(), 1);
-        assert_eq!(pt.phong_bans[0].mangs[0].ten, MANG_VAN_DE_CHUNG);
-        assert!(pt.phong_bans[0].mangs[0].tu_dong);
+        assert!(pt.rows[0].loi.iter().any(|l| l.starts_with("Chưa có dòng phòng ban")));
+        assert!(co_loi_chan(&pt));
     }
 
     #[test]
@@ -737,6 +729,7 @@ mod tests {
     fn hop_so_mang_xuong_dong_sau() {
         let pt = chay(vec![
             tieu_de_cot(),
+            pb(),
             hs("5", "1", "Hồ sơ năm 2020", "2020", "10", "Vĩnh viễn"),
             hs("", "2", "Hồ sơ năm 2021", "2021", "10", "Vĩnh viễn"),
         ]);
@@ -749,6 +742,7 @@ mod tests {
     fn trung_ho_so_so_chi_trong_cung_loai() {
         let pt = chay(vec![
             tieu_de_cot(),
+            pb(),
             hs("1", "1", "A năm 2020", "2020", "10", "Vĩnh viễn"),
             hs("1", "1", "B năm 2020", "2020", "10", "5 năm"),
         ]);
@@ -756,17 +750,19 @@ mod tests {
 
         let pt2 = chay(vec![
             tieu_de_cot(),
+            pb(),
             hs("1", "1", "A năm 2020", "2020", "10", "Vĩnh viễn"),
             hs("1", "1", "B năm 2020", "2020", "10", "Vĩnh viễn"),
         ]);
         assert_eq!(pt2.so_loi, 1);
-        assert!(pt2.rows[1].loi[0].contains("trùng với dòng 2"));
+        assert!(pt2.rows[1].loi[0].contains("trùng với dòng 3"));
     }
 
     #[test]
     fn so_to_co_don_vi_va_khong_phai_so() {
         let pt = chay(vec![
             tieu_de_cot(),
+            pb(),
             hs("1", "1", "A năm 2020", "2020", "47 tờ", "Vĩnh viễn"),
             hs("1", "2", "B năm 2020", "2020", "18 quyển", "Vĩnh viễn"),
             hs("1", "3", "C năm 2020", "2020", "0", "10 năm"),
@@ -785,6 +781,7 @@ mod tests {
     fn thieu_so_to_tu_20_nam_la_loi_chan() {
         let pt = chay(vec![
             tieu_de_cot(),
+            pb(),
             hs("1", "1", "A năm 2020", "2020", "", "Vĩnh viễn"),
             hs("1", "2", "B năm 2020", "2020", "0", "20 năm"),
             hs("1", "3", "C năm 2020", "2020", "", "10 năm"),
@@ -800,6 +797,7 @@ mod tests {
     fn hop_lan_hai_loai_thi_canh_bao() {
         let pt = chay(vec![
             tieu_de_cot(),
+            pb(),
             hs("7", "1", "A năm 2020", "2020", "10", "Vĩnh viễn"),
             hs("7", "1", "B năm 2020", "2020", "10", "5 năm"),
         ]);
@@ -826,7 +824,7 @@ mod tests {
 
     #[test]
     fn thieu_thbq_la_loi_chan() {
-        let pt = chay(vec![tieu_de_cot(), hs("1", "1", "A năm 2020", "2020", "10", "")]);
+        let pt = chay(vec![tieu_de_cot(), pb(), hs("1", "1", "A năm 2020", "2020", "10", "")]);
         assert!(co_loi_chan(&pt));
         assert!(pt.rows[0].loi.iter().any(|l| l.contains("Thiếu thời hạn bảo quản")));
     }
