@@ -3,7 +3,9 @@
 //! đọc bản có watermark, nhật ký khai thác. Chỉ mục và hàm `khong_dau` / `cl_vb_tim` / `cl_hs_tim` ở migration 0026.
 //!
 //! - `GET /tra-cuu?projectId&q&noiDung&phongId&hoSoId&thbqId&loaiVb&namTu&namDen&cheDo&daHuy&limit&offset` — mỗi dòng
-//!   một văn bản; các từ của `q` phải có mặt theo đúng thứ tự (mẫu `%tu1%tu2%`), khớp mục lục hoặc lớp chữ.
+//!   một văn bản; các từ của `q` phải có mặt theo đúng thứ tự (mẫu `%tu1%tu2%`), khớp mục lục hoặc lớp chữ. Mục lục gói
+//!   AIP nhập vào ghi MÃ loại văn bản (TT05, vd "32") nên `q` cũng được dịch sang mã qua `cl_loai_van_ban` — gõ tên loại
+//!   ("quyết định") vẫn ra tài liệu nhập từ gói (26/11/2026).
 //! - `GET /tra-cuu/bo-loc?projectId` — phông, THBQ, loại văn bản, khoảng năm để dựng bộ lọc.
 //! - `GET /tra-cuu/tai-lieu/{documentId}/doc` — bản đọc có watermark (không tải). Cán bộ lưu trữ (`access.review`) đọc
 //!   mọi tài liệu; người khai thác chỉ đọc thẳng tài liệu CÔNG KHAI khi phí đọc của dự án bằng 0 — còn lại gửi yêu cầu
@@ -148,6 +150,22 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
         }
         None => None,
     };
+    // Loại văn bản: mục lục gói AIP nhập vào ghi MÃ TT05 ("32"), người tra cứu gõ TÊN ("quyết định"). Dịch từ tìm thành
+    // danh sách mã trước (cl_loai_van_ban chỉ vài chục dòng) rồi so bằng `=` trong câu chính, để câu chính vẫn dùng được
+    // chỉ mục trigram trên cl_vb_tim thay vì phải LIKE trên tên loại của từng dòng.
+    let ma_loai: Vec<String> = match mau.as_deref() {
+        Some(m) => {
+            sqlx::query_scalar(
+                "SELECT DISTINCT btrim(ma) FROM cl_loai_van_ban \
+                 WHERE deleted_at IS NULL AND (project_id IS NULL OR project_id = $2) AND khong_dau(ten) LIKE $1",
+            )
+            .bind(m)
+            .bind(q.project_id)
+            .fetch_all(&st.pool)
+            .await?
+        }
+        None => Vec::new(),
+    };
     let noi_dung = q.noi_dung.unwrap_or(true) && mau.is_some();
     let da_huy = q.da_huy.unwrap_or(false) && ts.has_perm(Permission::AccessReview);
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
@@ -161,7 +179,8 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
                 f.document_id, d.ky_so, COALESCE(d.status = 'disposed', false) AS da_huy, \
                 CASE WHEN $2::text IS NULL THEN NULL \
                      WHEN cl_vb_tim(v.trich_yeu, v.so_ky_hieu, v.co_quan_ban_hanh, v.loai_vb, v.tu_khoa) LIKE $2 \
-                       OR cl_hs_tim(h.tieu_de, h.so_ky_hieu_hs, h.tu_khoa, h.so_tam) LIKE $2 THEN 'muc_luc' \
+                       OR cl_hs_tim(h.tieu_de, h.so_ky_hieu_hs, h.tu_khoa, h.so_tam) LIKE $2 \
+                       OR btrim(v.loai_vb) = ANY($14::text[]) THEN 'muc_luc' \
                      ELSE 'noi_dung' END AS khop, \
                 count(*) OVER () AS tong \
          FROM cl_ho_so h \
@@ -179,6 +198,7 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
            AND ($2::text IS NULL \
                 OR cl_vb_tim(v.trich_yeu, v.so_ky_hieu, v.co_quan_ban_hanh, v.loai_vb, v.tu_khoa) LIKE $2 \
                 OR cl_hs_tim(h.tieu_de, h.so_ky_hieu_hs, h.tu_khoa, h.so_tam) LIKE $2 \
+                OR btrim(v.loai_vb) = ANY($14::text[]) \
                 OR f.document_id IN (SELECT document_id FROM nd)) \
            AND ($3::uuid IS NULL OR p.id = $3) \
            AND ($4::uuid IS NULL OR h.id = $4) \
@@ -205,6 +225,7 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
         .bind(da_huy)
         .bind(limit)
         .bind(offset)
+        .bind(&ma_loai)
         .fetch_all(&st.pool)
         .await?;
     let tong = dong.first().map(|d| d.tong).unwrap_or(0);
