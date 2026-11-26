@@ -1089,11 +1089,12 @@ dependencies = [
  "serde",
  "thiserror 2.0.18",
  "unicode-normalization",
+ "uuid",
 ]
 
 [[package]]
 name = "digitext-desktop"
-version = "0.25.18"
+version = "0.25.19"
 dependencies = [
  "aes-gcm",
  "argon2",
