@@ -1,11 +1,11 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
 // Biểu mẫu chỉnh lý ra PDF TẠI MÁY TRẠM (27/11/2026, đợt 4 nhóm 3C): cùng dữ liệu và cách sắp xếp với print.ts (HTML), nhưng dựng
 // bằng bộ dựng PDF chung (`pdf_manual`) → tệp PDF thật, phông chữ nhúng, không phụ thuộc trình duyệt. HTML `window.print` giữ làm
-// "In nhanh" một vài bản phát hành rồi bỏ (đề xuất câu 18). Nhãn hộp 2×2 còn ở HTML.
+// "In nhanh" một vài bản phát hành rồi bỏ (đề xuất câu 18). Nhãn hộp 2×2 ra PDF từ đợt 5 (27/11/2026).
 
 import { str, num, type ClRow } from "@/api/chinhly";
 import { kb, pdfManual, type KhoiIn } from "@/api/inPdf";
-import { collator, hoaDau, khoangNgay, namTuDen, sapXepHoSo, soThanhChu } from "./print";
+import { collator, hoaDau, khoangNgay, namTuDen, nhanHopData, sapXepHoSo, soThanhChu } from "./print";
 
 const COT_MLHS = ["Hộp số", "Hồ sơ số", "Tiêu đề hồ sơ", "Ngày tháng bắt đầu – kết thúc", "Số tờ", "Thời hạn bảo quản", "Ghi chú"];
 const RONG_MLHS = [7, 8, 46, 18, 7, 13, 12];
@@ -152,4 +152,19 @@ export function pdfPhuLuc(rows: ClRow[], tenPhong: string, ten = "huong-dan-tra-
   }
   const blocks: KhoiIn[] = [dau(tenPhong, ""), kb.title("HƯỚNG DẪN TRA TÌM MỤC LỤC"), kb.gap(6), kb.table(["STT", "Nội dung", "Từ hồ sơ", "Đến hồ sơ", "Từ hộp số", "Đến hộp số", "Trang mục lục"], [5, 40, 9, 9, 9, 9, 10], bang), ...khoiKy()];
   return pdfManual(blocks, ten, false);
+}
+
+/** Nhãn hộp 2×2 (A4 dọc, 4 nhãn một trang, có viền cắt): cơ quan / phông, phòng ban, HỘP SỐ, năm, từ – đến hồ sơ, THBQ. */
+export function pdfNhanHop(rows: ClRow[], tenPhong: string, ten = "nhan-hop.pdf") {
+  const nhans = nhanHopData(rows).map((x) => ({
+    top: [tenPhong.toUpperCase(), x.tenPb, "*****"].filter(Boolean),
+    big: x.hop,
+    bottom: [
+      ["Năm", x.nam],
+      ["Từ hồ sơ số", x.tu],
+      ["Đến hồ sơ số", x.den],
+      ["Thời hạn bảo quản", x.thbq],
+    ] as [string, string][],
+  }));
+  return pdfManual([kb.labels(nhans)], ten, false);
 }

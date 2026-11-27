@@ -350,9 +350,11 @@ async fn generate(
         },
     ];
     let r_jy;
+    // Người bị giới hạn phông (0038) chỉ kết xuất từ tài liệu đã nối mục lục thuộc phông được cấp (đợt 5, 27/11/2026).
+    let pham_vi = crate::routes::chinh_ly::pham_vi_phong(&r_jv, &r_jm, r_ju.project_id).await?;
     let r_jx = match r_ju.hinh_thuc.as_str() {
         "danh_muc" => {
-            let hits = info::f_x8(&r_jv.pool, r_ju.project_id, &r_ju.chu_de, quota + 1).await?;
+            let hits = info::f_x8(&r_jv.pool, r_ju.project_id, &r_ju.chu_de, quota + 1, pham_vi.as_deref()).await?;
             r_jy = hits.len() as i64 > quota;
             let hits = &hits[..hits.len().min(quota as usize)];
             r_jn.push(FormBlock::SectionHeading(format!(
@@ -375,7 +377,7 @@ async fn generate(
             "DANH MỤC TÀI LIỆU LƯU TRỮ THEO CHỦ ĐỀ"
         }
         "trich_xuat" => {
-            let hits = info::f_1b9(&r_jv.pool, r_ju.project_id, &r_ju.chu_de, quota + 1).await?;
+            let hits = info::f_1b9(&r_jv.pool, r_ju.project_id, &r_ju.chu_de, quota + 1, pham_vi.as_deref()).await?;
             r_jy = hits.len() as i64 > quota;
             let hits = &hits[..hits.len().min(quota as usize)];
             r_jn.push(FormBlock::SectionHeading(format!(

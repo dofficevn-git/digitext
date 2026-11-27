@@ -284,6 +284,32 @@ Chưa làm / cần anh: (17) mẫu PL VI chính thức để so câu chữ, có 
 in HTML (hiện song song); (19) phạm vi phông có cần áp cho kho tệp thi công (`documents` không gắn phông) và `/cl/rows/{table}/{id}` không.
 Ngoài kế hoạch còn: nhãn hộp 2×2 ra PDF, cổng độc giả web, tài liệu ảnh / ghi âm, email / SMS (đã ghi "để sau" trong plan).
 
+### GĐ10 — Đợt 5: dọn phần còn sót (cơ quan lưu trữ, lịch sử phông, bịt phạm vi phông, nhãn hộp PDF, nợ Digifile) (27/11/2026, nhánh `feat/ban-luu-tru`)
+
+Anh bảo "làm đợt tiếp theo" sau khi 4 đợt xong → làm phần còn sót TRONG phạm vi đã chốt, không đụng nhóm "để sau" (cổng độc giả web,
+ảnh / ghi âm, email / SMS).
+
+Đã làm:
+- **0039** `co_quan_luu_tru` (một dòng / dự án), `phong_lich_su` (phiên bản theo phông).
+- **Cấu hình cơ quan lưu trữ** (Digifile B01): `GET/PUT /projects/{id}/co-quan`; dùng ở hạn nộp lưu / mốc nhắc / quyền sử dụng (SQL
+  `COALESCE` theo dự án, worker nhắc theo mốc từng dự án), khối ký + đầu văn bản báo cáo TT05, trang thể thức chuyển đổi. Chưa khai = như
+  trước (tên dự án, 60 / 15-7-1 / 360, "LÃNH ĐẠO CƠ QUAN"). **Mẫu sinh mã hồ sơ (B06) chưa đổi** — mã nằm ở ba nơi (view SQL, hệ thống
+  hoá, desktop offline) và dữ liệu cũ đã mang mã; đổi cần anh chốt công thức (câu (20) dưới).
+- **Lịch sử đơn vị hình thành phông có phiên bản** (B02): `GET/POST /cl/phong/{id}/lich-su`; desktop Danh mục › tab Phông › "Lịch sử phông".
+- **Bịt phạm vi phông** (nợ 4C): `/cl/rows/*` (đọc / ghi / xoá / khôi phục, kể cả dời hồ sơ sang phông khác), `POST /cl/sync/push` (op ngoài
+  phông bị từ chối `phong_scope`, không áp), `/access` (lập / nạp / danh sách), `/info/{id}/generate`, `/nop-luu/*`, `/danh-muc-ho-so`.
+- **Nhãn hộp 2×2 ra PDF** (`ManualBlock::Labels2x2`), menu Kết xuất "Nhãn hộp (PDF)"; HTML giữ "In nhanh".
+- **Nợ Digifile**: cột "Cơ quan ban hành" trong Excel 51 cột đọc được; ngôn ngữ `01;02` tách đúng; `digitext sign` báo ngay khi slot không
+  có token (không chờ driver ~40 s). Mức độ tin cậy mặc định: TT02 không có trường này (chỉ `cl_van_ban.do_tin_cay` TT05) — không sửa.
+- **Desktop 0.25.22** cả hai bản; Tauri `bc_call` kiểm quyền theo đường.
+- **Kiểm chứng**: `cargo test` core / pdf / extimport / api / db; kịch bản `dev/luutru/thu-dot-5.ps1` (tự áp 0039): cấu hình cơ quan →
+  hạn nộp 90 ngày phản ánh ở `ho-so-can-nop`, PDF báo cáo có cấp trên + chức vụ + người ký; lịch sử phông 2 phiên bản; nvc giới hạn
+  phông A bị chặn ở `/cl/rows` (GET / PUT / POST / DELETE), push, khai thác, danh mục hồ sơ; PDF chuyển đổi mang tên cơ quan mới.
+
+Chưa làm / cần anh: (20) công thức mã hồ sơ theo Phụ lục I (có thêm mã cơ quan lưu trữ ở đầu không, áp cho hồ sơ cũ thế nào); (21) lịch
+sử phông có đưa vào EAD `bioghist` khi đóng gói không (gói dựng ở máy trạm từ SQLite, cần kéo thêm bảng). Vẫn còn ngoài kế hoạch: cổng
+độc giả web, ảnh / ghi âm, email / SMS; GĐ5 máy sạch.
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

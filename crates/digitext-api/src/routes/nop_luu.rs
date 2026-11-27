@@ -11,7 +11,7 @@
 //! - `POST /nop-luu/{id}/tiep-nhan {ghiChu?}` (tự lập biên bản giao nhận) · `POST /nop-luu/{id}/tra-lai {lyDo}`
 //! - `POST /nop-luu/{id}/bien-ban` (lập lại) · `POST /nop-luu/{id}/mo-khoa {hoSoId, lyDo}`
 //! - `GET  /nop-luu/so-nop-luu?projectId&nam&phongBanId` · `POST /nop-luu/so-nop-luu/bien-ban {projectId, nam, phongBanId?}`
-use super::chinh_ly::{pham_vi_cua, project_access};
+use super::chinh_ly::{pham_vi_cua, pham_vi_phong, project_access};
 use crate::app::AppState;
 use crate::error::ApiError;
 use crate::extract::Ts;
@@ -81,7 +81,8 @@ struct DuAnQ {
 async fn tong_quan(State(st): State<AppState>, ts: Ts, Query(q): Query<DuAnQ>) -> Result<Json<nop_luu::TongQuan>, ApiError> {
     quyen_xem(&st, &ts, q.project_id).await?;
     let pb = phong_ban_ep(&ts).or(q.phong_ban_id);
-    Ok(Json(nop_luu::tong_quan(&st.pool, q.project_id, pb).await?))
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    Ok(Json(nop_luu::tong_quan(&st.pool, q.project_id, pb, scope.as_deref()).await?))
 }
 
 #[derive(Deserialize)]
@@ -106,7 +107,8 @@ async fn ho_so_can_nop(State(st): State<AppState>, ts: Ts, Query(q): Query<CanNo
     quyen_xem(&st, &ts, q.project_id).await?;
     let pb = phong_ban_ep(&ts).or(q.phong_ban_id);
     let loc = q.loc.as_deref().filter(|l| matches!(*l, "den_han" | "qua_han"));
-    let (rows, total) = nop_luu::ho_so_can_nop(&st.pool, q.project_id, pb, loc, q.limit, q.offset).await?;
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    let (rows, total) = nop_luu::ho_so_can_nop(&st.pool, q.project_id, pb, loc, q.limit, q.offset, scope.as_deref()).await?;
     Ok(Json(json!({ "rows": rows, "total": total })))
 }
 
@@ -175,6 +177,7 @@ async fn list(State(st): State<AppState>, ts: Ts, Query(q): Query<ListQ>) -> Res
         nam: q.nam,
         limit: q.limit,
         offset: q.offset,
+        phong_ids: pham_vi_phong(&st, &ts, q.project_id).await?,
     };
     let (rows, total) = nop_luu::list(&st.pool, &f).await?;
     Ok(Json(json!({ "rows": rows, "total": total })))
@@ -377,14 +380,16 @@ async fn so_nop_luu(State(st): State<AppState>, ts: Ts, Query(q): Query<SoQ>) ->
     quyen_xem(&st, &ts, q.project_id).await?;
     let nam = q.nam.unwrap_or_else(|| nop_luu::hom_nay_vn().year());
     let pb = phong_ban_ep(&ts).or(q.phong_ban_id);
-    Ok(Json(json!({ "nam": nam, "rows": nop_luu::so_nop_luu(&st.pool, q.project_id, nam, pb).await? })))
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    Ok(Json(json!({ "nam": nam, "rows": nop_luu::so_nop_luu(&st.pool, q.project_id, nam, pb, scope.as_deref()).await? })))
 }
 
 async fn so_nop_luu_bien_ban(State(st): State<AppState>, ts: Ts, Json(q): Json<SoQ>) -> Result<Json<super::records::RecordDto>, ApiError> {
     quyen_nhan(&st, &ts, q.project_id).await?;
     let nam = q.nam.unwrap_or_else(|| nop_luu::hom_nay_vn().year());
-    let rows = nop_luu::so_nop_luu(&st.pool, q.project_id, nam, q.phong_ban_id).await?;
-    let ten_cq = projects::get(&st.pool, q.project_id).await?.map(|x| x.name).unwrap_or_default();
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    let rows = nop_luu::so_nop_luu(&st.pool, q.project_id, nam, q.phong_ban_id, scope.as_deref()).await?;
+    let ten_cq = digitext_db::co_quan::hieu_dung(&st.pool, q.project_id).await?.ten;
     let chu = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
     let so = |v: &Value, k: &str| v.get(k).map(|x| match x { Value::Number(n) => n.to_string(), Value::String(s) => s.clone(), _ => String::new() }).unwrap_or_default();
     let ngay = |v: &Value, k: &str| {

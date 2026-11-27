@@ -163,3 +163,18 @@ Khi nâng cấp máy chủ đang chạy:
 1. Chạy lại `cai-dat.ps1` / `./cai-dat.sh` như mục 6: cập nhật CSDL áp thêm `0037`, `0038` (nhanh, không khoá bảng).
 2. Máy chủ cần font TTF (`DIGITEXT_CERT_FONT`, bộ cài đã đặt) để dựng trang thể thức; thiếu font API trả lỗi 503 khi chuyển đổi.
 3. Không có việc nền mới.
+
+## 11. Cơ quan lưu trữ, lịch sử phông, nhãn hộp PDF (từ bản 0.25.22)
+
+- **Tổng quan › Cơ quan lưu trữ** (quản trị dự án): khai mã cơ quan lưu trữ (Phụ lục I), tên / cơ quan cấp trên / địa chỉ, loại hình
+  (lưu trữ cơ quan hay lưu trữ lịch sử), người ký và chức vụ, hạn nộp lưu, mốc nhắc, quyền sử dụng sau nộp. Giá trị này in lên đầu và khối
+  ký của báo cáo TT05, trang thể thức chuyển đổi, và quyết định hạn nộp lưu / nhắc hạn. Chưa khai thì phần mềm dùng tên dự án và 60 ngày /
+  nhắc 15-7-1 / 360 ngày như trước.
+- **Danh mục › Phông › Lịch sử phông**: lịch sử đơn vị hình thành phông và lịch sử phông theo Điều 4, 22; mỗi lần nộp bổ sung lập một phiên
+  bản mới, bản cũ giữ nguyên. Chỉ khi trực tuyến.
+- **Phạm vi phông** nay chặn cả sửa / xoá từng dòng, đẩy thay đổi ngoại tuyến, yêu cầu khai thác, cung cấp thông tin, nộp lưu và danh mục hồ sơ.
+- **Kết xuất mục lục › Nhãn hộp (PDF)**: 4 nhãn một trang A4, có viền để cắt.
+
+Khi nâng cấp máy chủ đang chạy:
+1. Chạy lại `cai-dat.ps1` / `./cai-dat.sh` như mục 6: cập nhật CSDL áp thêm `0039` (hai bảng mới, không khoá bảng cũ).
+2. Không có việc nền mới; worker nhắc nộp lưu tự đọc mốc nhắc mới của từng cơ quan.

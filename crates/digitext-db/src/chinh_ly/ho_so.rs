@@ -75,7 +75,7 @@ const WHERE: &str = "v.project_id = $1 AND ($2::bool OR v.deleted_at IS NULL) \
     AND ($15::int IS NULL OR v.nam_ket_thuc = $15) AND ($16::uuid IS NULL OR v.hop_id = $16) \
     AND (cardinality($17::uuid[]) = 0 OR v.id = ANY($17)) \
     AND ($18::uuid IS NULL OR v.created_by = $19 \
-         OR (v.phong_ban_id = $18 AND (v.khoa_luc IS NULL OR v.khoa_luc + make_interval(days => $20) > now()))) \
+         OR (v.phong_ban_id = $18 AND (v.khoa_luc IS NULL OR v.khoa_luc + make_interval(days => COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = v.project_id), $20)) > now()))) \
     AND ($21::text IS NULL OR CASE $21 WHEN 'chua_nop' THEN v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai' \
                                          ELSE v.nop_luu_trang_thai = $21 END) \
     AND ($22::uuid[] IS NULL OR v.phong_id = ANY($22))";
@@ -177,7 +177,7 @@ pub async fn search_van_ban(pool: &PgPool, f: &VanBanFilter) -> sqlx::Result<(Ve
         AND ($6::text IS NULL OR v.loai_vb = $6) AND ($7::text IS NULL OR v.co_quan_ban_hanh ILIKE '%' || $7 || '%') \
         AND ($8::date IS NULL OR v.ngay_thang_sort >= $8) AND ($9::date IS NULL OR v.ngay_thang_sort <= $9) \
         AND ($10::uuid IS NULL OR h.created_by = $11 \
-             OR (h.phong_ban_id = $10 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $12) > now()))) \
+             OR (h.phong_ban_id = $10 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = h.project_id), $12)) > now()))) \
         AND ($13::uuid[] IS NULL OR h.phong_id = ANY($13))";
     let sql = format!(
         "SELECT to_jsonb(v) || jsonb_build_object('so_tam', h.so_tam, 'ho_so_so', h.ho_so_so, 'hop_so', h.hop_so, 'tieu_de_ho_so', h.tieu_de, \

@@ -153,7 +153,7 @@ async fn nop_luu_khoa_ho_so_va_mo_khi_rut() {
     assert!(acts.iter().any(|a| a == "nop_luu") && acts.iter().any(|a| a == "rut_nop_luu") && acts.iter().any(|a| a == "tiep_nhan"), "{acts:?}");
     // Sổ nộp lưu năm nay có phiếu, hồ sơ trong phiếu đủ 2 dòng, mở khoá ngoại lệ mở được.
     let nam = nop_luu::hom_nay_vn().format("%Y").to_string().parse::<i32>().unwrap();
-    assert_eq!(nop_luu::so_nop_luu(&pool, fx.project, nam, None).await.unwrap().len(), 1);
+    assert_eq!(nop_luu::so_nop_luu(&pool, fx.project, nam, None, None).await.unwrap().len(), 1);
     assert_eq!(nop_luu::ho_so_cua(&pool, p3.id).await.unwrap().len(), 2);
     assert!(nop_luu::mo_khoa(&pool, hs1, fx.user2).await.unwrap());
     assert!(sync::apply_op(&pool, &c, &upsert("cl_ho_so", hs1, json!({"tieu_de": "Sau mở khoá"}))).await.unwrap().is_ok());
@@ -205,10 +205,10 @@ async fn pham_vi_phong_ban_loc_ho_so() {
     let (rows, _) = ho_so::list(&pool, &f(Some(PhamVi { phong_ban_id: fx.pb_a, user_id: Uuid::now_v7() }), None)).await.unwrap();
     assert!(rows.is_empty(), "người khác phòng A hết quyền xem A1 sau 360 ngày: {rows:?}");
     // Hồ sơ cần nộp + tổng quan + nhắc hạn (hồ sơ kết thúc 2025 → hạn 01/03/2026 → quá hạn → có thông báo).
-    let (rows, _) = nop_luu::ho_so_can_nop(&pool, fx.project, Some(fx.pb_b), Some("qua_han"), 100, 0).await.unwrap();
+    let (rows, _) = nop_luu::ho_so_can_nop(&pool, fx.project, Some(fx.pb_b), Some("qua_han"), 100, 0, None).await.unwrap();
     assert_eq!(rows.len(), 2, "{rows:?}");
     assert!(rows[0].get("han_nop").is_some() && rows[0].get("con_ngay").is_some());
-    let tq = nop_luu::tong_quan(&pool, fx.project, None).await.unwrap();
+    let tq = nop_luu::tong_quan(&pool, fx.project, None, None).await.unwrap();
     assert_eq!((tq.qua_han, tq.chua_nop), (2, 2));
     let hom_nay = chrono::NaiveDate::from_ymd_opt(2026, 11, 26).unwrap();
     // quet_nhac quét TOÀN máy chủ (test khác chạy song song cũng tạo hồ sơ) → chỉ đếm thông báo của user trong test này.

@@ -218,12 +218,19 @@ pub struct ListFilter {
     pub nam: Option<i32>,
     pub limit: i64,
     pub offset: i64,
+    /// Phạm vi phông của người gọi (0038); None = không giới hạn.
+    pub phong_ids: Option<Vec<Uuid>>,
 }
 
 pub async fn list(pool: &PgPool, f: &ListFilter) -> sqlx::Result<(Vec<Value>, i64)> {
-    let dk = "x.project_id = $1 AND ($2::text IS NULL OR x.trang_thai = $2) AND ($3::uuid IS NULL OR x.phong_ban_id = $3) \
-              AND ($4::uuid IS NULL OR x.nguoi_nop = $4) AND ($5::int IS NULL OR extract(year FROM x.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::int = $5)";
-    let sql = format!("SELECT to_jsonb(x) AS row FROM ({PHIEU_JSON}) x WHERE {dk} ORDER BY x.created_at DESC LIMIT $6 OFFSET $7");
+    let dk = |ph: &str| {
+        format!(
+            "x.project_id = $1 AND ($2::text IS NULL OR x.trang_thai = $2) AND ($3::uuid IS NULL OR x.phong_ban_id = $3) \
+             AND ($4::uuid IS NULL OR x.nguoi_nop = $4) AND ($5::int IS NULL OR extract(year FROM x.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::int = $5) \
+             AND ({ph}::uuid[] IS NULL OR x.phong_id = ANY({ph}))"
+        )
+    };
+    let sql = format!("SELECT to_jsonb(x) AS row FROM ({PHIEU_JSON}) x WHERE {} ORDER BY x.created_at DESC LIMIT $6 OFFSET $7", dk("$8"));
     let rows = sqlx::query(&sql)
         .bind(f.project_id)
         .bind(f.trang_thai.as_deref())
@@ -232,14 +239,16 @@ pub async fn list(pool: &PgPool, f: &ListFilter) -> sqlx::Result<(Vec<Value>, i6
         .bind(f.nam)
         .bind(f.limit.clamp(1, 1000))
         .bind(f.offset.max(0))
+        .bind(f.phong_ids.as_deref())
         .fetch_all(pool)
         .await?;
-    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM lt_nop_luu x WHERE {dk}"))
+    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM lt_nop_luu x WHERE {}", dk("$6")))
         .bind(f.project_id)
         .bind(f.trang_thai.as_deref())
         .bind(f.phong_ban_id)
         .bind(f.nguoi_nop)
         .bind(f.nam)
+        .bind(f.phong_ids.as_deref())
         .fetch_one(pool)
         .await?;
     Ok((rows.into_iter().filter_map(|r| r.try_get::<Value, _>("row").ok()).collect(), total))
@@ -381,25 +390,35 @@ pub async fn set_bien_ban(pool: &PgPool, id: Uuid, record_id: Uuid) -> sqlx::Res
 
 /// Hồ sơ của phòng ban còn phải nộp (chưa nộp hoặc bị trả lại), kèm hạn nộp và số ngày còn lại (âm = quá hạn).
 /// `loc`: `den_han` (hạn trong 15 ngày tới hoặc hôm nay) | `qua_han` | None (tất cả).
-pub async fn ho_so_can_nop(pool: &PgPool, project: Uuid, phong_ban: Option<Uuid>, loc: Option<&str>, limit: i64, offset: i64) -> sqlx::Result<(Vec<Value>, i64)> {
+pub async fn ho_so_can_nop(pool: &PgPool, project: Uuid, phong_ban: Option<Uuid>, loc: Option<&str>, limit: i64, offset: i64, phong_ids: Option<&[Uuid]>) -> sqlx::Result<(Vec<Value>, i64)> {
     let hom_nay = hom_nay_vn();
-    let dk = "v.project_id = $1 AND v.deleted_at IS NULL AND (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') \
-              AND ($2::uuid IS NULL OR v.phong_ban_id = $2) \
-              AND ($3::text IS NULL \
-                   OR ($3 = 'den_han' AND v.ngay_kt_cuoi IS NOT NULL AND v.ngay_kt_cuoi + $5 BETWEEN $4::date AND $4::date + 15) \
-                   OR ($3 = 'qua_han' AND v.ngay_kt_cuoi IS NOT NULL AND v.ngay_kt_cuoi + $5 < $4::date))";
+    // Hạn nộp theo cấu hình cơ quan (0039), $5 = mặc định 60; cửa sổ "đến hạn" = mốc nhắc lớn nhất (mặc định 15).
+    let han_sql = "COALESCE((SELECT c.han_nop_ngay FROM co_quan_luu_tru c WHERE c.project_id = v.project_id), $5)";
+    let cua_so = "COALESCE((SELECT max(m) FROM co_quan_luu_tru c, unnest(c.nhac_truoc_ngay) m WHERE c.project_id = v.project_id), 15)";
+    let dk = |ph: &str| {
+        format!(
+            "v.project_id = $1 AND v.deleted_at IS NULL AND (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') \
+             AND ($2::uuid IS NULL OR v.phong_ban_id = $2) \
+             AND ($3::text IS NULL \
+                  OR ($3 = 'den_han' AND v.ngay_kt_cuoi IS NOT NULL AND v.ngay_kt_cuoi + {han_sql} BETWEEN $4::date AND $4::date + {cua_so}) \
+                  OR ($3 = 'qua_han' AND v.ngay_kt_cuoi IS NOT NULL AND v.ngay_kt_cuoi + {han_sql} < $4::date)) \
+             AND ({ph}::uuid[] IS NULL OR v.phong_id = ANY({ph}))"
+        )
+    };
     let sql = format!(
-        "SELECT to_jsonb(v) || jsonb_build_object('han_nop', v.ngay_kt_cuoi + $5, 'con_ngay', (v.ngay_kt_cuoi + $5) - $4::date) AS row \
-         FROM cl_ho_so_v v WHERE {dk} ORDER BY v.ngay_kt_cuoi NULLS LAST, v.so_tam COLLATE vi_so LIMIT $6 OFFSET $7"
+        "SELECT to_jsonb(v) || jsonb_build_object('han_nop', v.ngay_kt_cuoi + {han_sql}, 'con_ngay', (v.ngay_kt_cuoi + {han_sql}) - $4::date) AS row \
+         FROM cl_ho_so_v v WHERE {} ORDER BY v.ngay_kt_cuoi NULLS LAST, v.so_tam COLLATE vi_so LIMIT $6 OFFSET $7",
+        dk("$8")
     );
     let han: i32 = luu_tru::HAN_NOP_NGAY as i32;
-    let rows = sqlx::query(&sql).bind(project).bind(phong_ban).bind(loc).bind(hom_nay).bind(han).bind(limit.clamp(1, 5000)).bind(offset.max(0)).fetch_all(pool).await?;
-    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM cl_ho_so_v v WHERE {dk}"))
+    let rows = sqlx::query(&sql).bind(project).bind(phong_ban).bind(loc).bind(hom_nay).bind(han).bind(limit.clamp(1, 5000)).bind(offset.max(0)).bind(phong_ids).fetch_all(pool).await?;
+    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM cl_ho_so_v v WHERE {}", dk("$6")))
         .bind(project)
         .bind(phong_ban)
         .bind(loc)
         .bind(hom_nay)
         .bind(han)
+        .bind(phong_ids)
         .fetch_one(pool)
         .await?;
     Ok((rows.into_iter().filter_map(|r| r.try_get::<Value, _>("row").ok()).collect(), total))
@@ -415,38 +434,44 @@ pub struct TongQuan {
     pub quyen_sap_het: i64,
 }
 
-pub async fn tong_quan(pool: &PgPool, project: Uuid, phong_ban: Option<Uuid>) -> sqlx::Result<TongQuan> {
+pub async fn tong_quan(pool: &PgPool, project: Uuid, phong_ban: Option<Uuid>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<TongQuan> {
     let hom_nay = hom_nay_vn();
     let han: i32 = luu_tru::HAN_NOP_NGAY as i32;
     let qsd: i32 = luu_tru::QUYEN_SU_DUNG_NGAY as i32;
-    let r: (i64, i64, i64, i64, i64) = sqlx::query_as(
+    let han_sql = "COALESCE((SELECT c.han_nop_ngay FROM co_quan_luu_tru c WHERE c.project_id = v.project_id), $4)";
+    let qsd_sql = "COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = v.project_id), $5)";
+    let cua_so = "COALESCE((SELECT max(m) FROM co_quan_luu_tru c, unnest(c.nhac_truoc_ngay) m WHERE c.project_id = v.project_id), 15)";
+    let r: (i64, i64, i64, i64, i64) = sqlx::query_as(&format!(
         "SELECT \
-            count(*) FILTER (WHERE (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') AND v.ngay_kt_cuoi + $4 BETWEEN $3::date AND $3::date + 15), \
-            count(*) FILTER (WHERE (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') AND v.ngay_kt_cuoi + $4 < $3::date), \
+            count(*) FILTER (WHERE (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') AND v.ngay_kt_cuoi + {han_sql} BETWEEN $3::date AND $3::date + {cua_so}), \
+            count(*) FILTER (WHERE (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') AND v.ngay_kt_cuoi + {han_sql} < $3::date), \
             count(*) FILTER (WHERE v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai'), \
-            (SELECT count(*) FROM lt_nop_luu n WHERE n.project_id = $1 AND n.trang_thai = 'cho_tiep_nhan' AND ($2::uuid IS NULL OR n.phong_ban_id = $2)), \
-            count(*) FILTER (WHERE v.nop_luu_trang_thai = 'da_nop' AND (v.khoa_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + $5 BETWEEN $3::date AND $3::date + 7) \
-         FROM cl_ho_so_v v WHERE v.project_id = $1 AND v.deleted_at IS NULL AND ($2::uuid IS NULL OR v.phong_ban_id = $2)",
-    )
+            (SELECT count(*) FROM lt_nop_luu n WHERE n.project_id = $1 AND n.trang_thai = 'cho_tiep_nhan' AND ($2::uuid IS NULL OR n.phong_ban_id = $2) \
+                AND ($6::uuid[] IS NULL OR n.phong_id = ANY($6))), \
+            count(*) FILTER (WHERE v.nop_luu_trang_thai = 'da_nop' AND (v.khoa_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + {qsd_sql} BETWEEN $3::date AND $3::date + 7) \
+         FROM cl_ho_so_v v WHERE v.project_id = $1 AND v.deleted_at IS NULL AND ($2::uuid IS NULL OR v.phong_ban_id = $2) AND ($6::uuid[] IS NULL OR v.phong_id = ANY($6))"
+    ))
     .bind(project)
     .bind(phong_ban)
     .bind(hom_nay)
     .bind(han)
     .bind(qsd)
+    .bind(phong_ids)
     .fetch_one(pool)
     .await?;
     Ok(TongQuan { den_han: r.0, qua_han: r.1, chua_nop: r.2, phieu_cho_tiep_nhan: r.3, quyen_sap_het: r.4 })
 }
 
 /// Sổ nộp lưu một năm: một dòng một phiếu đã tiếp nhận / trả lại.
-pub async fn so_nop_luu(pool: &PgPool, project: Uuid, nam: i32, phong_ban: Option<Uuid>) -> sqlx::Result<Vec<Value>> {
+pub async fn so_nop_luu(pool: &PgPool, project: Uuid, nam: i32, phong_ban: Option<Uuid>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<Vec<Value>> {
     let sql = format!(
         "SELECT to_jsonb(x) AS row FROM ({PHIEU_JSON}) x \
          WHERE x.project_id = $1 AND x.trang_thai IN ('da_tiep_nhan', 'tra_lai') AND ($3::uuid IS NULL OR x.phong_ban_id = $3) \
+           AND ($4::uuid[] IS NULL OR x.phong_id = ANY($4)) \
            AND extract(year FROM COALESCE(x.tiep_nhan_luc, x.created_at) AT TIME ZONE 'Asia/Ho_Chi_Minh')::int = $2 \
          ORDER BY COALESCE(x.tiep_nhan_luc, x.created_at)"
     );
-    let rows = sqlx::query(&sql).bind(project).bind(nam).bind(phong_ban).fetch_all(pool).await?;
+    let rows = sqlx::query(&sql).bind(project).bind(nam).bind(phong_ban).bind(phong_ids).fetch_all(pool).await?;
     Ok(rows.into_iter().filter_map(|r| r.try_get::<Value, _>("row").ok()).collect())
 }
 
@@ -461,14 +486,19 @@ pub async fn so_nop_luu(pool: &PgPool, project: Uuid, nam: i32, phong_ban: Optio
 pub async fn quet_nhac(pool: &PgPool, hom_nay: NaiveDate, tu_nam: i32) -> sqlx::Result<u64> {
     let mut tao = 0u64;
     let han: i32 = luu_tru::HAN_NOP_NGAY as i32;
-    // 1. Hồ sơ chưa nộp đã tới cửa sổ nhắc (hạn ≤ hôm nay + 15).
-    let hs: Vec<(Uuid, Uuid, Option<Uuid>, Option<Uuid>, String, String, NaiveDate)> = sqlx::query_as(
-        "SELECT v.id, v.project_id, v.phong_ban_id, v.created_by, v.so_tam, COALESCE(v.tieu_de, ''), v.ngay_kt_cuoi + $3 \
+    // Hạn nộp + mốc nhắc theo cấu hình cơ quan (0039); dự án chưa khai dùng mặc định 60 / 15-7-1.
+    let moc_du_an = crate::co_quan::moc_nhac_theo_du_an(pool).await?;
+    let moc_mac_dinh: Vec<u64> = luu_tru::NHAC_TRUOC_NGAY.to_vec();
+    let han_sql = "COALESCE((SELECT c.han_nop_ngay FROM co_quan_luu_tru c WHERE c.project_id = v.project_id), $3)";
+    let cua_so = "COALESCE((SELECT max(m) FROM co_quan_luu_tru c, unnest(c.nhac_truoc_ngay) m WHERE c.project_id = v.project_id), 15)";
+    // 1. Hồ sơ chưa nộp đã tới cửa sổ nhắc (hạn ≤ hôm nay + mốc lớn nhất).
+    let hs: Vec<(Uuid, Uuid, Option<Uuid>, Option<Uuid>, String, String, NaiveDate)> = sqlx::query_as(&format!(
+        "SELECT v.id, v.project_id, v.phong_ban_id, v.created_by, v.so_tam, COALESCE(v.tieu_de, ''), v.ngay_kt_cuoi + {han_sql} \
          FROM cl_ho_so_v v \
          WHERE v.deleted_at IS NULL AND (v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai') \
-           AND v.ngay_kt_cuoi IS NOT NULL AND v.nam_ket_thuc >= $2 AND v.ngay_kt_cuoi + $3 <= $1::date + 15 \
-         ORDER BY v.project_id, v.phong_ban_id",
-    )
+           AND v.ngay_kt_cuoi IS NOT NULL AND v.nam_ket_thuc >= $2 AND v.ngay_kt_cuoi + {han_sql} <= $1::date + {cua_so} \
+         ORDER BY v.project_id, v.phong_ban_id"
+    ))
     .bind(hom_nay)
     .bind(tu_nam)
     .bind(han)
@@ -476,7 +506,8 @@ pub async fn quet_nhac(pool: &PgPool, hom_nay: NaiveDate, tu_nam: i32) -> sqlx::
     .await?;
     let mut tong: std::collections::BTreeMap<Uuid, (i64, i64)> = std::collections::BTreeMap::new();
     for (id, project, pb, created_by, so_tam, tieu_de, han_nop) in &hs {
-        let (kind, ref_, msg) = match luu_tru::tinh_trang_han(*han_nop, hom_nay) {
+        let moc = moc_du_an.get(project).unwrap_or(&moc_mac_dinh);
+        let (kind, ref_, msg) = match luu_tru::tinh_trang_han_voi(*han_nop, hom_nay, moc) {
             luu_tru::TinhTrangHan::QuaHan(n) => {
                 tong.entry(*project).or_default().0 += 1;
                 let tuan = hom_nay.iso_week();
@@ -488,7 +519,7 @@ pub async fn quet_nhac(pool: &PgPool, hom_nay: NaiveDate, tu_nam: i32) -> sqlx::
             }
             luu_tru::TinhTrangHan::DenHan(_) => {
                 tong.entry(*project).or_default().1 += 1;
-                let Some(m) = luu_tru::moc_nhac(*han_nop, hom_nay) else { continue };
+                let Some(m) = luu_tru::moc_nhac_voi(*han_nop, hom_nay, moc) else { continue };
                 (
                     format!("nop_luu_nhac_{m}"),
                     format!("ho_so:{id}:nhac{m}"),
@@ -514,7 +545,7 @@ pub async fn quet_nhac(pool: &PgPool, hom_nay: NaiveDate, tu_nam: i32) -> sqlx::
         if qua + den == 0 {
             continue;
         }
-        let msg = format!("Lưu trữ hiện hành: {qua} hồ sơ quá hạn nộp lưu, {den} hồ sơ đến hạn trong 15 ngày");
+        let msg = format!("Lưu trữ hiện hành: {qua} hồ sơ quá hạn nộp lưu, {den} hồ sơ sắp đến hạn");
         let ref_ = format!("du_an:{project}:{}", hom_nay.format("%Y-%m-%d"));
         for u in crate::projects::f_re(pool, project).await? {
             if crate::notifications::f_1v8_ref(pool, u, "nop_luu_tong_hop", &msg, &ref_).await? {
@@ -525,10 +556,10 @@ pub async fn quet_nhac(pool: &PgPool, hom_nay: NaiveDate, tu_nam: i32) -> sqlx::
     // 3. Quyền sử dụng sắp hết.
     let qsd: i32 = luu_tru::QUYEN_SU_DUNG_NGAY as i32;
     let sap_het: Vec<(Uuid, Option<Uuid>, Option<Uuid>, String, NaiveDate)> = sqlx::query_as(
-        "SELECT h.id, h.created_by, n.nguoi_nop, h.so_tam, (h.khoa_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + $2 \
+        "SELECT h.id, h.created_by, n.nguoi_nop, h.so_tam, (h.khoa_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = h.project_id), $2) \
          FROM cl_ho_so h LEFT JOIN lt_nop_luu n ON n.id = h.nop_luu_id \
          WHERE h.deleted_at IS NULL AND h.nop_luu_trang_thai = 'da_nop' AND h.khoa_luc IS NOT NULL \
-           AND (h.khoa_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + $2 IN ($1::date, $1::date + 7)",
+           AND (h.khoa_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = h.project_id), $2) IN ($1::date, $1::date + 7)",
     )
     .bind(hom_nay)
     .bind(qsd)

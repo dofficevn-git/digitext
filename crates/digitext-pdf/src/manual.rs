@@ -38,6 +38,16 @@ pub enum ManualBlock {
     PageBreak,
     /// Dòng chữ căn giữa cỡ tuỳ ý (bìa: tên phông, "HỒ SƠ" cỡ lớn, năm).
     Centered { text: String, size: f32, bold: bool },
+    /// Nhãn hộp hồ sơ, 4 nhãn một trang A4 (2 × 2), mỗi nhãn có viền để cắt (đợt 5, 27/11/2026). Luôn bắt đầu trang mới.
+    Labels2x2(Vec<Label>),
+}
+
+/// Một nhãn hộp: dòng đầu (cơ quan, phòng ban — dòng đầu in đậm), số hộp cỡ lớn, các dòng cuối dạng nhãn: giá trị.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Label {
+    pub top: Vec<String>,
+    pub big: String,
+    pub bottom: Vec<(String, String)>,
 }
 
 const MARGIN: f32 = 50.0;
@@ -245,6 +255,11 @@ fn clean_block(face: &ttf_parser::Face<'_>, b: &ManualBlock) -> ManualBlock {
         }
         ManualBlock::PageBreak => ManualBlock::PageBreak,
         ManualBlock::Centered { text, size, bold } => ManualBlock::Centered { text: clean(face, text, *bold), size: *size, bold: *bold },
+        ManualBlock::Labels2x2(nhan) => ManualBlock::Labels2x2(
+            nhan.iter()
+                .map(|n| Label { top: n.top.iter().map(|t| clean(face, t, true)).collect(), big: clean(face, &n.big, true), bottom: n.bottom.iter().map(|(k, v)| (clean(face, k, true), clean(face, v, true))).collect() })
+                .collect(),
+        ),
     }
 }
 
@@ -415,6 +430,64 @@ fn render_manual_kho(blocks: &[ManualBlock], font: &[u8], ngang: bool) -> Result
                 let size = size.clamp(6.0, 72.0);
                 lay.centered(text, size, *bold, BLACK, size * 1.35)?;
             }
+            ManualBlock::Labels2x2(nhan) => {
+                // Trang mới nếu trang hiện tại đã có gì; mỗi trang 4 ô (2 cột × 2 hàng), ô cách lề 6 pt để cắt.
+                if lay.y < lay.ph - MARGIN - 0.5 {
+                    lay.new_page();
+                }
+                let o_w = (cw - 12.0) / 2.0;
+                let o_h = (lay.ph - MARGIN * 2.0 - 12.0) / 2.0;
+                for (i, n) in nhan.iter().enumerate() {
+                    if i > 0 && i % 4 == 0 {
+                        lay.new_page();
+                    }
+                    let (col, row) = ((i % 4) % 2, (i % 4) / 2);
+                    let x0 = MARGIN + col as f32 * (o_w + 12.0);
+                    let top = lay.ph - MARGIN - row as f32 * (o_h + 12.0);
+                    {
+                        let page = lay.pages.last_mut().expect("có trang");
+                        page.rect_stroke(x0, top - o_h, o_w, o_h, BLACK);
+                    }
+                    let mut y = top - 22.0;
+                    let giua = |lay: &Layout<'_>, s: &str, size: f32| -> Result<f32, PdfError> { Ok(x0 + ((o_w - lay.width(s, size)?) / 2.0).max(4.0)) };
+                    for (j, t) in n.top.iter().enumerate() {
+                        let size = if j == 0 { 11.0 } else { 10.0 };
+                        for line in lay.wrap(t, size, o_w - 16.0)? {
+                            all_text.push(line.clone());
+                            let x = giua(&lay, &line, size)?;
+                            let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                            page.text(face, &line, size, x, y, j == 0, BLACK)?;
+                            y -= size * 1.35;
+                        }
+                    }
+                    // "HỘP SỐ" + số hộp lớn ở giữa ô.
+                    let giua_o = top - o_h / 2.0;
+                    let nhan_hop = "HỘP SỐ";
+                    all_text.push(nhan_hop.into());
+                    all_text.push(n.big.clone());
+                    {
+                        let x = giua(&lay, nhan_hop, 12.0)?;
+                        let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                        page.text(face, nhan_hop, 12.0, x, giua_o + 22.0, true, BLACK)?;
+                    }
+                    let big_size = if n.big.chars().count() > 4 { 34.0 } else { 44.0 };
+                    {
+                        let x = giua(&lay, &n.big, big_size)?;
+                        let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                        page.text(face, &n.big, big_size, x, giua_o - 22.0, true, BLACK)?;
+                    }
+                    // Dòng cuối từ đáy ô lên.
+                    let mut yb = top - o_h + 14.0 + (n.bottom.len().saturating_sub(1)) as f32 * 14.0;
+                    for (k, v) in &n.bottom {
+                        let s = format!("{k}: {v}");
+                        all_text.push(s.clone());
+                        let (face, page) = (&lay.face, lay.pages.last_mut().expect("có trang"));
+                        page.text(face, &s, 10.0, x0 + 12.0, yb, false, BLACK)?;
+                        yb -= 14.0;
+                    }
+                }
+                lay.y = BOTTOM; // trang đã đầy: khối sau tự sang trang mới
+            }
             ManualBlock::Footer(t) => {
                 all_text.push(t.clone());
                 lay.ensure(26.0);
@@ -475,6 +548,24 @@ mod tests {
     use super::*;
 
     /// Chữ từ Excel có xuống dòng CR LF, tab, ký tự độ rộng 0 và ký tự font không có vẫn phải ra PDF.
+    /// Nhãn hộp 2×2: 5 nhãn → 2 trang, chữ "HỘP SỐ" và số hộp có trong PDF.
+    #[test]
+    fn nhan_hop_2x2_hai_trang() {
+        let Some(font) = crate::sans_font().and_then(|p| std::fs::read(p).ok()) else {
+            return;
+        };
+        let nhan: Vec<Label> = (1..=5)
+            .map(|i| Label {
+                top: vec!["UBND XÃ DIỄN XÁ".into(), "Văn phòng".into(), "*****".into()],
+                big: format!("{i:02}"),
+                bottom: vec![("Năm".into(), "2024".into()), ("Từ hồ sơ số".into(), "01".into()), ("Đến hồ sơ số".into(), "12".into()), ("Thời hạn bảo quản".into(), "Vĩnh viễn".into())],
+            })
+            .collect();
+        let pdf = render_manual(&[ManualBlock::Title("Nhãn hộp".into()), ManualBlock::Labels2x2(nhan)], &font).unwrap();
+        let doc = lopdf::Document::load_mem(&pdf).unwrap();
+        assert_eq!(doc.get_pages().len(), 3, "trang tiêu đề + 2 trang nhãn (4 + 1)");
+    }
+
     #[test]
     fn manual_survives_dirty_excel_text() {
         let Some(font) = crate::sans_font().and_then(|p| std::fs::read(p).ok()) else {

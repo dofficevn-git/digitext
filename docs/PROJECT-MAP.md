@@ -243,6 +243,8 @@ axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs
 | `chinh_ly/kho_gia` | `GET /cl/kho-gia/tong-hop?projectId&khoId&phongId` (sức chứa, hộp / hồ sơ đang chứa, % đầy, gần đầy), `GET /cl/kho-gia/ho-so?khoId\|giaId&format=xlsx`, `GET /cl/kho-gia/chua-hop?phongId`, `POST /cl/ho-so/gan-hop {phongBanId, rows[{hoSoId, hopSo}]}` (đặt phòng ban cho hồ sơ nhập gói rồi `he_thong_hoa::boxing`) — 0035 (27/11/2026) |
 | `chuyen_doi` | `POST /chuyen-doi {projectId, documentId, mucDich?, nguoiNhan?, canCu?, chucVu?}` (`access.review`; kiểm chữ ký số lúc chuyển đổi, ghép trang thể thức PL VI vào CUỐI, chân trang i/n, cấp số `CD-{năm}-{stt:06}`, ghi `chuyen_doi_giay` + `khai_thac.chuyen_doi`), `GET /chuyen-doi?projectId&from&to[&format=xlsx]`, `GET /chuyen-doi/{id}/download` — Điều 13–16, 0037 (27/11/2026) |
 | `users` (0038) | `GET/PUT /users/{id}/phong {projectId, phongIds[]}` — phạm vi phông (`user.grant_permissions`; rỗng = không giới hạn; super_admin / manager không giới hạn được); `GET /cl/pham-vi-phong?projectId` — phạm vi của chính mình |
+| `co_quan` (0039) | `GET /projects/{id}/co-quan` (người thuộc dự án; trả dòng đã khai + giá trị hiệu dụng) · `PUT` (`project.update` trong phạm vi) — cấu hình cơ quan lưu trữ: mã CQ lưu trữ, tên / cấp trên / địa chỉ, loại hình, người ký + chức vụ, hạn nộp lưu / mốc nhắc / quyền sử dụng; không khai = tên dự án + 60 / 15-7-1 / 360 (27/11/2026) |
+| `chinh_ly/phong_lich_su` (0039) | `GET /cl/phong/{id}/lich-su` (đọc mục lục + trong phạm vi phông) · `POST` (`catalog.update`) — lịch sử đơn vị hình thành phông / lịch sử phông có phiên bản, số phiên bản = max + 1 dưới khoá tư vấn (27/11/2026) |
 | `danh_muc_ho_so` | `/danh-muc-ho-so` GET/POST, `/hieu-luc?phongId&nam`, `/{id}`, `/{id}/dong[/{dongId}]` POST/PUT/DELETE, `/dong/nhap`, `/trinh`, `/duyet` (không tự duyệt), `/tra-lai`, `/ban-hanh`, `/phien-ban-moi`, `/doi-chieu`, `/bien-ban` — danh mục hồ sơ dự kiến Điều 19.4 |
 | còn lại | `records`, `stats`, `changes`, `notifications`, `/healthz` |
 
@@ -305,6 +307,24 @@ Ba mẫu hình lặp lại đáng để ý:
   hoá, nhập mục lục, đối soát, chuyển đổi. Chưa áp: `/cl/rows/{table}/{id}` đọc một dòng, `access` / `info` (tài liệu theo dự án).
   (c) **Biểu mẫu PDF tại máy trạm**: `ManualBlock` có `serde` (tag `t`, content `v`) + `PageBreak` + `Centered`; Tauri `in_pdf::pdf_manual`
   nhận mảng khối JSON, dựng bằng font sans hệ thống, hộp thoại Lưu. Kịch bản thử: `dev/luutru/thu-dot-4.ps1 -MatKhauDb <mk>`.
+- **Đợt 5 đối chiếu Digifile (27/11/2026, migration 0039)** — dọn phần còn sót trong phạm vi đã chốt. (a) **Bịt phạm vi phông**:
+  `digitext-db::user_phong::{phong_cua_dong, phong_cua_tai_lieu, tai_lieu_trong_pham_vi}` suy phông của một dòng `cl_*` (theo
+  `phong_id` / phòng ban / hồ sơ / văn bản) hoặc của tài liệu (qua `cl_van_ban_file`); `routes/chinh_ly/mod.rs::kiem_phong_dong` cắm vào
+  `/cl/rows/{table}[/{id}]` GET / POST / PUT (kiểm cả dòng đang có lẫn dòng sắp ghi — không "dời" hồ sơ sang phông khác) / DELETE / restore;
+  `POST /cl/sync/push` từ chối tại chỗ op ngoài phông (`Rejected{reason: "phong_scope"}`, không áp); `/access` (lập, nạp, danh sách — yêu
+  cầu có tài liệu ngoài phông ẩn / 403; tài liệu chưa nối mục lục không ràng), `/info/{id}/generate` tìm theo chủ đề chỉ trong tài liệu
+  đã nối mục lục thuộc phông được cấp, `/nop-luu/*` (hồ sơ cần nộp, phiếu, sổ, tổng quan), `/danh-muc-ho-so` (list, hiệu lực, tạo, nạp).
+  (b) **Cấu hình cơ quan lưu trữ** `co_quan_luu_tru` (Digifile B01): `digitext-db::co_quan::{get, hieu_dung, dat, sql_han_nop,
+  sql_quyen_su_dung}`; hạn nộp / quyền sử dụng trong SQL đổi thành `COALESCE((SELECT … FROM co_quan_luu_tru …), $n)` giữ nguyên bind
+  cũ làm mặc định (nop_luu, ho_so::Filter, tra_cuu); worker `quet_nhac` dùng `luu_tru::{tinh_trang_han_voi, moc_nhac_voi}` theo mốc từng
+  dự án; `bao_cao` PDF (đầu văn bản có cấp trên, khối ký = chức vụ + người ký cấu hình) và `chuyen_doi` (tên cơ quan, chức vụ mặc định,
+  người ký) đọc `hieu_dung`. Mẫu sinh mã (B06) KHÔNG đổi: mã hồ sơ vẫn `ma_du_an.phong_so.nam.so[.muc_luc]` ở 3 nơi (view SQL,
+  `he_thong_hoa`, desktop `store.rs`) — đổi phải đổi cả ba + dữ liệu cũ, chờ anh chốt. (c) **Lịch sử ĐVHTP có phiên bản** `phong_lich_su`
+  (B02): `digitext-db::phong_lich_su`, route `/cl/phong/{id}/lich-su`; chưa đưa vào EAD (`bioghist`) vì gói dựng ở máy trạm từ SQLite.
+  (d) **Nhãn hộp 2×2 PDF**: `ManualBlock::Labels2x2(Vec<Label{top, big, bottom}>)` 4 ô một trang A4, viền cắt, test `nhan_hop_2x2_hai_trang`.
+  (e) **Nợ Digifile**: `digitext-extimport` nhận tiêu đề cột "Cơ quan ban hành" / "Tác giả" cho `doc_organ`, ô ngôn ngữ `01;02` tách thành
+  nhiều mã (`pack::tach_ngon_ngu`); `digitext-token-signpdf` báo ngay "slot không có token cắm" trước khi mở phiên (E2E 11:241 chờ ~40 s;
+  tắt kiểm bằng `DIGITEXT_SIGN_KHONG_KIEM_TOKEN=1`). Kịch bản thử: `dev/luutru/thu-dot-5.ps1 -MatKhauDb <mk>` (tự `migrate`).
 - **Dashboard theo ngày** (`routes/dashboard.rs`, migration `0021_dashboard_daily.sql`): bảng `dashboard_daily`
   (ngày VN × dự án × người; dòng tổng dự án `user_id = uuid 0`) do hàm SQL `dashboard_rollup(từ, đến)` tính;
   API tự roll hôm qua + hôm nay mỗi 2 phút và 35 ngày lúc 00:15 (`spawn_rollup` gọi từ `cli.rs`), phát topic
@@ -453,8 +473,13 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   bản, gate `access.view`), `api/chuyenDoi.ts`. `users/UsersView` menu "Phạm vi phông" → `PhongDialog` (MultiSelect phông của dự án, trống =
   không giới hạn), `api/users.ts::userPhongGet/Set` qua Tauri `bc_call` (nhận `/chuyen-doi`, `/users/{id}/phong`). Biểu mẫu PDF tại máy trạm:
   `chinhly/printPdf.ts` (`pdfMucLucHoSo`, `pdfSanPham` hai bìa + bảng gom mảng / năm, `pdfMucLucVanBan` sang trang từng hồ sơ, `pdfPhuLuc`)
-  trên `api/inPdf.ts::{kb, pdfManual}`; menu Kết xuất của `KhaiThacView` có mục "(PDF)" đứng trước, HTML giữ là "In nhanh … (HTML)"; nhãn
-  hộp 2×2 vẫn HTML.
+  trên `api/inPdf.ts::{kb, pdfManual}`; menu Kết xuất của `KhaiThacView` có mục "(PDF)" đứng trước, HTML giữ là "In nhanh … (HTML)".
+  **GĐ10 Đợt 5 (27/11, 0039):** hộp thoại `settings/CoQuanDialog` (mở từ nút "Cơ quan lưu trữ" ở `home/LuuTruHome` — bản Lưu trữ — và cạnh
+  "Định mức" ở `home/ProjectDashboard` — bản thi công; sửa cần `project.update`), `api/coQuan.ts`; `chinhly/PhongLichSuDialog` từ menu dòng
+  tab Phông của `DanhMucView` ("Lịch sử phông", chỉ khi trực tuyến; thêm phiên bản cần `catalog.update`), `api/phongLichSu.ts`; nhãn hộp
+  `printPdf.ts::pdfNhanHop` trên dữ liệu `print.ts::nhanHopData` dùng chung với HTML, `inPdf.ts::kb.labels`; Tauri `bc_call` kiểm quyền
+  theo đường (`quyen_goi`: `/projects/{id}/co-quan` project.view / project.update, `/cl/phong/{id}/lich-su` catalog.read / catalog.update);
+  `topics.ts` `bc_call` += `projects`, `chinhLy`.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
@@ -509,7 +534,7 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0038` (sửa 27/11/2026)
+### Schema Postgres: `migrations/0001`–`0039` (sửa 27/11/2026)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
 (0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05, 0025 nhập gói AIP, 0026 tra cứu không dấu /
@@ -519,7 +544,7 @@ thống lúc khởi động, `roles::bo_sung_quyen_moi`; 0031 lưu trữ hiện 
 `backup_runs`; 0033 quét trùng: `disposal_entries.phat_hien`, chỉ mục blake3 + mục lục, cần 0026 trước; 0034 mượn – trả có duyệt: CHECK
 `cl_muon_tra.trang_thai` 6 giá trị + 12 cột duyệt / giao / gia hạn / nhắc; 0035 `cl_gia.suc_chua_hop / canh_bao_pct`, `cl_kho.suc_chua_hop`;
 0036 chỉ mục `audit_log` theo dự án cho báo cáo lượt khai thác, CONCURRENTLY; 0037 `chuyen_doi_giay` sổ chuyển đổi ra giấy; 0038 `user_phong`
-phạm vi phông) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
+phạm vi phông; 0039 `co_quan_luu_tru` cấu hình cơ quan lưu trữ + `phong_lich_su` lịch sử phông có phiên bản) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
 Áp bằng `digitext-api migrate` (bảng `_digitext_migrations`, 9/11/2026; máy chủ đã áp tay thì `migrate --da-ap-den <NNNN>` một lần)
 hoặc tay theo thứ tự bằng `psql -f` (xem `docs/CHUYEN-MAY-OCR-PC.md`).
 

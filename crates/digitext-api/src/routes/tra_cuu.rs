@@ -216,7 +216,7 @@ async fn tim(State(st): State<AppState>, ts: Ts, Query(q): Query<TimQuery>) -> R
            AND ($9::text IS NULL OR ($9 = 'han_che') = COALESCE({HAN_CHE_SQL}, false)) \
            AND ($11 OR d.id IS NULL OR d.status <> 'disposed') \
            AND ($15::uuid IS NULL OR h.created_by = $16 \
-                OR (h.phong_ban_id = $15 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $17) > now()))) \
+                OR (h.phong_ban_id = $15 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = h.project_id), $17)) > now()))) \
            AND ($18::uuid[] IS NULL OR p.id = ANY($18)) \
          ORDER BY p.ma_du_an, g.ma_ho_so_goc NULLS LAST, h.so_tam, v.so_thu_tu \
          LIMIT $12 OFFSET $13"
@@ -419,7 +419,7 @@ async fn doc_tai_lieu(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>) 
         let duoc: bool = sqlx::query_scalar(
             "SELECT EXISTS (SELECT 1 FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id JOIN cl_ho_so h ON h.id = v.ho_so_id \
              WHERE f.document_id = $1 AND f.deleted_at IS NULL AND (h.created_by = $3 \
-                OR (h.phong_ban_id = $2 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $4) > now()))))",
+                OR (h.phong_ban_id = $2 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => COALESCE((SELECT c.quyen_su_dung_ngay FROM co_quan_luu_tru c WHERE c.project_id = h.project_id), $4)) > now()))))",
         )
         .bind(id)
         .bind(pv.phong_ban_id)

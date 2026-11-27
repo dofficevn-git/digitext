@@ -47,10 +47,16 @@ pub enum TinhTrangHan {
 }
 
 pub fn tinh_trang_han(han: NaiveDate, hom_nay: NaiveDate) -> TinhTrangHan {
+    tinh_trang_han_voi(han, hom_nay, &NHAC_TRUOC_NGAY)
+}
+
+/// Như `tinh_trang_han` nhưng theo bộ mốc nhắc của cơ quan (0039: `co_quan_luu_tru.nhac_truoc_ngay`, xếp giảm dần; rỗng = mặc định).
+pub fn tinh_trang_han_voi(han: NaiveDate, hom_nay: NaiveDate, moc: &[u64]) -> TinhTrangHan {
+    let cua_so = moc.iter().copied().max().unwrap_or(NHAC_TRUOC_NGAY[0]);
     let lech = (han - hom_nay).num_days();
     if lech < 0 {
         TinhTrangHan::QuaHan(lech.unsigned_abs())
-    } else if (lech as u64) <= NHAC_TRUOC_NGAY[0] {
+    } else if (lech as u64) <= cua_so {
         TinhTrangHan::DenHan(lech as u64)
     } else {
         TinhTrangHan::ChuaDen
@@ -59,8 +65,13 @@ pub fn tinh_trang_han(han: NaiveDate, hom_nay: NaiveDate) -> TinhTrangHan {
 
 /// Hôm nay có đúng là một mốc nhắc trước hạn không (15 / 7 / 1 ngày) → trả mốc đó để làm khoá chống nhắc lặp.
 pub fn moc_nhac(han: NaiveDate, hom_nay: NaiveDate) -> Option<u64> {
+    moc_nhac_voi(han, hom_nay, &NHAC_TRUOC_NGAY)
+}
+
+/// Như `moc_nhac` nhưng theo bộ mốc của cơ quan (0039).
+pub fn moc_nhac_voi(han: NaiveDate, hom_nay: NaiveDate, moc: &[u64]) -> Option<u64> {
     let lech = (han - hom_nay).num_days();
-    NHAC_TRUOC_NGAY.into_iter().find(|m| lech == *m as i64)
+    moc.iter().copied().find(|m| lech == *m as i64)
 }
 
 /// Người nộp còn quyền sử dụng hồ sơ đã nộp không (tính từ lúc khoá, tức lúc tiếp nhận).
@@ -104,6 +115,18 @@ mod tests {
         assert_eq!(moc_nhac(han, d(2026, 2, 22)), Some(7));
         assert_eq!(moc_nhac(han, d(2026, 2, 28)), Some(1));
         assert_eq!(moc_nhac(han, d(2026, 2, 20)), None);
+    }
+
+    #[test]
+    fn moc_nhac_theo_cau_hinh_co_quan() {
+        let han = d(2026, 3, 1);
+        let moc = [30u64, 10, 3];
+        assert_eq!(tinh_trang_han_voi(han, d(2026, 1, 25), &moc), TinhTrangHan::ChuaDen, "còn 35 ngày, cửa sổ 30");
+        assert_eq!(tinh_trang_han_voi(han, d(2026, 1, 30), &moc), TinhTrangHan::DenHan(30));
+        assert_eq!(moc_nhac_voi(han, d(2026, 1, 30), &moc), Some(30));
+        assert_eq!(moc_nhac_voi(han, d(2026, 2, 19), &moc), Some(10));
+        assert_eq!(moc_nhac_voi(han, d(2026, 2, 22), &moc), None, "7 ngày không còn là mốc");
+        assert_eq!(tinh_trang_han_voi(han, d(2026, 2, 14), &[]), TinhTrangHan::DenHan(15), "rỗng = mặc định 15");
     }
 
     #[test]

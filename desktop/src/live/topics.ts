@@ -358,7 +358,7 @@ export const V3xd: Readonly<Record<string, readonly V3xa[]>> = {
   cl_remote: ["chinhLy"],
   lt_call: ["nopLuu", "danhMuc", "chinhLy", "notifications", "records"],
   bq_call: ["ops", "disposal", "notifications"],
-  bc_call: ["records", "users"],
+  bc_call: ["records", "users", "projects", "chinhLy"],
   cl_migrate_run: ["chinhLy", "clSync", "dossier", "catalog"],
   cl_project_set: ["chinhLy", "clSync", "dossier", "catalog", "khogia", "work"],
   work_create_package: ["work"],

@@ -72,18 +72,34 @@ pub async fn bc_download(app: AppHandle, db: State<'_, Db>, auth: State<'_, Auth
     Ok(Some(path.display().to_string()))
 }
 
-/// Ghi: `POST /chuyen-doi` (quyền `access.review`), `PUT /users/{id}/phong` (quyền `user.grant_permissions`). Quyền thật kiểm ở máy chủ.
+/// Đường + quyền cục bộ (quyền thật kiểm ở máy chủ) cho `bc_call`: `/chuyen-doi` (access.review), `/users/{id}/phong`
+/// (user.grant_permissions), `/projects/{id}/co-quan` (project.view / project.update — 0039), `/cl/phong/{id}/lich-su`
+/// (catalog.read / catalog.update — 0039).
+fn quyen_goi(method: &str, path: &str) -> Option<Permission> {
+    if path.contains("..") {
+        return None;
+    }
+    let p = path.split('?').next().unwrap_or("");
+    let doc = method == "GET";
+    if p.starts_with("/users/") && p.ends_with("/phong") {
+        Some(Permission::UserGrantPermissions)
+    } else if p.starts_with("/projects/") && p.ends_with("/co-quan") {
+        Some(if doc { Permission::ProjectView } else { Permission::ProjectUpdate })
+    } else if p.starts_with("/cl/phong/") && p.ends_with("/lich-su") {
+        Some(if doc { Permission::CatalogRead } else { Permission::CatalogUpdate })
+    } else if p.starts_with("/chuyen-doi") {
+        Some(Permission::AccessReview)
+    } else {
+        None
+    }
+}
+
+/// Gọi JSON có quyền theo đường (xem `quyen_goi`).
 #[tauri::command]
 pub async fn bc_call(db: State<'_, Db>, auth: State<'_, AuthState>, method: String, path: String, body: Option<Value>) -> Result<Value, AppError> {
-    let la_phong = path.starts_with("/users/") && path.split('?').next().unwrap_or("").ends_with("/phong") && !path.contains("..");
-    if !la_phong {
-        hop_le(&path)?;
-        if !path.starts_with("/chuyen-doi") {
-            return Err(AppError::validation("đường dẫn không hợp lệ"));
-        }
-    }
-    let perm = if la_phong { Permission::UserGrantPermissions } else { Permission::AccessReview };
     let m = method.to_uppercase();
+    let perm = quyen_goi(&m, &path).ok_or_else(|| AppError::validation("đường dẫn không hợp lệ"))?;
+    let chuyen_doi = path.starts_with("/chuyen-doi");
     let body = body.unwrap_or(serde_json::json!({}));
     f_2r8(&db, &auth, perm, move |base, token| {
         let (m, path, body) = (m.clone(), path.clone(), body.clone());
@@ -92,7 +108,8 @@ pub async fn bc_call(db: State<'_, Db>, auth: State<'_, AuthState>, method: Stri
                 "GET" => client::f_1eo::<Value>(&base, &token, &path).await,
                 "PUT" => client::f_24x::<Value>(&base, &token, &path, &body).await,
                 // Chuyển đổi: kiểm chữ ký + ghép PDF lớn → thời gian dài.
-                _ => client::post_long::<Value>(&base, &token, &path, &body).await,
+                _ if chuyen_doi => client::post_long::<Value>(&base, &token, &path, &body).await,
+                _ => client::f_23d::<Value>(&base, &token, &path, &body).await,
             }
         }
     })

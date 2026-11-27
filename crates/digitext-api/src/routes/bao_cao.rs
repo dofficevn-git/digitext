@@ -380,7 +380,8 @@ async fn chay(State(st): State<AppState>, ts: Ts, Path(ma): Path<String>, Query(
     if format == "json" {
         return Ok(Json(json!({ "def": def_json(d), "rows": rows, "tong": tong })).into_response());
     }
-    let ten_cq = digitext_db::projects::get(&st.pool, q.project_id).await?.map(|p| p.name).unwrap_or_default();
+    let cq = digitext_db::co_quan::hieu_dung(&st.pool, q.project_id).await?;
+    let ten_cq = cq.ten.clone();
     let ten_phong = match q.phong_id {
         Some(p) => sqlx::query_scalar::<_, String>("SELECT ma_du_an || ' — ' || ten FROM cl_phong WHERE id = $1").bind(p).fetch_optional(&st.pool).await?,
         None => None,
@@ -421,7 +422,7 @@ async fn chay(State(st): State<AppState>, ts: Ts, Path(ma): Path<String>, Query(
             let now_vn = Utc::now().with_timezone(&chrono::FixedOffset::east_opt(7 * 3600).expect("+07:00"));
             let mut blocks = vec![
                 ManualBlock::OfficialHeader {
-                    left: vec![format!("*{}", ten_cq.to_uppercase())],
+                    left: cq.ten_cap_tren.iter().map(|t| t.to_uppercase()).chain(std::iter::once(format!("*{}", ten_cq.to_uppercase()))).collect(),
                     right: vec!["*CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM".into(), "*Độc lập - Tự do - Hạnh phúc".into()],
                     dated: format!("Ngày {} tháng {} năm {}", now_vn.day(), now_vn.month(), now_vn.year()),
                 },
@@ -451,7 +452,7 @@ async fn chay(State(st): State<AppState>, ts: Ts, Path(ma): Path<String>, Query(
             blocks.push(ManualBlock::Gap(16.0));
             blocks.push(ManualBlock::Signatures {
                 left: ("NGƯỜI LẬP BÁO CÁO".into(), "(Ký, ghi rõ họ tên)".into(), ts.user.display_name.clone()),
-                right: ("LÃNH ĐẠO CƠ QUAN".into(), "(Ký, ghi rõ họ tên, đóng dấu)".into(), String::new()),
+                right: (cq.chuc_vu_nguoi_ky.to_uppercase(), "(Ký, ghi rõ họ tên, đóng dấu)".into(), cq.nguoi_ky.clone().unwrap_or_default()),
             });
             blocks.push(ManualBlock::Footer(format!("DigiText — số liệu lấy lúc {} · {} dòng", now_vn.format("%d/%m/%Y %H:%M"), rows.len())));
             let ngang = d.cot.len() > 7;

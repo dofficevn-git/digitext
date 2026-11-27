@@ -2,7 +2,7 @@
 // Tổng quan của bản Lưu trữ (4/11/2026, docs/KE-HOACH-BAN-LUU-TRU.md): việc chờ của cán bộ lưu trữ (yêu cầu khai thác,
 // cung cấp thông tin), tình trạng bảo quản, lối tắt nhóm Lưu trữ số (cả Nhập gói AIP, GĐ3). Số liệu mục lục thêm ở GĐ4.
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { V3z9 } from "@/domain/permissions";
 import { V460 } from "@/state";
 import { V3zr } from "@/state/sessionCore";
@@ -16,6 +16,7 @@ import { mtTongQuan, type TongQuanMuon } from "@/api/muonTra";
 import { useProject } from "@/state/project";
 import { type V41v as IconName } from "@/components/Icon";
 import { Badge, Banner, Button, Card, KpiRow, KpiTile, Table, type Column } from "@/ui";
+import CoQuanDialog from "@/features/settings/CoQuanDialog";
 
 type Viec = { id: string; loai: "Khai thác" | "Cung cấp thông tin"; noiDung: string; trangThai: string; ngay: string; mo: () => void };
 
@@ -34,6 +35,8 @@ export default function LuuTruHome() {
   const coMuon = has("loan.view");
   const duAnChon = useProject().projectId;
   const duAn = session?.projectId ?? duAnChon ?? null;
+  const [coQuan, setCoQuan] = useState(false);
+  const suaCoQuan = has("project.update") || has("project.view");
   const dungDuoc = isTauri() || import.meta.env.DEV;
 
   const loader = useCallback(async () => {
@@ -103,16 +106,22 @@ export default function LuuTruHome() {
           {chao}, {session?.displayName ?? ""}
         </h1>
         <p className="mt-0.5 text-sm text-fg-subtle">{session?.mode === "offline" ? `Ngoại tuyến, còn ${offlineDays} ngày` : "Đã kết nối máy chủ lưu trữ"}</p>
-        {loiTat.length > 0 && (
+        {(loiTat.length > 0 || (suaCoQuan && duAn)) && (
           <nav aria-label="Lối tắt" className="mt-3 flex flex-wrap gap-2">
             {loiTat.map((l) => (
               <Button key={l.label} size="sm" icon={l.icon} onClick={l.run}>
                 {l.label}
               </Button>
             ))}
+            {suaCoQuan && duAn && session?.mode !== "offline" && (
+              <Button size="sm" icon="caiDat" onClick={() => setCoQuan(true)}>
+                Cơ quan lưu trữ
+              </Button>
+            )}
           </nav>
         )}
       </header>
+      {coQuan && duAn && <CoQuanDialog projectId={duAn} canEdit={has("project.update")} onClose={() => setCoQuan(false)} />}
       {session?.mode === "offline" && (
         <Banner tone="warning" className="mb-4">
           Đang ngoại tuyến: không tra cứu và khai thác được trên máy chủ lưu trữ. Kết nối mạng rồi đăng nhập lại.

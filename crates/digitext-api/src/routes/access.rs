@@ -116,7 +116,16 @@ async fn load_in_scope(r_7d: &AppState, r_7a: &Ts, id: Uuid) -> Result<Ta, ApiEr
     if !can_touch_project(r_7a, &r_7c, r_7b.project_id) {
         return Err(ApiError::forbidden());
     }
+    if !trong_pham_vi_phong(r_7d, r_7a, &r_7b).await? {
+        return Err(ApiError::forbidden());
+    }
     Ok(r_7b)
+}
+/// Người bị giới hạn phông (0038) chỉ chạm yêu cầu mà mọi tài liệu đã nối mục lục đều thuộc phông được cấp (đợt 5, 27/11/2026).
+async fn trong_pham_vi_phong(st: &AppState, ts: &Ts, r: &Ta) -> Result<bool, ApiError> {
+    let Some(sc) = crate::routes::chinh_ly::pham_vi_phong(st, ts, r.project_id).await? else { return Ok(true) };
+    let ids: Vec<Uuid> = access::items(&st.pool, r.id).await?.into_iter().map(|i| i.document_id).collect();
+    Ok(digitext_db::user_phong::tai_lieu_trong_pham_vi(&st.pool, Some(&sc), &ids).await?)
 }
 fn require_owner_or_reviewer(r_7e: &Ts, r_7f: &Ta) -> Result<(), ApiError> {
     if r_7f.requester == Some(r_7e.user.id) || r_7e.has_perm(Permission::AccessReview) {
@@ -228,6 +237,11 @@ async fn create_request(
             )));
         }
     }
+    if let Some(sc) = crate::routes::chinh_ly::pham_vi_phong(&r_7u, &r_7p, project_id).await? {
+        if !digitext_db::user_phong::tai_lieu_trong_pham_vi(&r_7u.pool, Some(&sc), &r_7r.document_ids).await? {
+            return Err(ApiError::forbidden());
+        }
+    }
     let (r_7s, _) = match access::create(
         &r_7u.pool,
         Tdq {
@@ -280,7 +294,13 @@ async fn list_requests(
             .filter(|r_7y| r_7y.requester == Some(r_7w.user.id))
             .collect()
     };
-    Ok(Json(rows.into_iter().map(AccessDto::from).collect()))
+    let mut loc = Vec::with_capacity(rows.len());
+    for r in rows {
+        if trong_pham_vi_phong(&r_80, &r_7w, &r).await? {
+            loc.push(r);
+        }
+    }
+    Ok(Json(loc.into_iter().map(AccessDto::from).collect()))
 }
 async fn get_request(
     State(r_83): State<AppState>,

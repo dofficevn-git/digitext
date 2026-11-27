@@ -127,7 +127,8 @@ async fn tao(State(st): State<AppState>, ts: Ts, Json(b): Json<TaoBody>) -> Resu
         }
     }
     let goc = goc.ok_or_else(|| ApiError::conflict("tài liệu chưa có bản số trong kho"))?;
-    let ten_cq = digitext_db::projects::get(&st.pool, project).await?.map(|p| p.name).unwrap_or_default();
+    let cq = digitext_db::co_quan::hieu_dung(&st.pool, project).await?;
+    let ten_cq = cq.ten.clone();
     let font_path = digitext_pdf::f_1cq().ok_or_else(|| ApiError::service_unavailable("không tìm thấy font TTF — đặt DIGITEXT_CERT_FONT"))?;
     let font = std::fs::read(&font_path).map_err(|e| {
         tracing::error!(path = %font_path.display(), error = %e, "đọc font lỗi");
@@ -156,7 +157,7 @@ async fn tao(State(st): State<AppState>, ts: Ts, Json(b): Json<TaoBody>) -> Resu
     let mut tx = st.pool.begin().await?;
     let (nam, so) = db::cap_so(&mut tx, project).await?;
     let luc = ngay_vn(Utc::now());
-    let chuc_vu = b.chuc_vu.clone().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).unwrap_or_else(|| "LÃNH ĐẠO CƠ QUAN".into());
+    let chuc_vu = b.chuc_vu.clone().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).unwrap_or_else(|| cq.chuc_vu_nguoi_ky.clone());
     let mo_ta_tl = {
         let mut v = vec![ten_tai_lieu.clone()];
         if let Some(s) = so_ky_hieu.as_deref().filter(|s| !s.is_empty()) {
@@ -210,7 +211,7 @@ async fn tao(State(st): State<AppState>, ts: Ts, Json(b): Json<TaoBody>) -> Resu
         ManualBlock::Gap(6.0),
         ManualBlock::Signatures {
             left: ("NGƯỜI THỰC HIỆN CHUYỂN ĐỔI".into(), "(Ký, ghi rõ họ tên)".into(), ts.user.display_name.clone()),
-            right: (chuc_vu.to_uppercase(), "(Chữ ký của người có thẩm quyền, dấu của cơ quan, tổ chức)".into(), String::new()),
+            right: (chuc_vu.to_uppercase(), "(Chữ ký của người có thẩm quyền, dấu của cơ quan, tổ chức)".into(), if b.chuc_vu.is_some() { String::new() } else { cq.nguoi_ky.clone().unwrap_or_default() }),
         },
     ];
     let font2 = font.clone();
@@ -325,7 +326,7 @@ async fn so(State(st): State<AppState>, ts: Ts, Query(q): Query<SoQ>) -> Result<
             ]
         })
         .collect();
-    let ten_cq = digitext_db::projects::get(&st.pool, q.project_id).await?.map(|p| p.name).unwrap_or_default();
+    let ten_cq = digitext_db::co_quan::hieu_dung(&st.pool, q.project_id).await?.ten;
     let sheet = xlsx::sheet_bang("Sổ chuyển đổi", &[ten_cq, "SỔ CHUYỂN ĐỔI TÀI LIỆU LƯU TRỮ SỐ RA GIẤY".into(), format!("{} lượt — Điều 13–16, Phụ lục VI TT 05/2025/TT-BNV", rows.len())], &cot, &bang, None);
     let bytes = xlsx::dong_goi(&[sheet]).map_err(|e| {
         tracing::error!(error = %e, "đóng gói Excel sổ chuyển đổi lỗi");

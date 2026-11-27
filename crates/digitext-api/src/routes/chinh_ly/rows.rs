@@ -50,7 +50,10 @@ async fn get_row(State(st): State<AppState>, ts: Ts, Path((table, id)): Path<(St
     let row = cl::rows::get(&mut conn, &t, id).await?.ok_or_else(ApiError::not_found)?;
     let project = cl::rows::uuid_of(&row, "project_id");
     match project {
-        Some(p) => read_access(&st, &ts, p).await?,
+        Some(p) => {
+            read_access(&st, &ts, p).await?;
+            super::kiem_phong_dong(&st, &ts, p, &t, id, &row).await?;
+        }
         None => {
             if !(ts.has_perm(digitext_core::Permission::CatalogRead) || ts.has_perm(digitext_core::Permission::DossierRead)) {
                 return Err(ApiError::forbidden());
@@ -66,6 +69,7 @@ async fn insert(State(st): State<AppState>, ts: Ts, Path(table): Path<String>, J
     let parts = ctx_parts(&ts);
     let ctx = op_ctx(&ts, b.project_id, "online", &parts);
     let op = SyncOp { op_id: None, table: t, id: b.id.unwrap_or_else(Uuid::now_v7), op: OpKind::Upsert, base: None, new: b.new, if_ver: None, edited_at: None };
+    super::kiem_phong_dong(&st, &ts, b.project_id, &op.table, op.id, &op.new).await?;
     let res = cl::apply_op(&st.pool, &ctx, &op).await?;
     Ok(op_response(res))
 }
@@ -76,6 +80,9 @@ async fn update(State(st): State<AppState>, ts: Ts, Path((table, id)): Path<(Str
     let parts = ctx_parts(&ts);
     let ctx = op_ctx(&ts, b.project_id, "online", &parts);
     let op = SyncOp { op_id: None, table: t, id, op: OpKind::Upsert, base: b.base, new: b.new, if_ver: b.if_ver, edited_at: None };
+    // Cả dòng đang có (khoá vắng → tra CSDL) lẫn dòng sắp ghi (đổi phông / hồ sơ) đều phải trong phạm vi.
+    super::kiem_phong_dong(&st, &ts, b.project_id, &op.table, id, &Row::new()).await?;
+    super::kiem_phong_dong(&st, &ts, b.project_id, &op.table, id, &op.new).await?;
     let res = cl::apply_op(&st.pool, &ctx, &op).await?;
     Ok(op_response(res))
 }
@@ -86,6 +93,7 @@ async fn delete(State(st): State<AppState>, ts: Ts, Path((table, id)): Path<(Str
     let parts = ctx_parts(&ts);
     let ctx = op_ctx(&ts, q.project_id, "online", &parts);
     let op = SyncOp { op_id: None, table: t.clone(), id, op: OpKind::Delete, base: None, new: Row::new(), if_ver: q.if_ver, edited_at: None };
+    super::kiem_phong_dong(&st, &ts, q.project_id, &t, id, &Row::new()).await?;
     let res = cl::apply_op(&st.pool, &ctx, &op).await?;
     if res.is_ok() {
         digitext_db::audit::append(&st.pool, super::audit(&ts, "cl.delete", id.to_string(), serde_json::json!({"table": t}))).await?;
@@ -103,6 +111,7 @@ async fn restore(State(st): State<AppState>, ts: Ts, Path((table, id)): Path<(St
     if cl::rows::uuid_of(&row, "project_id") != Some(q.project_id) {
         return Err(ApiError::forbidden());
     }
+    super::kiem_phong_dong(&st, &ts, q.project_id, &t, id, &row).await?;
     if row.get("deleted_at").map_or(true, Value::is_null) {
         return Ok(Json(Value::Object(row)));
     }

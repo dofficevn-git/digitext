@@ -112,6 +112,18 @@ fn f_29c(pkcs11: &Pkcs11) -> Result<Vec<Slot>, String> {
     }
     Ok(r_5ia)
 }
+/// Slot phải báo `token_present`; không thì trả lỗi tức thì (không mở phiên — vài driver treo hàng chục giây khi USB chưa cắm).
+/// Đặt `DIGITEXT_SIGN_KHONG_KIEM_TOKEN=1` để bỏ qua (driver báo sai cờ).
+fn f_2sx(pkcs11: &Pkcs11, slot: Slot, idx: usize) -> Result<(), String> {
+    if std::env::var_os("DIGITEXT_SIGN_KHONG_KIEM_TOKEN").is_some() {
+        return Ok(());
+    }
+    match pkcs11.get_slot_info(slot) {
+        Ok(i) if i.token_present() => Ok(()),
+        Ok(_) => Err(format!("slot {idx} không có token cắm — cắm USB token rồi chạy lại (không chờ driver)")),
+        Err(e) => Err(format!("đọc thông tin slot {idx} lỗi: {e}")),
+    }
+}
 fn f_23u(tag: &str, r_5id: &[u8]) {
     match Certificate::from_der(r_5id) {
         Ok(c) => {
@@ -858,6 +870,8 @@ fn f_15v(
             r_5lr.len()
         )
     })?;
+    // Không có token cắm ở slot → báo ngay (Digifile E2E 11:241: driver chờ ~40 s mỗi tệp rồi mới lỗi; 27/11/2026).
+    f_2sx(&pkcs11, slot, idx)?;
     let label = pkcs11
         .get_token_info(slot)
         .map(|t| t.label().trim().to_string())

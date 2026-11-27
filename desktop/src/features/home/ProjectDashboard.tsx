@@ -9,6 +9,7 @@ import { V3z9 } from "@/domain/permissions";
 import { dashboardProject, QUOTA_METRICS, type BacklogStageKey, type MetricKey, type ProjectDash } from "@/api/dashboard";
 import { Badge, BarChart, Button, ChartLegend, CHART, KpiRow, KpiTile, Pipeline, Ring, Seg, Sparkline, StackedBar, Table, fmtDayFull, fmtNum, type Column } from "@/ui";
 import KpiSettingsDialog from "@/features/report/KpiSettingsDialog";
+import CoQuanDialog from "@/features/settings/CoQuanDialog";
 import CanXuLyCard from "./blocks/CanXuLy";
 import SucKhoeCard from "./blocks/SucKhoe";
 import { DataCard, DaysSeg, RagBadge, duKienText, n, pct1, useSo, type Days } from "./blocks/common";
@@ -32,6 +33,7 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
   const [days, setDays] = useState<Days>(30);
   const [tp, setTp] = useState<ThroughputMetric>("pagesScanned");
   const [dinhMuc, setDinhMuc] = useState(false);
+  const [coQuan, setCoQuan] = useState(false);
   const load = useCallback(() => dashboardProject(projectId, days), [projectId, days]);
   const dash = useSo(load, ["dashboard", "work", "sign", "packages"], true);
   const d = dash.data;
@@ -68,9 +70,14 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
       <span className="text-sm text-fg-muted">{duKienText(d.health, d.contract.deadlineOn ?? d.contract.endOn)}</span>
       <span className="ml-auto flex items-center gap-2">
         {has("project.update") && (
-          <Button size="sm" icon="caiDat" onClick={() => setDinhMuc(true)}>
-            Định mức
-          </Button>
+          <>
+            <Button size="sm" icon="caiDat" onClick={() => setDinhMuc(true)}>
+              Định mức
+            </Button>
+            <Button size="sm" icon="danhmuc" onClick={() => setCoQuan(true)}>
+              Cơ quan lưu trữ
+            </Button>
+          </>
         )}
         <DaysSeg value={days} onChange={setDays} />
       </span>
@@ -236,6 +243,7 @@ export default function ProjectDashboard({ projectId }: { projectId: string }) {
         <CanXuLyCard className="xl:col-span-5" />
         {has("bk.view") && <SucKhoeCard className="xl:col-span-7" />}
       </div>
+      {coQuan && d && <CoQuanDialog projectId={projectId} projectLabel={`${d.code} · ${d.name}`} canEdit onClose={() => setCoQuan(false)} />}
       {dinhMuc && d && <KpiSettingsDialog projectId={projectId} projectLabel={`${d.code} · ${d.name}`} onClose={() => setDinhMuc(false)} onSaved={() => dash.reload()} />}
       <p className="text-xs text-fg-subtle">{pct1(d?.health.progressPct)} hoàn thành · số theo ngày cập nhật mỗi 2 phút, số hiện tại mỗi 60 giây.</p>
     </div>

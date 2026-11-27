@@ -166,6 +166,7 @@ pub async fn f_x8(
     project_id: Uuid,
     chu_de: &str,
     r_25p: i64,
+    phong_ids: Option<&[Uuid]>,
 ) -> sqlx::Result<Vec<T2k>> {
     sqlx::query_as::<_, T2k>(
         "SELECT COALESCE(m.ma_vb, d.ho_so_ref) AS ho_so_ref, \
@@ -181,11 +182,14 @@ pub async fn f_x8(
          WHERE d.project_id = $1 AND d.status <> 'disposed' \
            AND (khong_dau(d.filename || ' ' || COALESCE(d.ho_so_ref, '')) LIKE '%' || khong_dau($2) || '%' ESCAPE '\\' \
                 OR m.tim LIKE '%' || khong_dau($2) || '%' ESCAPE '\\') \
+           AND ($4::uuid[] IS NULL OR EXISTS (SELECT 1 FROM cl_van_ban_file f2 JOIN cl_van_ban v2 ON v2.id = f2.van_ban_id JOIN cl_ho_so h2 ON h2.id = v2.ho_so_id \
+                WHERE f2.document_id = d.id AND f2.deleted_at IS NULL AND h2.phong_id = ANY($4))) \
          ORDER BY 1 NULLS LAST, 2 LIMIT $3",
     )
     .bind(project_id)
     .bind(f_1a9(chu_de))
     .bind(r_25p)
+    .bind(phong_ids)
     .fetch_all(r_25q)
     .await
 }
@@ -202,6 +206,7 @@ pub async fn f_1b9(
     project_id: Uuid,
     chu_de: &str,
     r_25r: i64,
+    phong_ids: Option<&[Uuid]>,
 ) -> sqlx::Result<Vec<T75>> {
     sqlx::query_as::<_, T75>(
         "SELECT DISTINCT ON (r.document_id, r.page_no) \
@@ -212,6 +217,8 @@ pub async fn f_1b9(
                             WHERE f.document_id = d.id AND f.deleted_at IS NULL LIMIT 1) g ON true \
          WHERE d.project_id = $1 AND d.status <> 'disposed' \
            AND khong_dau(r.content) LIKE '%' || khong_dau($2) || '%' ESCAPE '\\' \
+           AND ($4::uuid[] IS NULL OR EXISTS (SELECT 1 FROM cl_van_ban_file f2 JOIN cl_van_ban v2 ON v2.id = f2.van_ban_id JOIN cl_ho_so h2 ON h2.id = v2.ho_so_id \
+                WHERE f2.document_id = d.id AND f2.deleted_at IS NULL AND h2.phong_id = ANY($4))) \
          ORDER BY r.document_id, r.page_no, \
                   (r.text_source = 'ocr_corrected') DESC, r.created_at DESC \
          LIMIT $3",
@@ -219,6 +226,7 @@ pub async fn f_1b9(
     .bind(project_id)
     .bind(f_1a9(chu_de))
     .bind(r_25r)
+    .bind(phong_ids)
     .fetch_all(r_25s)
     .await
 }

@@ -7,6 +7,8 @@ import { V460 } from "@/state";
 import { clDelete, clSave, str, type ClCatalog, type ClRow, type ClTable } from "@/api/chinhly";
 import { ChuaChonDuAn, Select, SyncBadgeRow, tenPhong, useClCatalog } from "./common";
 import { Badge, Button, Card, confirm, Dialog, ErrorBanner, Field, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, Tabs, Tip, type Column } from "@/ui";
+import PhongLichSuDialog from "./PhongLichSuDialog";
+import { isTauri } from "@/api/ipc";
 
 type Tab = "phong" | "phong_ban" | "mang" | "thbq" | "ngon_ngu" | "loai_van_ban" | "khoi_phong";
 const TABS: [Tab, string][] = [
@@ -174,6 +176,8 @@ export default function DanhMucView() {
   const { cat, reload, error } = useClCatalog();
   const [tab, setTab] = useState<Tab>("phong");
   const [form, setForm] = useState<{ row: ClRow | null } | null>(null);
+  const [lichSu, setLichSu] = useState<ClRow | null>(null);
+  const trucTuyen = isTauri() && session?.mode !== "offline";
   const rows = cat[tab];
   const ten = useMemo(() => {
     const m = new Map<string, string>();
@@ -251,12 +255,14 @@ export default function DanhMucView() {
           dense
           rowActions={(r) => {
             const locked = chung(r) && !isSuper;
-            if (locked || (!canUpdate && !canDelete)) return null;
-            return <Menu size="sm" items={[...(canUpdate ? [{ label: "Sửa", icon: "sua" as const, onSelect: () => setForm({ row: r }) }] : []), ...(canDelete ? [{ label: "Xoá", icon: "xoa" as const, danger: true, onSelect: () => void xoa(r) }] : [])]} />;
+            const lichSuItem = tab === "phong" && trucTuyen ? [{ label: "Lịch sử phông", icon: "lichSu" as const, hint: "Lịch sử đơn vị hình thành phông, có phiên bản", onSelect: () => setLichSu(r) }] : [];
+            if (locked || (!canUpdate && !canDelete && lichSuItem.length === 0)) return null;
+            return <Menu size="sm" items={[...(canUpdate ? [{ label: "Sửa", icon: "sua" as const, onSelect: () => setForm({ row: r }) }] : []), ...lichSuItem, ...(canDelete ? [{ label: "Xoá", icon: "xoa" as const, danger: true, onSelect: () => void xoa(r) }] : [])]} />;
           }}
           state={{ empty: { title: `Chưa có ${TABS.find((t) => t[0] === tab)?.[1].toLowerCase()} nào`, action: canCreate ? <Button icon="them" onClick={() => setForm({ row: null })}>Thêm</Button> : undefined } }}
         />
       </Card>
+      {lichSu && <PhongLichSuDialog phong={lichSu} canEdit={canUpdate} onClose={() => setLichSu(null)} />}
       {form && (
         <Form
           tab={tab}

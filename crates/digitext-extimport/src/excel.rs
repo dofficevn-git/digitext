@@ -151,7 +151,7 @@ const DOC: &[Spec] = &[
     ("doc_number", &["so cua tai lieu", "so van ban"], false),
     ("doc_notation", &["ky hieu cua tai lieu", "ky hieu van ban"], false),
     ("doc_date", &["ngay thang nam", "ngay ban hanh"], false),
-    ("doc_organ", &["ten co quan"], false),
+    ("doc_organ", &["ten co quan", "co quan ban hanh", "co quan, to chuc ban hanh", "tac gia"], false),
     ("doc_subject", &["trich yeu"], false),
     ("doc_lang", &["ngon ngu"], false),
     ("doc_pages", &["so luong trang", "so trang"], false),

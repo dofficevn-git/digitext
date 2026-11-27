@@ -10,7 +10,7 @@
 //! - `GET /danh-muc-ho-so/{id}` (kèm dòng) · `GET /{id}/doi-chieu` · `POST /{id}/bien-ban`
 //! - `POST /{id}/dong {…}` · `PUT /{id}/dong/{dongId}` · `DELETE /{id}/dong/{dongId}` · `POST /{id}/dong/nhap {rows: […]}`
 //! - `POST /{id}/trinh` · `/duyet` · `/tra-lai {lyDo}` · `/ban-hanh {soQuyetDinh, ngayBanHanh}` · `/phien-ban-moi`
-use super::chinh_ly::{pham_vi_cua, project_access};
+use super::chinh_ly::{kiem_phong, pham_vi_cua, pham_vi_phong, phong_hieu_dung, project_access};
 use crate::app::AppState;
 use crate::error::ApiError;
 use crate::extract::Ts;
@@ -55,6 +55,7 @@ async fn quyen_xem(st: &AppState, ts: &Ts, project: Uuid) -> Result<(), ApiError
 async fn nap(st: &AppState, ts: &Ts, id: Uuid) -> Result<dm::DanhMucRow, ApiError> {
     let d = dm::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
     quyen_xem(st, ts, d.project_id).await?;
+    kiem_phong(pham_vi_phong(st, ts, d.project_id).await?.as_deref(), d.phong_id)?;
     Ok(d)
 }
 
@@ -70,7 +71,13 @@ struct ListQ {
 
 async fn list(State(st): State<AppState>, ts: Ts, Query(q): Query<ListQ>) -> Result<Json<Value>, ApiError> {
     quyen_xem(&st, &ts, q.project_id).await?;
-    Ok(Json(json!({ "rows": dm::list(&st.pool, q.project_id, q.phong_id, q.nam).await? })))
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong = phong_hieu_dung(scope.as_deref(), q.phong_id)?;
+    let mut rows = dm::list(&st.pool, q.project_id, phong, q.nam).await?;
+    if let Some(sc) = &scope {
+        rows.retain(|r| r.get("phong_id").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()).is_some_and(|p| sc.contains(&p)));
+    }
+    Ok(Json(json!({ "rows": rows })))
 }
 
 #[derive(Deserialize)]
@@ -86,6 +93,7 @@ async fn hieu_luc(State(st): State<AppState>, ts: Ts, Query(q): Query<HieuLucQ>)
     let project: Option<Uuid> = sqlx::query_scalar("SELECT project_id FROM cl_phong WHERE id = $1").bind(q.phong_id).fetch_optional(&st.pool).await?;
     let project = project.ok_or_else(ApiError::not_found)?;
     quyen_xem(&st, &ts, project).await?;
+    kiem_phong(pham_vi_phong(&st, &ts, project).await?.as_deref(), q.phong_id)?;
     let pb = phong_ban_ep(&ts).or(q.phong_ban_id);
     Ok(Json(json!({ "rows": dm::dong_hieu_luc(&st.pool, q.phong_id, q.nam, pb).await? })))
 }
@@ -106,6 +114,7 @@ async fn tao(State(st): State<AppState>, ts: Ts, Json(b): Json<TaoBody>) -> Resu
     if !(2000..=2100).contains(&b.nam) {
         return Err(ApiError::bad_request("năm không hợp lệ"));
     }
+    kiem_phong(pham_vi_phong(&st, &ts, b.project_id).await?.as_deref(), b.phong_id)?;
     let d = dm::tao(&st.pool, b.project_id, b.phong_id, b.nam, ts.user.id, b.sao_chep_tu).await?.map_err(ApiError::conflict)?;
     Ok(Json(dm::get_json(&st.pool, d.id).await?.unwrap_or(Value::Null)))
 }

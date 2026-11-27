@@ -17,7 +17,15 @@ export type KhoiIn =
   | { t: "paragraph"; v: string }
   | { t: "signatures"; v: { left: [string, string, string]; right: [string, string, string] } }
   | { t: "page_break" }
-  | { t: "centered"; v: { text: string; size: number; bold: boolean } };
+  | { t: "centered"; v: { text: string; size: number; bold: boolean } }
+  | { t: "labels2x2"; v: NhanIn[] };
+
+/** Một nhãn hộp (khớp `digitext_pdf::manual::Label`): dòng đầu (dòng 1 đậm), số hộp lớn, dòng cuối nhãn: giá trị. */
+export interface NhanIn {
+  top: string[];
+  big: string;
+  bottom: [string, string][];
+}
 
 export const kb = {
   title: (v: string): KhoiIn => ({ t: "title", v }),
@@ -32,6 +40,7 @@ export const kb = {
   sign: (left: [string, string, string], right: [string, string, string]): KhoiIn => ({ t: "signatures", v: { left, right } }),
   pageBreak: (): KhoiIn => ({ t: "page_break" }),
   center: (text: string, size = 12, bold = false): KhoiIn => ({ t: "centered", v: { text, size, bold } }),
+  labels: (v: NhanIn[]): KhoiIn => ({ t: "labels2x2", v }),
 };
 
 /** Dựng và lưu PDF; trả đường dẫn đã ghi, null nếu người dùng huỷ. */

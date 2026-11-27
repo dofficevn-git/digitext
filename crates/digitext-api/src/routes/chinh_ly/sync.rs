@@ -75,6 +75,14 @@ struct PushResp {
     next: i64,
 }
 
+/// Op có chạm dòng ngoài phạm vi phông không: xét cả dòng sắp ghi (khoá trong `new`) lẫn dòng đang có (tra CSDL theo id).
+async fn ngoai_pham_vi(st: &AppState, scope: Option<&[Uuid]>, op: &SyncOp) -> Result<bool, ApiError> {
+    let Some(sc) = scope else { return Ok(false) };
+    let moi = digitext_db::user_phong::phong_cua_dong(&st.pool, &op.table, op.id, &op.new).await?;
+    let cu = if op.new.is_empty() { None } else { digitext_db::user_phong::phong_cua_dong(&st.pool, &op.table, op.id, &cl::Row::new()).await? };
+    Ok([moi, cu].into_iter().flatten().any(|p| !sc.contains(&p)))
+}
+
 async fn push(State(st): State<AppState>, ts: Ts, Json(mut b): Json<PushReq>) -> Result<Json<PushResp>, ApiError> {
     project_access(&st, &ts, b.project_id).await?;
     if b.ops.len() > PUSH_MAX {
@@ -85,8 +93,14 @@ async fn push(State(st): State<AppState>, ts: Ts, Json(mut b): Json<PushReq>) ->
     let ctx = op_ctx(&ts, b.project_id, "sync", &parts);
     let mut results = Vec::with_capacity(b.ops.len());
     let mut counts = std::collections::BTreeMap::<String, usize>::new();
+    // Người bị giới hạn phông (0038): op chạm dòng ngoài phông được cấp bị từ chối tại chỗ, không áp (đợt 5, 27/11/2026).
+    let scope = super::pham_vi_phong(&st, &ts, b.project_id).await?;
     for op in &b.ops {
-        let r = cl::apply_op(&st.pool, &ctx, op).await?;
+        let r = if ngoai_pham_vi(&st, scope.as_deref(), op).await? {
+            cl::OpResult::Rejected { reason: "phong_scope".into(), message: "Ngoài phạm vi phông được cấp cho tài khoản".into(), errors: vec![] }
+        } else {
+            cl::apply_op(&st.pool, &ctx, op).await?
+        };
         let mut v = serde_json::to_value(&r).unwrap_or(Value::Null);
         if let Some(o) = v.as_object_mut() {
             o.insert("opId".into(), json!(op.op_id));

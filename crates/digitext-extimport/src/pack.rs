@@ -122,7 +122,7 @@ pub fn to_tt02(d: &Dossier) -> (Tos, Vec<String>) {
         let mls: HashSet<String> = names.iter().zip(&phu_tro).filter(|(_, p)| !**p).filter_map(|(n, _)| parse_doc_name(n).muc_luc).collect();
         if mls.len() == 1 { mls.into_iter().next() } else { None }
     };
-    let lang = |s: &Option<String>| s.clone().map(|x| vec![x]).unwrap_or_default();
+    let lang = |s: &Option<String>| tach_ngon_ngu(s.as_deref());
     let van_ban = d
         .rows
         .iter()
@@ -185,6 +185,14 @@ pub fn to_tt02(d: &Dossier) -> (Tos, Vec<String>) {
         van_ban,
     };
     (hs, names)
+}
+
+/// Ô "Ngôn ngữ" của Digifile / TT05 chứa nhiều mã cách nhau bởi `;` `,` `/` (vd. `01;02`) → tách thành từng mã (nợ Digifile 05:47, 27/11/2026).
+pub fn tach_ngon_ngu(s: Option<&str>) -> Vec<String> {
+    let Some(s) = s else { return Vec::new() };
+    let mut out: Vec<String> = s.split([';', ',', '/', '|']).map(str::trim).filter(|x| !x.is_empty()).map(str::to_owned).collect();
+    out.dedup();
+    out
 }
 
 fn build_one(d: &Dossier, root: &Path, o: &PackOptions) -> PackResult {
@@ -392,4 +400,15 @@ pub fn run(
     let mut v = out.into_inner().unwrap();
     v.sort_by_key(|x| x.0);
     Ok(v.into_iter().map(|x| x.1).collect())
+}
+
+#[cfg(test)]
+mod tests_ngon_ngu {
+    #[test]
+    fn tach_ma_ngon_ngu_nhieu_ma() {
+        assert_eq!(super::tach_ngon_ngu(Some("01;02")), vec!["01", "02"]);
+        assert_eq!(super::tach_ngon_ngu(Some(" Tiếng Việt , Tiếng Anh ")), vec!["Tiếng Việt", "Tiếng Anh"]);
+        assert_eq!(super::tach_ngon_ngu(Some("01")), vec!["01"]);
+        assert!(super::tach_ngon_ngu(None).is_empty());
+    }
 }

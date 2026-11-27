@@ -21,6 +21,7 @@ pub mod kho_gia;
 pub mod muc_luc;
 pub mod muon_tra;
 pub mod read;
+pub mod phong_lich_su;
 pub mod rows;
 pub mod sync;
 pub mod thong_ke;
@@ -39,7 +40,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().merge(read::router()).merge(rows::router()).merge(import::router()).merge(muc_luc::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(muon_tra::router()).merge(kho_gia::router()).merge(tu_ocr::router()).merge(doi_soat::router())
+    Router::new().merge(read::router()).merge(rows::router()).merge(phong_lich_su::router()).merge(import::router()).merge(muc_luc::router()).merge(sync::router()).merge(he_thong_hoa::router()).merge(thong_ke::router()).merge(muon_tra::router()).merge(kho_gia::router()).merge(tu_ocr::router()).merge(doi_soat::router())
 }
 
 /// Người gọi phải thuộc dự án (admin quản dự án, thành viên, hoặc tài khoản gắn dự án).
@@ -88,6 +89,17 @@ pub(crate) fn phong_hieu_dung(scope: Option<&[Uuid]>, chon: Option<Uuid>) -> Res
         kiem_phong(scope, p)?;
     }
     Ok(chon)
+}
+
+/// Một dòng `cl_*` (đang có hoặc sắp ghi) phải thuộc phông trong phạm vi (đợt 5, 27/11/2026: bịt `/cl/rows`, push đồng bộ).
+/// Dòng không ràng phông (khối phông, THBQ, kho, giá chưa gắn phòng ban…) đi qua.
+pub(crate) async fn kiem_phong_dong(st: &AppState, ts: &Ts, project: Uuid, table: &str, id: Uuid, row: &digitext_db::chinh_ly::Row) -> Result<(), ApiError> {
+    if let Some(sc) = pham_vi_phong(st, ts, project).await? {
+        if let Some(p) = digitext_db::user_phong::phong_cua_dong(&st.pool, table, id, row).await? {
+            kiem_phong(Some(&sc), p)?;
+        }
+    }
+    Ok(())
 }
 
 /// Đọc: cần dossier.read hoặc catalog.read + thuộc dự án.
