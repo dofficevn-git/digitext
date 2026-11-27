@@ -173,6 +173,8 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
     return () => window.clearTimeout(t);
   }, [q]);
   const [chiChoXacNhan, setChiChoXacNhan] = useState(false);
+  // Chỉ hồ sơ còn tài liệu CHƯA bóc 16 trường (lọc tại chỗ trên số liệu gộp theo hồ sơ).
+  const [chiChuaBoc, setChiChuaBoc] = useState(false);
   const loader = useCallback(
     () => (isTauri() || import.meta.env.DEV ? docsReviewSummary({ projectId: onlyProject || undefined, q: qTim || undefined, pendingOnly: chiChoXacNhan }) : Promise.resolve([] as ReviewSummaryRow[])),
     [onlyProject, qTim, chiChoXacNhan],
@@ -196,11 +198,11 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
   useEffect(() => {
     if (phongLoc && !dsPhong.includes(phongLoc)) setPhongLoc("");
   }, [dsPhong, phongLoc]);
-  const nhom = useMemo(() => groupsFromSummary(phongLoc ? summary.filter((r) => r.phong === phongLoc) : summary, files), [summary, phongLoc, files]);
+  const nhom = useMemo(() => groupsFromSummary(summary.filter((r) => (!phongLoc || r.phong === phongLoc) && (!chiChuaBoc || r.fieldsDone < r.files)), files), [summary, phongLoc, chiChuaBoc, files]);
   const flat = useMemo(() => nhom.flatMap((g) => g.rows.map((r) => ({ g, r }))), [nhom]);
   const trang = usePagination(100);
   const { setPage } = trang;
-  useEffect(() => setPage(1), [qTim, chiChoXacNhan, phongLoc, onlyProject, setPage]);
+  useEffect(() => setPage(1), [qTim, chiChoXacNhan, chiChuaBoc, phongLoc, onlyProject, setPage]);
   const pageRows = useMemo(() => pageSlice(flat, trang), [flat, trang]);
 
   const busy = tienDo !== null;
@@ -302,6 +304,7 @@ export default function ReviewHoSoTable({ canReview, actions, onlyProject, onOpe
         <Input size="sm" prefix="tim" className="w-64" placeholder="Tìm tên tệp, hộp, hồ sơ" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Tìm tài liệu" />
         {dsPhong.length > 0 && <Select size="sm" className="w-56" value={phongLoc} onChange={setPhongLoc} placeholder={`Tất cả phông (${dsPhong.length})`} options={dsPhong.map((p) => ({ value: p, label: p }))} aria-label="Lọc theo phông" />}
         <Checkbox checked={chiChoXacNhan} disabled={busy} onChange={setChiChoXacNhan} text="Chỉ phần chờ xác nhận" />
+        <Checkbox checked={chiChuaBoc} disabled={busy} onChange={setChiChuaBoc} text="Chỉ phần chưa bóc tách" />
         <Toolbar.Spacer />
         <span className="text-sm text-fg-subtle">{loading && summary.length === 0 ? "Đang tải…" : `${fmtN(soHoSo)} hồ sơ · ${fmtN(tongTep)} tài liệu`}</span>
         {actions}

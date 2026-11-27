@@ -65,7 +65,9 @@ export default function OcrPane() {
   useEffect(() => {
     if (!duAnTaiKhoan && duAnTopbar.projectId) setChonDuAn(duAnTopbar.projectId);
   }, [duAnTaiKhoan, duAnTopbar.projectId]);
-  const duAnHieuLuc = duAnTaiKhoan ?? chonDuAn;
+  // Dự án đã cố định (theo tài khoản hoặc đang chọn ở thanh trên): cả ba tab chỉ hiện dự án đó, không bỏ chọn tại chỗ được.
+  const duAnCoDinh = duAnTaiKhoan ?? duAnTopbar.projectId ?? "";
+  const duAnHieuLuc = duAnCoDinh || chonDuAn;
   const coQuyenDuyet = V3z9(session?.permissions, "document.review");
   const loiKhoang = V4hh(khoang);
 
@@ -188,8 +190,8 @@ export default function OcrPane() {
     );
   }
 
-  const totals = report?.totals;
-  const duAnRows = report?.projects ?? [];
+  const duAnRows = (report?.projects ?? []).filter((p) => !duAnCoDinh || p.projectId === duAnCoDinh);
+  const totals = duAnCoDinh ? duAnRows[0] : report?.totals;
   const cols: Column<V4f1>[] = [
     {
       key: "name",
@@ -261,7 +263,7 @@ export default function OcrPane() {
           <>
             <Card>
               <KpiRow>
-                <KpiTile label="Dự án" value={report?.projectsCount ?? 0} />
+                <KpiTile label="Dự án" value={duAnCoDinh ? duAnRows.length : (report?.projectsCount ?? 0)} />
                 <KpiTile label="Tổng tệp" value={totals?.docs ?? 0} sub={`${fmtN(totals?.pages ?? 0)} trang`} />
                 <KpiTile label="Đã OCR" value={totals?.ocrDone ?? 0} sub={totals?.fieldDocs ? `${fmtN(totals.fieldDocs)} đã bóc 16 trường` : undefined} />
                 <KpiTile label="Đã duyệt" value={totals?.approved ?? 0} tone="ok" />
@@ -290,10 +292,10 @@ export default function OcrPane() {
                 rows={duAnRows}
                 getRowId={(p) => p.projectId}
                 onRowClick={(p) => {
-                  setChonDuAn((cu) => (cu === p.projectId ? "" : p.projectId));
+                  if (!duAnCoDinh) setChonDuAn((cu) => (cu === p.projectId ? "" : p.projectId));
                   setTab("soat");
                 }}
-                rowClassName={(p) => (p.projectId === chonDuAn ? "bg-brand-50" : undefined)}
+                rowClassName={(p) => (p.projectId === duAnHieuLuc ? "bg-brand-50" : undefined)}
                 state={{ loading: dangTinh && !report, empty: { title: "Chưa có dự án nào trong phạm vi phụ trách" } }}
               />
               {totals && duAnRows.length > 1 && (
@@ -305,7 +307,7 @@ export default function OcrPane() {
           </>
         )}
         {tab === "chay" && <V4k5 />}
-        {tab === "soat" && <ReviewHoSoTable canReview={coQuyenDuyet} onlyProject={duAnTaiKhoan ? undefined : chonDuAn} onOpenDoc={(f) => setDocMo({ ...f, reviewStatus: f.review })} onDone={() => void napBaoCao()} actions={chonDuAnUI} />}
+        {tab === "soat" && <ReviewHoSoTable canReview={coQuyenDuyet} onlyProject={duAnTaiKhoan ? undefined : duAnHieuLuc} onOpenDoc={(f) => setDocMo({ ...f, reviewStatus: f.review })} onDone={() => void napBaoCao()} actions={chonDuAnUI} />}
       </div>
     </section>
   );
