@@ -52,12 +52,16 @@ export default function RolesView() {
   const [perms, setPerms] = useState<V3yx[]>([]);
   const [busy, setBusy] = useState(false);
   const [tao, setTao] = useState(false);
+  // Chỉ nạp lại ô nhập khi ĐỔI vai trò hoặc nội dung trên máy chủ thật sự khác. Danh sách tự tải lại theo sự kiện
+  // trực tiếp (mỗi lần tải lại `role` là đối tượng mới) — phụ thuộc vào `role` thì ô vừa bỏ tích bị bật lại.
+  const dauVet = role ? `${role.code}\u0001${role.name}\u0001${role.description ?? ""}\u0001${[...role.permissions].sort().join(",")}` : "";
   useEffect(() => {
     if (!role) return;
     setName(role.name);
     setDesc(role.description ?? "");
     setPerms(role.permissions);
-  }, [role]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dauVet]);
 
   const khoa = !role || !coSua || role.code === "super_admin" || (myRole === "manager" && (role.baseRole === "super_admin" || role.baseRole === "manager"));
   const daDoi = !!role && (name.trim() !== role.name || (desc.trim() || "") !== (role.description ?? "") || !sameSet(perms, role.permissions));
