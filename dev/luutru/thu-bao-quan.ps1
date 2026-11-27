@@ -42,6 +42,8 @@ function Chk($ten, $dk, $them) { if ($dk) { Write-Host ("  OK   {0} {1}" -f $ten
 
 Write-Host "===== 0. don du lieu cu + superadmin"
 Sql "TRUNCATE projects, users CASCADE" | Out-Null
+# TRUNCATE CASCADE lam trong ca bang ma dung chung (cl_thbq / cl_ngon_ngu / cl_loai_van_ban, project_id NULL) -> nap lai tu 0012.
+Get-Content (Join-Path $PSScriptRoot "seed-dung-chung-0012.sql") -Raw -Encoding UTF8 | docker exec -i $Container psql -X -q -U digitext -d digitext | Out-Null
 # Không TRUNCATE bk_phuong_tien (CASCADE sẽ xoá luôn bk_lich_sao_luu); lịch mặc định của 0032 dựng lại nếu thiếu.
 Sql "DELETE FROM bk_su_co; DELETE FROM backup_runs; DELETE FROM bk_phuong_tien; DELETE FROM bk_lich_sao_luu" | Out-Null
 Sql "INSERT INTO bk_lich_sao_luu (id, loai, ten, chu_ky_gio, do_tre_cho_phep_gio, giu_so_ban, nguon) SELECT gen_random_uuid(), 'gia_tang', 'Sao luu gia tang hang ngay', 24, 2, 14, 'Kho tai lieu' WHERE NOT EXISTS (SELECT 1 FROM bk_lich_sao_luu WHERE loai = 'gia_tang')" | Out-Null

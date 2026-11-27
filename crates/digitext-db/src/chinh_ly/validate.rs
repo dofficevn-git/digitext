@@ -179,6 +179,8 @@ pub fn fill_defaults(table: &str, row: &mut Row) {
         }
         "cl_mang" => put(row, "ma_mang", Value::String("00".into())),
         "cl_hop" => put(row, "vinh_vien", Value::Bool(false)),
+        // 0035: rows::insert đi qua jsonb_populate_record nên cột vắng = NULL, không lấy DEFAULT 90 của bảng.
+        "cl_gia" => put(row, "canh_bao_pct", Value::from(90)),
         "cl_thbq" => {
             put(row, "gia_tri", Value::from(0));
             put(row, "ma_tt05", Value::String("07".into()));

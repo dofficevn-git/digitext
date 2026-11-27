@@ -182,13 +182,13 @@ async fn pham_vi_phong_ban_loc_ho_so() {
     // Pull theo phạm vi: người phòng A kéo về A1 + B2 (mình lập) và văn bản của chúng, không có B1.
     let vb_b1 = Uuid::now_v7();
     assert!(sync::apply_op(&pool, &OpCtx { project_id: fx.project, user_id: fx.user2, user_name: "x", device_id: None, source: "online", has_perm: &all, is_super: false }, &upsert("cl_van_ban", vb_b1, json!({"ho_so_id": _b1, "so_thu_tu": 1, "trich_yeu": "VB của B1"}))).await.unwrap().is_ok());
-    let p = sync::pull(&pool, fx.project, 0, 1000, Some(PhamVi { phong_ban_id: fx.pb_a, user_id: fx.user })).await.unwrap();
+    let p = sync::pull(&pool, fx.project, 0, 1000, Some(PhamVi { phong_ban_id: fx.pb_a, user_id: fx.user }), None).await.unwrap();
     let hs_keo: Vec<String> = p.rows.iter().filter(|r| r.table == "cl_ho_so").filter_map(|r| r.row.get("so_tam").and_then(Value::as_str).map(str::to_owned)).collect();
     assert_eq!(hs_keo.len(), 2, "{hs_keo:?}");
     assert!(hs_keo.contains(&"A1".to_string()) && hs_keo.contains(&"B2".to_string()));
     assert!(!p.rows.iter().any(|r| r.table == "cl_van_ban" && r.row.get("id").and_then(Value::as_str) == Some(&vb_b1.to_string())), "văn bản của B1 không được kéo về");
     assert!(p.rows.iter().any(|r| r.table == "cl_phong_ban"), "danh mục vẫn kéo đủ");
-    let p_full = sync::pull(&pool, fx.project, 0, 1000, None).await.unwrap();
+    let p_full = sync::pull(&pool, fx.project, 0, 1000, None, None).await.unwrap();
     assert_eq!(p_full.rows.iter().filter(|r| r.table == "cl_ho_so").count(), 3);
     // Nộp lưu A1 → vẫn thấy (trong 360 ngày), lọc nop_luu hoạt động.
     let p = nop_luu::lap(&pool, nop_luu::LapPhieu { project_id: fx.project, phong_ban_id: Some(fx.pb_a), nguoi_nop: fx.user, nguoi_nop_ten: "x", ghi_chu: None, ho_so_ids: &[a1] }).await.unwrap().unwrap();

@@ -45,6 +45,8 @@ function Than($j) { if ($null -eq $j) { return "" }; if ($j -is [string]) { retu
 
 Write-Host "===== 0. don du lieu cu + superadmin"
 Sql "TRUNCATE projects, users CASCADE" | Out-Null
+# TRUNCATE CASCADE lam trong ca bang ma dung chung (cl_thbq / cl_ngon_ngu / cl_loai_van_ban, project_id NULL) -> nap lai tu 0012.
+Get-Content (Join-Path $PSScriptRoot "seed-dung-chung-0012.sql") -Raw -Encoding UTF8 | docker exec -i $Container psql -X -q -U digitext -d digitext | Out-Null
 $mk = Join-Path $sb "mk.txt"; [IO.File]::WriteAllText($mk, "ThuNghiemCucBo2026")
 & $api bootstrap-superadmin --username quantri --display-name "Quan tri" --password-file $mk 2>&1 | Select-Object -Last 1
 
@@ -145,13 +147,13 @@ try {
 
   Write-Host "===== 4. bao cao TT05 (0036)"
   $r = Call GET "/bao-cao" $tc; $defs = @($r.json.baoCao)
-  Chk "danh muc ban Luu tru: 18 bao cao (khong thu_nop), 5 nhom" ($r.code -eq 200 -and $defs.Count -eq 18 -and @($r.json.nhom).Count -eq 5 -and -not ($defs | Where-Object { $_.ma -eq "thu_nop" })) ("n=" + $defs.Count)
+  Chk "danh muc ban Luu tru: 19 bao cao (khong thu_nop; +so chuyen doi tu 0037), 5 nhom" ($r.code -eq 200 -and $defs.Count -eq 19 -and @($r.json.nhom).Count -eq 5 -and -not ($defs | Where-Object { $_.ma -eq "thu_nop" })) ("n=" + $defs.Count)
   $loiSql = 0
   foreach ($d in $defs) {
     $r = Call GET "/bao-cao/$($d.ma)?projectId=$pid1" $tc
     if ($r.code -ne 200) { $loiSql++; Write-Host ("   !! " + $d.ma + " code=" + $r.code + " " + (Than $r.json)) -ForegroundColor Yellow }
   }
-  Chk "18 bao cao JSON deu chay (SQL hop le)" ($loiSql -eq 0) ("loi=" + $loiSql)
+  Chk "19 bao cao JSON deu chay (SQL hop le)" ($loiSql -eq 0) ("loi=" + $loiSql)
   $r = Call GET "/bao-cao/phong?projectId=$pid1" $tc; $row = @($r.json.rows)[0]
   Chk "bao cao phong: so_ho_so=5 so_hop=3 so_phong_ban=2, dong tong" ($row.so_ho_so -eq 5 -and $row.so_hop -eq 3 -and $row.so_phong_ban -eq 2 -and $r.json.tong -and $r.json.tong[4] -eq "5") (Than $row)
   $r = Call GET "/bao-cao/phong?projectId=$pid1&namTu=2026" $tc; Chk "loc nam 2026 -> so_ho_so=0" (@($r.json.rows)[0].so_ho_so -eq 0) ""

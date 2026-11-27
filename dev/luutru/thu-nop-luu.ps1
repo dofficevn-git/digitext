@@ -44,6 +44,7 @@ Write-Host "===== 0. don du lieu cu + superadmin"
 Sql "DELETE FROM projects WHERE code = 'LTHH'" | Out-Null
 # CSDL tạm: xoá sạch bằng TRUNCATE CASCADE (audit_log, records… tham chiếu users không cascade nên DELETE bị chặn).
 Sql "TRUNCATE projects, users CASCADE" | Out-Null; Write-Host ("   users con lai: " + (Sql "SELECT count(*) FROM users"))
+Get-Content (Join-Path $PSScriptRoot "seed-dung-chung-0012.sql") -Raw -Encoding UTF8 | docker exec -i $Container psql -X -q -U digitext -d digitext | Out-Null
 $mk = Join-Path $sb "mk-nl.txt"; [IO.File]::WriteAllText($mk, "ThuNghiemCucBo2026")
 & $api bootstrap-superadmin --username quantri --display-name "Quan tri" --password-file $mk 2>&1 | Select-Object -Last 1
 

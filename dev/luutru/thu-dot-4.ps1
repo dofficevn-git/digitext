@@ -45,6 +45,8 @@ function SoTrangPdf($path) { try { $o = & python -c "import pymupdf,sys; print(l
 
 Write-Host "===== 0. don du lieu cu + superadmin"
 Sql "TRUNCATE projects, users CASCADE" | Out-Null
+# TRUNCATE CASCADE lam trong ca bang ma dung chung (cl_thbq / cl_ngon_ngu / cl_loai_van_ban, project_id NULL) -> nap lai tu 0012.
+Get-Content (Join-Path $PSScriptRoot "seed-dung-chung-0012.sql") -Raw -Encoding UTF8 | docker exec -i $Container psql -X -q -U digitext -d digitext | Out-Null
 $mk = Join-Path $sb "mk.txt"; [IO.File]::WriteAllText($mk, "ThuNghiemCucBo2026")
 & $api bootstrap-superadmin --username quantri --display-name "Quan tri" --password-file $mk 2>&1 | Select-Object -Last 1
 
