@@ -35,6 +35,7 @@ function Call($m, $path, $tok, $body) {
     $resp = $_.Exception.Response
     if ($null -eq $resp) { return @{ code = 0; json = $null; loi = $_.Exception.Message } }
     $sr = New-Object IO.StreamReader($resp.GetResponseStream(), [Text.Encoding]::UTF8); $txt = $sr.ReadToEnd()
+    if (-not $txt) { $txt = [string]$_.ErrorDetails.Message }
     return @{ code = [int]$resp.StatusCode; json = $(try { $txt | ConvertFrom-Json } catch { $txt }) }
   }
 }

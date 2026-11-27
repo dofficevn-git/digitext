@@ -564,6 +564,10 @@ mod tests {
         let pdf = render_manual(&[ManualBlock::Title("Nhãn hộp".into()), ManualBlock::Labels2x2(nhan)], &font).unwrap();
         let doc = lopdf::Document::load_mem(&pdf).unwrap();
         assert_eq!(doc.get_pages().len(), 3, "trang tiêu đề + 2 trang nhãn (4 + 1)");
+        // Xem bằng mắt: DIGITEXT_PDF_OUT=<thư mục> cargo test -p digitext-pdf nhan_hop -- --ignored
+        if let Some(dir) = std::env::var_os("DIGITEXT_PDF_OUT") {
+            std::fs::write(std::path::Path::new(&dir).join("nhan-hop-2x2.pdf"), &pdf).unwrap();
+        }
     }
 
     #[test]
