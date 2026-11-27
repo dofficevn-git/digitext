@@ -12,7 +12,7 @@ fn rows_json(rows: Vec<sqlx::postgres::PgRow>) -> Vec<Value> {
 
 /// Mỗi giá một dòng: kho, phòng ban / phông, dải hộp, `suc_chua` (cột hoặc suy từ dải), số hộp / hồ sơ đang chứa, `pct_day`,
 /// `gan_day` (≥ `canh_bao_pct`), `vuot` (> 100 %).
-pub async fn tong_hop(pool: &PgPool, project: Uuid, kho: Option<Uuid>, phong: Option<Uuid>) -> sqlx::Result<Vec<Value>> {
+pub async fn tong_hop(pool: &PgPool, project: Uuid, kho: Option<Uuid>, phong: Option<Uuid>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<Vec<Value>> {
     let rows = sqlx::query(
         "WITH hs AS (SELECT v.gia_eff_id, count(DISTINCT v.hop_id) AS so_hop, count(*) AS so_ho_so \
                      FROM cl_ho_so_v v WHERE v.project_id = $1 AND v.deleted_at IS NULL AND v.gia_eff_id IS NOT NULL GROUP BY v.gia_eff_id) \
@@ -29,11 +29,13 @@ pub async fn tong_hop(pool: &PgPool, project: Uuid, kho: Option<Uuid>, phong: Op
            LEFT JOIN cl_phong_ban pb ON pb.id = g.phong_ban_id LEFT JOIN cl_phong p ON p.id = pb.phong_id \
            LEFT JOIN hs ON hs.gia_eff_id = g.id \
            WHERE g.project_id = $1 AND g.deleted_at IS NULL AND k.deleted_at IS NULL AND ($2::uuid IS NULL OR g.kho_id = $2) AND ($3::uuid IS NULL OR p.id = $3) \
+             AND ($4::uuid[] IS NULL OR p.id = ANY($4)) \
            ORDER BY k.so_tt NULLS LAST, k.ten, g.so_tt NULLS LAST, g.tu_hop NULLS LAST, g.ten) x",
     )
     .bind(project)
     .bind(kho)
     .bind(phong)
+    .bind(phong_ids)
     .fetch_all(pool)
     .await?;
     Ok(rows_json(rows))
@@ -41,7 +43,7 @@ pub async fn tong_hop(pool: &PgPool, project: Uuid, kho: Option<Uuid>, phong: Op
 
 /// Giá gần đầy / vượt sức chứa của một dự án (cho nhắc `kho_day`): (id giá, tên kho, tên giá, số hộp, sức chứa, %).
 pub async fn gia_gan_day(pool: &PgPool, project: Uuid) -> sqlx::Result<Vec<(Uuid, String, String, i64, i64, f64)>> {
-    let rows = tong_hop(pool, project, None, None).await?;
+    let rows = tong_hop(pool, project, None, None, None).await?;
     Ok(rows
         .into_iter()
         .filter(|r| r["gan_day"].as_bool() == Some(true))

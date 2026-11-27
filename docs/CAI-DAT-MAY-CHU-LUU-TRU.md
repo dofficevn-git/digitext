@@ -148,3 +148,18 @@ Khi nâng cấp máy chủ đang chạy:
    quầy chỉ lập và giao mà không duyệt thì bỏ quyền này ở vai trò của họ.
 3. Vào **Kho và giá › Giá**, sửa từng giá: khai sức chứa và ngưỡng cảnh báo nếu khác mặc định.
 4. Tuỳ chọn thử nhanh: `DIGITEXT_MT_NHAC_GIAY=60` trong `conf\api.env` rút chu kỳ nhắc mượn trả / giá đầy xuống 60 giây (chỉ dùng khi thử).
+
+## 10. Chuyển đổi số → giấy, phạm vi phông, biểu mẫu PDF (từ bản 0.25.21)
+
+- **Tra cứu › In ra giấy** (cán bộ lưu trữ): chuyển đổi một tài liệu số sang giấy theo Điều 13–16 TT 05/2025: hệ thống kiểm chữ ký số của
+  bản gốc, ghép trang thể thức "TÀI LIỆU LƯU TRỮ CHUYỂN ĐỔI" (Phụ lục VI) vào cuối, đánh chân trang từng trang, cấp số `CD-năm-số` và ghi
+  **Lưu trữ số › Sổ chuyển đổi** + nhật ký khai thác. Bản in có giá trị khi người có thẩm quyền ký và đóng dấu lên trang thể thức.
+- **Quản trị › Người dùng › Phạm vi phông**: giới hạn một tài khoản (quản trị dự án, nhân viên, khách) chỉ thấy một số phông của dự án;
+  không chọn gì = thấy mọi phông như trước. Áp cho mục lục, tra cứu, đọc tài liệu, mượn trả, kho, báo cáo và bản sao ngoại tuyến.
+- **Kết xuất mục lục**: các bản in mục lục hồ sơ, sản phẩm có bìa, mục lục văn bản, phụ lục tra tìm nay ra **PDF dựng tại máy trạm** (chạy
+  cả ngoại tuyến); bản HTML cũ vẫn còn dưới tên "In nhanh … (HTML)".
+
+Khi nâng cấp máy chủ đang chạy:
+1. Chạy lại `cai-dat.ps1` / `./cai-dat.sh` như mục 6: cập nhật CSDL áp thêm `0037`, `0038` (nhanh, không khoá bảng).
+2. Máy chủ cần font TTF (`DIGITEXT_CERT_FONT`, bộ cài đã đặt) để dựng trang thể thức; thiếu font API trả lỗi 503 khi chuyển đổi.
+3. Không có việc nền mới.

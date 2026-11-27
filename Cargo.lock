@@ -984,6 +984,7 @@ dependencies = [
  "fax",
  "image",
  "lopdf",
+ "serde",
  "sha2 0.10.9",
  "thiserror",
  "tiff",

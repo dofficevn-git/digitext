@@ -6,7 +6,7 @@
 //! - `POST /cl/ho-so/gan-hop {projectId, phongBanId, rows: [{hoSoId, hopSo}]}` — đặt phòng ban cho hồ sơ chưa có rồi gán hộp
 //!   (he_thong_hoa::boxing: tạo hộp nếu chưa có, ghi cl_lich_su 'boxing'); lỗi theo dòng.
 //! Quyền: đọc `dossier.read`; gán hộp `dossier.systematize` hoặc `khogia.manage`.
-use super::{ctx_parts, op_ctx, project_access, read_access};
+use super::{ctx_parts, kiem_phong, op_ctx, pham_vi_phong, phong_hieu_dung, project_access, read_access};
 use crate::app::AppState;
 use crate::error::ApiError;
 use crate::extract::Ts;
@@ -42,7 +42,9 @@ struct TongHopQ {
 
 async fn tong_hop(State(st): State<AppState>, ts: Ts, Query(q): Query<TongHopQ>) -> Result<Json<Value>, ApiError> {
     read_access(&st, &ts, q.project_id).await?;
-    let rows = db::tong_hop(&st.pool, q.project_id, q.kho_id, q.phong_id).await?;
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = phong_hieu_dung(scope.as_deref(), q.phong_id)?;
+    let rows = db::tong_hop(&st.pool, q.project_id, q.kho_id, phong_id, scope.as_deref()).await?;
     let gan_day = rows.iter().filter(|r| r["gan_day"].as_bool() == Some(true)).count();
     let vuot = rows.iter().filter(|r| r["vuot"].as_bool() == Some(true)).count();
     Ok(Json(json!({ "rows": rows, "ganDay": gan_day, "vuot": vuot })))
@@ -84,6 +86,7 @@ async fn ho_so_theo_kho(State(st): State<AppState>, ts: Ts, Query(q): Query<HoSo
     let f = ho_so::Filter {
         project_id: q.project_id,
         pham_vi: super::pham_vi_cua(&ts),
+        phong_ids: pham_vi_phong(&st, &ts, q.project_id).await?,
         kho_id: q.kho_id,
         gia_id: q.gia_id,
         sort: Some("ho_so_so".into()),
@@ -144,6 +147,7 @@ struct ChuaHopQ {
 
 async fn chua_hop(State(st): State<AppState>, ts: Ts, Query(q): Query<ChuaHopQ>) -> Result<Json<Value>, ApiError> {
     read_access(&st, &ts, q.project_id).await?;
+    kiem_phong(pham_vi_phong(&st, &ts, q.project_id).await?.as_deref(), q.phong_id)?;
     Ok(Json(json!({ "rows": db::ho_so_chua_hop(&st.pool, q.project_id, q.phong_id, q.limit).await? })))
 }
 
@@ -173,6 +177,12 @@ async fn gan_hop(State(st): State<AppState>, ts: Ts, Json(b): Json<GanHopBody>) 
         return Err(ApiError::bad_request("Tối đa 5000 dòng mỗi lần"));
     }
     let ids: Vec<Uuid> = b.rows.iter().map(|r| r.ho_so_id).collect();
+    if let Some(sc) = pham_vi_phong(&st, &ts, b.project_id).await? {
+        let ngoai: i64 = sqlx::query_scalar("SELECT count(*) FROM cl_ho_so WHERE id = ANY($1) AND NOT (phong_id = ANY($2))").bind(&ids).bind(&sc).fetch_one(&st.pool).await?;
+        if ngoai > 0 {
+            return Err(ApiError::forbidden());
+        }
+    }
     let (da_dat_pb, loi_pb) = db::dat_phong_ban(&st.pool, b.project_id, b.phong_ban_id, &ids, ts.user.id).await?;
     let loi_ids: std::collections::HashSet<Uuid> = loi_pb.iter().map(|(id, _)| *id).collect();
     let box_rows: Vec<hth::BoxRow> = b

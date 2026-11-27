@@ -8,7 +8,7 @@ import { V460 } from "@/state";
 import { V3z0, V3za } from "@/domain/permissions";
 import type { V3yx } from "@/domain/permissions";
 import type { V3xs } from "@/domain/types";
-import { V4ac, V4ad, V4ae, V4af, V4ag, V4ai, V4aj, V4ak, V4al, V4an, V4ao } from "@/api/users";
+import { V4ac, V4ad, V4ae, V4af, V4ag, V4ai, V4aj, V4ak, V4al, V4an, V4ao, userPhongGet, userPhongSet } from "@/api/users";
 import type { V4a8, V4a9, V4ah } from "@/api/users";
 import { V4r3, type V4r0 } from "@/api/stats";
 import { rolesList, type RoleInfo } from "@/api/roles";
@@ -16,15 +16,15 @@ import { V4r5, V4r6, V4r8, type V4r4 } from "./projectAdmins";
 import ProjectPurgeDialog from "./ProjectPurgeDialog";
 import { Icon } from "@/components/Icon";
 import { LUU_TRU } from "@/config";
-import { str, type ClRow } from "@/api/chinhly";
+import { clRemote, str, type ClRow } from "@/api/chinhly";
 import { useClCatalog } from "@/features/chinhly/common";
-import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, KpiRow, KpiTile, Menu, notifyError, PageHeader, Select, Table, Tabs, Tip, toast, Toolbar, type Column } from "@/ui";
+import { Badge, Button, Card, Checkbox, confirm, Dialog, ErrorBanner, Field, FormGrid, IconButton, Input, KpiRow, KpiTile, Menu, MultiSelect, notifyError, PageHeader, Select, Table, Tabs, Tip, toast, Toolbar, type Column } from "@/ui";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
 const mb = (b: number) => `${(b / 1_048_576).toFixed(1)} MB`;
 
 type Tab = "users" | "projects" | "stats";
-type DialogState = null | { kind: "create" } | { kind: "edit"; user: V4a8 } | { kind: "password"; user: V4a8 } | { kind: "perms"; user: V4a8 } | { kind: "project" };
+type DialogState = null | { kind: "create" } | { kind: "edit"; user: V4a8 } | { kind: "password"; user: V4a8 } | { kind: "perms"; user: V4a8 } | { kind: "phong"; user: V4a8 } | { kind: "project" };
 
 export default function V4ra() {
   const { session } = V460();
@@ -162,6 +162,7 @@ export default function V4ra() {
                   { label: "Sửa thông tin", icon: "sua", onSelect: () => setDlg({ kind: "edit", user: u }) },
                   { label: "Đổi mật khẩu", icon: "khoa", onSelect: () => setDlg({ kind: "password", user: u }) },
                   { label: "Phân quyền", icon: "quanTri", onSelect: () => setDlg({ kind: "perms", user: u }) },
+                  ...(u.role === "admin" || u.role === "user" || u.role === "customer" ? [{ label: "Phạm vi phông", icon: "danhmuc" as const, hint: "Chỉ thấy các phông được cấp", onSelect: () => setDlg({ kind: "phong", user: u }) }] : []),
                   "-",
                   { label: u.isActive ? "Vô hiệu hoá" : "Kích hoạt", icon: u.isActive ? "daHuy" : "duyet", danger: u.isActive, onSelect: () => void toggleActive(u), disabled: u.id === me },
                 ]}
@@ -220,6 +221,7 @@ export default function V4ra() {
       )}
       {dlg?.kind === "password" && <PasswordDialog user={dlg.user} onClose={() => setDlg(null)} />}
       {dlg?.kind === "perms" && <PermsDialog user={dlg.user} onClose={() => setDlg(null)} />}
+      {dlg?.kind === "phong" && <PhongDialog user={dlg.user} projectId={dlg.user.projectId ?? session?.projectId ?? null} onClose={() => setDlg(null)} />}
       {xoaDuAn && <ProjectPurgeDialog projectId={xoaDuAn} onClose={() => setXoaDuAn(null)} onDone={reload} />}
       {dlg?.kind === "project" && (
         <ProjectDialog
@@ -664,6 +666,66 @@ function ProjectDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
         </Field>
         <button type="submit" className="hidden" />
       </form>
+    </Dialog>
+  );
+}
+
+/** Phạm vi phông (0038): chọn các phông trong dự án mà tài khoản được thấy; trống = không giới hạn. */
+function PhongDialog({ user, projectId, onClose }: { user: V4a8; projectId: string | null; onClose: () => void }) {
+  const [sel, setSel] = useState<string[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    if (!projectId) return { hienTai: [] as string[], phong: [] as ClRow[] };
+    const [pv, cat] = await Promise.all([userPhongGet(user.id, projectId), clRemote<{ phong?: ClRow[] }>("GET", `/cl/catalog?projectId=${projectId}`)]);
+    return { hienTai: pv.phongIds, phong: cat.phong ?? [] };
+  }, [user.id, projectId]);
+  const { data, error, loading } = V41t(load, { topics: ["users"] });
+  const gia_tri = sel ?? data?.hienTai ?? [];
+  const dirty = !!data && (gia_tri.length !== data.hienTai.length || gia_tri.some((p) => !data.hienTai.includes(p)));
+  const save = async () => {
+    if (!projectId || busy) return;
+    setBusy(true);
+    try {
+      await userPhongSet(user.id, projectId, gia_tri);
+      toast.success(gia_tri.length ? `Đã giới hạn ${user.username} ở ${gia_tri.length} phông.` : `Đã bỏ giới hạn phông cho ${user.username}.`);
+      onClose();
+    } catch (e) {
+      notifyError(e, "lưu phạm vi phông");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => !o && !busy && onClose()}
+      title={`Phạm vi phông — ${user.username}`}
+      description="Không chọn phông nào = thấy mọi phông của dự án (như trước). Có chọn = mục lục, tra cứu, mượn trả, kho, báo cáo và bản sao ngoại tuyến chỉ còn các phông đó."
+      size="md"
+      footer={
+        <>
+          <Button onClick={() => setSel([])} disabled={!data || gia_tri.length === 0 || busy}>
+            Bỏ giới hạn
+          </Button>
+          <Toolbar.Spacer />
+          <Button onClick={onClose} disabled={busy}>
+            Đóng
+          </Button>
+          <Button variant="primary" loading={busy} disabled={!dirty || !projectId} onClick={() => void save()}>
+            Lưu
+          </Button>
+        </>
+      }
+    >
+      {!projectId ? (
+        <ErrorBanner error="Tài khoản chưa gắn dự án — chọn dự án đang làm rồi mở lại." />
+      ) : error ? (
+        <ErrorBanner error={error} />
+      ) : loading && !data ? (
+        <p className="text-sm text-fg-subtle">Đang tải…</p>
+      ) : (
+        <MultiSelect label="Phông được thấy" size="md" options={(data?.phong ?? []).map((p) => ({ value: p.id, label: `${str(p, "ma_du_an")} — ${str(p, "ten")}` }))} value={gia_tri} onChange={setSel} />
+      )}
     </Dialog>
   );
 }

@@ -63,6 +63,33 @@ pub(crate) fn pham_vi_cua(ts: &Ts) -> Option<digitext_db::chinh_ly::ho_so::PhamV
     Some(digitext_db::chinh_ly::ho_so::PhamVi { phong_ban_id, user_id: ts.user.id })
 }
 
+/// Phạm vi PHÔNG (0038, 27/11/2026): `Some(ids)` khi người gọi có dòng `user_phong` cho dự án này (super_admin / manager không bao giờ
+/// bị giới hạn); `None` = không giới hạn (mọi tài khoản không có dòng — hành vi y như trước). Áp ở các đường đọc mục lục / tra cứu /
+/// khai thác tài liệu đã gắn phông, mượn trả, kho, báo cáo, thống kê, hệ thống hoá, nhập mục lục và pull offline.
+pub(crate) async fn pham_vi_phong(st: &AppState, ts: &Ts, project: Uuid) -> Result<Option<Vec<Uuid>>, ApiError> {
+    if matches!(ts.user.role, Role::SuperAdmin | Role::Manager) {
+        return Ok(None);
+    }
+    let ids = digitext_db::user_phong::cua(&st.pool, ts.user.id, project).await?;
+    Ok(if ids.is_empty() { None } else { Some(ids) })
+}
+
+/// Phông được chọn / chạm tới phải nằm trong phạm vi (nếu có phạm vi).
+pub(crate) fn kiem_phong(scope: Option<&[Uuid]>, phong: Uuid) -> Result<(), ApiError> {
+    match scope {
+        Some(sc) if !sc.contains(&phong) => Err(ApiError::forbidden()),
+        _ => Ok(()),
+    }
+}
+
+/// Phông người dùng chọn (có thể None) hợp với phạm vi: trả bộ lọc phông hiệu dụng cho câu SQL một phông.
+pub(crate) fn phong_hieu_dung(scope: Option<&[Uuid]>, chon: Option<Uuid>) -> Result<Option<Uuid>, ApiError> {
+    if let Some(p) = chon {
+        kiem_phong(scope, p)?;
+    }
+    Ok(chon)
+}
+
 /// Đọc: cần dossier.read hoặc catalog.read + thuộc dự án.
 pub(crate) async fn read_access(st: &AppState, ts: &Ts, project: Uuid) -> Result<(), ApiError> {
     if !(ts.has_perm(Permission::DossierRead) || ts.has_perm(Permission::CatalogRead)) {

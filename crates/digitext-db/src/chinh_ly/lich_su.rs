@@ -91,6 +91,8 @@ pub struct Filter {
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
     pub q: Option<String>,
+    /// Phạm vi phông (0038).
+    pub phong_ids: Option<Vec<Uuid>>,
     pub limit: i64,
     pub offset: i64,
 }
@@ -102,10 +104,11 @@ pub async fn list(pool: &PgPool, f: &Filter) -> sqlx::Result<(Vec<Value>, i64)> 
         AND ($4::uuid IS NULL OR l.phong_id = $4) AND ($5::uuid IS NULL OR l.actor_id = $5) \
         AND ($6::text IS NULL OR l.action = $6) AND ($7::timestamptz IS NULL OR l.at >= $7) \
         AND ($8::timestamptz IS NULL OR l.at < $8) \
-        AND ($9::text IS NULL OR l.title ILIKE '%' || $9 || '%' OR h.so_tam ILIKE '%' || $9 || '%' OR l.actor_name ILIKE '%' || $9 || '%')";
+        AND ($9::text IS NULL OR l.title ILIKE '%' || $9 || '%' OR h.so_tam ILIKE '%' || $9 || '%' OR l.actor_name ILIKE '%' || $9 || '%') \
+        AND ($10::uuid[] IS NULL OR l.phong_id = ANY($10))";
     let sql = format!(
         "SELECT to_jsonb(l) || jsonb_build_object('so_tam', h.so_tam, 'tieu_de_hien_tai', h.tieu_de, 'ho_so_so', h.ho_so_so) AS row \
-         FROM cl_lich_su l LEFT JOIN cl_ho_so h ON h.id = l.ho_so_id WHERE {where_sql} ORDER BY l.at DESC, l.ver DESC LIMIT $10 OFFSET $11"
+         FROM cl_lich_su l LEFT JOIN cl_ho_so h ON h.id = l.ho_so_id WHERE {where_sql} ORDER BY l.at DESC, l.ver DESC LIMIT $11 OFFSET $12"
     );
     let count_sql = format!("SELECT count(*) FROM cl_lich_su l LEFT JOIN cl_ho_so h ON h.id = l.ho_so_id WHERE {where_sql}");
     fn bind<'q>(q: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>, f: &'q Filter) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
@@ -118,6 +121,7 @@ pub async fn list(pool: &PgPool, f: &Filter) -> sqlx::Result<(Vec<Value>, i64)> 
             .bind(f.from)
             .bind(f.to)
             .bind(f.q.as_deref().map(str::trim).filter(|s| !s.is_empty()))
+            .bind(f.phong_ids.as_deref())
     }
     use sqlx::Row as _;
     let rows = bind(sqlx::query(&sql), f).bind(f.limit.clamp(1, 100_000)).bind(f.offset.max(0)).fetch_all(pool).await?;

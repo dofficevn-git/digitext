@@ -53,17 +53,22 @@ async fn stats_access(st: &AppState, ts: &Ts, project: Uuid) -> Result<(), ApiEr
 
 async fn chinh_ly(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Result<Json<Vec<Value>>, ApiError> {
     stats_access(&st, &ts, q.project_id).await?;
-    Ok(Json(tk::chinh_ly(&st.pool, q.project_id, q.phong_id).await?))
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = super::phong_hieu_dung(scope.as_deref(), q.phong_id)?;
+    Ok(Json(tk::chinh_ly(&st.pool, q.project_id, phong_id, scope.as_deref()).await?))
 }
 
 async fn nhan_vien(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Result<Json<Vec<Value>>, ApiError> {
     stats_access(&st, &ts, q.project_id).await?;
-    Ok(Json(tk::nhan_vien(&st.pool, q.project_id, q.phong_id, vn(q.from.as_deref(), false)?, vn(q.to.as_deref(), true)?).await?))
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = super::phong_hieu_dung(scope.as_deref(), q.phong_id)?;
+    Ok(Json(tk::nhan_vien(&st.pool, q.project_id, phong_id, vn(q.from.as_deref(), false)?, vn(q.to.as_deref(), true)?, scope.as_deref()).await?))
 }
 
 async fn phan_mem(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Result<Json<Vec<Value>>, ApiError> {
     stats_access(&st, &ts, q.project_id).await?;
-    Ok(Json(tk::phan_mem(&st.pool, q.project_id, vn(q.from.as_deref(), false)?, vn(q.to.as_deref(), true)?).await?))
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    Ok(Json(tk::phan_mem(&st.pool, q.project_id, vn(q.from.as_deref(), false)?, vn(q.to.as_deref(), true)?, scope.as_deref()).await?))
 }
 
 async fn muon_tra(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Result<Json<Value>, ApiError> {

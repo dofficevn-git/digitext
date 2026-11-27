@@ -19,6 +19,8 @@ pub struct PhamVi {
 pub struct Filter {
     pub project_id: Uuid,
     pub pham_vi: Option<PhamVi>,
+    /// Phạm vi PHÔNG (0038): None = không giới hạn; Some = chỉ hồ sơ của các phông này (user_phong).
+    pub phong_ids: Option<Vec<Uuid>>,
     /// Lọc theo trạng thái nộp lưu (0031): `chua_nop` (NULL hoặc trả lại) | `cho_tiep_nhan` | `da_nop` | `tra_lai`.
     pub nop_luu: Option<String>,
     pub phong_id: Option<Uuid>,
@@ -75,7 +77,8 @@ const WHERE: &str = "v.project_id = $1 AND ($2::bool OR v.deleted_at IS NULL) \
     AND ($18::uuid IS NULL OR v.created_by = $19 \
          OR (v.phong_ban_id = $18 AND (v.khoa_luc IS NULL OR v.khoa_luc + make_interval(days => $20) > now()))) \
     AND ($21::text IS NULL OR CASE $21 WHEN 'chua_nop' THEN v.nop_luu_trang_thai IS NULL OR v.nop_luu_trang_thai = 'tra_lai' \
-                                         ELSE v.nop_luu_trang_thai = $21 END)";
+                                         ELSE v.nop_luu_trang_thai = $21 END) \
+    AND ($22::uuid[] IS NULL OR v.phong_id = ANY($22))";
 
 fn bind<'q>(q: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>, f: &'q Filter) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
     q.bind(f.project_id)
@@ -99,11 +102,12 @@ fn bind<'q>(q: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArgument
         .bind(f.pham_vi.map(|p| p.user_id))
         .bind(digitext_core::luu_tru::QUYEN_SU_DUNG_NGAY as i32)
         .bind(f.nop_luu.as_deref().filter(|s| matches!(*s, "chua_nop" | "cho_tiep_nhan" | "da_nop" | "tra_lai")))
+        .bind(f.phong_ids.as_deref())
 }
 
 /// Danh sách hồ sơ (dòng JSON của view) + tổng số khớp bộ lọc.
 pub async fn list(pool: &PgPool, f: &Filter) -> sqlx::Result<(Vec<Value>, i64)> {
-    let sql = format!("SELECT to_jsonb(v) AS row FROM cl_ho_so_v v WHERE {WHERE} ORDER BY {} LIMIT $22 OFFSET $23", order_by(f.sort.as_deref(), f.desc));
+    let sql = format!("SELECT to_jsonb(v) AS row FROM cl_ho_so_v v WHERE {WHERE} ORDER BY {} LIMIT $23 OFFSET $24", order_by(f.sort.as_deref(), f.desc));
     let rows = bind(sqlx::query(&sql), f).bind(f.limit.clamp(1, LIST_MAX)).bind(f.offset.max(0)).fetch_all(pool).await?;
     let total: i64 = bind(sqlx::query(&format!("SELECT count(*) FROM cl_ho_so_v v WHERE {WHERE}")), f).fetch_one(pool).await?.try_get(0)?;
     Ok((rows.into_iter().filter_map(|r| r.try_get::<Value, _>("row").ok()).collect(), total))
@@ -160,6 +164,8 @@ pub struct VanBanFilter {
     pub tu_ngay: Option<chrono::NaiveDate>,
     pub den_ngay: Option<chrono::NaiveDate>,
     pub pham_vi: Option<PhamVi>,
+    /// Phạm vi phông (0038).
+    pub phong_ids: Option<Vec<Uuid>>,
     pub limit: i64,
     pub offset: i64,
 }
@@ -171,13 +177,14 @@ pub async fn search_van_ban(pool: &PgPool, f: &VanBanFilter) -> sqlx::Result<(Ve
         AND ($6::text IS NULL OR v.loai_vb = $6) AND ($7::text IS NULL OR v.co_quan_ban_hanh ILIKE '%' || $7 || '%') \
         AND ($8::date IS NULL OR v.ngay_thang_sort >= $8) AND ($9::date IS NULL OR v.ngay_thang_sort <= $9) \
         AND ($10::uuid IS NULL OR h.created_by = $11 \
-             OR (h.phong_ban_id = $10 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $12) > now())))";
+             OR (h.phong_ban_id = $10 AND (h.khoa_luc IS NULL OR h.khoa_luc + make_interval(days => $12) > now()))) \
+        AND ($13::uuid[] IS NULL OR h.phong_id = ANY($13))";
     let sql = format!(
         "SELECT to_jsonb(v) || jsonb_build_object('so_tam', h.so_tam, 'ho_so_so', h.ho_so_so, 'hop_so', h.hop_so, 'tieu_de_ho_so', h.tieu_de, \
             'ma_ho_so', h.ma_ho_so, 'ten_phong', h.ten_phong, 'ten_phong_ban', h.ten_phong_ban, \
             'ma_van_ban', CASE WHEN h.ma_ho_so IS NOT NULL THEN h.ma_ho_so || '.' || lpad(v.so_thu_tu::text, 7, '0') END) AS row \
          FROM cl_van_ban v JOIN cl_ho_so_v h ON h.id = v.ho_so_id WHERE {where_sql} \
-         ORDER BY h.hop_so_int NULLS LAST, h.ho_so_so COLLATE vi_so NULLS LAST, h.so_tam COLLATE vi_so, v.so_thu_tu LIMIT $13 OFFSET $14"
+         ORDER BY h.hop_so_int NULLS LAST, h.ho_so_so COLLATE vi_so NULLS LAST, h.so_tam COLLATE vi_so, v.so_thu_tu LIMIT $14 OFFSET $15"
     );
     let count_sql = format!("SELECT count(*) FROM cl_van_ban v JOIN cl_ho_so_v h ON h.id = v.ho_so_id WHERE {where_sql}");
     fn bind<'q>(q: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>, f: &'q VanBanFilter) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
@@ -193,6 +200,7 @@ pub async fn search_van_ban(pool: &PgPool, f: &VanBanFilter) -> sqlx::Result<(Ve
             .bind(f.pham_vi.map(|p| p.phong_ban_id))
             .bind(f.pham_vi.map(|p| p.user_id))
             .bind(digitext_core::luu_tru::QUYEN_SU_DUNG_NGAY as i32)
+            .bind(f.phong_ids.as_deref())
     }
     let rows = bind(sqlx::query(&sql), f).bind(f.limit.clamp(1, LIST_MAX)).bind(f.offset.max(0)).fetch_all(pool).await?;
     let total: i64 = bind(sqlx::query(&count_sql), f).fetch_one(pool).await?.try_get(0)?;

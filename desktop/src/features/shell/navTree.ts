@@ -118,6 +118,8 @@ const NAV_THI_CONG: V46s[] = [
       { id: "tracuutl", label: "Tra cứu", gate: "tracuu", leaf: { kind: "view", view: "tracuu" }, keywords: "tra cuu tim kiem tai lieu van ban ho so noi dung khong dau doc ban so" },
       { id: "khaithacso", label: "Yêu cầu khai thác", gate: "access", leaf: { kind: "view", view: "access" }, keywords: "khai thac yeu cau ban sao dip" },
       { id: "cungcap", label: "Cung cấp thông tin", gate: "info", leaf: { kind: "view", view: "info" } },
+      // 27/11/2026: sổ chuyển đổi tài liệu số ra giấy (Điều 13–16, PL VI); chuyển đổi làm từ màn Tra cứu.
+      { id: "chuyendoi", label: "Sổ chuyển đổi", gate: "chuyendoi", leaf: { kind: "view", view: "chuyendoi" }, keywords: "chuyen doi so giay phu luc vi in ra giay the thuc" },
       { id: "baoquan", label: "Bảo quản và sao lưu", gate: "bk", leaf: { kind: "view", view: "bk" }, keywords: "toan ven backup" },
       { id: "huy", label: "Tiêu huỷ", gate: "disposal", leaf: { kind: "view", view: "disposal" }, keywords: "het gia tri" },
     ],

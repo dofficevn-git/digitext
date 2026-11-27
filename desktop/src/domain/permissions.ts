@@ -483,6 +483,7 @@ const V3z7: Record<V3xt, V3yx> = {
   nopluu: "luutru.submit",
   tiepnhan: "luutru.receive",
   danhmuc: "danhmuc.edit",
+  chuyendoi: "access.view",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

@@ -43,6 +43,7 @@ import TraCuuView from "@/features/tracuu/TraCuuView";
 import NopLuuView from "@/features/luutru/NopLuuView";
 import TiepNhanView from "@/features/luutru/TiepNhanView";
 import DanhMucHoSoView from "@/features/luutru/DanhMucHoSoView";
+import SoChuyenDoiView from "@/features/luutru/SoChuyenDoiView";
 import { LUU_TRU, V3wu } from "@/config";
 import { VIEW_CUA_BAN } from "@/features/shell/navTree";
 
@@ -97,6 +98,7 @@ export default function V4wx() {
         {V382 && view === "nopluu" && <NopLuuView />}
         {V382 && view === "tiepnhan" && <TiepNhanView />}
         {V382 && view === "danhmuc" && <DanhMucHoSoView />}
+        {V382 && view === "chuyendoi" && <SoChuyenDoiView />}
       </main>
 
       <V47t />

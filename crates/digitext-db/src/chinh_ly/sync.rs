@@ -529,7 +529,9 @@ pub const PULL_MAX: i64 = 10_000;
 /// `pham_vi` (0031, lưu trữ hiện hành): người phòng ban chỉ kéo về hồ sơ của phòng mình hoặc mình lập, cùng văn bản / tệp /
 /// lịch sử / phiếu mượn của các hồ sơ đó — bản sao offline không được chứa hồ sơ phòng khác. Danh mục (phông, phòng ban, THBQ…)
 /// kéo đủ. `None` = như trước.
-pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64, pham_vi: Option<super::ho_so::PhamVi>) -> sqlx::Result<Pull> {
+/// `phong_ids` (0038): người bị giới hạn phông chỉ kéo về phông được cấp + phòng ban / mảng / hộp / bó tập / giá / hồ sơ / văn bản / tệp /
+/// mượn trả / lịch sử thuộc các phông đó; bảng dùng chung (THBQ, ngôn ngữ, loại văn bản, khối phông, kho) vẫn đủ.
+pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64, pham_vi: Option<super::ho_so::PhamVi>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<Pull> {
     let limit = limit.clamp(1, PULL_MAX);
     let mut tx = pool.begin().await?;
     let pruned: i64 = sqlx::query_scalar("SELECT COALESCE(max(pruned_ver), 0) FROM cl_sync_meta").fetch_one(&mut *tx).await?;
@@ -554,7 +556,19 @@ pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64, pham_
                 "cl_van_ban_file" => format!(" AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM cl_van_ban v JOIN cl_ho_so h ON h.id = v.ho_so_id WHERE v.id = x.van_ban_id AND {HS}))"),
                 _ => String::new(),
             };
-            format!("SELECT '{t}'::text AS t, x.ver, to_jsonb(x) AS row FROM {t} x WHERE {scope} AND x.ver > $2{tomb}{pv}")
+            // Phạm vi phông (0038): theo cột phong_id / phong_ban_id → phông / hồ sơ cha.
+            const PB: &str = "EXISTS (SELECT 1 FROM cl_phong_ban pb WHERE pb.id = x.phong_ban_id AND pb.phong_id = ANY($6))";
+            let pp = match *t {
+                "cl_phong" => " AND ($6::uuid[] IS NULL OR x.id = ANY($6))".to_string(),
+                "cl_phong_ban" | "cl_ho_so" => " AND ($6::uuid[] IS NULL OR x.phong_id = ANY($6))".to_string(),
+                "cl_lich_su" => " AND ($6::uuid[] IS NULL OR x.phong_id IS NULL OR x.phong_id = ANY($6))".to_string(),
+                "cl_mang" | "cl_hop" | "cl_bo_tap" => format!(" AND ($6::uuid[] IS NULL OR {PB})"),
+                "cl_gia" => format!(" AND ($6::uuid[] IS NULL OR x.phong_ban_id IS NULL OR {PB})"),
+                "cl_van_ban" | "cl_muon_tra" => " AND ($6::uuid[] IS NULL OR EXISTS (SELECT 1 FROM cl_ho_so h WHERE h.id = x.ho_so_id AND h.phong_id = ANY($6)))".to_string(),
+                "cl_van_ban_file" => " AND ($6::uuid[] IS NULL OR EXISTS (SELECT 1 FROM cl_van_ban v JOIN cl_ho_so h ON h.id = v.ho_so_id WHERE v.id = x.van_ban_id AND h.phong_id = ANY($6)))".to_string(),
+                _ => String::new(),
+            };
+            format!("SELECT '{t}'::text AS t, x.ver, to_jsonb(x) AS row FROM {t} x WHERE {scope} AND x.ver > $2{tomb}{pv}{pp}")
         })
         .collect();
     let sql = format!("SELECT t, ver, row FROM ({}) u ORDER BY ver LIMIT $3", parts.join(" UNION ALL "));
@@ -564,6 +578,7 @@ pub async fn pull(pool: &PgPool, project_id: Uuid, since: i64, limit: i64, pham_
         .bind(limit + 1)
         .bind(pham_vi.map(|p| p.phong_ban_id))
         .bind(pham_vi.map(|p| p.user_id))
+        .bind(phong_ids)
         .fetch_all(&mut *tx)
         .await?;
     tx.commit().await?;

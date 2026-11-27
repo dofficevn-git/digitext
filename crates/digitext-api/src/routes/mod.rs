@@ -6,6 +6,7 @@ pub mod bao_cao;
 pub mod bao_quan;
 pub mod changes;
 pub mod chinh_ly;
+pub mod chuyen_doi;
 pub mod danh_muc_ho_so;
 pub mod dashboard;
 pub mod devices;

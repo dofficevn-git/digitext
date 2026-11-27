@@ -216,7 +216,7 @@ việc lên model nếu chỉ số tụt.
 axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs`
 (rate limit), `client_ip.rs`, `extract.rs`, `error.rs`, `config.rs`, `app.rs` (lắp router).
 
-24 nhóm route:
+25 nhóm route:
 
 | Nhóm | Đường dẫn tiêu biểu |
 | --- | --- |
@@ -241,6 +241,8 @@ axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs
 | `bao_cao` | `GET /bao-cao` (danh mục 19 báo cáo Điều 44.3b: mã, tên, căn cứ, nhóm, bản, bộ lọc, cột — desktop dựng màn từ đây), `GET /bao-cao/{ma}?projectId&phongId&namTu&namDen&from&to&format=json\|xlsx\|pdf` (Excel `xlsx::sheet_bang`; PDF `digitext_pdf::manual` A4 ngang khi > 7 cột, đầu văn bản hành chính + khối ký) — 27/11/2026, khối `chung`, quyền `stats.view` / `stats.view_project`; `thu_nop` chỉ bản thi công |
 | `chinh_ly/muon_tra` | `GET/POST /cl/muon-tra` (phiếu nhiều hồ sơ, `so_phieu` MT-năm-stt, `giaoNgay` cần `loan.approve`), `/tong-quan`, `/{id}` GET, `/{id}/duyet \| tu-choi \| giao \| gia-han \| tra \| huy` (POST không cần thân), `/nhom/{nhomId}` GET + `/duyet \| tu-choi \| huy` (cả phiếu), `/{id}/phieu.pdf` — mượn – trả có duyệt 0034 (27/11/2026) |
 | `chinh_ly/kho_gia` | `GET /cl/kho-gia/tong-hop?projectId&khoId&phongId` (sức chứa, hộp / hồ sơ đang chứa, % đầy, gần đầy), `GET /cl/kho-gia/ho-so?khoId\|giaId&format=xlsx`, `GET /cl/kho-gia/chua-hop?phongId`, `POST /cl/ho-so/gan-hop {phongBanId, rows[{hoSoId, hopSo}]}` (đặt phòng ban cho hồ sơ nhập gói rồi `he_thong_hoa::boxing`) — 0035 (27/11/2026) |
+| `chuyen_doi` | `POST /chuyen-doi {projectId, documentId, mucDich?, nguoiNhan?, canCu?, chucVu?}` (`access.review`; kiểm chữ ký số lúc chuyển đổi, ghép trang thể thức PL VI vào CUỐI, chân trang i/n, cấp số `CD-{năm}-{stt:06}`, ghi `chuyen_doi_giay` + `khai_thac.chuyen_doi`), `GET /chuyen-doi?projectId&from&to[&format=xlsx]`, `GET /chuyen-doi/{id}/download` — Điều 13–16, 0037 (27/11/2026) |
+| `users` (0038) | `GET/PUT /users/{id}/phong {projectId, phongIds[]}` — phạm vi phông (`user.grant_permissions`; rỗng = không giới hạn; super_admin / manager không giới hạn được); `GET /cl/pham-vi-phong?projectId` — phạm vi của chính mình |
 | `danh_muc_ho_so` | `/danh-muc-ho-so` GET/POST, `/hieu-luc?phongId&nam`, `/{id}`, `/{id}/dong[/{dongId}]` POST/PUT/DELETE, `/dong/nhap`, `/trinh`, `/duyet` (không tự duyệt), `/tra-lai`, `/ban-hanh`, `/phien-ban-moi`, `/doi-chieu`, `/bien-ban` — danh mục hồ sơ dự kiến Điều 19.4 |
 | còn lại | `records`, `stats`, `changes`, `notifications`, `/healthz` |
 
@@ -290,6 +292,19 @@ Ba mẫu hình lặp lại đáng để ý:
   mượn (chữ) bị từ chối; nay bỏ qua với `cl_muon_tra`. (c) **Kho / giá sức chứa**: `cl_gia.suc_chua_hop / canh_bao_pct`, `cl_kho.suc_chua_hop`
   (vào `spec.cols`), `digitext-db::chinh_ly::kho_gia::tong_hop` gom `cl_ho_so_v.gia_eff_id` một lượt theo dự án (không view),
   `dat_phong_ban` + `boxing` cho hồ sơ nhập gói, nhắc `kho_day` mỗi tuần. Kịch bản thử trọn ba phần: `dev/luutru/thu-dot-3.ps1 -MatKhauDb <mk>`.
+- **Đợt 4 đối chiếu Digifile (27/11/2026, migration 0037–0038)** — (a) **Chuyển đổi tài liệu số ra giấy** (Điều 13–16, PL VI):
+  `digitext-pdf/src/ghep.rs` (`noi_truoc` nối hai PDF: đánh số lại đối tượng, một cây Pages phẳng, kéo Resources / MediaBox / Rotate kế
+  thừa xuống trang, bỏ AcroForm / Outlines; `chan_trang` in dòng nhỏ đáy mỗi trang cùng bộ hàm với watermark), `digitext-db::chuyen_doi`
+  (số theo dự án / năm với khoá tư vấn), `routes/chuyen_doi.rs`; trang thể thức dựng bằng `manual::render_manual` và đặt SAU nội dung
+  (Mục 1 PL VI). Không ký số lại bản ghép; chữ ký của bản gốc kiểm bằng `digitext_sign_verify::nhieu::{kiem_tat_ca, ket_luan_tep}` và
+  ghi kết luận lên trang thể thức. Báo cáo #19 `chuyen_doi` thêm vào `DEFS`. (b) **Phân quyền theo phông** `user_phong` (0038):
+  `routes/chinh_ly/mod.rs::{pham_vi_phong, kiem_phong, phong_hieu_dung}` — không có dòng = không giới hạn; cắm vào `ho_so::Filter.phong_ids`,
+  `VanBanFilter`, `lich_su::Filter`, `sync::pull` (bản sao offline chỉ còn phông được cấp — thay vì 403), `/cl/catalog` (lọc JSON: khoá
+  `phong`, `phong_ban`, `mang`, `hop`, `bo_tap`, `gia` — KHÔNG có tiền tố `cl_`), `/tra-cuu` + `bo-loc` + `tai-lieu/{id}/doc`, mượn trả
+  (list, lập, từng bước), kho / giá, báo cáo (`BoLoc.phong_ids`; báo cáo không có chiều phông vẫn là số toàn dự án), thống kê, hệ thống
+  hoá, nhập mục lục, đối soát, chuyển đổi. Chưa áp: `/cl/rows/{table}/{id}` đọc một dòng, `access` / `info` (tài liệu theo dự án).
+  (c) **Biểu mẫu PDF tại máy trạm**: `ManualBlock` có `serde` (tag `t`, content `v`) + `PageBreak` + `Centered`; Tauri `in_pdf::pdf_manual`
+  nhận mảng khối JSON, dựng bằng font sans hệ thống, hộp thoại Lưu. Kịch bản thử: `dev/luutru/thu-dot-4.ps1 -MatKhauDb <mk>`.
 - **Dashboard theo ngày** (`routes/dashboard.rs`, migration `0021_dashboard_daily.sql`): bảng `dashboard_daily`
   (ngày VN × dự án × người; dòng tổng dự án `user_id = uuid 0`) do hàm SQL `dashboard_rollup(từ, đến)` tính;
   API tự roll hôm qua + hôm nay mỗi 2 phút và 35 ngày lúc 00:15 (`spawn_rollup` gọi từ `cli.rs`), phát topic
@@ -433,6 +448,13 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   % đầy, tô gần đầy / vượt), ô sức chứa + ngưỡng cảnh báo, xuất hồ sơ theo kho / giá, tab **Gán hộp** (`GanHopPanel`: hồ sơ chưa hộp của
   phông, phòng ban chủ hộp, nhập từng dòng hoặc dán 2 cột), `api/khoGia.ts`. `LuuTruHome` thêm hàng KPI mượn trả. Quyền `loan.approve`
   (72 quyền) ở `permissions.ts`.
+  **GĐ9 Đợt 4 (27/11, 0037–0038):** `tracuu/TraCuuView` nút "In ra giấy" (cán bộ) → `ChuyenDoiDialog` (mục đích, người nhận, căn cứ, chức vụ
+  người ký) → tải PDF đã ghép; màn mới `luutru/SoChuyenDoiView` (`view:chuyendoi`, mục "Sổ chuyển đổi" trong nhóm Lưu trữ số của cả hai
+  bản, gate `access.view`), `api/chuyenDoi.ts`. `users/UsersView` menu "Phạm vi phông" → `PhongDialog` (MultiSelect phông của dự án, trống =
+  không giới hạn), `api/users.ts::userPhongGet/Set` qua Tauri `bc_call` (nhận `/chuyen-doi`, `/users/{id}/phong`). Biểu mẫu PDF tại máy trạm:
+  `chinhly/printPdf.ts` (`pdfMucLucHoSo`, `pdfSanPham` hai bìa + bảng gom mảng / năm, `pdfMucLucVanBan` sang trang từng hồ sơ, `pdfPhuLuc`)
+  trên `api/inPdf.ts::{kb, pdfManual}`; menu Kết xuất của `KhaiThacView` có mục "(PDF)" đứng trước, HTML giữ là "In nhanh … (HTML)"; nhãn
+  hộp 2×2 vẫn HTML.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
@@ -487,7 +509,7 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0036` (sửa 27/11/2026)
+### Schema Postgres: `migrations/0001`–`0038` (sửa 27/11/2026)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
 (0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05, 0025 nhập gói AIP, 0026 tra cứu không dấu /
@@ -496,7 +518,8 @@ thống lúc khởi động, `roles::bo_sung_quyen_moi`; 0031 lưu trữ hiện 
 `notifications.ref`, **DROP/CREATE view `cl_ho_so_v`** → áp lúc bảo trì; 0032 bảo quản Điều 29–31: `bk_*`, cột `integrity_checks` /
 `backup_runs`; 0033 quét trùng: `disposal_entries.phat_hien`, chỉ mục blake3 + mục lục, cần 0026 trước; 0034 mượn – trả có duyệt: CHECK
 `cl_muon_tra.trang_thai` 6 giá trị + 12 cột duyệt / giao / gia hạn / nhắc; 0035 `cl_gia.suc_chua_hop / canh_bao_pct`, `cl_kho.suc_chua_hop`;
-0036 chỉ mục `audit_log` theo dự án cho báo cáo lượt khai thác, CONCURRENTLY) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
+0036 chỉ mục `audit_log` theo dự án cho báo cáo lượt khai thác, CONCURRENTLY; 0037 `chuyen_doi_giay` sổ chuyển đổi ra giấy; 0038 `user_phong`
+phạm vi phông) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
 Áp bằng `digitext-api migrate` (bảng `_digitext_migrations`, 9/11/2026; máy chủ đã áp tay thì `migrate --da-ap-den <NNNN>` một lần)
 hoặc tay theo thứ tự bằng `psql -f` (xem `docs/CHUYEN-MAY-OCR-PC.md`).
 

@@ -112,3 +112,15 @@ export function V4an(Vq2: string, Vq3: string): Promise<V4a9> {
 export function V4ao(Vq4: string, Vq5: string): Promise<V4a9> {
   return invoke<V4a9>("project_remove_admin", { args: { projectId: Vq4, adminId: Vq5 } });
 }
+
+// ---- phạm vi phông (0038, 27/11/2026) — qua Tauri bc_call (máy chủ /users/{id}/phong)
+export interface PhamViPhongUser {
+  projectId: string;
+  /** Rỗng = không giới hạn. */
+  phongIds: string[];
+  tenPhong: [string, string][];
+}
+export const userPhongGet = (id: string, projectId?: string | null) =>
+  invoke<PhamViPhongUser>("bc_call", { method: "GET", path: `/users/${id}/phong${projectId ? `?projectId=${projectId}` : ""}`, body: null });
+export const userPhongSet = (id: string, projectId: string, phongIds: string[]) =>
+  invoke<PhamViPhongUser>("bc_call", { method: "PUT", path: `/users/${id}/phong`, body: { projectId, phongIds } });

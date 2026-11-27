@@ -7,6 +7,8 @@ mod icc;
 pub mod pdfa;
 pub mod sua_xref;
 pub mod manual;
+/// Ghép trang thể thức PL VI + chân trang (chuyển đổi tài liệu số ra giấy, 27/11/2026).
+pub mod ghep;
 pub mod tach_tiff;
 use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Dictionary, Document, Object, Stream, StringFormat};

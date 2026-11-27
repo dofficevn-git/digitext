@@ -140,6 +140,7 @@ async fn doi_soat(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
     if !ts.has_perm(Permission::DossierRead) || !ts.has_perm(Permission::DocumentList) {
         return Err(ApiError::forbidden());
     }
+    super::kiem_phong(super::pham_vi_phong(&st, &ts, q.project_id).await?.as_deref(), q.phong_id)?;
     Ok(Json(tinh(&st.pool, q.project_id, q.phong_id, q.thu_muc.as_deref()).await?))
 }
 

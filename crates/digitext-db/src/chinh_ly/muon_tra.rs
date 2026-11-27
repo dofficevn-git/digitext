@@ -44,6 +44,8 @@ pub struct LapPhieu<'a> {
     /// `cho_duyet` (mặc định) hoặc `dang_muon` (lập và giao luôn — người lập có `loan.approve`).
     pub trang_thai: &'a str,
     pub nguoi_lap: Uuid,
+    /// Phạm vi phông của người lập (0038): hồ sơ ngoài phạm vi → lỗi nghiệp vụ.
+    pub phong_ids: Option<&'a [Uuid]>,
 }
 
 /// Lập một phiếu cho nhiều hồ sơ: một `nhom_id`, một `so_phieu` "MT-{năm}-{stt}", mỗi hồ sơ một dòng.
@@ -70,14 +72,15 @@ pub async fn lap(pool: &PgPool, p: LapPhieu<'_>) -> sqlx::Result<Result<(Uuid, S
     let mut tx = pool.begin().await?;
     let co: Vec<(Uuid, Option<String>, bool)> = sqlx::query_as(
         "SELECT h.id, h.tieu_de, EXISTS (SELECT 1 FROM cl_muon_tra m WHERE m.ho_so_id = h.id AND m.trang_thai = 'dang_muon' AND m.deleted_at IS NULL) \
-         FROM cl_ho_so h WHERE h.id = ANY($1) AND h.project_id = $2 AND h.deleted_at IS NULL",
+         FROM cl_ho_so h WHERE h.id = ANY($1) AND h.project_id = $2 AND h.deleted_at IS NULL AND ($3::uuid[] IS NULL OR h.phong_id = ANY($3))",
     )
     .bind(&ids)
     .bind(p.project_id)
+    .bind(p.phong_ids)
     .fetch_all(&mut *tx)
     .await?;
     if co.len() != ids.len() {
-        return Ok(Err("Có hồ sơ không thuộc dự án hoặc đã xoá".into()));
+        return Ok(Err("Có hồ sơ không thuộc dự án, ngoài phạm vi phông được cấp, hoặc đã xoá".into()));
     }
     if p.trang_thai == mt::DANG_MUON {
         if let Some((_, td, _)) = co.iter().find(|(_, _, dang)| *dang) {

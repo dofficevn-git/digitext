@@ -20,6 +20,7 @@ pub fn router() -> Router<AppState> {
         .route("/users/{id}/password", post(f_xv))
         .route("/users/{id}/revoke", post(f_2a3))
         .route("/users/{id}/permissions", get(f_1f1).put(f_24z))
+        .route("/users/{id}/phong", get(phong_get).put(phong_set))
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -504,4 +505,73 @@ async fn f_24z(
     )
     .await?;
     Ok(Json(f_vt(&r_xk, &r_xo.pool, &r_xp, &r_xl).await?))
+}
+
+// ---------------------------------------------------------------- phạm vi phông (0038, 27/11/2026)
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhamViPhongDto {
+    pub project_id: Uuid,
+    /// Rỗng = không giới hạn.
+    pub phong_ids: Vec<Uuid>,
+    pub ten_phong: Vec<(Uuid, String)>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhamViPhongQ {
+    pub project_id: Option<Uuid>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhamViPhongBody {
+    pub project_id: Uuid,
+    #[serde(default)]
+    pub phong_ids: Vec<Uuid>,
+}
+
+/// Dự án làm mốc cho phạm vi phông: `projectId` truyền lên, không có thì dự án của tài khoản.
+fn du_an_cua(user: &User, q: Option<Uuid>) -> Result<Uuid, ApiError> {
+    q.or(user.project_id).ok_or_else(|| ApiError::bad_request("tài khoản không gắn dự án — truyền projectId"))
+}
+
+/// `GET /users/{id}/phong?projectId` — phông được cấp của một tài khoản trong một dự án (cần `user.grant_permissions`).
+async fn phong_get(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Query(q): Query<PhamViPhongQ>) -> Result<Json<PhamViPhongDto>, ApiError> {
+    let u = f_1ox(&st, id).await?;
+    f_sw(&st, &ts, &u).await?;
+    let project = du_an_cua(&u, q.project_id)?;
+    let ids = digitext_db::user_phong::cua(&st.pool, u.id, project).await?;
+    let ten = digitext_db::user_phong::ten_phong(&st.pool, &ids).await?;
+    Ok(Json(PhamViPhongDto { project_id: project, phong_ids: ids, ten_phong: ten }))
+}
+
+/// `PUT /users/{id}/phong {projectId, phongIds[]}` — rỗng = bỏ giới hạn. super_admin / manager không bị giới hạn dù có dòng.
+async fn phong_set(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Json(b): Json<PhamViPhongBody>) -> Result<Json<PhamViPhongDto>, ApiError> {
+    let u = f_1ox(&st, id).await?;
+    f_sw(&st, &ts, &u).await?;
+    if matches!(u.role, Role::SuperAdmin | Role::Manager) && !b.phong_ids.is_empty() {
+        return Err(ApiError::bad_request("super admin / quản lý không giới hạn theo phông được"));
+    }
+    // Người cấp cũng phải được thấy các phông đó (quản trị dự án bị giới hạn không cấp rộng hơn mình).
+    if let Some(sc) = crate::routes::chinh_ly::pham_vi_phong(&st, &ts, b.project_id).await? {
+        if b.phong_ids.iter().any(|p| !sc.contains(p)) {
+            return Err(ApiError::forbidden());
+        }
+    }
+    let n = digitext_db::user_phong::dat(&st.pool, u.id, b.project_id, &b.phong_ids, ts.user.id).await?;
+    audit::append(
+        &st.pool,
+        audit::Tp {
+            actor_id: Some(ts.user.id),
+            device_id: ts.claims.device_id,
+            action: "user.phong_scope",
+            target: Some(u.id.to_string()),
+            detail: Some(serde_json::json!({ "projectId": b.project_id, "phongIds": b.phong_ids, "daGhi": n })),
+            ip: ts.ip(),
+        },
+    )
+    .await?;
+    let ids = digitext_db::user_phong::cua(&st.pool, u.id, b.project_id).await?;
+    let ten = digitext_db::user_phong::ten_phong(&st.pool, &ids).await?;
+    Ok(Json(PhamViPhongDto { project_id: b.project_id, phong_ids: ids, ten_phong: ten }))
 }

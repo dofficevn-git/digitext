@@ -3,10 +3,10 @@
 //! `digitext_db::bao_cao`; ở đây là DANH MỤC báo cáo (mã, tên, căn cứ, nhóm, bản áp dụng, bộ lọc, cột) mà desktop dựng màn từ đó,
 //! và ba dạng xuất: JSON (xem trên màn), Excel (`xlsx::sheet_bang`), PDF (`digitext_pdf::manual`, A4 ngang khi nhiều cột, đầu văn
 //! bản hành chính + khối ký). Không lưu bản xuất vào sổ biên bản (anh chưa chốt câu 15 — xuất là tệp tải về; cần lưu thì làm sau).
-//! - `GET /bao-cao` — danh mục (lọc theo bản: thi công / lưu trữ / cả hai)
+//! - `GET /bao-cao` — danh mục (lọc theo bản: thi công / lưu trữ / cả hai); 20 báo cáo kể cả sổ chuyển đổi (0037)
 //! - `GET /bao-cao/{ma}?projectId&phongId&namTu&namDen&from&to&format=json|xlsx|pdf`
 //! Quyền: `stats.view` hoặc `stats.view_project` + thuộc dự án. Báo cáo sao lưu là toàn máy chủ (vẫn kiểm theo dự án đang chọn).
-use super::chinh_ly::project_access;
+use super::chinh_ly::{pham_vi_phong, phong_hieu_dung, project_access};
 use crate::app::AppState;
 use crate::error::ApiError;
 use crate::extract::Ts;
@@ -165,6 +165,10 @@ const DEFS: &[Def] = &[
         cot: &[ma("so_phieu", "Số phiếu", 14.0), ngay("ngay_muon", "Ngày mượn"), chu("nguoi_muon", "Người mượn", 22.0), chu("don_vi", "Đơn vị", 22.0), ma("ma_ho_so", "Mã hồ sơ", 18.0), chu("tieu_de", "Tiêu đề hồ sơ", 44.0), ma("hop_so", "Hộp", 8.0), ngay("ngay_du_kien_tra", "Hạn trả"), so("so_lan_gia_han", "Gia hạn"), ngay("ngay_thuc_te_tra", "Ngày trả"), chu("trang_thai", "Trạng thái", 16.0), chu("nguoi_lap", "Người lập", 18.0)],
     },
     Def {
+        ma: "chuyen_doi", ten: "Sổ chuyển đổi tài liệu số ra giấy", can_cu: "Điều 13–16, Phụ lục VI TT 05/2025/TT-BNV", nhom: "khai_thac", ban: "ca_hai", bo_loc: &["phong", "thoi_gian"], tong: false,
+        cot: &[ma("so_chuyen_doi", "Số chuyển đổi", 16.0), ngay("created_at", "Thời điểm"), ma("ma_tai_lieu", "Mã tài liệu gốc", 24.0), chu("ten_tai_lieu", "Tài liệu", 40.0), ma("ma_ho_so", "Mã hồ sơ", 18.0), chu("ten_phong", "Phông", 24.0), so("so_trang", "Trang"), chu("muc_dich", "Mục đích", 22.0), chu("nguoi_nhan", "Người nhận", 18.0), chu("ky_so_ket_luan", "Chữ ký số", 16.0), chu("nguoi_thuc_hien", "Người thực hiện", 18.0)],
+    },
+    Def {
         ma: "kho_gia", ten: "Kho – giá – hộp (mức đầy)", can_cu: "Điều 44.3b TT 05/2025/TT-BNV", nhom: "kho", ban: "ca_hai", bo_loc: &["phong"], tong: true,
         cot: &[chu("ten_kho", "Kho", 20.0), chu("ten", "Giá", 20.0), chu("ten_phong", "Phông", 26.0), chu("ten_phong_ban", "Phòng ban", 24.0), so("tu_hop", "Từ hộp"), so("den_hop", "Đến hộp"), so("suc_chua", "Sức chứa"), so("so_hop", "Hộp đang chứa"), so("so_ho_so", "Hồ sơ"), so("pct_day", "% đầy"), bo("gan_day", "Gần đầy")],
     },
@@ -241,7 +245,7 @@ async fn so_lieu(st: &AppState, d: &Def, b: &BoLoc) -> Result<Vec<Value>, ApiErr
     let rows = match d.ma {
         "phong" => db::phong(pool, b).await?,
         "ho_so_nam" => db::ho_so_nam(pool, b).await?,
-        "phong_ban" => digitext_db::chinh_ly::thong_ke::chinh_ly(pool, b.project_id, b.phong_id).await?,
+        "phong_ban" => digitext_db::chinh_ly::thong_ke::chinh_ly(pool, b.project_id, b.phong_id, b.phong_ids.as_deref()).await?,
         "thbq" => db::thbq(pool, b, digitext_db::nop_luu::hom_nay_vn().year()).await?,
         "che_do_su_dung" => db::che_do_su_dung(pool, b).await?,
         "do_tin_cay" => db::do_tin_cay(pool, b).await?,
@@ -258,6 +262,7 @@ async fn so_lieu(st: &AppState, d: &Def, b: &BoLoc) -> Result<Vec<Value>, ApiErr
         "cung_cap_thong_tin" => db::cung_cap_thong_tin(pool, b).await?,
         "muon_tra" => db::muon_tra(pool, b).await?,
         "kho_gia" => db::kho_gia(pool, b).await?,
+        "chuyen_doi" => db::chuyen_doi(pool, b).await?,
         _ => return Err(ApiError::not_found()),
     };
     Ok(rows)
@@ -361,7 +366,9 @@ fn ngay_dep(s: &str) -> String {
 async fn chay(State(st): State<AppState>, ts: Ts, Path(ma): Path<String>, Query(q): Query<Q>) -> Result<Response, ApiError> {
     let d = def_of(&ma).filter(|d| ban_hop(d)).ok_or_else(ApiError::not_found)?;
     quyen(&st, &ts, q.project_id).await?;
-    let b = BoLoc { project_id: q.project_id, phong_id: q.phong_id, nam_tu: q.nam_tu, nam_den: q.nam_den, from: vn(q.from.as_deref(), false)?, to: vn(q.to.as_deref(), true)? };
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = phong_hieu_dung(scope.as_deref(), q.phong_id)?;
+    let b = BoLoc { project_id: q.project_id, phong_id, nam_tu: q.nam_tu, nam_den: q.nam_den, from: vn(q.from.as_deref(), false)?, to: vn(q.to.as_deref(), true)?, phong_ids: scope };
     if let (Some(a), Some(c)) = (b.nam_tu, b.nam_den) {
         if a > c {
             return Err(ApiError::bad_request("Năm bắt đầu phải không lớn hơn năm kết thúc"));

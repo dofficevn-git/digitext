@@ -12,7 +12,7 @@ use serde_json::Value;
 use tauri::{AppHandle, State};
 
 fn hop_le(path: &str) -> Result<(), AppError> {
-    let ok = (path.starts_with("/bao-cao") || path.starts_with("/cl/muon-tra/") || path.starts_with("/cl/kho-gia/")) && !path.contains("..");
+    let ok = (path.starts_with("/bao-cao") || path.starts_with("/cl/muon-tra/") || path.starts_with("/cl/kho-gia/") || path.starts_with("/chuyen-doi")) && !path.contains("..");
     if ok {
         Ok(())
     } else {
@@ -23,10 +23,11 @@ fn hop_le(path: &str) -> Result<(), AppError> {
 #[tauri::command]
 pub async fn bc_get(db: State<'_, Db>, auth: State<'_, AuthState>, path: String) -> Result<Value, AppError> {
     hop_le(&path)?;
-    if !path.starts_with("/bao-cao") {
+    if !(path.starts_with("/bao-cao") || path.starts_with("/chuyen-doi")) {
         return Err(AppError::validation("đường dẫn không hợp lệ"));
     }
-    f_2r8(&db, &auth, Permission::StatsView, move |base, token| {
+    let perm = if path.starts_with("/chuyen-doi") { Permission::AccessView } else { Permission::StatsView };
+    f_2r8(&db, &auth, perm, move |base, token| {
         let path = path.clone();
         async move { client::f_1eo::<Value>(&base, &token, &path).await }
     })
@@ -41,7 +42,13 @@ pub async fn bc_download(app: AppHandle, db: State<'_, Db>, auth: State<'_, Auth
     if !matches!(ext.as_str(), "xlsx" | "pdf") {
         return Err(AppError::validation("Đuôi tệp phải là xlsx hoặc pdf."));
     }
-    let perm = if path.starts_with("/bao-cao") { Permission::StatsView } else { Permission::DossierRead };
+    let perm = if path.starts_with("/bao-cao") {
+        Permission::StatsView
+    } else if path.starts_with("/chuyen-doi") {
+        Permission::AccessView
+    } else {
+        Permission::DossierRead
+    };
     let bytes = f_2r8(&db, &auth, perm, move |base, token| {
         let path = path.clone();
         async move { client::f_1ei(&base, &token, &path).await }
@@ -63,4 +70,31 @@ pub async fn bc_download(app: AppHandle, db: State<'_, Db>, auth: State<'_, Auth
         .map_err(|e| AppError::internal(format!("luồng ghi lỗi: {e}")))?
         .map_err(|e| AppError::internal(format!("không ghi được tệp: {e}")))?;
     Ok(Some(path.display().to_string()))
+}
+
+/// Ghi: `POST /chuyen-doi` (quyền `access.review`), `PUT /users/{id}/phong` (quyền `user.grant_permissions`). Quyền thật kiểm ở máy chủ.
+#[tauri::command]
+pub async fn bc_call(db: State<'_, Db>, auth: State<'_, AuthState>, method: String, path: String, body: Option<Value>) -> Result<Value, AppError> {
+    let la_phong = path.starts_with("/users/") && path.split('?').next().unwrap_or("").ends_with("/phong") && !path.contains("..");
+    if !la_phong {
+        hop_le(&path)?;
+        if !path.starts_with("/chuyen-doi") {
+            return Err(AppError::validation("đường dẫn không hợp lệ"));
+        }
+    }
+    let perm = if la_phong { Permission::UserGrantPermissions } else { Permission::AccessReview };
+    let m = method.to_uppercase();
+    let body = body.unwrap_or(serde_json::json!({}));
+    f_2r8(&db, &auth, perm, move |base, token| {
+        let (m, path, body) = (m.clone(), path.clone(), body.clone());
+        async move {
+            match m.as_str() {
+                "GET" => client::f_1eo::<Value>(&base, &token, &path).await,
+                "PUT" => client::f_24x::<Value>(&base, &token, &path, &body).await,
+                // Chuyển đổi: kiểm chữ ký + ghép PDF lớn → thời gian dài.
+                _ => client::post_long::<Value>(&base, &token, &path, &body).await,
+            }
+        }
+    })
+    .await
 }

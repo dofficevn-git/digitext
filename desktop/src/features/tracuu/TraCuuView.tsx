@@ -9,7 +9,8 @@ import { useProject } from "@/state/project";
 import { V41t } from "@/live/useLive";
 import { traCuuBoLoc, traCuuDoc, traCuuNhatKy, traCuuTim, type DongNhatKy, type DongTraCuu, type TraCuuQuery } from "@/api/tracuu";
 import { YeuCauMoiDialog, type TaiLieuChon } from "@/features/access/AccessView";
-import { CanDuAn, Badge, Button, Card, Checkbox, Dialog, ErrorBanner, Input, PageHeader, Select, Table, Tabs, Tip, Toolbar, notifyError, type Column } from "@/ui";
+import { cdTai, cdTao, type DongChuyenDoi } from "@/api/chuyenDoi";
+import { CanDuAn, Badge, Button, Card, Checkbox, Dialog, ErrorBanner, Field, FormGrid, Input, PageHeader, Select, Table, Tabs, Textarea, Tip, Toolbar, notifyError, toast, type Column } from "@/ui";
 
 const fmt = (n: number) => n.toLocaleString("vi-VN");
 const PAGE = 50;
@@ -19,6 +20,7 @@ const VIEC: Record<string, string> = {
   "khai_thac.doc": "Đọc theo yêu cầu",
   "khai_thac.tai": "Tải bản sao",
   "khai_thac.dip": "Cấp gói DIP",
+  "khai_thac.chuyen_doi": "Chuyển đổi ra giấy",
 };
 
 type Loc = Omit<TraCuuQuery, "projectId" | "limit" | "offset" | "q" | "noiDung">;
@@ -113,6 +115,7 @@ export default function TraCuuView() {
     });
   };
 
+  const [chuyenDoi, setChuyenDoi] = useState<DongTraCuu | null>(null);
   const doc_ = async (d: DongTraCuu) => {
     if (!d.documentId) return;
     setDangMo(khoa(d));
@@ -281,13 +284,24 @@ export default function TraCuuView() {
               rowActions={(d) => {
                 const why = lyDoKhongDoc(d, canBo, docThang);
                 return (
-                  <Tip text={why || "Đọc bản có watermark, không tải về"}>
-                    <span>
-                      <Button size="sm" icon="xem" disabled={!!why} loading={dangMo === khoa(d)} onClick={() => void doc_(d)}>
-                        Đọc
-                      </Button>
-                    </span>
-                  </Tip>
+                  <span className="flex items-center gap-1">
+                    <Tip text={why || "Đọc bản có watermark, không tải về"}>
+                      <span>
+                        <Button size="sm" icon="xem" disabled={!!why} loading={dangMo === khoa(d)} onClick={() => void doc_(d)}>
+                          Đọc
+                        </Button>
+                      </span>
+                    </Tip>
+                    {canBo && d.documentId && !d.daHuy && (
+                      <Tip text="Chuyển đổi tài liệu số ra giấy: ghép trang thể thức Phụ lục VI, cấp số, ghi sổ">
+                        <span>
+                          <Button size="sm" icon="inRa" onClick={() => setChuyenDoi(d)}>
+                            In ra giấy
+                          </Button>
+                        </span>
+                      </Tip>
+                    )}
+                  </span>
                 );
               }}
               pagination={{ page, pageSize: PAGE, total: kq.data?.tong ?? 0, onChange: setPage }}
@@ -302,6 +316,7 @@ export default function TraCuuView() {
         {doc && <embed src={doc.src} type="application/pdf" className="h-full w-full" />}
       </Dialog>
 
+      {chuyenDoi && projectId && <ChuyenDoiDialog projectId={projectId} d={chuyenDoi} onClose={() => setChuyenDoi(null)} />}
       {yeuCau && (
         <YeuCauMoiDialog
           projectId={projectId}
@@ -315,5 +330,102 @@ export default function TraCuuView() {
         />
       )}
     </section>
+  );
+}
+
+/** Hộp thoại chuyển đổi một tài liệu số ra giấy (Điều 13–16, PL VI): mục đích, người nhận, căn cứ, chức vụ người ký bản in. */
+function ChuyenDoiDialog({ projectId, d, onClose }: { projectId: string; d: DongTraCuu; onClose: () => void }) {
+  const [mucDich, setMucDich] = useState("");
+  const [nguoiNhan, setNguoiNhan] = useState("");
+  const [canCu, setCanCu] = useState("");
+  const [chucVu, setChucVu] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [xong, setXong] = useState<DongChuyenDoi | null>(null);
+  const [err, setErr] = useState<unknown>(null);
+  const chay = async () => {
+    if (!d.documentId) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await cdTao({ projectId, documentId: d.documentId, mucDich: mucDich || undefined, nguoiNhan: nguoiNhan || undefined, canCu: canCu || undefined, chucVu: chucVu || undefined });
+      setXong(r);
+      toast.success(`Đã chuyển đổi, số ${r.so_chuyen_doi} — chữ ký số: ${r.ky_so_ket_luan ?? "—"}.`);
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const tai = async () => {
+    if (!xong) return;
+    setBusy(true);
+    try {
+      const p = await cdTai(xong);
+      if (p) toast.success(`Đã lưu: ${p}`);
+    } catch (e) {
+      notifyError(e, "tải bản chuyển đổi");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => !o && !busy && onClose()}
+      closable={!busy}
+      title="Chuyển đổi tài liệu số ra giấy"
+      description={`${d.maHoSo}${d.soThuTu ? ` · văn bản ${d.soThuTu}` : ""} — ${d.trichYeu || d.tieuDeHoSo}`}
+      size="md"
+      footer={
+        xong ? (
+          <>
+            <Button onClick={onClose}>Đóng</Button>
+            <Button variant="primary" icon="tepPdf" loading={busy} onClick={() => void tai()}>
+              Tải PDF để in
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={onClose} disabled={busy}>
+              Huỷ
+            </Button>
+            <Button variant="primary" icon="inRa" loading={busy} onClick={() => void chay()}>
+              Chuyển đổi
+            </Button>
+          </>
+        )
+      }
+    >
+      <div className="space-y-3">
+        {err !== null && <ErrorBanner error={err} />}
+        {xong ? (
+          <div className="rounded-md border border-border-subtle bg-surface-sunken p-3 text-sm">
+            <p>
+              Số chuyển đổi <b>{xong.so_chuyen_doi}</b> · {xong.so_trang ?? "?"} trang tài liệu + 1 trang thể thức.
+            </p>
+            <p className="mt-1">Chữ ký số tại thời điểm chuyển đổi: <b>{xong.ky_so_ket_luan ?? "—"}</b>{xong.ky_so_chi_tiet ? ` — ${xong.ky_so_chi_tiet}` : ""}</p>
+            <p className="mt-1 text-fg-subtle">In bản PDF, trình người có thẩm quyền ký và đóng dấu lên trang thể thức cuối. Lượt này đã ghi vào sổ chuyển đổi và nhật ký khai thác.</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-fg-muted">Hệ thống kiểm chữ ký số của bản gốc, ghép trang thể thức "TÀI LIỆU LƯU TRỮ CHUYỂN ĐỔI" (Mục 1 Phụ lục VI) vào cuối, đánh chân trang và cấp số chuyển đổi theo năm.</p>
+            <Field label="Mục đích chuyển đổi">
+              <Textarea rows={2} value={mucDich} onChange={(e) => setMucDich(e.target.value)} placeholder="VD: cung cấp bản giấy theo yêu cầu khai thác số …" autoFocus />
+            </Field>
+            <FormGrid cols={2}>
+              <Field label="Người / đơn vị nhận">
+                <Input value={nguoiNhan} onChange={(e) => setNguoiNhan(e.target.value)} />
+              </Field>
+              <Field label="Chức vụ người ký bản in" hint="Mặc định: Lãnh đạo cơ quan">
+                <Input value={chucVu} onChange={(e) => setChucVu(e.target.value)} placeholder="LÃNH ĐẠO CƠ QUAN" />
+              </Field>
+            </FormGrid>
+            <Field label="Căn cứ (văn bản yêu cầu, phiếu khai thác…)">
+              <Input value={canCu} onChange={(e) => setCanCu(e.target.value)} />
+            </Field>
+          </>
+        )}
+      </div>
+    </Dialog>
   );
 }

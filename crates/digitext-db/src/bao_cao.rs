@@ -18,6 +18,9 @@ pub struct BoLoc {
     pub nam_den: Option<i32>,
     pub from: Option<DateTime<Utc>>,
     pub to: Option<DateTime<Utc>>,
+    /// Phạm vi phông (0038): None = không giới hạn. Báo cáo không có chiều phông (gói, kiểm tra, sao lưu, thu nộp, nhập, khai thác,
+    /// cung cấp thông tin, tiêu huỷ) vẫn là số toàn dự án.
+    pub phong_ids: Option<Vec<Uuid>>,
 }
 
 fn rows_json(rows: Vec<sqlx::postgres::PgRow>) -> Vec<Value> {
@@ -26,7 +29,7 @@ fn rows_json(rows: Vec<sqlx::postgres::PgRow>) -> Vec<Value> {
 
 /// Điều kiện hồ sơ dùng chung: $1 dự án, $2 phông, $3/$4 năm kết thúc. Bí danh view là `h`.
 const HS_WHERE: &str = "h.project_id = $1 AND h.deleted_at IS NULL AND ($2::uuid IS NULL OR h.phong_id = $2) \
-    AND ($3::int IS NULL OR h.nam_ket_thuc >= $3) AND ($4::int IS NULL OR h.nam_ket_thuc <= $4)";
+    AND ($3::int IS NULL OR h.nam_ket_thuc >= $3) AND ($4::int IS NULL OR h.nam_ket_thuc <= $4) AND ($5::uuid[] IS NULL OR h.phong_id = ANY($5))";
 
 /// Tháng theo giờ Việt Nam từ một cột timestamptz.
 fn thang(col: &str) -> String {
@@ -34,10 +37,10 @@ fn thang(col: &str) -> String {
 }
 
 async fn chay_hs(pool: &PgPool, sql: &str, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
-    Ok(rows_json(sqlx::query(sql).bind(b.project_id).bind(b.phong_id).bind(b.nam_tu).bind(b.nam_den).fetch_all(pool).await?))
+    Ok(rows_json(sqlx::query(sql).bind(b.project_id).bind(b.phong_id).bind(b.nam_tu).bind(b.nam_den).bind(b.phong_ids.as_deref()).fetch_all(pool).await?))
 }
 async fn chay_tg(pool: &PgPool, sql: &str, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
-    Ok(rows_json(sqlx::query(sql).bind(b.project_id).bind(b.phong_id).bind(b.from).bind(b.to).fetch_all(pool).await?))
+    Ok(rows_json(sqlx::query(sql).bind(b.project_id).bind(b.phong_id).bind(b.from).bind(b.to).bind(b.phong_ids.as_deref()).fetch_all(pool).await?))
 }
 
 // ------------------------------------------------------------------------------------------------------ nhóm mục lục hồ sơ
@@ -55,7 +58,7 @@ pub async fn phong(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
            FROM cl_phong p \
            LEFT JOIN cl_ho_so_v h ON h.phong_id = p.id AND {HS_WHERE} \
            LEFT JOIN cl_ho_so_goi g ON g.ho_so_id = h.id \
-           WHERE p.project_id = $1 AND p.deleted_at IS NULL AND ($2::uuid IS NULL OR p.id = $2) \
+           WHERE p.project_id = $1 AND p.deleted_at IS NULL AND ($2::uuid IS NULL OR p.id = $2) AND ($5::uuid[] IS NULL OR p.id = ANY($5)) \
            GROUP BY p.id, p.ma_du_an, p.ten, p.phong_so, p.so_tt ORDER BY p.so_tt NULLS LAST, p.ten) x"
     );
     chay_hs(pool, &sql, b).await
@@ -81,12 +84,12 @@ pub async fn thbq(pool: &PgPool, b: &BoLoc, nam_now: i32) -> sqlx::Result<Vec<Va
                   CASE t.trang_thai WHEN 1 THEN 'Vĩnh viễn' WHEN 2 THEN 'Có thời hạn' WHEN 3 THEN 'Đánh giá lại' ELSE 'Theo tuổi thọ công trình' END AS loai, \
                   t.gia_tri AS so_nam, count(h.id) AS so_ho_so, COALESCE(sum(h.so_van_ban), 0) AS so_van_ban, COALESCE(sum(h.so_luong_trang), 0) AS so_trang, \
                   count(h.id) FILTER (WHERE h.thbq_status = 'HET') AS hs_het, \
-                  count(h.id) FILTER (WHERE t.trang_thai = 2 AND h.nam_ket_thuc IS NOT NULL AND h.nam_ket_thuc + t.gia_tri BETWEEN $5 AND $5 + 5) AS hs_het_5_nam \
+                  count(h.id) FILTER (WHERE t.trang_thai = 2 AND h.nam_ket_thuc IS NOT NULL AND h.nam_ket_thuc + t.gia_tri BETWEEN $6 AND $6 + 5) AS hs_het_5_nam \
            FROM cl_thbq t LEFT JOIN cl_ho_so_v h ON h.thbq_id = t.id AND {HS_WHERE} \
            WHERE (t.project_id = $1 OR t.project_id IS NULL) AND t.deleted_at IS NULL \
            GROUP BY t.id, t.ten, t.ma_tt05, t.trang_thai, t.gia_tri, t.so_tt ORDER BY t.so_tt NULLS LAST, t.trang_thai, t.gia_tri DESC) x"
     );
-    Ok(rows_json(sqlx::query(&sql).bind(b.project_id).bind(b.phong_id).bind(b.nam_tu).bind(b.nam_den).bind(nam_now).fetch_all(pool).await?))
+    Ok(rows_json(sqlx::query(&sql).bind(b.project_id).bind(b.phong_id).bind(b.nam_tu).bind(b.nam_den).bind(b.phong_ids.as_deref()).bind(nam_now).fetch_all(pool).await?))
 }
 
 /// #5 / #6: một giá trị một dòng, đếm hồ sơ và văn bản (cột khác nhau giữa hồ sơ và văn bản).
@@ -138,7 +141,7 @@ pub async fn tai_lieu_so(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
            LEFT JOIN LATERAL (SELECT h.phong_id FROM cl_van_ban_file f JOIN cl_van_ban v ON v.id = f.van_ban_id JOIN cl_ho_so h ON h.id = v.ho_so_id \
                               WHERE f.document_id = d.id AND f.deleted_at IS NULL LIMIT 1) l ON true \
            LEFT JOIN cl_phong p ON p.id = l.phong_id \
-           WHERE d.project_id = $1 AND d.status <> 'disposed' AND ($2::uuid IS NULL OR p.id = $2) \
+           WHERE d.project_id = $1 AND d.status <> 'disposed' AND ($2::uuid IS NULL OR p.id = $2) AND ($5::uuid[] IS NULL OR p.id = ANY($5)) \
              AND ($3::timestamptz IS NULL OR d.uploaded_at >= $3) AND ($4::timestamptz IS NULL OR d.uploaded_at < $4) \
            GROUP BY p.id, p.ma_du_an, p.ten, p.so_tt ORDER BY p.so_tt NULLS LAST, p.ten NULLS LAST) x";
     chay_tg(pool, sql, b).await
@@ -153,7 +156,7 @@ pub async fn goi_tin(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
                   COALESCE(sum(p.document_count) FILTER (WHERE p.status = 'built'), 0) AS so_tai_lieu, \
                   round(COALESCE(sum(p.zip_size), 0) / 1048576.0, 1) AS dung_luong_mb, count(*) FILTER (WHERE p.huy_at IS NOT NULL) AS da_huy, \
                   count(*) FILTER (WHERE p.virus_scan LIKE 'infected%') AS virus_nhiem \
-           FROM packages p WHERE p.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM packages p WHERE p.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR p.created_at >= $3) AND ($4::timestamptz IS NULL OR p.created_at < $4) \
            GROUP BY p.kind, p.nguon ORDER BY p.kind, p.nguon) x";
     chay_tg(pool, sql, b).await
@@ -168,7 +171,7 @@ pub async fn thu_nop(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
                   count(*) FILTER (WHERE s.status = 'approved') AS da_duyet, count(*) FILTER (WHERE s.status = 'completed') AS hoan_tat, \
                   COALESCE(sum(s.total_pages), 0) AS so_trang, round(COALESCE(sum(s.total_bytes), 0) / 1048576.0, 1) AS dung_luong_mb, \
                   count(*) FILTER (WHERE s.cach_thuc = 'truc_tiep') AS truc_tiep \
-           FROM submissions s WHERE s.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM submissions s WHERE s.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR s.created_at >= $3) AND ($4::timestamptz IS NULL OR s.created_at < $4) \
            GROUP BY 1 ORDER BY 1) x",
         th = thang("s.created_at")
@@ -184,7 +187,7 @@ pub async fn nhap_he_thong(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>>
                   count(*) FILTER (WHERE i.ket_qua = 'da_co') AS da_co, count(*) FILTER (WHERE i.ket_qua = 'tu_choi') AS tu_choi, count(*) FILTER (WHERE i.ket_qua = 'loi') AS loi, \
                   COALESCE(sum(i.so_van_ban) FILTER (WHERE i.ket_qua = 'nhap'), 0) AS so_van_ban, COALESCE(sum(i.so_chua_ky) FILTER (WHERE i.ket_qua = 'nhap'), 0) AS so_chua_ky, \
                   round(COALESCE(sum(i.size_bytes) FILTER (WHERE i.ket_qua = 'nhap'), 0) / 1048576.0, 1) AS dung_luong_mb \
-           FROM ingest_items i WHERE i.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM ingest_items i WHERE i.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR i.created_at >= $3) AND ($4::timestamptz IS NULL OR i.created_at < $4) \
            GROUP BY 1 ORDER BY 1) x",
         th = thang("i.created_at")
@@ -201,7 +204,7 @@ pub async fn kiem_tra(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
            SELECT {th} AS thang, CASE c.nguon WHEN 'ke_hoach' THEN 'Theo kế hoạch' WHEN 'tay' THEN 'Chạy tay' WHEN 'kiem_lai' THEN 'Kiểm lại sau khắc phục' ELSE 'Tự động' END AS nguon, \
                   count(*) AS so_lan, count(*) FILTER (WHERE c.ket_qua = 'dat') AS dat, count(*) FILTER (WHERE c.ket_qua = 'loi') AS loi, \
                   count(DISTINCT c.document_id) AS so_tai_lieu, count(DISTINCT c.package_id) AS so_goi, count(DISTINCT c.ke_hoach_id) AS so_ke_hoach \
-           FROM integrity_checks c WHERE c.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM integrity_checks c WHERE c.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR c.checked_at >= $3) AND ($4::timestamptz IS NULL OR c.checked_at < $4) \
            GROUP BY 1, 2 ORDER BY 1, 2) x",
         th = thang("c.checked_at")
@@ -217,7 +220,7 @@ pub async fn sao_luu(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
                   count(*) AS so_lan, count(*) FILTER (WHERE r.ket_qua = 'dat') AS dat, count(*) FILTER (WHERE r.ket_qua = 'khong_dat') AS khong_dat, \
                   round(COALESCE(sum(r.dung_luong_bytes), 0) / 1048576.0, 1) AS dung_luong_mb, count(*) FILTER (WHERE r.da_xoa_at IS NOT NULL) AS da_xoa, \
                   count(DISTINCT r.phuong_tien_id) AS so_phuong_tien \
-           FROM backup_runs r WHERE ($1::uuid IS NULL OR true) AND ($2::uuid IS NULL OR true) \
+           FROM backup_runs r WHERE ($1::uuid IS NULL OR true) AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR r.created_at >= $3) AND ($4::timestamptz IS NULL OR r.created_at < $4) \
            GROUP BY 1, 2 ORDER BY 1, 2) x",
         th = thang("r.created_at")
@@ -236,7 +239,7 @@ pub async fn tieu_huy(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
                   (SELECT count(*) FROM disposal_entries e WHERE e.batch_id = d.id AND e.status = 'da_huy') AS da_huy, \
                   (SELECT count(*) FROM disposal_entries e WHERE e.batch_id = d.id AND e.status = 'giu_lai') AS giu_lai, \
                   d.created_at, d.decided_at, d.executed_at \
-           FROM disposal_batches d WHERE d.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM disposal_batches d WHERE d.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::int IS NULL OR d.nam >= $3) AND ($4::int IS NULL OR d.nam <= $4) \
            ORDER BY d.nam DESC, d.created_at DESC) x";
     chay_hs(pool, sql, b).await
@@ -254,7 +257,7 @@ pub async fn khai_thac_yeu_cau(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Val
                   (SELECT count(*) FROM access_request_items i WHERE i.request_id = ANY(array_agg(r.id)) AND i.deleted_at IS NULL AND i.verdict = 'duyet') AS tl_duyet, \
                   (SELECT count(*) FROM access_request_items i WHERE i.request_id = ANY(array_agg(r.id)) AND i.deleted_at IS NULL AND i.verdict = 'tu_choi') AS tl_tu_choi, \
                   COALESCE(sum(r.phi), 0) AS phi, COALESCE(sum(r.phi) FILTER (WHERE r.paid_at IS NOT NULL), 0) AS phi_da_thu \
-           FROM access_requests r WHERE r.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM access_requests r WHERE r.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR r.created_at >= $3) AND ($4::timestamptz IS NULL OR r.created_at < $4) \
            GROUP BY r.kind ORDER BY r.kind) x";
     chay_tg(pool, sql, b).await
@@ -267,7 +270,7 @@ pub async fn luot_khai_thac(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>
            SELECT {th} AS thang, CASE split_part(a.action, '.', 2) WHEN 'xem' THEN 'Xem' WHEN 'doc' THEN 'Đọc bản sao' WHEN 'tai' THEN 'Tải bản sao' \
                        WHEN 'in' THEN 'In' WHEN 'chuyen_doi' THEN 'Chuyển đổi ra giấy' ELSE split_part(a.action, '.', 2) END AS viec, \
                   count(*) AS so_luot, count(DISTINCT a.target) AS so_tai_lieu, count(DISTINCT a.actor_id) AS so_nguoi \
-           FROM audit_log a WHERE a.action LIKE 'khai_thac.%' AND a.detail->>'projectId' = $1::text AND ($2::uuid IS NULL OR true) \
+           FROM audit_log a WHERE a.action LIKE 'khai_thac.%' AND a.detail->>'projectId' = $1::text AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR a.at >= $3) AND ($4::timestamptz IS NULL OR a.at < $4) \
            GROUP BY 1, 2 ORDER BY 1, 2) x",
         th = thang("a.at")
@@ -283,7 +286,7 @@ pub async fn cung_cap_thong_tin(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Va
                   count(*) FILTER (WHERE r.status = 'fulfilled') AS da_cung_cap, count(*) FILTER (WHERE r.status = 'refused') AS tu_choi, \
                   COALESCE(sum(r.phi), 0) AS phi, COALESCE(sum(r.phi) FILTER (WHERE r.paid_at IS NOT NULL), 0) AS phi_da_thu, \
                   round(COALESCE(avg(EXTRACT(EPOCH FROM (r.fulfilled_at - r.created_at)) / 86400.0) FILTER (WHERE r.fulfilled_at IS NOT NULL), 0)::numeric, 1) AS ngay_xu_ly_tb \
-           FROM info_requests r WHERE r.project_id = $1 AND ($2::uuid IS NULL OR true) \
+           FROM info_requests r WHERE r.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR r.created_at >= $3) AND ($4::timestamptz IS NULL OR r.created_at < $4) \
            GROUP BY r.hinh_thuc ORDER BY r.hinh_thuc) x";
     chay_tg(pool, sql, b).await
@@ -298,7 +301,7 @@ pub async fn muon_tra(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
                        WHEN 'dang_muon' THEN CASE WHEN m.ngay_du_kien_tra < CURRENT_DATE THEN 'Quá hạn' ELSE 'Đang mượn' END WHEN 'da_tra' THEN 'Đã trả' ELSE 'Đã huỷ' END AS trang_thai, \
                   (m.trang_thai = 'dang_muon' AND m.ngay_du_kien_tra < CURRENT_DATE) AS qua_han, m.tra_truoc_han, u.display_name AS nguoi_lap, ud.display_name AS nguoi_duyet_ten \
            FROM cl_muon_tra m JOIN cl_ho_so_v h ON h.id = m.ho_so_id LEFT JOIN users u ON u.id = m.nguoi_lap_phieu LEFT JOIN users ud ON ud.id = m.nguoi_duyet \
-           WHERE m.project_id = $1 AND m.deleted_at IS NULL AND ($2::uuid IS NULL OR h.phong_id = $2) \
+           WHERE m.project_id = $1 AND m.deleted_at IS NULL AND ($2::uuid IS NULL OR h.phong_id = $2) AND ($5::uuid[] IS NULL OR h.phong_id = ANY($5)) \
              AND ($3::timestamptz IS NULL OR m.ngay_muon >= ($3 AT TIME ZONE 'Asia/Ho_Chi_Minh')::date) AND ($4::timestamptz IS NULL OR m.ngay_muon < ($4 AT TIME ZONE 'Asia/Ho_Chi_Minh')::date) \
            ORDER BY m.ngay_muon, m.so_phieu NULLS LAST, m.created_at) x";
     chay_tg(pool, sql, b).await
@@ -306,5 +309,17 @@ pub async fn muon_tra(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
 
 /// #18 Kho – giá – hộp: mỗi giá một dòng, sức chứa và % đầy (0035; cùng câu với màn Kho và giá).
 pub async fn kho_gia(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
-    crate::chinh_ly::kho_gia::tong_hop(pool, b.project_id, None, b.phong_id).await
+    crate::chinh_ly::kho_gia::tong_hop(pool, b.project_id, None, b.phong_id, b.phong_ids.as_deref()).await
+}
+
+/// #19 Sổ chuyển đổi tài liệu số ra giấy (0037): một dòng một lần chuyển đổi.
+pub async fn chuyen_doi(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Value>> {
+    let sql = "SELECT to_jsonb(x) AS row FROM ( \
+           SELECT c.so_chuyen_doi, c.created_at, c.ma_tai_lieu, c.ten_tai_lieu, c.ma_ho_so, p.ma_du_an || ' — ' || p.ten AS ten_phong, c.so_trang, c.muc_dich, c.nguoi_nhan, \
+                  c.ky_so_ket_luan, u.display_name AS nguoi_thuc_hien \
+           FROM chuyen_doi_giay c LEFT JOIN cl_phong p ON p.id = c.phong_id LEFT JOIN users u ON u.id = c.nguoi_thuc_hien \
+           WHERE c.project_id = $1 AND ($2::uuid IS NULL OR c.phong_id = $2) AND ($5::uuid[] IS NULL OR c.phong_id = ANY($5)) \
+             AND ($3::timestamptz IS NULL OR c.created_at >= $3) AND ($4::timestamptz IS NULL OR c.created_at < $4) \
+           ORDER BY c.created_at DESC) x";
+    chay_tg(pool, sql, b).await
 }

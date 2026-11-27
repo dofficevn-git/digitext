@@ -12,7 +12,7 @@ fn rows_json(rows: Vec<sqlx::postgres::PgRow>) -> Vec<Value> {
 }
 
 /// Mỗi phòng ban của phông một dòng: hộp / hồ sơ vĩnh viễn, có thời hạn; bó / tập loại; hết hạn; trùng thừa; chưa đánh số.
-pub async fn chinh_ly(pool: &PgPool, project: Uuid, phong: Option<Uuid>) -> sqlx::Result<Vec<Value>> {
+pub async fn chinh_ly(pool: &PgPool, project: Uuid, phong: Option<Uuid>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<Vec<Value>> {
     let rows = sqlx::query(
         "SELECT to_jsonb(x) AS row FROM ( \
            SELECT pb.id AS phong_ban_id, pb.ten AS ten_phong_ban, pb.ma_don_vi, p.id AS phong_id, p.ten AS ten_phong, p.ma_du_an, \
@@ -30,18 +30,19 @@ pub async fn chinh_ly(pool: &PgPool, project: Uuid, phong: Option<Uuid>) -> sqlx
            FROM cl_phong_ban pb JOIN cl_phong p ON p.id = pb.phong_id \
            LEFT JOIN cl_ho_so_v h ON h.phong_ban_id = pb.id AND h.deleted_at IS NULL \
            LEFT JOIN cl_thbq t ON t.id = h.thbq_id \
-           WHERE pb.project_id = $1 AND pb.deleted_at IS NULL AND p.deleted_at IS NULL AND ($2::uuid IS NULL OR p.id = $2) \
+           WHERE pb.project_id = $1 AND pb.deleted_at IS NULL AND p.deleted_at IS NULL AND ($2::uuid IS NULL OR p.id = $2) AND ($3::uuid[] IS NULL OR p.id = ANY($3)) \
            GROUP BY pb.id, pb.ten, pb.ma_don_vi, pb.so_tt, p.id, p.ten, p.ma_du_an ORDER BY p.ten, pb.so_tt NULLS LAST, pb.ten) x",
     )
     .bind(project)
     .bind(phong)
+    .bind(phong_ids)
     .fetch_all(pool)
     .await?;
     Ok(rows_json(rows))
 }
 
 /// Năng suất từng người từ lịch sử: số hồ sơ / văn bản đã chạm, trường thêm mới, trường sửa, ngày làm việc.
-pub async fn nhan_vien(pool: &PgPool, project: Uuid, phong: Option<Uuid>, from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>) -> sqlx::Result<Vec<Value>> {
+pub async fn nhan_vien(pool: &PgPool, project: Uuid, phong: Option<Uuid>, from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<Vec<Value>> {
     let rows = sqlx::query(
         "SELECT to_jsonb(x) AS row FROM ( \
            SELECT COALESCE(l.actor_id::text, l.actor_name) AS actor_key, l.actor_id, COALESCE(u.display_name, l.actor_name) AS actor_name, u.username, \
@@ -54,20 +55,21 @@ pub async fn nhan_vien(pool: &PgPool, project: Uuid, phong: Option<Uuid>, from: 
                   min(l.at) AS dau, max(l.at) AS cuoi \
            FROM cl_lich_su l LEFT JOIN users u ON u.id = l.actor_id \
            WHERE l.project_id = $1 AND ($2::uuid IS NULL OR l.phong_id = $2) AND ($3::timestamptz IS NULL OR l.at >= $3) AND ($4::timestamptz IS NULL OR l.at < $4) \
-             AND l.action IN ('add', 'edit', 'import') \
+             AND l.action IN ('add', 'edit', 'import') AND ($5::uuid[] IS NULL OR l.phong_id = ANY($5)) \
            GROUP BY actor_key, l.actor_id, actor_name, u.username ORDER BY truong_tong DESC, actor_name) x",
     )
     .bind(project)
     .bind(phong)
     .bind(from)
     .bind(to)
+    .bind(phong_ids)
     .fetch_all(pool)
     .await?;
     Ok(rows_json(rows))
 }
 
 /// Mỗi phông một dòng: thời gian khởi tạo, hồ sơ / văn bản tạo trong khoảng, hộp / hồ sơ VV và có thời hạn, bó / tập.
-pub async fn phan_mem(pool: &PgPool, project: Uuid, from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>) -> sqlx::Result<Vec<Value>> {
+pub async fn phan_mem(pool: &PgPool, project: Uuid, from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>, phong_ids: Option<&[Uuid]>) -> sqlx::Result<Vec<Value>> {
     let rows = sqlx::query(
         "SELECT to_jsonb(x) AS row FROM ( \
            SELECT p.id AS phong_id, p.ma_du_an, p.ten AS ten_phong, p.created_at AS khoi_tao, \
@@ -79,12 +81,13 @@ pub async fn phan_mem(pool: &PgPool, project: Uuid, from: Option<DateTime<Utc>>,
            FROM cl_phong p LEFT JOIN cl_ho_so_v h ON h.phong_id = p.id AND h.deleted_at IS NULL \
                 AND ($2::timestamptz IS NULL OR h.created_at >= $2) AND ($3::timestamptz IS NULL OR h.created_at < $3) \
            LEFT JOIN cl_thbq t ON t.id = h.thbq_id \
-           WHERE p.project_id = $1 AND p.deleted_at IS NULL \
+           WHERE p.project_id = $1 AND p.deleted_at IS NULL AND ($4::uuid[] IS NULL OR p.id = ANY($4)) \
            GROUP BY p.id, p.ma_du_an, p.ten, p.created_at, p.so_tt ORDER BY p.so_tt NULLS LAST, p.ten) x",
     )
     .bind(project)
     .bind(from)
     .bind(to)
+    .bind(phong_ids)
     .fetch_all(pool)
     .await?;
     Ok(rows_json(rows))
@@ -111,19 +114,21 @@ pub async fn muon_tra(pool: &PgPool, project: Uuid, from: Option<DateTime<Utc>>,
 }
 
 /// Danh sách phiếu mượn (kèm hồ sơ) theo trạng thái: dang_muon | da_tra | qua_han | (tất cả).
-pub async fn phieu_muon(pool: &PgPool, project: Uuid, trang_thai: Option<&str>, q: Option<&str>, limit: i64, offset: i64) -> sqlx::Result<(Vec<Value>, i64)> {
+pub async fn phieu_muon(pool: &PgPool, project: Uuid, trang_thai: Option<&str>, q: Option<&str>, phong_ids: Option<&[Uuid]>, limit: i64, offset: i64) -> sqlx::Result<(Vec<Value>, i64)> {
     let where_sql = "m.project_id = $1 AND m.deleted_at IS NULL \
         AND ($2::text IS NULL OR ($2 = 'qua_han' AND m.trang_thai = 'dang_muon' AND m.ngay_du_kien_tra < CURRENT_DATE) \
              OR ($2 = 'mo' AND m.trang_thai IN ('cho_duyet', 'da_duyet', 'dang_muon')) OR ($2 NOT IN ('qua_han', 'mo') AND m.trang_thai = $2)) \
-        AND ($3::text IS NULL OR m.nguoi_muon ILIKE '%' || $3 || '%' OR m.don_vi ILIKE '%' || $3 || '%' OR h.tieu_de ILIKE '%' || $3 || '%' OR h.so_tam ILIKE '%' || $3 || '%' OR h.ma_ho_so ILIKE '%' || $3 || '%')";
+        AND ($3::text IS NULL OR m.nguoi_muon ILIKE '%' || $3 || '%' OR m.don_vi ILIKE '%' || $3 || '%' OR h.tieu_de ILIKE '%' || $3 || '%' OR h.so_tam ILIKE '%' || $3 || '%' OR h.ma_ho_so ILIKE '%' || $3 || '%') \
+        AND ($4::uuid[] IS NULL OR h.phong_id = ANY($4))";
     let rows = sqlx::query(&format!(
         "{} WHERE {where_sql} \
-         ORDER BY CASE m.trang_thai WHEN 'cho_duyet' THEN 0 WHEN 'da_duyet' THEN 1 WHEN 'dang_muon' THEN 2 ELSE 3 END, m.ngay_muon DESC, m.so_phieu DESC NULLS LAST, m.ver DESC LIMIT $4 OFFSET $5",
+         ORDER BY CASE m.trang_thai WHEN 'cho_duyet' THEN 0 WHEN 'da_duyet' THEN 1 WHEN 'dang_muon' THEN 2 ELSE 3 END, m.ngay_muon DESC, m.so_phieu DESC NULLS LAST, m.ver DESC LIMIT $5 OFFSET $6",
         super::muon_tra::PHIEU_JSON
     ))
     .bind(project)
     .bind(trang_thai)
     .bind(q.map(str::trim).filter(|s| !s.is_empty()))
+    .bind(phong_ids)
     .bind(limit.clamp(1, 10_000))
     .bind(offset.max(0))
     .fetch_all(pool)
@@ -132,6 +137,7 @@ pub async fn phieu_muon(pool: &PgPool, project: Uuid, trang_thai: Option<&str>, 
         .bind(project)
         .bind(trang_thai)
         .bind(q.map(str::trim).filter(|s| !s.is_empty()))
+        .bind(phong_ids)
         .fetch_one(pool)
         .await?
         .try_get(0)?;

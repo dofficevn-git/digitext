@@ -57,6 +57,7 @@ fn order_of(n: i32) -> Result<SortOrder, ApiError> {
 async fn preview(State(st): State<AppState>, ts: Ts, Json(b): Json<PreviewReq>) -> Result<Json<hth::Preview>, ApiError> {
     ts.require_perm(Permission::DossierSystematize)?;
     project_access(&st, &ts, b.project_id).await?;
+    super::kiem_phong(super::pham_vi_phong(&st, &ts, b.project_id).await?.as_deref(), b.phong_id)?;
     let order = order_of(b.sort_order)?;
     Ok(Json(hth::preview(&st.pool, b.project_id, b.phong_id, &b.filter, order, b.file_type, b.start_at).await?))
 }
@@ -64,6 +65,7 @@ async fn preview(State(st): State<AppState>, ts: Ts, Json(b): Json<PreviewReq>) 
 async fn apply(State(st): State<AppState>, ts: Ts, Json(b): Json<PreviewReq>) -> Result<Json<hth::Preview>, ApiError> {
     ts.require_perm(Permission::DossierSystematize)?;
     project_access(&st, &ts, b.project_id).await?;
+    super::kiem_phong(super::pham_vi_phong(&st, &ts, b.project_id).await?.as_deref(), b.phong_id)?;
     let order = order_of(b.sort_order)?;
     let snapshot = b.snapshot_ver.ok_or_else(|| ApiError::bad_request("Thiếu snapshotVer — hãy xem trước rồi áp dụng"))?;
     let parts = ctx_parts(&ts);

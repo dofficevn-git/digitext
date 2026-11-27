@@ -309,6 +309,7 @@ pub(super) fn op_err(i: usize, r: &OpResult) -> Option<RowError> {
 
 async fn import_ho_so(State(st): State<AppState>, ts: Ts, Json(b): Json<HoSoImportReq>) -> Result<Json<ImportResp>, ApiError> {
     project_access(&st, &ts, b.project_id).await?;
+    super::kiem_phong(super::pham_vi_phong(&st, &ts, b.project_id).await?.as_deref(), b.phong_id)?;
     if b.rows.len() > IMPORT_MAX {
         return Err(ApiError::bad_request(format!("Tối đa {IMPORT_MAX} dòng mỗi lần — hãy chia nhỏ tệp")));
     }

@@ -54,7 +54,9 @@ async fn pull(State(st): State<AppState>, ts: Ts, Query(q): Query<PullQ>) -> Res
             tracing::warn!(error = %e, "không dọn được tombstone chỉnh lý");
         }
     }
-    Ok(Json(cl::sync::pull(&st.pool, q.project_id, q.since.max(0), q.limit, super::pham_vi_cua(&ts)).await?))
+    // Phạm vi phông (0038): bản sao offline chỉ còn phông được cấp.
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    Ok(Json(cl::sync::pull(&st.pool, q.project_id, q.since.max(0), q.limit, super::pham_vi_cua(&ts), scope.as_deref()).await?))
 }
 
 #[derive(Debug, Deserialize)]

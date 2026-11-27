@@ -258,6 +258,32 @@ Chưa làm / cần anh: (15) mẫu Excel / PDF 18 báo cáo và ảnh màn Báo 
 vào sổ biên bản không; (16) giữ `loan.approve` riêng hay gộp vào `loan.manage`. Còn lại của kế hoạch: Đợt 4 = 3B trang thể thức PL VI
 + sổ chuyển đổi (migration 0037 `chuyen_doi_giay`), 3C biểu mẫu PDF tại máy trạm, 4C quyền theo phông (0038 `user_phong`) — cần câu (17)–(19).
 
+### GĐ9 — Chuyển đổi số → giấy (PL VI), biểu mẫu PDF tại máy trạm, phân quyền theo phông (27/11/2026, nhánh `feat/ban-luu-tru`)
+
+Đợt 4 (cuối) của kế hoạch đối chiếu Digifile (3B → 3C → 4C). Anh chưa trả lời câu (17)–(19) nên làm theo đề xuất: trang thể thức suy từ
+Mục 1 Phụ lục VI (Digifile cũng tự dựng), đặt SAU nội dung; bản in ký tay + đóng dấu, KHÔNG ký số lại bản ghép; số chuyển đổi theo cơ quan
+(dự án) / năm `CD-{năm}-{stt:06}`; in HTML giữ làm "In nhanh" song song PDF một vài bản phát hành; phạm vi phông áp CẢ hai bản, người bị
+giới hạn vẫn làm ngoại tuyến (bản sao chỉ còn phông được cấp — không chặn 403 như plan), tài khoản khách cũng gán được.
+
+Đã làm:
+- **0037** `chuyen_doi_giay`, **0038** `user_phong`.
+- **Máy chủ**: `digitext-pdf::ghep` (ghép PDF + chân trang, có test), `digitext-db::{chuyen_doi, user_phong}`, `routes/chuyen_doi.rs`
+  (kiểm chữ ký số lúc chuyển đổi bằng `digitext_sign_verify`, trang thể thức `manual`, lưu `{project}-chuyen-doi/{id}.pdf`, nhật ký
+  `khai_thac.chuyen_doi`, sổ JSON / Excel, tải PDF), báo cáo #19 sổ chuyển đổi; phạm vi phông cắm vào mọi đường đọc mục lục / tra cứu /
+  đọc tài liệu / pull offline / mượn trả / kho / báo cáo / thống kê / hệ thống hoá / nhập mục lục / đối soát; route `GET/PUT /users/{id}/phong`,
+  `GET /cl/pham-vi-phong`; `ManualBlock` có serde + `PageBreak` + `Centered`.
+- **Desktop 0.25.21**: Tra cứu › "In ra giấy" + hộp thoại chuyển đổi; màn Sổ chuyển đổi (cả hai bản); Người dùng › "Phạm vi phông";
+  Kết xuất mục lục có bản PDF dựng tại máy trạm (mục lục hồ sơ, sản phẩm có bìa, mục lục văn bản, phụ lục tra tìm); Tauri `bc_call`, `pdf_manual`.
+- **Kiểm chứng**: `cargo test` pdf (ghép 1 + 3 trang → 4, chân trang), kịch bản `dev/luutru/thu-dot-4.ps1` xanh trên Postgres tạm: giới hạn
+  nvc ở phông A → /cl/ho-so, /cl/van-ban, catalog, tra cứu, bộ lọc, đọc tài liệu, pull offline, mượn trả, báo cáo, thống kê, lịch sử, gán
+  hộp, nhập mục lục đều chỉ còn / chặn đúng phông; bỏ giới hạn thấy lại hết; chuyển đổi tài liệu A → `CD-2026-000001`, PDF = gốc + 1
+  trang, lần hai 000002, sổ + Excel + nhật ký + báo cáo #19, người bị giới hạn không chuyển đổi tài liệu phông khác. Trang thể thức đã
+  xem bằng mắt.
+
+Chưa làm / cần anh: (17) mẫu PL VI chính thức để so câu chữ, có cần ký số lại bản ghép không (hiện ký tay + dấu); (18) bao giờ bỏ hẳn
+in HTML (hiện song song); (19) phạm vi phông có cần áp cho kho tệp thi công (`documents` không gắn phông) và `/cl/rows/{table}/{id}` không.
+Ngoài kế hoạch còn: nhãn hộp 2×2 ra PDF, cổng độc giả web, tài liệu ảnh / ghi âm, email / SMS (đã ghi "để sau" trong plan).
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

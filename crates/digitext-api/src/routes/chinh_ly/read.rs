@@ -17,6 +17,7 @@ use uuid::Uuid;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/cl/catalog", get(catalog))
+        .route("/cl/pham-vi-phong", get(pham_vi_phong_cua_toi))
         .route("/cl/ho-so", get(list_ho_so))
         .route("/cl/ho-so/{id}", get(get_ho_so))
         .route("/cl/ho-so/{id}/van-ban", get(van_ban_of))
@@ -32,7 +33,38 @@ struct ProjectQ {
 
 async fn catalog(State(st): State<AppState>, ts: Ts, Query(q): Query<ProjectQ>) -> Result<Json<Value>, ApiError> {
     read_access(&st, &ts, q.project_id).await?;
-    Ok(Json(Value::Object(cl::danh_muc::catalog(&st.pool, q.project_id).await?)))
+    let mut cat = cl::danh_muc::catalog(&st.pool, q.project_id).await?;
+    // Phạm vi phông (0038): bỏ phông ngoài phạm vi và phòng ban / mảng / hộp / bó tập / giá thuộc chúng.
+    if let Some(sc) = super::pham_vi_phong(&st, &ts, q.project_id).await? {
+        let id_cua = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok());
+        let giu_phong: std::collections::HashSet<Uuid> = sc.iter().copied().collect();
+        let loc = |cat: &mut serde_json::Map<String, Value>, bang: &str, f: &dyn Fn(&Value) -> bool| {
+            if let Some(Value::Array(rows)) = cat.get_mut(bang) {
+                rows.retain(|r| f(r));
+            }
+        };
+        // Khoá trong JSON catalog là tên bảng bỏ tiền tố `cl_` (danh_muc::catalog).
+        loc(&mut cat, "phong", &|r| id_cua(r, "id").is_some_and(|i| giu_phong.contains(&i)));
+        loc(&mut cat, "phong_ban", &|r| id_cua(r, "phong_id").is_some_and(|i| giu_phong.contains(&i)));
+        let giu_pb: std::collections::HashSet<Uuid> = cat.get("phong_ban").and_then(Value::as_array).map(|a| a.iter().filter_map(|r| id_cua(r, "id")).collect()).unwrap_or_default();
+        for bang in ["mang", "hop", "bo_tap"] {
+            loc(&mut cat, bang, &|r| id_cua(r, "phong_ban_id").is_some_and(|i| giu_pb.contains(&i)));
+        }
+        loc(&mut cat, "gia", &|r| id_cua(r, "phong_ban_id").map_or(true, |i| giu_pb.contains(&i)));
+    }
+    Ok(Json(Value::Object(cat)))
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PhamViPhong {
+    /// None = không giới hạn.
+    phong_ids: Option<Vec<Uuid>>,
+}
+/// `GET /cl/pham-vi-phong?projectId` — desktop hỏi để hiện băng "chỉ thấy N phông".
+async fn pham_vi_phong_cua_toi(State(st): State<AppState>, ts: Ts, Query(q): Query<ProjectQ>) -> Result<Json<PhamViPhong>, ApiError> {
+    read_access(&st, &ts, q.project_id).await?;
+    Ok(Json(PhamViPhong { phong_ids: super::pham_vi_phong(&st, &ts, q.project_id).await? }))
 }
 
 fn csv_uuids(s: &Option<String>) -> Vec<Uuid> {
@@ -93,12 +125,15 @@ fn default_limit() -> i64 {
 
 async fn list_ho_so(State(st): State<AppState>, ts: Ts, Query(q): Query<HoSoQ>) -> Result<Json<Value>, ApiError> {
     read_access(&st, &ts, q.project_id).await?;
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = super::phong_hieu_dung(scope.as_deref(), q.phong_id)?;
     let thbq_raw = q.thbq.as_deref().unwrap_or("").trim().to_owned();
     let f = ho_so::Filter {
         project_id: q.project_id,
         pham_vi: super::pham_vi_cua(&ts),
+        phong_ids: scope,
         nop_luu: q.nop_luu,
-        phong_id: q.phong_id,
+        phong_id,
         phong_ban_id: q.phong_ban_id,
         mang_id: q.mang_id,
         thbq_ids: if thbq_raw == "0" || thbq_raw == "-1" { vec![] } else { csv_uuids(&q.thbq) },
@@ -123,10 +158,20 @@ async fn list_ho_so(State(st): State<AppState>, ts: Ts, Query(q): Query<HoSoQ>) 
     Ok(Json(json!({"rows": rows, "total": total})))
 }
 
+/// Hồ sơ phải nằm trong phạm vi phông của người gọi (0038).
+async fn kiem_phong_ho_so(st: &AppState, ts: &Ts, project: Uuid, row: &Value) -> Result<(), ApiError> {
+    if let Some(sc) = super::pham_vi_phong(st, ts, project).await? {
+        let phong = row.get("phong_id").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()).ok_or_else(ApiError::forbidden)?;
+        super::kiem_phong(Some(&sc), phong)?;
+    }
+    Ok(())
+}
+
 async fn get_ho_so(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>) -> Result<Json<Value>, ApiError> {
     let mut row = ho_so::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
     let project = row.get("project_id").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()).ok_or_else(ApiError::not_found)?;
     read_access(&st, &ts, project).await?;
+    kiem_phong_ho_so(&st, &ts, project, &row).await?;
     let vb = ho_so::van_ban_of(&st.pool, id, false).await?;
     let loan = ho_so::open_loan(&st.pool, id).await?;
     if let Some(o) = row.as_object_mut() {
@@ -147,6 +192,7 @@ async fn van_ban_of(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Qu
     let row = ho_so::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
     let project = row.get("project_id").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok()).ok_or_else(ApiError::not_found)?;
     read_access(&st, &ts, project).await?;
+    kiem_phong_ho_so(&st, &ts, project, &row).await?;
     Ok(Json(ho_so::van_ban_of(&st.pool, id, q.include_deleted).await?))
 }
 
@@ -178,10 +224,13 @@ struct VbQ {
 
 async fn search_van_ban(State(st): State<AppState>, ts: Ts, Query(q): Query<VbQ>) -> Result<Json<Value>, ApiError> {
     read_access(&st, &ts, q.project_id).await?;
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = super::phong_hieu_dung(scope.as_deref(), q.phong_id)?;
     let f = ho_so::VanBanFilter {
         project_id: q.project_id,
         pham_vi: super::pham_vi_cua(&ts),
-        phong_id: q.phong_id,
+        phong_id,
+        phong_ids: scope,
         phong_ban_id: q.phong_ban_id,
         ho_so_id: q.ho_so_id,
         q: q.q,
@@ -224,11 +273,14 @@ struct LichSuQ {
 
 async fn list_lich_su(State(st): State<AppState>, ts: Ts, Query(q): Query<LichSuQ>) -> Result<Json<Value>, ApiError> {
     read_access(&st, &ts, q.project_id).await?;
+    let scope = super::pham_vi_phong(&st, &ts, q.project_id).await?;
+    let phong_id = super::phong_hieu_dung(scope.as_deref(), q.phong_id)?;
     let f = lich_su::Filter {
         project_id: q.project_id,
         entity: q.entity,
         ho_so_id: q.ho_so_id,
-        phong_id: q.phong_id,
+        phong_id,
+        phong_ids: scope,
         actor_id: q.actor_id,
         action: q.action,
         from: q.from,

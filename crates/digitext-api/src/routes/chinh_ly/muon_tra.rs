@@ -7,7 +7,7 @@
 //! - `POST /cl/muon-tra/{id}/duyet | tu-choi | giao | gia-han | tra | huy {lyDo?, ngay?, hanMoi?}`
 //! - `POST /cl/muon-tra/nhom/{nhomId}/duyet | tu-choi | huy {lyDo?}` — cả phiếu (mọi dòng còn chờ duyệt)
 //! Quyền: xem `loan.view`; lập / giao / gia hạn / trả / huỷ `loan.manage`; duyệt / từ chối `loan.approve`; lập và giao luôn cần `loan.approve`.
-use super::project_access;
+use super::{kiem_phong, pham_vi_phong, project_access};
 use crate::app::AppState;
 use crate::error::ApiError;
 use crate::extract::Ts;
@@ -79,7 +79,8 @@ fn uuid_cua(v: &Value, k: &str) -> Option<Uuid> {
 async fn list(State(st): State<AppState>, ts: Ts, Query(q): Query<ListQ>) -> Result<Json<Value>, ApiError> {
     ts.require_perm(Permission::LoanView)?;
     project_access(&st, &ts, q.project_id).await?;
-    let (rows, total) = tk::phieu_muon(&st.pool, q.project_id, q.trang_thai.as_deref().filter(|s| !s.is_empty()), q.q.as_deref(), q.limit, q.offset).await?;
+    let scope = pham_vi_phong(&st, &ts, q.project_id).await?;
+    let (rows, total) = tk::phieu_muon(&st.pool, q.project_id, q.trang_thai.as_deref().filter(|s| !s.is_empty()), q.q.as_deref(), scope.as_deref(), q.limit, q.offset).await?;
     Ok(Json(json!({ "rows": rows, "total": total })))
 }
 
@@ -94,6 +95,9 @@ async fn nap(st: &AppState, ts: &Ts, id: Uuid) -> Result<Value, ApiError> {
     let r = db::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
     let project = uuid_cua(&r, "project_id").ok_or_else(ApiError::not_found)?;
     project_access(st, ts, project).await?;
+    if let Some(p) = uuid_cua(&r, "phong_id") {
+        kiem_phong(pham_vi_phong(st, ts, project).await?.as_deref(), p)?;
+    }
     Ok(r)
 }
 
@@ -108,6 +112,9 @@ async fn nhom_get(State(st): State<AppState>, ts: Ts, Path(nhom_id): Path<Uuid>)
     let Some(first) = rows.first() else { return Err(ApiError::not_found()) };
     let project = uuid_cua(first, "project_id").ok_or_else(ApiError::not_found)?;
     project_access(&st, &ts, project).await?;
+    if let Some(p) = uuid_cua(first, "phong_id") {
+        kiem_phong(pham_vi_phong(&st, &ts, project).await?.as_deref(), p)?;
+    }
     Ok(Json(json!({ "rows": rows })))
 }
 
@@ -147,6 +154,7 @@ async fn lap(State(st): State<AppState>, ts: Ts, Json(b): Json<LapBody>) -> Resu
         return Err(ApiError::forbidden());
     }
     let trang_thai = if b.giao_ngay { mt::DANG_MUON } else { mt::CHO_DUYET };
+    let scope = pham_vi_phong(&st, &ts, b.project_id).await?;
     let (nhom_id, so_phieu, rows) = loi_nghiep_vu(
         db::lap(
             &st.pool,
@@ -163,6 +171,7 @@ async fn lap(State(st): State<AppState>, ts: Ts, Json(b): Json<LapBody>) -> Resu
                 ghi_chu: b.ghi_chu.as_deref(),
                 trang_thai,
                 nguoi_lap: ts.user.id,
+                phong_ids: scope.as_deref(),
             },
         )
         .await?,
@@ -255,6 +264,9 @@ async fn nhom_buoc(st: &AppState, ts: &Ts, nhom_id: Uuid, den: &str, b: BuocBody
     let Some(first) = rows.first() else { return Err(ApiError::not_found()) };
     let project = uuid_cua(first, "project_id").ok_or_else(ApiError::not_found)?;
     project_access(st, ts, project).await?;
+    if let Some(p) = uuid_cua(first, "phong_id") {
+        kiem_phong(pham_vi_phong(st, ts, project).await?.as_deref(), p)?;
+    }
     let n = loi_nghiep_vu(db::chuyen_nhom(&st.pool, nhom_id, den, ts.user.id, b.ly_do.as_deref()).await?)?;
     let so_phieu = first.get("so_phieu").and_then(Value::as_str).unwrap_or("").to_string();
     digitext_db::audit::append(&st.pool, super::audit(ts, "cl.loan.transition_group", nhom_id.to_string(), json!({ "soPhieu": so_phieu, "den": den, "dong": n, "lyDo": b.ly_do }))).await?;

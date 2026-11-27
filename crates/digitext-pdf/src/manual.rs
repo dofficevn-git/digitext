@@ -6,7 +6,9 @@ use super::{f_2bf, f_2eo, f_2k2, f_2rm, f_qn, f_zc, pdfa, PdfError, C_0, C_1};
 use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Document, Object, Stream, StringFormat};
 
-#[derive(Debug, Clone)]
+/// JSON (desktop gửi lên lệnh Tauri `pdf_manual`, 3C 27/11/2026): `{"t": "title", "v": "…"}`, `{"t": "table", "v": {"headers": …}}`.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "t", content = "v", rename_all = "snake_case")]
 pub enum ManualBlock {
     /// Tiêu đề lớn, giữa trang, đậm, màu xanh.
     Title(String),
@@ -32,6 +34,10 @@ pub enum ManualBlock {
     Paragraph(String),
     /// Khối ký hai cột: (chức danh, ghi chú nhỏ, họ tên) — để trống tên thì chừa chỗ ký.
     Signatures { left: (String, String, String), right: (String, String, String) },
+    /// Sang trang mới (bìa hồ sơ, mục lục văn bản từng hồ sơ — 27/11/2026).
+    PageBreak,
+    /// Dòng chữ căn giữa cỡ tuỳ ý (bìa: tên phông, "HỒ SƠ" cỡ lớn, năm).
+    Centered { text: String, size: f32, bold: bool },
 }
 
 const MARGIN: f32 = 50.0;
@@ -237,6 +243,8 @@ fn clean_block(face: &ttf_parser::Face<'_>, b: &ManualBlock) -> ManualBlock {
             let f = |t: &(String, String, String)| (clean(face, &t.0, true), clean(face, &t.1, true), clean(face, &t.2, true));
             ManualBlock::Signatures { left: f(left), right: f(right) }
         }
+        ManualBlock::PageBreak => ManualBlock::PageBreak,
+        ManualBlock::Centered { text, size, bold } => ManualBlock::Centered { text: clean(face, text, *bold), size: *size, bold: *bold },
     }
 }
 
@@ -400,6 +408,12 @@ fn render_manual_kho(blocks: &[ManualBlock], font: &[u8], ngang: bool) -> Result
                     }
                 }
                 lay.y = top - 110.0;
+            }
+            ManualBlock::PageBreak => lay.new_page(),
+            ManualBlock::Centered { text, size, bold } => {
+                all_text.push(text.clone());
+                let size = size.clamp(6.0, 72.0);
+                lay.centered(text, size, *bold, BLACK, size * 1.35)?;
             }
             ManualBlock::Footer(t) => {
                 all_text.push(t.clone());

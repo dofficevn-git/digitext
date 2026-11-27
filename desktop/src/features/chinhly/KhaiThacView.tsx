@@ -11,6 +11,7 @@ import { clHoSoList, clRows, clSyncNow, clTaoVanBanTuOcr, str, THBQ_STATUS_LABEL
 import { useProject } from "@/state/project";
 import { Chip, ChuaChonDuAn, n, Select, tenPhong, THBQ_BADGE, useClCatalog } from "./common";
 import { inHtml, inMucLucHoSo, inMucLucVanBan, inNhanHop, inPhuLuc, inSanPham } from "./print";
+import { pdfMucLucHoSo, pdfMucLucVanBan, pdfPhuLuc, pdfSanPham } from "./printPdf";
 import { KIEU_MLHS, xuatLichSu, xuatMucLucHoanThien, xuatMucLucVanBan, xuatPhuLuc, xuatTT02, xuatTT05, type KieuMLHS } from "./excelXuat";
 import VanBanPanel from "./VanBanPanel";
 import { Badge, Banner, Button, Card, Field, FormGrid, Input, Menu, MultiSelect, notifyError, PageHeader, Select as UiSelect, Table, toast, type Column, type MenuEntry } from "@/ui";
@@ -167,14 +168,18 @@ export default function KhaiThacView() {
     { label: "Metadata TT02 (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất metadata TT02", async (all) => xuatTT02(all, await vanBanCua(all), tenPhongHien)) },
     "-",
     { label: "Mục lục hồ sơ (Excel)", icon: "tepExcel", hint: kieu === 0 ? "Theo số hồ sơ" : `Kiểu ${kieu}`, onSelect: () => void chay("Xuất mục lục hồ sơ", (all) => xuatMucLucHoanThien(all, kieu, status === "HET" || trungThua, tenPhongHien)) },
-    { label: "In mục lục hồ sơ", icon: "inRa", onSelect: () => void chay("In mục lục hồ sơ", async (all) => inHtml("Mục lục hồ sơ", inMucLucHoSo(all, tenPhongHien, tenPb))) },
-    { label: "In sản phẩm mục lục có bìa", icon: "inRa", onSelect: () => void chay("In sản phẩm", async (all) => inHtml("Mục lục hồ sơ (sản phẩm)", inSanPham(all, tenPhongHien, tenPb, str(phong, "phong_so"), str(phong, "muc_luc_so"), coThoiHan))) },
+    { label: "Mục lục hồ sơ (PDF)", icon: "tepPdf", hint: "Tệp PDF dựng tại máy, A4 ngang", onSelect: () => void chay("Mục lục hồ sơ PDF", async (all) => { await pdfMucLucHoSo(all, tenPhongHien, tenPb); }) },
+    { label: "Sản phẩm mục lục có bìa (PDF)", icon: "tepPdf", onSelect: () => void chay("Sản phẩm mục lục PDF", async (all) => { await pdfSanPham(all, tenPhongHien, tenPb, str(phong, "phong_so"), str(phong, "muc_luc_so"), coThoiHan); }) },
+    { label: "In nhanh mục lục hồ sơ (HTML)", icon: "inRa", onSelect: () => void chay("In mục lục hồ sơ", async (all) => inHtml("Mục lục hồ sơ", inMucLucHoSo(all, tenPhongHien, tenPb))) },
+    { label: "In nhanh sản phẩm có bìa (HTML)", icon: "inRa", onSelect: () => void chay("In sản phẩm", async (all) => inHtml("Mục lục hồ sơ (sản phẩm)", inSanPham(all, tenPhongHien, tenPb, str(phong, "phong_so"), str(phong, "muc_luc_so"), coThoiHan))) },
     "-",
     { label: "Mục lục văn bản (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất mục lục văn bản", async (all) => xuatMucLucVanBan(all, await vanBanCua(all))) },
-    { label: "In mục lục văn bản", icon: "inRa", onSelect: () => void chay("In mục lục văn bản", async (all) => inHtml("Mục lục văn bản", inMucLucVanBan(all, await vanBanCua(all), tenPhongHien, tenPb))) },
+    { label: "Mục lục văn bản (PDF)", icon: "tepPdf", onSelect: () => void chay("Mục lục văn bản PDF", async (all) => { await pdfMucLucVanBan(all, await vanBanCua(all), tenPhongHien, tenPb); }) },
+    { label: "In nhanh mục lục văn bản (HTML)", icon: "inRa", onSelect: () => void chay("In mục lục văn bản", async (all) => inHtml("Mục lục văn bản", inMucLucVanBan(all, await vanBanCua(all), tenPhongHien, tenPb))) },
     "-",
     { label: "In nhãn hộp", icon: "inRa", onSelect: () => void chay("In nhãn hộp", async (all) => inHtml("Nhãn hộp", inNhanHop(all, tenPhongHien))) },
-    { label: "In phụ lục hướng dẫn tra tìm", icon: "inRa", onSelect: () => void chay("In phụ lục", async (all) => inHtml("Hướng dẫn tra tìm mục lục", inPhuLuc(all, tenPhongHien))) },
+    { label: "Phụ lục hướng dẫn tra tìm (PDF)", icon: "tepPdf", onSelect: () => void chay("Phụ lục PDF", async (all) => { await pdfPhuLuc(all, tenPhongHien); }) },
+    { label: "In nhanh phụ lục (HTML)", icon: "inRa", onSelect: () => void chay("In phụ lục", async (all) => inHtml("Hướng dẫn tra tìm mục lục", inPhuLuc(all, tenPhongHien))) },
     { label: "Phụ lục hướng dẫn tra tìm (Excel)", icon: "tepExcel", onSelect: () => void chay("Xuất phụ lục", (all) => xuatPhuLuc(all, str(phong, "ma_du_an") || "phong")) },
     "-",
     {

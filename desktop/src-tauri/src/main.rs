@@ -50,6 +50,7 @@ mod tra_cuu;
 mod luu_tru;
 mod bao_quan;
 mod bao_cao;
+mod in_pdf;
 mod update;
 mod tiff;
 use tauri::Manager;
@@ -115,6 +116,8 @@ fn main() {
             bao_quan::bq_call,
             bao_cao::bc_get,
             bao_cao::bc_download,
+            bao_cao::bc_call,
+            in_pdf::pdf_manual,
             auth::commands::auth_validate_online,
             auth::admin::users_list,
             auth::admin::user_create,
