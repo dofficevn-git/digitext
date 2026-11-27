@@ -31,6 +31,12 @@ Có hai cách cài, chọn theo hệ điều hành của máy chủ: **Windows**
    ```
 
    Script sẽ hỏi hai việc: mật khẩu tài khoản `postgres`, và mật khẩu cho tài khoản quản trị đầu tiên (`quantri`).
+
+   Tuỳ chọn thêm:
+   - `-CongApi 8090` khi máy đã có phần mềm khác chiếm cổng 8080 (API chỉ nghe ở `127.0.0.1`, máy trạm không thấy cổng này).
+     Script kiểm cổng trước khi đụng tới CSDL và báo tên tiến trình đang chiếm.
+   - `-MatKhauPgTep <tệp>` và `-MatKhauQuanTriTep <tệp>`: đọc hai mật khẩu từ tệp thay vì hỏi, để cài tự động (mỗi tệp một dòng).
+     Xoá hai tệp này sau khi cài xong.
 4. Cuối cùng script báo **XONG** kèm địa chỉ tải bộ cài cho máy trạm.
 
 Script làm những việc sau:
@@ -44,6 +50,7 @@ Script làm những việc sau:
 - Đặt lịch sao lưu lúc 01:00 hằng đêm.
 
 Chạy lại script nhiều lần cũng không sao: cấu hình và dữ liệu đã có được giữ nguyên.
+Thông số đã chọn (địa chỉ, thư mục, cổng API) ghi ở `conf\may-chu.env`; lần chạy lại không cần nhập lại.
 
 **Gỡ dịch vụ** (dữ liệu vẫn giữ): `.\cai-dat.ps1 -Go`.
 

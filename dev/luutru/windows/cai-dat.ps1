@@ -16,6 +16,9 @@ param(
   [string]$SaoLuuDir = "E:\DigiText-SaoLuu",  # nên ở ổ khác ổ kho
   [string]$PgBin = "",                        # để trống: tự tìm C:\Program Files\PostgreSQL\<bản>\bin
   [string]$PgCong = "5432",
+  [string]$CongApi = "",                      # cổng API nghe ở 127.0.0.1 (mặc định 8080; đổi khi máy đã có thứ khác chiếm 8080)
+  [string]$MatKhauPgTep = "",                 # tệp chứa mật khẩu 'postgres' — để chạy không cần gõ (cài tự động); trống thì hỏi
+  [string]$MatKhauQuanTriTep = "",            # tệp chứa mật khẩu quản trị đầu tiên — như trên
   [string]$QuanTri = "quantri",               # tên đăng nhập quản trị đầu tiên
   [string]$MaDuAn = "LUUTRU",                 # mã kho lưu trữ (dự án) tạo lần đầu — dùng ở lệnh nhap-goi --du-an
   [string]$TenCoQuan = "",                    # tên cơ quan / kho lưu trữ, vd "Lưu trữ lịch sử tỉnh Bắc Giang"
@@ -69,7 +72,7 @@ if (-not $laAdmin) { Dung "cần PowerShell quyền Administrator (chuột phả
 # Kho tài liệu là thư mục (FsObjectStore, ghi tệp tạm rồi đổi tên) — không dùng MinIO: máy chủ một máy không cần, bớt một
 # dịch vụ + một bộ mật khẩu, và MinIO trên Windows từng chết theo stderr (21/10/2026).
 $dichVu = @(
-  @{ Ten = "DigiText-LuuTru-API";    Vai = "api";    Mo = "Máy chủ DigiText Lưu trữ (127.0.0.1:8080)" },
+  @{ Ten = "DigiText-LuuTru-API";    Vai = "api";    Mo = "Máy chủ DigiText Lưu trữ (127.0.0.1:$CongApi)" },
   @{ Ten = "DigiText-LuuTru-Worker"; Vai = "worker"; Mo = "Việc nền lưu trữ: đóng gói DIP, kiểm toàn vẹn, tiêu huỷ" },
   @{ Ten = "DigiText-LuuTru-Caddy";  Vai = "caddy";  Mo = "Cổng HTTPS 443 (Caddy)" }
 )
@@ -101,6 +104,9 @@ $DiaChi = $DiaChi.Trim().ToLower() -replace '^https?://', '' -replace '/.*$', ''
 $laIp = $DiaChi -match '^\d{1,3}(\.\d{1,3}){3}$'
 $noiBo = $TlsNoiBo -or $laIp -or ($DiaChi -notmatch '\.') -or ($DiaChi -match '\.(local|lan|internal|home|corp)$')
 if (-not $PgBin) { $PgBin = $mc["PG_BIN"] }
+if (-not $CongApi) { $CongApi = $mc["CONG_API"] }
+if (-not $CongApi) { $CongApi = "8080" }
+if ($CongApi -notmatch '^\d+$') { Dung "-CongApi phải là số (đang là '$CongApi')" }
 if (-not $PgBin) {
   $PgBin = Get-ChildItem "C:\Program Files\PostgreSQL" -Directory -ErrorAction SilentlyContinue | Sort-Object { [int]($_.Name -replace '\D', '') } -Descending |
     ForEach-Object { Join-Path $_.FullName "bin" } | Where-Object { Test-Path (Join-Path $_ "psql.exe") } | Select-Object -First 1
@@ -119,6 +125,14 @@ if (Test-Path $pgReady) {
   & $pgReady -h 127.0.0.1 -p $PgCong -t 10 | Out-Null
   if ($LASTEXITCODE -ne 0) { Dung "PostgreSQL không trả lời ở 127.0.0.1:$PgCong. Mở services.msc, chạy dịch vụ postgresql-*, rồi chạy lại script (cổng khác thì thêm -PgCong)." }
 }
+$apiDangChay = Get-Process digitext-api -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$goc\*" }
+if (-not $apiDangChay) {
+  $chiem = Get-NetTCPConnection -State Listen -LocalPort ([int]$CongApi) -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($chiem) {
+    $tienTrinh = (Get-Process -Id $chiem.OwningProcess -ErrorAction SilentlyContinue).ProcessName
+    Dung "cổng $CongApi đang bị '$tienTrinh' chiếm — API không mở được. Chạy lại với -CongApi <cổng trống> (vd -CongApi 8090)."
+  }
+}
 # Ổ đĩa mặc định (D: kho, E: sao lưu) có thể không có trên máy chủ chủ đầu tư. New-Item trên ổ không tồn tại chỉ báo lỗi
 # rồi đi tiếp, Resolve-Path trả rỗng, api.env nhận DIGITEXT_PDF_STORE_DIR trống và API chết ở bước 4 — chặn ngay tại đây.
 foreach ($d in @(@{ P = $KhoDir; Ts = "-KhoDir"; Mo = "kho tài liệu" }, @{ P = $SaoLuuDir; Ts = "-SaoLuuDir"; Mo = "thư mục sao lưu" })) {
@@ -136,7 +150,7 @@ if ($SaoLuuDir -like "\\*") {
   Ghi "  CẢNH BÁO: sao lưu đặt ở thư mục mạng ($SaoLuuDir). Việc 01:00 chạy bằng SYSTEM nên sẽ KHÔNG vào được. Dùng ổ trong máy, hoặc đổi tài khoản của việc DigiText-LuuTru-SaoLuu trong Task Scheduler." Yellow
 }
 if (-not $mc["MA_DU_AN"]) { $mc["MA_DU_AN"] = $MaDuAn.Trim().ToUpper() }; if (-not $mc["QUAN_TRI"]) { $mc["QUAN_TRI"] = $QuanTri }
-$mc["DIA_CHI"] = $DiaChi; $mc["PG_BIN"] = $PgBin; $mc["KHO_DIR"] = (Resolve-Path $KhoDir).Path; $mc["SAO_LUU_DIR"] = (Resolve-Path $SaoLuuDir).Path
+$mc["DIA_CHI"] = $DiaChi; $mc["PG_BIN"] = $PgBin; $mc["CONG_API"] = $CongApi; $mc["KHO_DIR"] = (Resolve-Path $KhoDir).Path; $mc["SAO_LUU_DIR"] = (Resolve-Path $SaoLuuDir).Path
 Ghi-Env (Join-Path $conf "may-chu.env") $mc "Thông số máy chủ (không bí mật)"
 
 # --- 1. CSDL + tài khoản digitext
@@ -148,8 +162,13 @@ $env:PGPASSWORD = $mkDb
 & $psql -X -q -h 127.0.0.1 -p $PgCong -U digitext -d digitext -c "SELECT 1" 2>$null | Out-Null
 if ($LASTEXITCODE -eq 0) { $coSan = $true; Ghi "  CSDL digitext đã có, kết nối được" }
 if (-not $coSan) {
-  $mkPg = Read-Host "Mật khẩu tài khoản 'postgres' (đặt lúc cài PostgreSQL)" -AsSecureString
-  $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($mkPg))
+  if ($MatKhauPgTep) {
+    if (-not (Test-Path $MatKhauPgTep)) { Dung "không thấy tệp -MatKhauPgTep $MatKhauPgTep" }
+    $env:PGPASSWORD = (Get-Content $MatKhauPgTep -Raw -Encoding UTF8).Trim()
+  } else {
+    $mkPg = Read-Host "Mật khẩu tài khoản 'postgres' (đặt lúc cài PostgreSQL)" -AsSecureString
+    $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($mkPg))
+  }
   $taoRole = "DO `$`$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'digitext') THEN CREATE ROLE digitext LOGIN PASSWORD '$mkDb'; ELSE ALTER ROLE digitext LOGIN PASSWORD '$mkDb'; END IF; END `$`$;"
   & $psql -X -q -h 127.0.0.1 -p $PgCong -U postgres -d postgres -v ON_ERROR_STOP=1 -c $taoRole
   if ($LASTEXITCODE -ne 0) { Dung "không tạo được tài khoản digitext (sai mật khẩu postgres?)" }
@@ -167,7 +186,7 @@ $s3 = [ordered]@{ DIGITEXT_PDF_STORE_DIR = $mc["KHO_DIR"] }
 $boKhoa = "DIGITEXT_MINIO_ENDPOINT", "DIGITEXT_MINIO_BUCKET", "DIGITEXT_MINIO_ACCESS_KEY", "DIGITEXT_MINIO_SECRET_KEY", "DIGITEXT_PDF_STORE_BUCKET"
 $api["DATABASE_URL"] = $dbUrl
 $api["DIGITEXT_EDITION"] = "luu_tru"
-$api["DIGITEXT_BIND"] = "127.0.0.1:8080"
+$api["DIGITEXT_BIND"] = "127.0.0.1:$CongApi"
 $api["DIGITEXT_BEHIND_PROXY"] = "true"
 $api["DIGITEXT_PUBLIC_URL"] = "https://$DiaChi"
 $api["DIGITEXT_DATA_DIR"] = Join-Path $goc "data"
@@ -193,7 +212,7 @@ $http = if ($noiBo) {
 http://$DiaChi {
 `t@chungchi path /updates/chung-chi-goc.crt /updates/cai-chung-chi-goc.cmd /tai-ve
 `thandle @chungchi {
-`t`treverse_proxy 127.0.0.1:8080
+`t`treverse_proxy 127.0.0.1:$CongApi
 `t}
 `t# redir đứng trước handle trong thứ tự directive của Caddy → phải bọc vào handle dự phòng.
 `thandle {
@@ -202,7 +221,7 @@ http://$DiaChi {
 }
 "@ } else { "" }
 $caddy = @"
-# Sinh bởi cai-dat.ps1 — Caddy trước API DigiText Lưu trữ (API chỉ nghe 127.0.0.1:8080).
+# Sinh bởi cai-dat.ps1 — Caddy trước API DigiText Lưu trữ (API chỉ nghe 127.0.0.1:$CongApi).
 {
 `tstorage file_system {
 `t`troot $dataCaddy
@@ -216,7 +235,7 @@ $caddy = @"
 }
 
 $DiaChi {$tls
-`treverse_proxy 127.0.0.1:8080 {
+`treverse_proxy 127.0.0.1:$CongApi {
 `t`ttransport http {
 `t`t`tread_timeout 30m
 `t`t`twrite_timeout 30m
@@ -254,7 +273,7 @@ if ($LASTEXITCODE -ne 0) { Dung "áp migrations lỗi (xem dòng lỗi ở trên
 Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
 
 Dang-Ky $dichVu[0]
-if (-not (Cho "http://127.0.0.1:8080/healthz" 90 "API")) { Dung "API không chạy — xem logs\api.err.log" }
+if (-not (Cho "http://127.0.0.1:$CongApi/healthz" 90 "API")) { Dung "API không chạy — xem logs\api.err.log" }
 Dang-Ky $dichVu[1]
 
 # --- 5. Tài khoản quản trị đầu tiên (chỉ khi CSDL chưa có người dùng)
@@ -262,11 +281,17 @@ $env:PGPASSWORD = $mkDb
 $soNguoi = & $psql -X -t -A -h 127.0.0.1 -p $PgCong -U digitext -d digitext -c "SELECT count(*) FROM users"
 Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
 if ("$soNguoi".Trim() -eq "0") {
-  do {
-    $m1 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host "Mật khẩu cho tài khoản quản trị '$QuanTri' (tối thiểu 8 ký tự)" -AsSecureString)))
-    $m2 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host "Nhập lại" -AsSecureString)))
-    if ($m1 -ne $m2) { Write-Host "Hai lần nhập không khớp." -ForegroundColor Yellow } elseif ($m1.Length -lt 8) { Write-Host "Tối thiểu 8 ký tự." -ForegroundColor Yellow }
-  } until ($m1 -eq $m2 -and $m1.Length -ge 8)
+  if ($MatKhauQuanTriTep) {
+    if (-not (Test-Path $MatKhauQuanTriTep)) { Dung "không thấy tệp -MatKhauQuanTriTep $MatKhauQuanTriTep" }
+    $m1 = (Get-Content $MatKhauQuanTriTep -Raw -Encoding UTF8).Trim()
+    if ($m1.Length -lt 8) { Dung "mật khẩu quản trị trong tệp phải tối thiểu 8 ký tự" }
+  } else {
+    do {
+      $m1 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host "Mật khẩu cho tài khoản quản trị '$QuanTri' (tối thiểu 8 ký tự)" -AsSecureString)))
+      $m2 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host "Nhập lại" -AsSecureString)))
+      if ($m1 -ne $m2) { Write-Host "Hai lần nhập không khớp." -ForegroundColor Yellow } elseif ($m1.Length -lt 8) { Write-Host "Tối thiểu 8 ký tự." -ForegroundColor Yellow }
+    } until ($m1 -eq $m2 -and $m1.Length -ge 8)
+  }
   $tam = Join-Path $env:TEMP ("dt-" + [guid]::NewGuid().ToString("N") + ".txt")
   [IO.File]::WriteAllText($tam, $m1)
   foreach ($k in $api.Keys) { [Environment]::SetEnvironmentVariable($k, $api[$k], "Process") }
