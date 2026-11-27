@@ -64,6 +64,22 @@ def use_gpu() -> bool:
 # Semaphore giữ HTTP vẫn nhận request (xếp hàng) mà VRAM có trần.
 _INFER_SEM = threading.BoundedSemaphore(max(1, int(os.getenv("OCR_GPU_CONCURRENCY", "2"))))
 
+# 27/11/2026 — OCR_GPU_TRIM=true: trả bộ đệm CUDA của PyTorch sau MỖI lượt model. Mặc định torch giữ lại đỉnh
+# VRAM của lượt lớn nhất (đo được 3–10 GB/tiến trình trong khi thực dùng ~0,3 GB); khi card dùng chung với vLLM
+# (Qwen ~11,4/16 GB) phần giữ đó tràn sang RAM dùng chung của Windows/WSL và mọi thứ chậm đi. Bật khi chạy
+# nhiều tiến trình OCR trên cùng card; card riêng cho OCR thì không cần.
+_GPU_TRIM = os.getenv("OCR_GPU_TRIM", "").strip().lower() in ("1", "true", "yes")
+
+
+def _trim_torch() -> None:
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001
+        pass
+
 
 def _release_cuda() -> None:
     """Sau OOM: trả cache CUDA để lần thử lại (ô nhỏ hơn) có chỗ."""
@@ -117,6 +133,7 @@ def device_info() -> dict:
             info["gpu_name"] = torch.cuda.get_device_name(0)
             info["torch_mem_mb"] = round(torch.cuda.memory_allocated(0) / 1e6, 1)
             info["torch_reserved_mb"] = round(torch.cuda.memory_reserved(0) / 1e6, 1)
+            info["torch_peak_mb"] = round(torch.cuda.max_memory_allocated(0) / 1e6, 1)
     except Exception as e:  # noqa: BLE001
         info["gpu_error"] = str(e)
     # Paddle giữ VRAM riêng, torch không thấy; trên WSL2 nvidia-smi cũng không tách được theo tiến trình.
@@ -391,6 +408,8 @@ class _GpuSlot:
         return self
 
     def __exit__(self, *exc) -> None:
+        if _GPU_TRIM:
+            _trim_torch()
         _INFER_SEM.release()
 
 
