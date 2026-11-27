@@ -171,6 +171,15 @@ Khi nâng cấp máy chủ đang chạy:
 2. Máy chủ cần font TTF (`DIGITEXT_CERT_FONT`, bộ cài đã đặt) để dựng trang thể thức; thiếu font API trả lỗi 503 khi chuyển đổi.
 3. Không có việc nền mới.
 
+## 12. Menu đủ như Digifile (từ bản 0.25.25)
+
+Bản Lưu trữ phục vụ trọn một cơ quan nên có đủ các mục nghiệp vụ: **Lưu trữ hiện hành › Hệ thống hoá, Đồng bộ**; **Nhập Hệ thống ›
+Thu nộp lưu trữ lịch sử** (Điều 20–25, cần máy chủ từ bản này vì API mới gắn nhóm thu nộp); **Lưu trữ số › Gói tin SIP/AIP/DIP, Sổ biên
+bản**; **Tiện ích › Kiểm chữ ký số**; **Quản trị › Cơ quan lưu trữ**.
+
+Khi nâng cấp máy chủ đang chạy: thay `bin\digitext-api.exe` (không có migration mới) rồi chạy lại `cai-dat.ps1`, hoặc dừng tác vụ
+`DigiText-LuuTru-API`, chép đè, bật lại. Chép gói phát hành 0.25.25 vào `updates\` để máy trạm tự cập nhật.
+
 ## 11. Cơ quan lưu trữ, lịch sử phông, nhãn hộp PDF (từ bản 0.25.22)
 
 - **Tổng quan › Cơ quan lưu trữ** (quản trị dự án): khai mã cơ quan lưu trữ (Phụ lục I), tên / cơ quan cấp trên / địa chỉ, loại hình

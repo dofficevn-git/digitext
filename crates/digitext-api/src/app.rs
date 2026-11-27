@@ -149,6 +149,8 @@ fn f_rv() -> Router<AppState> {
         // Lưu trữ hiện hành (Điều 19, 26/11/2026): có ở cả hai bản — bản thi công chỉ không có menu.
         .merge(crate::routes::nop_luu::router())
         .merge(crate::routes::danh_muc_ho_so::router())
+        // 27/11/2026: thu nộp vào lưu trữ lịch sử (Điều 20–25) dùng ở cả hai bản — cơ quan chủ đầu tư là bên nhận.
+        .merge(crate::routes::submissions::router())
         .merge(crate::routes::hooks::router());
     // Bản Lưu trữ (máy chủ cơ quan chủ đầu tư) không gắn các route chỉ dùng khi thi công số hoá.
     if crate::config::edition_luu_tru() {
@@ -160,7 +162,6 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::ocr_fields::router())
         .merge(crate::routes::kie_examples::router())
         .merge(crate::routes::dashboard::router())
-        .merge(crate::routes::submissions::router())
         .merge(crate::routes::sign::router())
         .merge(crate::routes::upload_batches::router())
         // Cửa đọc sản lượng cho cổng nhà cung cấp: số liệu nó đọc (dashboard_daily, project_contracts)

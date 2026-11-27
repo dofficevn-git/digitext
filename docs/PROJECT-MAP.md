@@ -480,6 +480,10 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   `printPdf.ts::pdfNhanHop` trên dữ liệu `print.ts::nhanHopData` dùng chung với HTML, `inPdf.ts::kb.labels`; Tauri `bc_call` kiểm quyền
   theo đường (`quyen_goi`: `/projects/{id}/co-quan` project.view / project.update, `/cl/phong/{id}/lich-su` catalog.read / catalog.update);
   `topics.ts` `bc_call` += `projects`, `chinhLy`.
+  **GĐ11 (27/11, desktop 0.25.25):** bản Lưu trữ đủ menu như Digifile — `NAV_LUU_TRU` thêm `hethonghoa`, `dongbo`, `thunop` (API
+  `submissions::router()` chuyển vào khối chung của `app.rs`), `donggoi` ("Gói tin SIP/AIP/DIP"), `bienban`, `ti:chuky`, màn mới
+  `settings/CoQuanView` (view `coquan`, gate `project.view`). Digifile còn mà DigiText chưa có: thư viện văn bản pháp lý, danh mục cơ
+  quan nộp lưu, kho lưu trữ cá nhân (xem `KE-HOACH-BAN-LUU-TRU.md` GĐ11).
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,

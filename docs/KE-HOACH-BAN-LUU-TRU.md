@@ -310,6 +310,29 @@ Chưa làm / cần anh: (20) công thức mã hồ sơ theo Phụ lục I (có t
 sử phông có đưa vào EAD `bioghist` khi đóng gói không (gói dựng ở máy trạm từ SQLite, cần kéo thêm bảng). Vẫn còn ngoài kế hoạch: cổng
 độc giả web, ảnh / ghi âm, email / SMS; GĐ5 máy sạch.
 
+### GĐ11 — Bản Lưu trữ đủ chức năng như Digifile (27/11/2026, desktop 0.25.25)
+
+Anh chốt: **bản Lưu trữ là phần mềm của MỘT cơ quan chủ đầu tư, phải có đủ chức năng như Digifile**, không cắt theo kiểu
+"thi công / lưu trữ". Đối chiếu menu `_LeftMenu.cshtml` của Digifile với `NAV_LUU_TRU`:
+
+| Digifile | Bản Lưu trữ trước 0.25.25 | 0.25.25 |
+|---|---|---|
+| Hồ sơ › Hệ thống hoá hồ sơ, Hoàn thiện hồ sơ | thiếu (chỉ Lập hồ sơ) | **Lưu trữ hiện hành › Hệ thống hoá**, **Đồng bộ** (xung đột ngoại tuyến) |
+| Nộp lưu › Thu nộp lưu trữ lịch sử (TT05) | thiếu; API bản Lưu trữ không gắn `/submissions` | **Nhập Hệ thống › Thu nộp lưu trữ lịch sử**; `app.rs` chuyển `submissions::router()` vào khối chung |
+| Bảo quản › Gói tin SIP/AIP | thiếu màn gói | **Lưu trữ số › Gói tin SIP/AIP/DIP** (màn Đóng gói, cùng id `donggoi`) |
+| In biểu mẫu / biên bản | thiếu Sổ biên bản | **Lưu trữ số › Sổ biên bản** (`records`) |
+| Chữ ký số | thiếu | **Tiện ích › Kiểm chữ ký số** (ký số bản sao vẫn qua Khai thác) |
+| Cấu hình › Cơ quan lưu trữ (TT05) | chỉ là nút ở Tổng quan | **Quản trị › Cơ quan lưu trữ** (màn `coquan`, gate `project.view`, sửa cần `project.update`) |
+
+Đã có từ trước và giữ nguyên: Phông / phòng ban / mảng / THBQ / kho / giá (Danh mục), Kê khai danh mục hồ sơ, Lập hồ sơ, Mục lục +
+kết xuất, Khai thác (hồ sơ / văn bản / yêu cầu độc giả), Mượn – trả, Thống kê TT05, Nộp lưu cơ quan, Kiểm tra / sao lưu / sự cố, Huỷ,
+Cấu hình hệ thống, Người dùng / vai trò.
+
+**Digifile có mà DigiText CHƯA có ở cả hai bản** (ghi để xếp lịch): *Thư viện văn bản pháp lý* (thư mục + tệp văn bản QPPL nội bộ);
+*Cơ quan nộp lưu* (danh mục các cơ quan nộp vào lưu trữ lịch sử — hiện mới có khái niệm phông / dự án); *Kho lưu trữ cá nhân* (tầng
+hồ sơ đang làm của từng người trước khi vào phòng ban — DigiText chỉ phân theo phòng ban + người lập); cổng độc giả web, ảnh / ghi âm,
+email / SMS (đã ghi "để sau").
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

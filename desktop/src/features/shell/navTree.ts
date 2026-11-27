@@ -189,9 +189,14 @@ const NAV_LUU_TRU: V46s[] = [
     label: "Nhập Hệ thống",
     icon: "nhapKho",
     gate: "nhapgoi",
-    children: [{ id: "nhapgoi", label: "Nhập gói AIP", gate: "nhapgoi", leaf: { kind: "view", view: "nhapgoi" }, keywords: "nhap he thong goi aip sip tt05 dieu 9 khoan 7 tiep nhan" }],
+    children: [
+      { id: "nhapgoi", label: "Nhập gói AIP", gate: "nhapgoi", leaf: { kind: "view", view: "nhapgoi" }, keywords: "nhap he thong goi aip sip tt05 dieu 9 khoan 7 tiep nhan" },
+      // 27/11/2026: thu nộp vào lưu trữ lịch sử (Điều 20–25) — Digifile có "Thu nộp lưu trữ lịch sử (TT05)"; API bản Lưu trữ nay gắn /submissions.
+      { ...mucCon("thunop"), label: "Thu nộp lưu trữ lịch sử" },
+    ],
   },
   // Lưu trữ hiện hành (Điều 19, 26/11/2026): phòng ban lập hồ sơ theo danh mục, nộp vào lưu trữ cơ quan sau 60 ngày.
+  // 27/11/2026: thêm Hệ thống hoá + Đồng bộ — bản Lưu trữ phục vụ trọn một cơ quan, phải đủ như Digifile (lập → hệ thống hoá → hoàn thiện).
   {
     id: "luutruhienhanh",
     label: "Lưu trữ hiện hành",
@@ -201,6 +206,8 @@ const NAV_LUU_TRU: V46s[] = [
       { ...mucCon("danhmuccl"), label: "Phông, phòng ban" },
       { id: "danhmuc", label: "Danh mục hồ sơ", gate: "danhmuc", leaf: { kind: "view", view: "danhmuc" }, keywords: "danh muc ho so du kien dieu 19 ban hanh" },
       mucCon("laphoso"),
+      mucCon("hethonghoa"),
+      mucCon("dongbo"),
       { id: "nopluu", label: "Nộp lưu", gate: "nopluu", leaf: { kind: "view", view: "nopluu" }, keywords: "nop luu ho so luu tru co quan 60 ngay han" },
       { id: "tiepnhan", label: "Tiếp nhận nộp lưu", gate: "tiepnhan", leaf: { kind: "view", view: "tiepnhan" }, badge: "nopLuu", keywords: "tiep nhan phieu nop luu bien ban giao nhan so nop luu" },
     ],
@@ -215,12 +222,20 @@ const NAV_LUU_TRU: V46s[] = [
       { ...mucCon("khaithac"), label: "Mục lục hồ sơ" },
     ],
   },
-  { ...nhom("luutruso"), children: nhom("luutruso").children?.filter((c) => c.id !== "tracuutl") },
+  // Lưu trữ số: bỏ Tra cứu (đã có nhóm riêng), thêm Gói tin SIP/AIP/DIP (Digifile: Bảo quản › Gói tin) và Sổ biên bản.
+  {
+    ...nhom("luutruso"),
+    children: [...(nhom("luutruso").children?.filter((c) => c.id !== "tracuutl") ?? []), { ...mucCon("donggoi"), label: "Gói tin SIP/AIP/DIP" }, mucCon("bienban")],
+  },
   { id: "kholuutru", label: "Kho lưu trữ", icon: "kho", gate: "khogia", children: [mucCon("khogia"), mucCon("muontra")] },
   // Báo cáo thống kê TT05 (27/11/2026): bản Lưu trữ không có trục thi công nên chỉ hai mục.
   { id: "baocao", label: "Báo cáo", icon: "baoCao", gate: "report", children: [mucCon("report:tt05"), mucCon("report:muontra")] },
-  { id: "tienich", label: "Tiện ích", icon: "ketXuat", gate: "tienich", children: [mucCon("ti:kiemgoi"), mucCon("ti:pdfa")] },
-  nhom("quantri"),
+  { id: "tienich", label: "Tiện ích", icon: "ketXuat", gate: "tienich", children: [mucCon("ti:kiemgoi"), mucCon("ti:pdfa"), mucCon("ti:chuky")] },
+  // Quản trị: thêm màn Cơ quan lưu trữ (TT05) — Digifile: Cấu hình › Cơ quan lưu trữ (TT05).
+  {
+    ...nhom("quantri"),
+    children: [...(nhom("quantri").children ?? []), { id: "coquan", label: "Cơ quan lưu trữ", gate: "coquan", leaf: { kind: "view", view: "coquan" }, keywords: "co quan luu tru tt05 ma co quan nguoi ky han nop luu" }],
+  },
 ];
 
 export const NAV_TREE: V46s[] = LUU_TRU ? NAV_LUU_TRU : NAV_THI_CONG;
