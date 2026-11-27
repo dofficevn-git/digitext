@@ -149,6 +149,8 @@ export const V3xc: readonly string[] = [
   "tra_cuu_doc",
   "lt_get",
   "bq_get",
+  "bc_get",
+  "bc_download",
   "ops_backups",
   "ops_backup_report",
   "ocr_fields_list",

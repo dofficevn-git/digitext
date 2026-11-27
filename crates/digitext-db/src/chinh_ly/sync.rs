@@ -264,6 +264,40 @@ async fn ho_so_bi_khoa(tx: &mut PgConnection, sp: &TableSpec, server: Option<&Ro
     }
 }
 
+/// Mượn – trả có duyệt (0034): đường generic (REST /cl/rows, push offline) chỉ được tạo phiếu `cho_duyet` (hoặc `dang_muon` khi có
+/// `loan.approve`) và đổi trạng thái đúng bảng `digitext_core::chinh_ly::muon_tra::chuyen_duoc` với quyền tương ứng; bản sao offline
+/// không đổi trạng thái (duyệt / giao / trả là việc tại quầy, cần máy chủ). Các bước có cột máy chủ (duyệt, giao, gia hạn) đi route riêng.
+fn muon_tra_chan(ctx: &OpCtx<'_>, offline: bool, server: Option<&Row>, new: &Row) -> Option<OpResult> {
+    use digitext_core::chinh_ly::muon_tra as mt;
+    let moi = rows::str_of(new, "trang_thai");
+    let cu = server.and_then(|s| rows::str_of(s, "trang_thai"));
+    match (cu, moi) {
+        (None, tt) => {
+            let tt = tt.unwrap_or(mt::CHO_DUYET);
+            if offline && tt != mt::CHO_DUYET {
+                return Some(OpResult::rejected("loan_state", "Ngoại tuyến chỉ lập được phiếu chờ duyệt"));
+            }
+            if !mt::tao_duoc(tt, ctx.is_super || (ctx.has_perm)(Permission::LoanApprove)) {
+                return Some(OpResult::rejected("loan_state", "Phiếu mới chỉ ở trạng thái chờ duyệt; lập và giao luôn cần quyền duyệt mượn"));
+            }
+            None
+        }
+        (Some(cu), Some(tt)) if cu != tt => {
+            if offline {
+                return Some(OpResult::rejected("loan_state", "Đổi trạng thái phiếu mượn cần kết nối máy chủ"));
+            }
+            if !mt::chuyen_duoc(cu, tt) {
+                return Some(OpResult::rejected("loan_state", format!("Không chuyển phiếu từ \"{}\" sang \"{}\"", mt::ten_trang_thai(cu), mt::ten_trang_thai(tt))));
+            }
+            if !(ctx.is_super || (ctx.has_perm)(mt::quyen_chuyen(tt))) {
+                return Some(OpResult::rejected("forbidden", format!("Không có quyền chuyển phiếu sang \"{}\"", mt::ten_trang_thai(tt))));
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 const KHOA_MSG: &str = "Hồ sơ đã nộp lưu vào lưu trữ cơ quan, không sửa được (rút phiếu nộp lưu nếu cần sửa)";
 
 async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op: &SyncOp, server: Option<Row>, offline: bool) -> sqlx::Result<OpResult> {
@@ -341,6 +375,11 @@ async fn apply_inner(tx: &mut PgConnection, ctx: &OpCtx<'_>, sp: &TableSpec, op:
                     continue;
                 }
                 new.insert(k.clone(), v.clone());
+            }
+            if sp.name == "cl_muon_tra" {
+                if let Some(r) = muon_tra_chan(ctx, offline, server.as_ref(), &new) {
+                    return Ok(r);
+                }
             }
             match server {
                 None => {

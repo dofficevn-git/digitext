@@ -133,6 +133,7 @@ const NAV_THI_CONG: V46s[] = [
       { id: "report:chinhly", label: "Chỉnh lý", gate: "report", leaf: { kind: "report", tab: "chinhly" } },
       { id: "report:phanmem", label: "Phần mềm", gate: "report", leaf: { kind: "report", tab: "phanmem" } },
       { id: "report:muontra", label: "Mượn trả", gate: "report", leaf: { kind: "report", tab: "muontra" } },
+      { id: "report:tt05", label: "Thống kê TT05", gate: "report", leaf: { kind: "report", tab: "tt05" }, keywords: "bao cao thong ke tt05 dieu 44 excel pdf phong thbq khai thac sao luu kho" },
     ],
   },
   {
@@ -214,6 +215,8 @@ const NAV_LUU_TRU: V46s[] = [
   },
   { ...nhom("luutruso"), children: nhom("luutruso").children?.filter((c) => c.id !== "tracuutl") },
   { id: "kholuutru", label: "Kho lưu trữ", icon: "kho", gate: "khogia", children: [mucCon("khogia"), mucCon("muontra")] },
+  // Báo cáo thống kê TT05 (27/11/2026): bản Lưu trữ không có trục thi công nên chỉ hai mục.
+  { id: "baocao", label: "Báo cáo", icon: "baoCao", gate: "report", children: [mucCon("report:tt05"), mucCon("report:muontra")] },
   { id: "tienich", label: "Tiện ích", icon: "ketXuat", gate: "tienich", children: [mucCon("ti:kiemgoi"), mucCon("ti:pdfa")] },
   nhom("quantri"),
 ];

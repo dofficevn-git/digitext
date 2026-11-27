@@ -14,8 +14,10 @@
 pub mod danh_muc;
 pub mod he_thong_hoa;
 pub mod ho_so;
+pub mod kho_gia;
 pub mod lich_su;
 pub mod merge;
+pub mod muon_tra;
 pub mod ncc;
 pub mod rows;
 pub mod spec;

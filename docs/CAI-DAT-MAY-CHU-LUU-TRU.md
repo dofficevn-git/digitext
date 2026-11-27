@@ -130,3 +130,21 @@ Khi nâng cấp máy chủ đang chạy:
    dưới 1 năm.
 4. Quyền mới **Duyệt kế hoạch kiểm tra** (`bk.approve`) tự thêm cho vai trò quản trị, lãnh đạo; người lập kế hoạch không tự duyệt được.
 5. Tuỳ chọn thử nhanh: `DIGITEXT_BQ_GIAY=60` trong `worker.env` rút chu kỳ việc nền bảo quản xuống 60 giây (chỉ dùng khi thử).
+
+## 9. Báo cáo TT05, mượn – trả có duyệt, kho / giá (từ bản 0.25.20)
+
+- **Báo cáo › Thống kê TT05**: 18 báo cáo theo Điều 44.3b (mục lục, tài liệu số, bảo quản, khai thác, kho), lọc theo phông / năm / thời
+  gian, xuất Excel hoặc PDF (có đầu văn bản và khối ký). Cần quyền xem số liệu (`stats.view`).
+- **Kho lưu trữ › Mượn – trả**: phiếu mượn nhiều hồ sơ, **chờ duyệt → duyệt (từng hồ sơ hoặc cả phiếu) → giao → trả**; từ chối / huỷ có lý
+  do; gia hạn tối đa 2 lần; máy chủ nhắc người lập và quản trị dự án khi còn 3 ngày đến hạn và mỗi tuần khi quá hạn. Phiếu cũ (một hồ sơ,
+  giao luôn) vẫn hiện, không có số phiếu.
+- **Kho lưu trữ › Kho và giá**: giá có **sức chứa** (trống = độ dài dải hộp) và **ngưỡng cảnh báo** (mặc định 90 %); đạt ngưỡng máy chủ báo
+  quản trị dự án mỗi tuần. Tab **Gán hộp** xếp hộp cho hồ sơ nhập từ gói AIP (chọn phông, phòng ban chủ hộp, nhập số hộp hoặc dán từ bảng tính).
+
+Khi nâng cấp máy chủ đang chạy:
+1. Chạy lại `cai-dat.ps1` / `./cai-dat.sh` như mục 6: cập nhật CSDL áp thêm `0034`, `0035`, `0036` (không dựng lại bảng tra cứu; `0036` tạo chỉ
+   mục không khoá bảng).
+2. Quyền mới **Duyệt phiếu mượn** (`loan.approve`) tự thêm cho vai trò quản trị, lãnh đạo (cán bộ lưu trữ gốc quản trị cũng có). Muốn nhân viên
+   quầy chỉ lập và giao mà không duyệt thì bỏ quyền này ở vai trò của họ.
+3. Vào **Kho và giá › Giá**, sửa từng giá: khai sức chứa và ngưỡng cảnh báo nếu khác mặc định.
+4. Tuỳ chọn thử nhanh: `DIGITEXT_MT_NHAC_GIAY=60` trong `conf\api.env` rút chu kỳ nhắc mượn trả / giá đầy xuống 60 giây (chỉ dùng khi thử).

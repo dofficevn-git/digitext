@@ -84,6 +84,7 @@ export type V3yx =
   | "khogia.manage"
   | "loan.view"
   | "loan.manage"
+  | "loan.approve"
   | "luutru.submit"
   | "luutru.receive"
   | "luutru.unlock"
@@ -190,7 +191,8 @@ export const V3z0: V3yz[] = [
       { perm: "dossier.systematize", label: "Hệ thống hoá: đánh số hồ sơ, gán hộp/bó/tập, xuất/nhập mục lục tạm" },
       { perm: "khogia.manage", label: "Quản lý kho / giá lưu trữ, xếp hồ sơ lên giá" },
       { perm: "loan.view", label: "Xem phiếu mượn / trả hồ sơ giấy" },
-      { perm: "loan.manage", label: "Lập phiếu mượn, ghi trả hồ sơ giấy" },
+      { perm: "loan.manage", label: "Lập phiếu mượn, giao, gia hạn, ghi trả hồ sơ giấy" },
+      { perm: "loan.approve", label: "Duyệt / từ chối phiếu mượn hồ sơ" },
     ],
   },
   {
@@ -405,6 +407,7 @@ const V3z4: Record<V3yx, number> = {
   "khogia.manage": 2,
   "loan.view": 1,
   "loan.manage": 1,
+  "loan.approve": 2,
   "luutru.submit": 1,
   "luutru.receive": 1,
   "luutru.unlock": 2,

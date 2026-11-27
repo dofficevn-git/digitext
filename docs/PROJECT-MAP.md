@@ -216,7 +216,7 @@ việc lên model nếu chỉ số tụt.
 axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs`
 (rate limit), `client_ip.rs`, `extract.rs`, `error.rs`, `config.rs`, `app.rs` (lắp router).
 
-22 nhóm route:
+24 nhóm route:
 
 | Nhóm | Đường dẫn tiêu biểu |
 | --- | --- |
@@ -238,6 +238,9 @@ axum 0.8. Hạ tầng dùng chung: `jwt.rs`, `password.rs` (argon2), `limiter.rs
 | `dashboard` | `/dashboard/overview` (lãnh đạo), `/project`, `/staff`, `/me` (nhân viên: chỉ số của mình + trung bình nhóm ẩn danh), `/kpi-settings` GET/PUT, `POST /rollup` (super) — 22/10/2026 |
 | `nop_luu` | `/nop-luu/tong-quan`, `/ho-so-can-nop?loc=den_han\|qua_han`, `POST /nop-luu {phongBanId, hoSoIds[]}`, `/{id}` + `/rut`, `/ho-so/{hoSoId}/ket-qua`, `/tiep-nhan` (tự lập biên bản `giao_nhan_nop_luu`), `/tra-lai`, `/bien-ban`, `/mo-khoa` (audit), `/so-nop-luu[/bien-ban]` — Lưu trữ hiện hành Điều 19, 26/11/2026 (khối `chung`, cả hai bản) |
 | `bao_quan` | `/bao-quan/tong-quan` · kế hoạch kiểm tra `ke-hoach` GET/POST, `/xem-truoc`, `/{id}` GET/PUT, `/{id}/trinh \| duyet (bk.approve, không tự duyệt) \| tu-choi \| huy \| chay?limit \| bien-ban`, `/{id}/tep`, `/{id}/ket-luan` (điền sẵn Mẫu 01) · lỗi `loi` GET, `/{id}/khac-phuc \| kiem-lai \| bo-qua` · sao lưu `lich` GET/POST, `lich/{id}` PUT, `sao-luu` GET/POST (đủ cột 0032), `sao-luu/tinh-trang`, `sao-luu/{id}/da-xoa` · `phuong-tien` GET/POST/PUT · `su-co` GET/POST, `/{id}` GET/PUT, `/{id}/prefill` (Mẫu 04), `/{id}/bien-ban` — Bảo quản Điều 29–31, 0032 (26/11/2026, khối `chung`); `/ops/*` cũ giữ nguyên; `POST /disposal/sweep` trả thêm `trungTenTep/trungBlake3/trungMucLuc` (0033) |
+| `bao_cao` | `GET /bao-cao` (danh mục 19 báo cáo Điều 44.3b: mã, tên, căn cứ, nhóm, bản, bộ lọc, cột — desktop dựng màn từ đây), `GET /bao-cao/{ma}?projectId&phongId&namTu&namDen&from&to&format=json\|xlsx\|pdf` (Excel `xlsx::sheet_bang`; PDF `digitext_pdf::manual` A4 ngang khi > 7 cột, đầu văn bản hành chính + khối ký) — 27/11/2026, khối `chung`, quyền `stats.view` / `stats.view_project`; `thu_nop` chỉ bản thi công |
+| `chinh_ly/muon_tra` | `GET/POST /cl/muon-tra` (phiếu nhiều hồ sơ, `so_phieu` MT-năm-stt, `giaoNgay` cần `loan.approve`), `/tong-quan`, `/{id}` GET, `/{id}/duyet \| tu-choi \| giao \| gia-han \| tra \| huy` (POST không cần thân), `/nhom/{nhomId}` GET + `/duyet \| tu-choi \| huy` (cả phiếu), `/{id}/phieu.pdf` — mượn – trả có duyệt 0034 (27/11/2026) |
+| `chinh_ly/kho_gia` | `GET /cl/kho-gia/tong-hop?projectId&khoId&phongId` (sức chứa, hộp / hồ sơ đang chứa, % đầy, gần đầy), `GET /cl/kho-gia/ho-so?khoId\|giaId&format=xlsx`, `GET /cl/kho-gia/chua-hop?phongId`, `POST /cl/ho-so/gan-hop {phongBanId, rows[{hoSoId, hopSo}]}` (đặt phòng ban cho hồ sơ nhập gói rồi `he_thong_hoa::boxing`) — 0035 (27/11/2026) |
 | `danh_muc_ho_so` | `/danh-muc-ho-so` GET/POST, `/hieu-luc?phongId&nam`, `/{id}`, `/{id}/dong[/{dongId}]` POST/PUT/DELETE, `/dong/nhap`, `/trinh`, `/duyet` (không tự duyệt), `/tra-lai`, `/ban-hanh`, `/phien-ban-moi`, `/doi-chieu`, `/bien-ban` — danh mục hồ sơ dự kiến Điều 19.4 |
 | còn lại | `records`, `stats`, `changes`, `notifications`, `/healthz` |
 
@@ -275,6 +278,18 @@ Ba mẫu hình lặp lại đáng để ý:
   `/bien-ban {recordId}`. **0033** quét trùng Điều 48.2: `disposal::f_trung_blake3` (cùng dự án, cùng blake3) và `f_trung_muc_luc`
   (hai hồ sơ cùng phông + `khong_dau(tieu_de)` + số ký hiệu + năm → tài liệu của hồ sơ lập sau, `dup_ho_so_id`), cột
   `disposal_entries.phat_hien`; chỉ `xem_xet`, không đánh `cl_ho_so.trung_thua`. Kịch bản thử: `dev/luutru/thu-bao-quan.ps1 -MatKhauDb <mk>`.
+- **Đợt 3 đối chiếu Digifile (27/11/2026, migration 0034–0036)** — (a) **Báo cáo TT05** `digitext-db/src/bao_cao.rs` (19 hàm, mỗi
+  báo cáo một câu `to_jsonb`, bộ lọc `BoLoc{phong, năm kết thúc, từ – đến}`), định nghĩa cột / nhóm / bản ở `routes/bao_cao.rs::DEFS`
+  (một nơi duy nhất: desktop `BaoCaoView` dựng bộ lọc + bảng từ JSON danh mục). `luot_khai_thac` đọc `audit_log khai_thac.*` theo
+  `detail->>'projectId'` → chỉ mục 0036. (b) **Mượn – trả có duyệt**: máy trạng thái thuần `digitext-core::chinh_ly::muon_tra`
+  (cho_duyet → da_duyet \| tu_choi \| huy; da_duyet → dang_muon \| huy; dang_muon → da_tra; gia hạn ≤ 2 lần; có test), ghi ở
+  `digitext-db::chinh_ly::muon_tra` (SQL thẳng vì cột duyệt / giao / gia hạn là `is_derived`), đường generic `apply_op` bị chặn bởi
+  `sync::muon_tra_chan` (offline không đổi trạng thái; tạo thẳng `dang_muon` cần `loan.approve`); quyền mới `loan.approve` (ALL = 72);
+  nhắc sắp hạn 3 ngày / quá hạn mỗi tuần trong API `cli.rs::nhac_muon_tra_kho` (mỗi giờ, `DIGITEXT_MT_NHAC_GIAY` để thử) cho người lập +
+  quản trị dự án, khử lặp `notifications.ref`. Bẫy đã vá: `validate::normalize` ép `trang_thai` thành số cho mọi bảng (cl_thbq) → phiếu
+  mượn (chữ) bị từ chối; nay bỏ qua với `cl_muon_tra`. (c) **Kho / giá sức chứa**: `cl_gia.suc_chua_hop / canh_bao_pct`, `cl_kho.suc_chua_hop`
+  (vào `spec.cols`), `digitext-db::chinh_ly::kho_gia::tong_hop` gom `cl_ho_so_v.gia_eff_id` một lượt theo dự án (không view),
+  `dat_phong_ban` + `boxing` cho hồ sơ nhập gói, nhắc `kho_day` mỗi tuần. Kịch bản thử trọn ba phần: `dev/luutru/thu-dot-3.ps1 -MatKhauDb <mk>`.
 - **Dashboard theo ngày** (`routes/dashboard.rs`, migration `0021_dashboard_daily.sql`): bảng `dashboard_daily`
   (ngày VN × dự án × người; dòng tổng dự án `user_id = uuid 0`) do hàm SQL `dashboard_rollup(từ, đến)` tính;
   API tự roll hôm qua + hôm nay mỗi 2 phút và 35 ngày lúc 00:15 (`spawn_rollup` gọi từ `cli.rs`), phát topic
@@ -409,6 +424,15 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   `SoBienBan` Mẫu 02/03 điền từ sổ; `PhuongTienPanel`; `SuCoPanel` + Mẫu 04 điền sẵn; `baoQuanFlow.ts` nhãn + `ganBienBanMoiNhat`),
   `api/baoquan.ts` qua Tauri `bq_get` / `bq_call` (`src-tauri/src/bao_quan.rs`, gắn cứng `/bao-quan`, topic `ops`); `DisposalView` cột
   "Phát hiện"; `LuuTruHome` ô sao lưu trễ · lỗi mở · sự cố; quyền `bk.approve` (71 quyền). Mục menu `baoquan` giữ ở cả hai bản.
+  **GĐ8 Đợt 3 (27/11, 0034–0036):** `report/BaoCaoView.tsx` (tab `report:tt05`, nhóm Báo cáo có ở CẢ `NAV_LUU_TRU`): cột trái danh
+  mục báo cáo theo nhóm, bộ lọc sinh từ `boLoc`, bảng theo `cot` + dòng tổng, nút Excel / PDF tải qua Tauri `bc_download` (hộp thoại Lưu;
+  `src-tauri/src/bao_cao.rs`, nhận `/bao-cao`, `/cl/muon-tra/*.pdf`, `/cl/kho-gia/ho-so`), `api/baoCao.ts`. `chinhly/MuonTraView.tsx`
+  viết lại: KPI chờ duyệt / chờ giao / đang mượn / quá hạn, Seg 6 trạng thái, lập phiếu nhiều hồ sơ (`LapPhieuDialog`, ô "giao luôn" khi
+  có `loan.approve`), menu hành động theo `muonTraFlow::hanhDongMuon` (duyệt / từ chối / duyệt cả phiếu / giao / gia hạn / trả / huỷ),
+  phiếu PDF, sổ Excel (= báo cáo `muon_tra`), `api/muonTra.ts`. `chinhly/KhoGiaView.tsx`: tab Giá đọc `kgTongHop` (sức chứa, hộp,
+  % đầy, tô gần đầy / vượt), ô sức chứa + ngưỡng cảnh báo, xuất hồ sơ theo kho / giá, tab **Gán hộp** (`GanHopPanel`: hồ sơ chưa hộp của
+  phông, phòng ban chủ hộp, nhập từng dòng hoặc dán 2 cột), `api/khoGia.ts`. `LuuTruHome` thêm hàng KPI mượn trả. Quyền `loan.approve`
+  (72 quyền) ở `permissions.ts`.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,
@@ -463,14 +487,16 @@ Còn lại: `infra/terraform/` (modules + environments), `infra/ansible/`
 
 ## 8. Những chỗ cần biết khi sửa code
 
-### Schema Postgres: `migrations/0001`–`0033` (sửa 26/11/2026)
+### Schema Postgres: `migrations/0001`–`0036` (sửa 27/11/2026)
 
 `digitext-db` dùng sqlx truy vấn 28 nhóm bảng. Thư mục `migrations/` **có** trong repo
 (0001 baseline … 0022 roles, 0023 cl_van_ban nguồn OCR, 0024 records thi công TT05, 0025 nhập gói AIP, 0026 tra cứu không dấu /
 kiểm gói / huỷ gói, 0027 quét virus, 0028–0029 webhook dự án, 0030 `permissions_seen` — API tự bổ sung quyền MỚI vào vai trò hệ
 thống lúc khởi động, `roles::bo_sung_quyen_moi`; 0031 lưu trữ hiện hành Điều 19: `lt_*`, cột `cl_ho_so`, `users.phong_ban_id`,
 `notifications.ref`, **DROP/CREATE view `cl_ho_so_v`** → áp lúc bảo trì; 0032 bảo quản Điều 29–31: `bk_*`, cột `integrity_checks` /
-`backup_runs`; 0033 quét trùng: `disposal_entries.phat_hien`, chỉ mục blake3 + mục lục, cần 0026 trước) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
+`backup_runs`; 0033 quét trùng: `disposal_entries.phat_hien`, chỉ mục blake3 + mục lục, cần 0026 trước; 0034 mượn – trả có duyệt: CHECK
+`cl_muon_tra.trang_thai` 6 giá trị + 12 cột duyệt / giao / gia hạn / nhắc; 0035 `cl_gia.suc_chua_hop / canh_bao_pct`, `cl_kho.suc_chua_hop`;
+0036 chỉ mục `audit_log` theo dự án cho báo cáo lượt khai thác, CONCURRENTLY) — ghi chú cũ "không có migrations" là sai. Không có cache `.sqlx/` offline.
 Áp bằng `digitext-api migrate` (bảng `_digitext_migrations`, 9/11/2026; máy chủ đã áp tay thì `migrate --da-ap-den <NNNN>` một lần)
 hoặc tay theo thứ tự bằng `psql -f` (xem `docs/CHUYEN-MAY-OCR-PC.md`).
 

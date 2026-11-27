@@ -232,6 +232,32 @@ Chưa làm / cần anh: ảnh màn Digifile (Kế hoạch kiểm tra, Phương t
 điều luật); worker chưa chạy thử thật (cùng hàm băm với API, đã kiểm qua API). Nâng cấp máy chủ: `migrate` áp 0032 + 0033 (0033 cần 0026
 trước), rồi vào Bảo quản › Sao lưu sửa lịch cho khớp giờ chạy script, Phương tiện khai ổ sao lưu kèm hạn độ bền.
 
+### GĐ8 — Báo cáo thống kê TT05, mượn – trả có duyệt, kho / giá sức chứa (27/11/2026, nhánh `feat/ban-luu-tru`)
+
+Đợt 3 của kế hoạch đối chiếu Digifile (nhóm 3A → 4A → 4B). Anh chưa trả lời câu (15)–(16) nên làm theo đề xuất: không có mẫu Excel / PDF
+18 báo cáo của Digifile → cột suy từ dữ liệu và điều luật, PDF có đầu văn bản hành chính + khối ký "Người lập báo cáo / Lãnh đạo cơ quan";
+bản xuất là tệp tải về, KHÔNG lưu vào sổ biên bản; quyền duyệt mượn riêng `loan.approve` (tầng quản trị, như `bk.approve`).
+
+Đã làm:
+- **0034** mượn – trả có duyệt (giữ bảng `cl_muon_tra`, thêm `nhom_id`, `so_phieu`, duyệt / giao / gia hạn / nhắc; phiếu cũ = đã giao,
+  không số), **0035** sức chứa giá / kho, **0036** chỉ mục `audit_log` theo dự án.
+- **Máy chủ**: 19 báo cáo (`digitext-db::bao_cao`, `routes/bao_cao.rs` — bản Lưu trữ thấy 18, `thu_nop` chỉ thi công), Excel / PDF máy
+  chủ dựng; mượn – trả: `digitext-core::chinh_ly::muon_tra` (bảng chuyển + test), `routes/chinh_ly/muon_tra.rs` (lập nhiều hồ sơ, duyệt
+  lẻ / cả phiếu, từ chối, giao, gia hạn ≤ 2 lần giữ hạn gốc, trả, huỷ, phiếu PDF), `sync::muon_tra_chan` chặn đường generic / offline,
+  nhắc hạn trong API mỗi giờ; kho / giá: `routes/chinh_ly/kho_gia.rs` (tổng hợp, hồ sơ theo kho / giá + Excel, hồ sơ chưa hộp, gán hộp
+  cho hồ sơ nhập gói), nhắc `kho_day`.
+- **Desktop 0.25.20**: Báo cáo › Thống kê TT05 (cả hai bản), Mượn – trả viết lại, Kho và giá có sức chứa + tab Gán hộp, KPI mượn trả ở
+  Tổng quan Lưu trữ.
+- **Kiểm chứng**: `cargo test` core 34 / api 46 / db 27; kịch bản `dev/luutru/thu-dot-3.ps1` xanh trên Postgres tạm (nhân viên lập phiếu
+  2 hồ sơ → không duyệt / không giao ngay được → cán bộ duyệt 1, từ chối 1 có lý do → giao → gia hạn 2 lần, lần 3 bị chặn → lùi hạn,
+  job nhắc gửi `loan_overdue` cho người lập + quản trị → trả; phiếu 2 duyệt cả phiếu, huỷ 1 dòng; giá 1–3 chứa 2 hộp = 66,7 % ≥ 60 %
+  → `kho_day`; gán hộp 2 hồ sơ (1 chưa phòng ban) + 1 lỗi; 18 báo cáo JSON chạy, Excel / PDF phông và sổ mượn trả xem bằng mắt).
+  Bẫy vá nhân tiện: `validate::normalize` ép `trang_thai` thành số với mọi bảng → mọi phiếu mượn tạo qua `/cl/rows` bị từ chối.
+
+Chưa làm / cần anh: (15) mẫu Excel / PDF 18 báo cáo và ảnh màn Báo cáo của Digifile nếu có để chỉnh cột, khối ký; có cần lưu bản xuất
+vào sổ biên bản không; (16) giữ `loan.approve` riêng hay gộp vào `loan.manage`. Còn lại của kế hoạch: Đợt 4 = 3B trang thể thức PL VI
++ sổ chuyển đổi (migration 0037 `chuyen_doi_giay`), 3C biểu mẫu PDF tại máy trạm, 4C quyền theo phông (0038 `user_phong`) — cần câu (17)–(19).
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

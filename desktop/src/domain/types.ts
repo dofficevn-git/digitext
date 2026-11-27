@@ -47,7 +47,8 @@ export type V3xu = "danhmuccl" | "laphoso" | "hethonghoa" | "dongbo" | "sohoa" |
  *  (cùng màn KhaiThacView nhưng chỉ còn Tạo văn bản từ OCR + Metadata TT05, 3/11/2026). */
 export type V3xw = "khogia" | "khaithac" | "muontra" | "ketnoi";
 
-export type V3xx = "sohoa" | "chinhly" | "nhanvien" | "phanmem" | "muontra";
+/** Tab Báo cáo; `tt05` = 18 báo cáo thống kê Điều 44.3b (27/11/2026). */
+export type V3xx = "sohoa" | "chinhly" | "nhanvien" | "phanmem" | "muontra" | "tt05";
 
 export type V3xy = "root" | "folder" | "doc";
 

@@ -6,6 +6,7 @@ import { V460 } from "@/state";
 import ProjectProgressView from "./ProjectProgressView";
 import StaffReportView from "./StaffReportView";
 import ThongKeView from "@/features/chinhly/ThongKeView";
+import BaoCaoView from "./BaoCaoView";
 import { PageHeader, Tabs } from "@/ui";
 
 type NhanVienTab = "sohoa" | "chinhly";
@@ -16,6 +17,7 @@ export default function V4oe() {
   if (reportTab === "chinhly") return <ThongKeView kind="chinh-ly" />;
   if (reportTab === "phanmem") return <ThongKeView kind="phan-mem" />;
   if (reportTab === "muontra") return <ThongKeView kind="muon-tra" />;
+  if (reportTab === "tt05") return <BaoCaoView />;
   if (reportTab === "nhanvien")
     return (
       <section className="view active">

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 DigiText. All rights reserved.
-//! Thống kê chỉnh lý + danh sách phiếu mượn.
+//! Thống kê chỉnh lý (danh sách phiếu mượn chuyển sang `muon_tra.rs` từ 0034).
 
 use crate::app::AppState;
 use crate::error::ApiError;
@@ -11,7 +11,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use digitext_core::Permission;
 use digitext_db::chinh_ly::thong_ke as tk;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
@@ -20,7 +20,6 @@ pub fn router() -> Router<AppState> {
         .route("/cl/thong-ke/nhan-vien", get(nhan_vien))
         .route("/cl/thong-ke/phan-mem", get(phan_mem))
         .route("/cl/thong-ke/muon-tra", get(muon_tra))
-        .route("/cl/muon-tra", get(phieu_muon))
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,17 +33,6 @@ struct Q {
     from: Option<String>,
     #[serde(default)]
     to: Option<String>,
-    #[serde(default)]
-    trang_thai: Option<String>,
-    #[serde(default)]
-    q: Option<String>,
-    #[serde(default = "default_limit")]
-    limit: i64,
-    #[serde(default)]
-    offset: i64,
-}
-fn default_limit() -> i64 {
-    500
 }
 
 /// Ngày VN → mốc UTC (đầu ngày +07:00); `to` là ngày kết thúc bao gồm → +1 ngày.
@@ -83,9 +71,3 @@ async fn muon_tra(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Res
     Ok(Json(tk::muon_tra(&st.pool, q.project_id, vn(q.from.as_deref(), false)?, vn(q.to.as_deref(), true)?).await?))
 }
 
-async fn phieu_muon(State(st): State<AppState>, ts: Ts, Query(q): Query<Q>) -> Result<Json<Value>, ApiError> {
-    ts.require_perm(Permission::LoanView)?;
-    super::project_access(&st, &ts, q.project_id).await?;
-    let (rows, total) = tk::phieu_muon(&st.pool, q.project_id, q.trang_thai.as_deref().filter(|s| !s.is_empty()), q.q.as_deref(), q.limit, q.offset).await?;
-    Ok(Json(json!({"rows": rows, "total": total})))
-}

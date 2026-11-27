@@ -7,6 +7,8 @@ use std::cmp::Ordering;
 
 /// Mô tả 15 bảng cl_* (cột ghi được, cột chỉ online, cha → con, quyền) — dùng chung máy chủ + desktop.
 pub mod spec;
+/// Máy trạng thái mượn – trả hồ sơ giấy có duyệt (0034, 27/11/2026).
+pub mod muon_tra;
 
 // ------------------------------------------------------------------ ngày tháng
 

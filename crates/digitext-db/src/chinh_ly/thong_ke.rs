@@ -113,14 +113,13 @@ pub async fn muon_tra(pool: &PgPool, project: Uuid, from: Option<DateTime<Utc>>,
 /// Danh sách phiếu mượn (kèm hồ sơ) theo trạng thái: dang_muon | da_tra | qua_han | (tất cả).
 pub async fn phieu_muon(pool: &PgPool, project: Uuid, trang_thai: Option<&str>, q: Option<&str>, limit: i64, offset: i64) -> sqlx::Result<(Vec<Value>, i64)> {
     let where_sql = "m.project_id = $1 AND m.deleted_at IS NULL \
-        AND ($2::text IS NULL OR ($2 = 'qua_han' AND m.trang_thai = 'dang_muon' AND m.ngay_du_kien_tra < CURRENT_DATE) OR ($2 <> 'qua_han' AND m.trang_thai = $2)) \
+        AND ($2::text IS NULL OR ($2 = 'qua_han' AND m.trang_thai = 'dang_muon' AND m.ngay_du_kien_tra < CURRENT_DATE) \
+             OR ($2 = 'mo' AND m.trang_thai IN ('cho_duyet', 'da_duyet', 'dang_muon')) OR ($2 NOT IN ('qua_han', 'mo') AND m.trang_thai = $2)) \
         AND ($3::text IS NULL OR m.nguoi_muon ILIKE '%' || $3 || '%' OR m.don_vi ILIKE '%' || $3 || '%' OR h.tieu_de ILIKE '%' || $3 || '%' OR h.so_tam ILIKE '%' || $3 || '%' OR h.ma_ho_so ILIKE '%' || $3 || '%')";
     let rows = sqlx::query(&format!(
-        "SELECT to_jsonb(m) || jsonb_build_object('so_tam', h.so_tam, 'ho_so_so', h.ho_so_so, 'ma_ho_so', h.ma_ho_so, 'tieu_de', h.tieu_de, 'hop_so', h.hop_so, \
-            'ten_phong', h.ten_phong, 'ten_phong_ban', h.ten_phong_ban, 'qua_han', (m.trang_thai = 'dang_muon' AND m.ngay_du_kien_tra < CURRENT_DATE), \
-            'nguoi_lap_ten', u.display_name) AS row \
-         FROM cl_muon_tra m JOIN cl_ho_so_v h ON h.id = m.ho_so_id LEFT JOIN users u ON u.id = m.nguoi_lap_phieu \
-         WHERE {where_sql} ORDER BY m.trang_thai = 'dang_muon' DESC, m.ngay_muon DESC, m.ver DESC LIMIT $4 OFFSET $5"
+        "{} WHERE {where_sql} \
+         ORDER BY CASE m.trang_thai WHEN 'cho_duyet' THEN 0 WHEN 'da_duyet' THEN 1 WHEN 'dang_muon' THEN 2 ELSE 3 END, m.ngay_muon DESC, m.so_phieu DESC NULLS LAST, m.ver DESC LIMIT $4 OFFSET $5",
+        super::muon_tra::PHIEU_JSON
     ))
     .bind(project)
     .bind(trang_thai)

@@ -79,6 +79,8 @@ pub enum Permission {
     LoanView,
     /// Mượn / trả hồ sơ giấy: lập phiếu, ghi trả.
     LoanManage,
+    /// Mượn / trả hồ sơ giấy: duyệt / từ chối phiếu mượn (27/11/2026, Điều 32 TT05 — mượn có duyệt). Tầng quản trị.
+    LoanApprove,
     // Lưu trữ hiện hành — Điều 19 TT 05/2025 (26/11/2026, bản Lưu trữ cho cơ quan):
     /// Nộp hồ sơ của phòng mình vào lưu trữ cơ quan, rút phiếu khi chưa tiếp nhận.
     LuutruSubmit,
@@ -94,7 +96,7 @@ pub enum Permission {
     DanhmucApprove,
 }
 impl Permission {
-    pub const ALL: [Permission; 71] = [
+    pub const ALL: [Permission; 72] = [
         Permission::DossierRead,
         Permission::DossierCreate,
         Permission::DossierUpdate,
@@ -160,6 +162,7 @@ impl Permission {
         Permission::KhoGiaManage,
         Permission::LoanView,
         Permission::LoanManage,
+        Permission::LoanApprove,
         Permission::LuutruSubmit,
         Permission::LuutruReceive,
         Permission::LuutruUnlock,
@@ -234,6 +237,7 @@ impl Permission {
             Permission::KhoGiaManage => "khogia.manage",
             Permission::LoanView => "loan.view",
             Permission::LoanManage => "loan.manage",
+            Permission::LoanApprove => "loan.approve",
             Permission::LuutruSubmit => "luutru.submit",
             Permission::LuutruReceive => "luutru.receive",
             Permission::LuutruUnlock => "luutru.unlock",
@@ -312,6 +316,7 @@ impl Permission {
             | Permission::WorkManage
             | Permission::DossierSystematize
             | Permission::KhoGiaManage
+            | Permission::LoanApprove
             | Permission::LuutruUnlock
             | Permission::DanhmucApprove => Perm::Admin,
             Permission::ProjectAssignAdmin => Perm::Super,
@@ -440,11 +445,11 @@ mod quan_ly_tests {
         assert!(!Permission::ProjectAssignAdmin.granted_by_default(Role::Admin));
         assert_eq!("manager".parse::<Role>(), Ok(Role::Manager));
     }
-    /// 6 quyền lưu trữ hiện hành + bk.approve (26/11/2026): ALL đủ 71, chuỗi ↔ enum khớp, nhân viên phòng ban nộp/soạn nhưng không
+    /// 6 quyền lưu trữ hiện hành + bk.approve (26/11/2026) + loan.approve (27/11/2026): ALL đủ 72, chuỗi ↔ enum khớp, nhân viên phòng ban nộp/soạn nhưng không
     /// tiếp nhận hay trình; cán bộ (admin) có mở khoá / duyệt; khách không có gì.
     #[test]
     fn luu_tru_hien_hanh_quyen_mac_dinh() {
-        assert_eq!(Permission::ALL.len(), 71);
+        assert_eq!(Permission::ALL.len(), 72);
         for p in Permission::ALL {
             assert_eq!(p.as_str().parse::<Permission>(), Ok(p), "{p}");
         }

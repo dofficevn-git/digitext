@@ -267,6 +267,7 @@ async fn serve() -> anyhow::Result<()> {
         }
     }
     crate::routes::dashboard::spawn_rollup(r_22.clone());
+    nhac_muon_tra_kho(r_22.clone());
     f_2gs(r_22);
     axum::serve(
         r_1y,
@@ -313,6 +314,29 @@ fn f_2gr(data_dir: Arc<std::path::PathBuf>) {
     });
 }
 const C_X: std::time::Duration = std::time::Duration::from_secs(3600);
+/// Mỗi giờ (cả hai bản; `DIGITEXT_MT_NHAC_GIAY` để thử): nhắc phiếu mượn sắp hạn / quá hạn (0034) và giá gần đầy (0035). Cả hai
+/// idempotent theo ngày / tuần (ref thông báo + `nhac_lan_cuoi`), chạy ngay một lượt khi khởi động rồi theo chu kỳ.
+fn nhac_muon_tra_kho(pool: sqlx::PgPool) {
+    tokio::spawn(async move {
+        let giay = std::env::var("DIGITEXT_MT_NHAC_GIAY").ok().and_then(|v| v.parse::<u64>().ok()).filter(|g| *g >= 5).unwrap_or(3600);
+        let mut tick = tokio::time::interval(std::time::Duration::from_secs(giay));
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tick.tick().await;
+            let hom_nay = digitext_db::nop_luu::hom_nay_vn();
+            match digitext_db::chinh_ly::muon_tra::nhac(&pool, hom_nay).await {
+                Ok(n) if n > 0 => tracing::info!(thong_bao = n, "nhắc mượn trả: đã gửi"),
+                Ok(_) => {}
+                Err(e) => tracing::warn!(error = %e, "nhắc mượn trả lỗi (sẽ thử lại)"),
+            }
+            match digitext_db::chinh_ly::kho_gia::nhac_kho_day(&pool, hom_nay).await {
+                Ok(n) if n > 0 => tracing::info!(thong_bao = n, "nhắc giá gần đầy: đã gửi"),
+                Ok(_) => {}
+                Err(e) => tracing::warn!(error = %e, "nhắc giá gần đầy lỗi (sẽ thử lại)"),
+            }
+        }
+    });
+}
 const C_V: i32 = 48;
 fn f_2gs(r_2d: sqlx::PgPool) {
     tokio::spawn(async move {

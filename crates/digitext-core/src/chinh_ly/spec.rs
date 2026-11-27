@@ -41,7 +41,12 @@ pub const SYSTEM_COLS: &[&str] = &["id", "project_id", "ver", "created_at", "cre
 /// `cl_ho_so.vinh_vien` = loại bảo quản suy từ THBQ (0015); `nop_luu_trang_thai` / `nop_luu_id` / `khoa_luc` = trạng thái
 /// nộp lưu hiện hành, chỉ route nộp lưu ghi (0031) — bản sao offline nhận qua pull nên UI vẫn hiện "Đã nộp lưu".
 pub fn is_derived(table: &str, col: &str) -> bool {
-    matches!((table, col), ("cl_ho_so", "vinh_vien" | "nop_luu_trang_thai" | "nop_luu_id" | "khoa_luc"))
+    matches!(
+        (table, col),
+        ("cl_ho_so", "vinh_vien" | "nop_luu_trang_thai" | "nop_luu_id" | "khoa_luc")
+            // 0034 mượn – trả có duyệt: cột máy chủ ghi khi duyệt / giao / gia hạn / nhắc — bản sao offline nhận qua pull, không đẩy ngược.
+            | ("cl_muon_tra", "nhom_id" | "so_phieu" | "nguoi_duyet" | "duyet_at" | "ly_do_tu_choi" | "giao_boi" | "giao_at" | "han_tra_goc" | "so_lan_gia_han" | "gia_han_log" | "nhac_lan_cuoi" | "tra_truoc_han")
+    )
 }
 
 const DM: &[&str] = &["ma", "ten", "so_tt"];
@@ -119,7 +124,7 @@ pub const TABLES: &[TableSpec] = &[
     TableSpec {
         name: "cl_kho",
         rank: 60,
-        cols: &["ten", "so_do_key", "ghi_chu", "so_tt"],
+        cols: &["ten", "so_do_key", "ghi_chu", "so_tt", "suc_chua_hop"],
         online_only: &[],
         parent: None,
         shared: false,
@@ -130,7 +135,7 @@ pub const TABLES: &[TableSpec] = &[
     TableSpec {
         name: "cl_gia",
         rank: 70,
-        cols: &["kho_id", "phong_ban_id", "ten", "tu_hop", "den_hop", "vinh_vien", "ghi_chu", "so_tt"],
+        cols: &["kho_id", "phong_ban_id", "ten", "tu_hop", "den_hop", "vinh_vien", "ghi_chu", "so_tt", "suc_chua_hop", "canh_bao_pct"],
         online_only: &[],
         parent: Some(("kho_id", "cl_kho")),
         shared: false,

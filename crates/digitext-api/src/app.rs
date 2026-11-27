@@ -139,6 +139,7 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::info::router())
         .merge(crate::routes::ops::router())
         .merge(crate::routes::bao_quan::router())
+        .merge(crate::routes::bao_cao::router())
         .merge(crate::routes::changes::router())
         .merge(crate::routes::chinh_ly::router())
         .merge(crate::routes::ingest::router())

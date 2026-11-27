@@ -184,7 +184,7 @@ pub fn fill_defaults(table: &str, row: &mut Row) {
             put(row, "ma_tt05", Value::String("07".into()));
         }
         "cl_muon_tra" => {
-            put(row, "trang_thai", Value::String("dang_muon".into()));
+            put(row, "trang_thai", Value::String(digitext_core::chinh_ly::muon_tra::CHO_DUYET.into()));
             put(row, "ngay_muon", Value::String(chrono::Utc::now().date_naive().to_string()));
         }
         _ => {}
@@ -199,6 +199,10 @@ pub fn normalize(table: &str, row: &mut Row, full: bool) -> Vec<FieldErr> {
     for f in ["so_tt", "gia_tri", "trang_thai", "tu_hop", "den_hop", "so", "so_thu_tu", "to_so", "so_trang", "trang_so", "tong_so_vb",
         "so_luong_trang", "ct_danh_so_tu", "ct_den_so", "ct_so_muc_luc_vb", "ct_ngay", "ct_thang", "ct_nam", "size"]
     {
+        // `trang_thai` là số ở cl_thbq nhưng là CHỮ ở cl_muon_tra (cho_duyet / dang_muon…) — ép số sẽ từ chối mọi phiếu mượn.
+        if f == "trang_thai" && table == "cl_muon_tra" {
+            continue;
+        }
         if row.contains_key(f) {
             set_int(row, f, &mut errs, None);
         }
@@ -378,8 +382,8 @@ pub fn normalize(table: &str, row: &mut Row, full: bool) -> Vec<FieldErr> {
                 }
             }
             if let Some(tt) = str_of(row, "trang_thai") {
-                if tt != "dang_muon" && tt != "da_tra" {
-                    errs.push(FieldErr::new("trang_thai", "phải là dang_muon hoặc da_tra"));
+                if !digitext_core::chinh_ly::muon_tra::hop_le(&tt) {
+                    errs.push(FieldErr::new("trang_thai", "trạng thái phiếu mượn không hợp lệ (cho_duyet, da_duyet, tu_choi, dang_muon, da_tra, huy)"));
                 }
             }
         }
