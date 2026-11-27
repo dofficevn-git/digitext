@@ -5,7 +5,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { V41p } from "@/live/useLive";
 import { isTauri } from "@/api/ipc";
-import { V4ex, V4ev, V4ez, docsForGroups, docsOcrRetryFailed, docsPdfaRejected, docsReviewSummary, type V4ey, type ReviewSummaryRow } from "@/api/docs";
+import { V460 } from "@/state";
+import { useProject } from "@/state/project";
+import { V4ex, V4ev, V4ez, docsForGroups, docsOcrRetryFailed, docsPdfaRejected, docsReviewSummary, type V4ey, type PdfaRejectedRow, type ReviewSummaryRow } from "@/api/docs";
 import { V4e5 } from "@/features/dossier/excel";
 import { listHoSo, V40w, type V40d, type V40v } from "@/api/archive";
 import { V48j } from "@/api/catalog";
@@ -71,6 +73,14 @@ export default function V4k5() {
   const [V1oi, V1oj] = useState(false);
 
   const V1ok = V4j1(flt);
+  // Dự án đang làm (27/11/2026): /documents/progress trả số liệu của MỌI dự án tài khoản thấy được, nên khi đã chọn
+  // dự án thì tính từ số liệu gộp theo hồ sơ của riêng dự án đó, và mọi nút chạy chỉ đụng tài liệu của dự án đó.
+  const { session } = V460();
+  const proj = useProject();
+  const projectId = session?.projectId ?? proj.projectId ?? "";
+  const maDuAn = proj.projects.find((p) => p.id === projectId)?.code ?? "";
+  const theoHoSo = V1ok || !!projectId;
+  const [tuChoi, setTuChoi] = useState<PdfaRejectedRow[]>([]);
 
   const V1ol = useCallback(async () => {
     if (!isTauri()) return;
@@ -85,16 +95,22 @@ export default function V4k5() {
     if (!isTauri()) return;
     V1oj(true);
     try {
-      V1oh(await docsReviewSummary({}));
+      V1oh(await docsReviewSummary(projectId ? { projectId } : {}));
+      if (projectId) setTuChoi(await docsPdfaRejected().catch(() => []));
     } catch (e) {
       notifyError(e, "đọc kho máy chủ");
     } finally {
       V1oj(false);
     }
-  }, []);
+  }, [projectId]);
 
-  V41p(V1ol, { topics: ["docs", "ocr", "ocrFields"], enabled: !V1ok });
-  V41p(V1on, { topics: ["docs", "ocr", "ocrFields"], enabled: V1ok });
+  V41p(V1ol, { topics: ["docs", "ocr", "ocrFields"], enabled: !theoHoSo });
+  V41p(V1on, { topics: ["docs", "ocr", "ocrFields"], enabled: theoHoSo });
+  // Đổi dự án: bỏ số liệu của dự án trước ngay, không để nó hiện trong lúc chờ số liệu mới.
+  useEffect(() => {
+    V1oh(null);
+    setTuChoi([]);
+  }, [projectId]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -128,9 +144,23 @@ export default function V4k5() {
   const V1ov = useMemo(() => locHoSoGop(tree ?? [], flt, V1os, V1ot, V1ou), [tree, flt, V1os, V1ot, V1ou]);
 
   const view = useMemo<V4jt | null>(() => {
-    if (V1ok) return tree === null ? null : tienDoGop(V1ov.rows);
+    if (theoHoSo) {
+      if (tree === null) return null;
+      const v = tienDoGop(V1ov.rows);
+      // Chỉ lọc theo dự án (không thu hẹp phông / phòng ban): đếm được tài liệu bị từ chối ghép PDF/A của dự án.
+      if (!V1ok && maDuAn) {
+        for (const r of tuChoi) {
+          if (r.projectCode !== maDuAn || r.outcome === "exception") continue;
+          v.docsPdf2Rejected += 1;
+          if (r.reason.includes("độ phân giải")) v.docsPdf2RejectedDpi += 1;
+          else if (r.reason.includes("lớp text rỗng")) v.docsPdf2RejectedNoText += 1;
+          else v.docsPdf2RejectedOther += 1;
+        }
+      }
+      return v;
+    }
     return progress === null ? null : V4k4(progress);
-  }, [V1ok, tree, V1ov, progress]);
+  }, [theoHoSo, V1ok, tree, V1ov, progress, tuChoi, maDuAn]);
 
   // Danh sách id tài liệu trong phạm vi lọc — chỉ nạp khi bấm chạy (theo hồ sơ, ≤ 500 hồ sơ mỗi lượt).
   const V1ow = async (): Promise<string[] | undefined> => {
@@ -141,7 +171,7 @@ export default function V4k5() {
   const V1ox = () => (V1ok ? ` Phạm vi đang lọc: ${fmtN(V1ov.rows.reduce((a, r) => a + r.files, 0))} tài liệu.` : "");
 
   const reload = async () => {
-    if (V1ok) await V1on();
+    if (theoHoSo) await V1on();
     else await V1ol();
   };
 
@@ -150,7 +180,7 @@ export default function V4k5() {
   const xuatLoiPdfa = async () => {
     setXuatLoi(true);
     try {
-      const rows = await docsPdfaRejected();
+      const rows = (await docsPdfaRejected()).filter((r) => !maDuAn || r.projectCode === maDuAn);
       if (rows.length === 0) {
         toast.info("Không có tài liệu nào bị từ chối ghép PDF/A.");
         return;
@@ -204,7 +234,7 @@ export default function V4k5() {
   const chayPdf2 = async () => {
     V1o1("pdf2");
     try {
-      const r = await V4ev(undefined, await V1ow());
+      const r = await V4ev(projectId || undefined, await V1ow());
       const bo = (r.skippedRejected ?? 0) > 0 ? ` Bỏ qua ${fmtN(r.skippedRejected ?? 0)} tài liệu bản quét dưới 200 dpi, cần quét lại.` : "";
       if (r.documents > 0) toast.success(`Đã đưa ${fmtN(r.documents)} tài liệu vào hàng đợi ghép PDF 2 lớp.${bo}${V1ox()}`);
       else toast.info(`Không có tài liệu nào sẵn sàng ghép PDF 2 lớp, cần OCR xong trước.${bo}${V1ox()}`);
@@ -219,7 +249,7 @@ export default function V4k5() {
   const chayBocTach = async (thuLaiHong = false) => {
     V1o1("fields");
     try {
-      const r = await V4ex(undefined, thuLaiHong, await V1ow());
+      const r = await V4ex(projectId || undefined, thuLaiHong, await V1ow());
       toast.success(V4k2(r) + V1ox());
       await reload();
     } catch (e) {
@@ -232,7 +262,7 @@ export default function V4k5() {
   const thuLaiOcr = async () => {
     V1o1("ocrretry");
     try {
-      const r = await docsOcrRetryFailed(undefined, await V1ow(), keCaHong);
+      const r = await docsOcrRetryFailed(projectId || undefined, await V1ow(), keCaHong);
       const boQua = r.skippedSigned > 0 ? ` Bỏ qua ${fmtN(r.skippedSigned)} tài liệu đã sang bước ký.` : "";
       if (r.pages > 0) toast.success(`Đã xếp hàng lại ${fmtN(r.pages)} trang OCR lỗi của ${fmtN(r.documents)} tài liệu.${boQua}${V1ox()}`);
       else toast.info(`Không có trang OCR lỗi nào trong phạm vi.${boQua}`);
@@ -246,7 +276,7 @@ export default function V4k5() {
 
   const pctPdf2 = view ? V4jz(view) : 0;
   const pctFields = view ? V4k0(view) : 0;
-  const chuaCo = V1ok ? tree === null : progress === null;
+  const chuaCo = theoHoSo ? tree === null : progress === null;
   const busy = V1o0 !== "";
 
   const dsPhongBan = useMemo(() => V4cl(V1o9, flt.maDa), [V1o9, flt.maDa]);
