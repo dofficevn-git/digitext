@@ -7,13 +7,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { V4rw } from "@/api/packaging";
-import { V4s2, V4s3, V4s4, V4s6, V4s7, V4s9, V4sh, V4si, type V4rx, type V4rz, type V4s0, type V4s5 } from "@/api/submissions";
+import { hoSoTim, LOAI_TEP_THU_NOP, subFiles, subFileTai, subFileThem, subFileXoa, subItemsTuHoSo, subSoSanh, subTongQuan, V4s2, V4s3, V4s4, V4s6, V4s7, V4s9, V4sh, V4si, type HoSoChon, type SoSanhTrung, type TepThuNop, type TongQuanTiepNhan, type V4rx, type V4ry, type V4rz, type V4s0, type V4s5 } from "@/api/submissions";
+import { coQuanNopList, type CoQuanNop } from "@/api/coQuanNop";
 import { V4t3, type V4t2 } from "@/api/records";
 import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { V3z9 } from "@/domain/permissions";
 import { V462 as cn } from "@/lib/utils";
 import { Badge, Banner, Button, Card, confirm, Dialog, EmptyState, ErrorBanner, Field, FormGrid, IconButton, Input, Menu, notifyError, PageHeader, prompt, Select, Stepper, Table, Textarea, Tip, toast, Toolbar, type Column } from "@/ui";
+import { useRef } from "react";
 import { V4t6, V4t7 } from "./submissionFlow";
 
 const n = (v: number) => v.toLocaleString("vi-VN");
@@ -67,11 +69,53 @@ export default function V4t9() {
     if (!selId) return null;
     const d = await V4s3(selId);
     const returned = d.status === "approved" || d.status === "completed" ? await V4sh(selId).catch(() => null) : null;
-    return { d, returned };
+    // 0040: tệp đính kèm Điều 20 + 10 thông tin tiếp nhận Điều 23 (lỗi thì bỏ qua, không chặn màn).
+    const [files, tq] = await Promise.all([subFiles(selId).catch(() => [] as TepThuNop[]), subTongQuan(selId).catch(() => null as TongQuanTiepNhan | null)]);
+    return { d, returned, files, tq };
   }, [selId]);
   const detail = V41t(loadDetail, { topics: ["submissions", "packages"], enabled: isTauri() && !!selId });
   const d = detail.data?.d ?? null;
   const returned = detail.data?.returned ?? null;
+  const files = detail.data?.files ?? [];
+  const tq = detail.data?.tq ?? null;
+  const [chonHoSo, setChonHoSo] = useState(false);
+  const [soSanh, setSoSanh] = useState<SoSanhTrung | null>(null);
+  const [loaiTep, setLoaiTep] = useState<TepThuNop["loai"]>("van_ban_de_nghi");
+  const tepRef = useRef<HTMLInputElement>(null);
+  const themTep = async (f: File) => {
+    if (!d) return;
+    if (f.size > 25 * 1024 * 1024) {
+      toast.error("Tệp quá 25 MB.");
+      return;
+    }
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    await run("đính kèm tệp", async () => {
+      await subFileThem(d.id, loaiTep, f.name, btoa(bin));
+      toast.success(`Đã đính kèm ${f.name}.`);
+    });
+  };
+  const xoaTep = async (t: TepThuNop) => {
+    if (!d) return;
+    const ok = await confirm({ title: `Xoá tệp ${t.filename}?`, confirmLabel: "Xoá", danger: true });
+    if (!ok) return;
+    await run("xoá tệp", async () => {
+      await subFileXoa(d.id, t.id);
+    });
+  };
+  const taiTep = (t: TepThuNop) =>
+    run("tải tệp", async () => {
+      if (!d) return;
+      const p = await subFileTai(d.id, t.id, t.filename);
+      if (p) toast.success("Đã lưu tệp.", { description: p });
+    });
+  const moSoSanh = (i: V4ry) =>
+    run("so sánh", async () => {
+      if (!d) return;
+      setSoSanh(await subSoSanh(d.id, i.id));
+    });
+  const choSua = !!d && (d.status === "registered" || d.status === "confirmed") && can("submission.create");
 
   const shown = useMemo(() => {
     const k = q.trim().toLowerCase();
@@ -275,11 +319,76 @@ export default function V4t9() {
                 </Toolbar>
               </Card>
 
+              {tq && (
+                <Card title="Thông tin tiếp nhận (Điều 23)" description="Máy chủ tổng hợp từ đăng ký, gói đã nộp và kết quả chấm.">
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+                    <dt className="text-fg-subtle">Gói tin đã nộp</dt><dd>{n(tq.tongGoi)} · {(tq.dungLuongGoi / 1048576).toFixed(1)} MB</dd>
+                    <dt className="text-fg-subtle">Hồ sơ đăng ký</dt><dd>{n(tq.hoSoDangKy)}</dd>
+                    <dt className="text-fg-subtle">Đã duyệt / không đạt</dt><dd>{n(tq.hoSoDaDuyet)} / {n(tq.hoSoKhongDat)}</dd>
+                    <dt className="text-fg-subtle">Đã vào hệ thống</dt><dd>{n(tq.hoSoDaVaoHeThong)}</dd>
+                    <dt className="text-fg-subtle">Trùng trong đợt</dt><dd>{n(tq.hoSoTrungDot)}</dd>
+                    <dt className="text-fg-subtle">Số lần nộp</dt><dd>{tq.soLanNop}</dd>
+                    <dt className="text-fg-subtle">Trang / dung lượng khai</dt><dd>{tq.totalPages != null ? n(tq.totalPages) : "—"} / {tq.totalBytes != null ? `${(tq.totalBytes / 1048576).toFixed(1)} MB` : "—"}</dd>
+                    <dt className="text-fg-subtle">Tệp đính kèm</dt><dd>{n(tq.soTepDinhKem)}</dd>
+                  </dl>
+                </Card>
+              )}
+              <Card
+                title={`Tệp đính kèm (${n(files.length)})`}
+                description="Văn bản đề nghị, lịch sử phông, phương án phân loại, hướng dẫn xác định giá trị (Điều 20.3), quyết định phê duyệt (Điều 25)."
+                padding="none"
+                actions={
+                  can("submission.create") && d.status !== "completed" && d.status !== "refused" && (
+                    <>
+                      <Select size="sm" value={loaiTep} onChange={(v) => setLoaiTep(v as TepThuNop["loai"])} options={LOAI_TEP_THU_NOP.map(([value, label]) => ({ value, label }))} className="w-64" aria-label="Loại tệp" />
+                      <Button size="sm" icon="nhapTep" disabled={busy} onClick={() => tepRef.current?.click()}>
+                        Đính kèm
+                      </Button>
+                      <input
+                        ref={tepRef}
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = "";
+                          if (f) void themTep(f);
+                        }}
+                      />
+                    </>
+                  )
+                }
+              >
+                <Table
+                  columns={[
+                    { key: "loai", header: "Loại", width: 220, cell: (t: TepThuNop) => LOAI_TEP_THU_NOP.find(([k]) => k === t.loai)?.[1] ?? t.loai },
+                    { key: "filename", header: "Tệp", className: "whitespace-normal" },
+                    { key: "sizeBytes", header: "Dung lượng", align: "right", width: 100, cell: (t: TepThuNop) => `${(t.sizeBytes / 1024).toFixed(0)} KB` },
+                    { key: "createdAt", header: "Ngày", width: 100, cell: (t: TepThuNop) => t.createdAt.slice(0, 10).split("-").reverse().join("/") },
+                  ]}
+                  rows={files}
+                  getRowId={(t) => t.id}
+                  dense
+                  rowActions={(t) => (
+                    <>
+                      <IconButton label="Tải" icon="taiVe" size="sm" disabled={busy} onClick={() => void taiTep(t)} />
+                      {choSua && <IconButton label="Xoá" icon="xoa" size="sm" disabled={busy} onClick={() => void xoaTep(t)} />}
+                    </>
+                  )}
+                  state={{ empty: { title: "Chưa có tệp đính kèm" } }}
+                />
+              </Card>
+
               <Card
                 title={`Mục lục hồ sơ (${n(d.items.length)})`}
                 padding="none"
                 actions={
-                  d.status === "received" && can("submission.review") && selItems.size > 0 && (
+                  <>
+                  {choSua && (
+                    <Button size="sm" icon="them" disabled={busy} onClick={() => setChonHoSo(true)}>
+                      Thêm hồ sơ có sẵn trong hệ thống
+                    </Button>
+                  )}
+                  {d.status === "received" && can("submission.review") && selItems.size > 0 && (
                     <>
                       <Button size="sm" variant="primary" icon="duyet" disabled={busy} onClick={() => void cham([...selItems], "dat")}>
                         Đạt ({n(selItems.size)})
@@ -288,13 +397,14 @@ export default function V4t9() {
                         Không đạt
                       </Button>
                     </>
-                  )
+                  )}
+                  </>
                 }
               >
                 <Table
                   columns={[
                     { key: "stt", header: "#", align: "right", width: 50 },
-                    { key: "maHoSo", header: "Mã hồ sơ", width: 140 },
+                    { key: "maHoSo", header: "Mã hồ sơ", width: 160, cell: (i) => <span className="flex flex-wrap items-center gap-1">{i.maHoSo}{i.hoSoId && <Tip text="Hồ sơ có sẵn trong hệ thống (nộp cùng hệ thống)"><span><Badge tone="info">HT</Badge></span></Tip>}{i.trungTrongDot && <Badge tone="err">Trùng trong đợt</Badge>}</span> },
                     { key: "tieuDe", header: "Tiêu đề", className: "whitespace-normal" },
                     { key: "soTrang", header: "Trang", align: "right", width: 70, cell: (i) => i.soTrang ?? "—" },
                     {
@@ -308,16 +418,17 @@ export default function V4t9() {
                   rows={d.items}
                   getRowId={(i) => i.id}
                   selection={d.status === "received" && can("submission.review") ? { selected: selItems, onChange: setSelItems } : undefined}
-                  rowActions={
-                    d.status === "received" && can("submission.review")
-                      ? (i) => (
-                          <>
-                            <IconButton label="Đạt" icon="duyet" size="sm" disabled={busy} onClick={() => void cham([i.id], "dat")} />
-                            <IconButton label="Không đạt" icon="tuChoi" size="sm" disabled={busy} onClick={() => void cham([i.id], "khong_dat")} />
-                          </>
-                        )
-                      : undefined
-                  }
+                  rowActions={(i) => (
+                    <>
+                      <IconButton label="So sánh với kho" icon="tim" size="sm" disabled={busy} onClick={() => void moSoSanh(i)} />
+                      {d.status === "received" && can("submission.review") && (
+                        <>
+                          <IconButton label="Đạt" icon="duyet" size="sm" disabled={busy} onClick={() => void cham([i.id], "dat")} />
+                          <IconButton label="Không đạt" icon="tuChoi" size="sm" disabled={busy} onClick={() => void cham([i.id], "khong_dat")} />
+                        </>
+                      )}
+                    </>
+                  )}
                   state={{ empty: { title: "Mục lục trống" } }}
                   maxHeight={360}
                 />
@@ -375,6 +486,45 @@ export default function V4t9() {
       </div>
 
 
+      {chonHoSo && d && (
+        <ChonHoSoDialog
+          projectId={d.projectId}
+          onClose={() => setChonHoSo(false)}
+          onDone={async (ids) => {
+            setChonHoSo(false);
+            await run("thêm hồ sơ", async () => {
+              const r = await subItemsTuHoSo(d.id, ids);
+              toast.success(`Đã thêm ${n(r.length)} hồ sơ vào mục lục nộp.`);
+            });
+          }}
+        />
+      )}
+      {soSanh && (
+        <Dialog open onOpenChange={(o) => !o && setSoSanh(null)} title={`So sánh: ${soSanh.dong.maHoSo}`} size="xl" footer={<Button onClick={() => setSoSanh(null)}>Đóng</Button>}>
+          <p className="mb-3 text-sm text-fg-muted">{soSanh.dong.tieuDe}</p>
+          {soSanh.trongDot.length > 0 && (
+            <Banner tone="danger" className="mb-3" title="Trùng mã trong cùng đợt nộp">
+              Dòng {soSanh.trongDot.map((x) => `#${x.stt}`).join(", ")} có cùng mã — hệ thống đã tự đánh không đạt dòng sau (Điều 24.2).
+            </Banner>
+          )}
+          <h4 className="mb-1 text-sm font-semibold">Hồ sơ đang có trong kho ({n(soSanh.trongKho.length)})</h4>
+          <Table
+            columns={[
+              { key: "khop", header: "", width: 90, cell: (h: SoSanhTrung["trongKho"][number]) => (h.khop === "ma" ? <Badge tone="err">Trùng mã</Badge> : <Badge tone="warn">Cùng tiêu đề</Badge>) },
+              { key: "ma_ho_so", header: "Mã", width: 170, cell: (h: SoSanhTrung["trongKho"][number]) => h.ma_ho_so_tt05 ?? h.ma_ho_so ?? "—" },
+              { key: "tieu_de", header: "Tiêu đề", className: "whitespace-normal" },
+              { key: "ngay", header: "Thời gian", width: 150, cell: (h: SoSanhTrung["trongKho"][number]) => [h.ngay_bat_dau, h.ngay_ket_thuc].filter(Boolean).join(" – ") || "—" },
+              { key: "so_to", header: "Tờ", width: 60, align: "right", cell: (h: SoSanhTrung["trongKho"][number]) => h.so_to ?? "—" },
+              { key: "ten_phong", header: "Phông / THBQ", width: 180, cell: (h: SoSanhTrung["trongKho"][number]) => [h.ten_phong, h.ten_thbq].filter(Boolean).join(" · ") },
+            ]}
+            rows={soSanh.trongKho}
+            getRowId={(h) => h.id}
+            dense
+            state={{ empty: { title: "Không có hồ sơ nào trong kho trùng mã hoặc tiêu đề" } }}
+          />
+          <p className="mt-3 text-xs text-fg-subtle">Nghi trùng thì viên chức quyết định chấm đạt / không đạt; hệ thống không tự từ chối hồ sơ trùng với kho (Điều 24.1).</p>
+        </Dialog>
+      )}
       {dangKy && (
         <DangKyDialog
           projectId={duAn}
@@ -397,6 +547,27 @@ function DangKyDialog({ projectId, onClose, onDone }: { projectId: string | null
   const [step, setStep] = useState(0);
   const [orgName, setOrgName] = useState("");
   const [orgCode, setOrgCode] = useState("");
+  // 0040: danh mục cơ quan nộp lưu của kho; chọn thì tên / mã lấy theo đó.
+  const [coQuans, setCoQuans] = useState<CoQuanNop[]>([]);
+  const [coQuanId, setCoQuanId] = useState("");
+  useEffect(() => {
+    if (!projectId) return;
+    let bo = false;
+    coQuanNopList(projectId)
+      .then((r) => !bo && setCoQuans(r))
+      .catch(() => !bo && setCoQuans([]));
+    return () => {
+      bo = true;
+    };
+  }, [projectId]);
+  const chonCoQuan = (id: string) => {
+    setCoQuanId(id);
+    const c = coQuans.find((x) => x.id === id);
+    if (c) {
+      setOrgName(c.ten);
+      setOrgCode(c.ma);
+    }
+  };
   const [fondCode, setFondCode] = useState("");
   const [summary, setSummary] = useState("");
   const [hanNop, setHanNop] = useState("");
@@ -405,7 +576,7 @@ function DangKyDialog({ projectId, onClose, onDone }: { projectId: string | null
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
-  const body = () => ({ projectId, orgName, orgCode, fondCode, summary: summary.trim() || null, cachThuc: "truc_tuyen" as const, hanNop: hanNop || null, items: items.filter((i) => i.maHoSo.trim() || i.tieuDe.trim()) });
+  const body = () => ({ projectId, coQuanNopId: coQuanId || null, orgName, orgCode, fondCode, summary: summary.trim() || null, cachThuc: "truc_tuyen" as const, hanNop: hanNop || null, items: items.filter((i) => i.maHoSo.trim() || i.tieuDe.trim()) });
   const errs = V4t7(body());
   const step0Ok = orgName.trim() && orgCode.trim() && fondCode.trim();
   const set = (i: number, p: Partial<V4s0>) => setItems((s) => s.map((x, j) => (j === i ? { ...x, ...p } : x)));
@@ -462,11 +633,16 @@ function DangKyDialog({ projectId, onClose, onDone }: { projectId: string | null
       <Stepper className="mb-4" current={step} onSelect={(i) => i < step && setStep(i)} steps={[{ key: "coquan", label: "Cơ quan và phông" }, { key: "mucluc", label: "Mục lục hồ sơ" }]} />
       {step === 0 ? (
         <FormGrid cols={2}>
+          {coQuans.length > 0 && (
+            <Field label="Cơ quan trong danh mục" hint="Chọn thì tên và mã điền theo danh mục; tài khoản của cơ quan sẽ theo dõi được đợt nộp này." className="col-span-2">
+              <Select value={coQuanId} onChange={chonCoQuan} placeholder="— Khai tay —" options={coQuans.map((c) => ({ value: c.id, label: `${c.ma} · ${c.ten}` }))} />
+            </Field>
+          )}
           <Field label="Tên cơ quan, tổ chức nộp" required className="col-span-2">
-            <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} autoFocus />
+            <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} autoFocus disabled={!!coQuanId} />
           </Field>
           <Field label="Mã cơ quan nộp" required>
-            <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} />
+            <Input value={orgCode} onChange={(e) => setOrgCode(e.target.value)} disabled={!!coQuanId} />
           </Field>
           <Field label="Mã phông" required>
             <Input value={fondCode} onChange={(e) => setFondCode(e.target.value)} />
@@ -548,6 +724,69 @@ function DangKyDialog({ projectId, onClose, onDone }: { projectId: string | null
           )}
         </div>
       )}
+    </Dialog>
+  );
+}
+
+// ---------------- 0040 (D04): chọn hồ sơ có sẵn trong hệ thống để nộp cùng hệ thống (Điều 22.4)
+function ChonHoSoDialog({ projectId, onClose, onDone }: { projectId: string; onClose: () => void; onDone: (ids: string[]) => void }) {
+  const [q, setQ] = useState("");
+  const [rows, setRows] = useState<HoSoChon[]>([]);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const tim = async () => {
+    setBusy(true);
+    try {
+      const r = await hoSoTim(projectId, q.trim());
+      setRows(r.rows);
+    } catch (e) {
+      notifyError(e, "tìm hồ sơ");
+    } finally {
+      setBusy(false);
+    }
+  };
+  useEffect(() => {
+    void tim();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tải lần đầu
+  }, []);
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title="Thêm hồ sơ có sẵn vào mục lục nộp"
+      size="xl"
+      footer={
+        <>
+          <span className="self-center text-sm text-fg-muted">{n(sel.size)} hồ sơ đã chọn</span>
+          <Toolbar.Spacer />
+          <Button onClick={onClose}>Huỷ</Button>
+          <Button variant="primary" disabled={sel.size === 0} onClick={() => onDone([...sel])}>
+            Thêm vào mục lục
+          </Button>
+        </>
+      }
+    >
+      <Toolbar className="mb-3">
+        <Input prefix="tim" placeholder="Mã, tiêu đề hồ sơ" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void tim()} className="flex-1" aria-label="Tìm hồ sơ" />
+        <Button loading={busy} onClick={() => void tim()}>
+          Tìm
+        </Button>
+      </Toolbar>
+      <Table
+        columns={[
+          { key: "ma", header: "Mã", width: 170, cell: (h: HoSoChon) => h.ma_ho_so_tt05 ?? h.ma_ho_so ?? "—" },
+          { key: "tieu_de", header: "Tiêu đề", className: "whitespace-normal" },
+          { key: "ngay_ket_thuc", header: "Kết thúc", width: 100, cell: (h: HoSoChon) => h.ngay_ket_thuc ?? "—" },
+          { key: "ten_phong", header: "Phông", width: 160, cell: (h: HoSoChon) => h.ten_phong ?? "" },
+        ]}
+        rows={rows}
+        getRowId={(h) => h.id}
+        dense
+        selection={{ selected: sel, onChange: setSel }}
+        maxHeight={400}
+        state={{ loading: busy && rows.length === 0, empty: { title: "Không có hồ sơ khớp" } }}
+      />
+      <p className="mt-2 text-xs text-fg-subtle">Hồ sơ chọn mang mã hồ sơ hiện có; khi tiếp nhận hệ thống đối chiếu đủ / thiếu theo mục lục.</p>
     </Dialog>
   );
 }

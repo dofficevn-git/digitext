@@ -407,6 +407,7 @@ async fn f_v2(r_2j: &[String]) -> anyhow::Result<()> {
         &r_2m,
         users::Te1 {
             phong_ban_id: None, // bootstrap: tài khoản quản trị không thuộc phòng ban
+            co_quan_nop_id: None,
             username: &username,
             email: None,
             display_name: r_2l.as_deref().unwrap_or(&username),

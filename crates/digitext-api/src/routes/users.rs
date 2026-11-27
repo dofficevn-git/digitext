@@ -34,6 +34,8 @@ pub struct UserDto {
     pub project_id: Option<Uuid>,
     /// Phòng ban (lưu trữ hiện hành, 0031); None = không giới hạn phạm vi.
     pub phong_ban_id: Option<Uuid>,
+    /// Cơ quan nộp lưu (0040): tài khoản của cơ quan ngoài, chỉ thấy đợt nộp của mình.
+    pub co_quan_nop_id: Option<Uuid>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -48,6 +50,7 @@ impl From<User> for UserDto {
             role_code: r_w0.role_code,
             project_id: r_w0.project_id,
             phong_ban_id: r_w0.phong_ban_id,
+            co_quan_nop_id: r_w0.co_quan_nop_id,
             is_active: r_w0.is_active,
             created_at: r_w0.created_at,
         }
@@ -70,6 +73,9 @@ pub struct T3i {
     /// Phòng ban của người dùng (bản Lưu trữ, Điều 19). Chỉ có nghĩa khi tài khoản gắn dự án có phông chứa phòng ban đó.
     #[serde(default)]
     pub phong_ban_id: Option<Uuid>,
+    /// Cơ quan nộp lưu (0040) — tài khoản cho cơ quan ngoài nộp vào lưu trữ lịch sử.
+    #[serde(default)]
+    pub co_quan_nop_id: Option<Uuid>,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,6 +94,11 @@ pub struct Tgt {
     pub phong_ban_id: Option<Uuid>,
     #[serde(default)]
     pub bo_phong_ban: bool,
+    /// Gắn cơ quan nộp lưu (0040); bỏ gắn: `boCoQuanNop: true`.
+    #[serde(default)]
+    pub co_quan_nop_id: Option<Uuid>,
+    #[serde(default)]
+    pub bo_co_quan_nop: bool,
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -175,6 +186,7 @@ async fn f_12g(
         &r_wk.pool,
         users::Te1 {
             phong_ban_id: r_wi.phong_ban_id,
+            co_quan_nop_id: r_wi.co_quan_nop_id,
             username: &r_wi.username,
             email: r_wi.email.as_deref(),
             display_name: &r_wi.display_name,
@@ -258,6 +270,7 @@ async fn f_20i(
             is_active: r_wt.is_active,
             // Đổi phòng ban chỉ do người quản lý tài khoản (không tự đổi) — kiểm ở dưới.
             phong_ban_id: if r_ws && r_wt.bo_phong_ban { Some(None) } else if r_ws { r_wt.phong_ban_id.map(Some) } else { None },
+            co_quan_nop_id: if r_ws && r_wt.bo_co_quan_nop { Some(None) } else if r_ws { r_wt.co_quan_nop_id.map(Some) } else { None },
         },
     )
     .await?

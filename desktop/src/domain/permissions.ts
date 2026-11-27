@@ -486,6 +486,8 @@ const V3z7: Record<V3xt, V3yx> = {
   chuyendoi: "access.view",
   // Cơ quan lưu trữ (TT05): ai xem được dự án thì xem được; sửa cần project.update (màn tự kiểm).
   coquan: "project.view",
+  // Cơ quan nộp lưu (0040): ai xem thu nộp thì xem được; sửa / cấp khoá cần submission.review (màn tự kiểm).
+  coquannop: "submission.view",
 };
 
 export function V3z8(Vk: V3yx[], view: V3xt): boolean {

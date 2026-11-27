@@ -193,6 +193,8 @@ const NAV_LUU_TRU: V46s[] = [
       { id: "nhapgoi", label: "Nhập gói AIP", gate: "nhapgoi", leaf: { kind: "view", view: "nhapgoi" }, keywords: "nhap he thong goi aip sip tt05 dieu 9 khoan 7 tiep nhan" },
       // 27/11/2026: thu nộp vào lưu trữ lịch sử (Điều 20–25) — Digifile có "Thu nộp lưu trữ lịch sử (TT05)"; API bản Lưu trữ nay gắn /submissions.
       { ...mucCon("thunop"), label: "Thu nộp lưu trữ lịch sử" },
+      // 0040 (đợt 6): danh mục cơ quan nộp lưu + tài khoản + khoá API (Digifile: Nộp lưu › Cơ quan nộp lưu).
+      { id: "coquannop", label: "Cơ quan nộp lưu", gate: "coquannop", leaf: { kind: "view", view: "coquannop" }, keywords: "co quan nop luu tai khoan khoa api x-api-key" },
     ],
   },
   // Lưu trữ hiện hành (Điều 19, 26/11/2026): phòng ban lập hồ sơ theo danh mục, nộp vào lưu trữ cơ quan sau 60 ngày.
@@ -212,6 +214,13 @@ const NAV_LUU_TRU: V46s[] = [
       { id: "tiepnhan", label: "Tiếp nhận nộp lưu", gate: "tiepnhan", leaf: { kind: "view", view: "tiepnhan" }, badge: "nopLuu", keywords: "tiep nhan phieu nop luu bien ban giao nhan so nop luu" },
     ],
   },
+  // Đợt 6 (27/11/2026): anh chốt bản Lưu trữ phải đủ như Digifile → cơ quan tự số hoá được: giao nhận giấy, quét / OCR / đưa lên
+  // máy chủ, kiểm tra sản phẩm, ký số, nghiệm thu. API bản Lưu trữ đã gắn đủ route; OCR có hay không là cấu hình máy chủ.
+  nhom("giaonhan"),
+  nhom("sohoa"),
+  nhom("kiemtra"),
+  { ...nhom("kyso"), children: [mucCon("kyso")] },
+  nhom("nghiemthu"),
   {
     id: "tracuu",
     label: "Tra cứu",
@@ -229,8 +238,8 @@ const NAV_LUU_TRU: V46s[] = [
   },
   { id: "kholuutru", label: "Kho lưu trữ", icon: "kho", gate: "khogia", children: [mucCon("khogia"), mucCon("muontra")] },
   // Báo cáo thống kê TT05 (27/11/2026): bản Lưu trữ không có trục thi công nên chỉ hai mục.
-  { id: "baocao", label: "Báo cáo", icon: "baoCao", gate: "report", children: [mucCon("report:tt05"), mucCon("report:muontra")] },
-  { id: "tienich", label: "Tiện ích", icon: "ketXuat", gate: "tienich", children: [mucCon("ti:kiemgoi"), mucCon("ti:pdfa"), mucCon("ti:chuky")] },
+  { id: "baocao", label: "Báo cáo", icon: "baoCao", gate: "report", children: [mucCon("report:tt05"), mucCon("report:muontra"), mucCon("report:sohoa"), mucCon("report:nhanvien"), mucCon("report:chinhly"), mucCon("report:phanmem")] },
+  { ...nhom("tienich"), children: nhom("tienich").children?.filter((c) => c.id !== "khogia" && c.id !== "muontra") },
   // Quản trị: thêm màn Cơ quan lưu trữ (TT05) — Digifile: Cấu hình › Cơ quan lưu trữ (TT05).
   {
     ...nhom("quantri"),

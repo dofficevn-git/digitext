@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41p } from "@/live/useLive";
-import { clDelete, clNextStt, clRemote, clSave, clSyncNow, clTaoVanBanTuOcr, clVanBanList, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
+import { clDelete, clNextStt, clRemote, clSave, clSyncNow, clTaoVanBanTuOcr, clVanBanList, str, DU_PHONG, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
 import { useProject } from "@/state/project";
 import { V460 } from "@/state";
 import { errText, n, SyncBadgeRow } from "./common";
@@ -39,7 +39,7 @@ function VanBanForm({ cat, hoSoId, row, onClose, onSaved }: { cat: ClCatalog; ho
     setBusy(true);
     try {
       const patch: Record<string, unknown> = {};
-      for (const k of ["ho_so_id", "so_thu_tu", "loai_vb", "to_so", "so_trang", "trang_so", "ngon_ngu", "che_do_su_dung", "do_tin_cay", "tinh_trang_vat_ly", ...FIELDS.map((f) => f[0])]) patch[k] = d[k] === "" ? null : d[k];
+      for (const k of ["ho_so_id", "so_thu_tu", "loai_vb", "to_so", "so_trang", "trang_so", "ngon_ngu", "che_do_su_dung", "do_tin_cay", "tinh_trang_vat_ly", "du_phong", "du_phong_trang_thai", "quy_trinh_xu_ly", ...FIELDS.map((f) => f[0])]) patch[k] = d[k] === "" ? null : d[k];
       if (!row && (patch.so_thu_tu === null || patch.so_thu_tu === undefined)) patch.so_thu_tu = await clNextStt(hoSoId);
       const r = await clSave("van_ban", row ? row.id : null, patch);
       if (!r.ok) {
@@ -107,6 +107,20 @@ function VanBanForm({ cat, hoSoId, row, onClose, onSaved }: { cat: ClCatalog; ho
           </Field>
           <Field label="Tình trạng vật lý">
             <Select value={g("tinh_trang_vat_ly")} onChange={(v) => set("tinh_trang_vat_ly", v)} placeholder="Chọn" options={opts(TINH_TRANG_VAT_LY)} />
+          </Field>
+          <Field label="Tình trạng dự phòng" hint="riskRecovery — Phụ lục I" hintAs="tip">
+            <Select
+              value={g("du_phong_trang_thai")}
+              onChange={(v) => {
+                set("du_phong_trang_thai", v);
+                set("du_phong", v === "01");
+              }}
+              placeholder="Chưa rõ"
+              options={opts(DU_PHONG)}
+            />
+          </Field>
+          <Field label="Quy trình xử lý" hint="process — PL I mục 2b: tóm tắt luồng xử lý văn bản" hintAs="tip" className="col-span-2">
+            {inp("quy_trinh_xu_ly")}
           </Field>
         </FormGrid>
         <Field label="Trích yếu nội dung" error={err("trich_yeu")}>

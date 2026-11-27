@@ -24,6 +24,8 @@ pub fn router() -> Router<AppState> {
         .route("/access/{id}", get(get_request))
         .route("/access/{id}/items/{item_id}/review", post(review_item))
         .route("/access/{id}/approve", post(approve_request))
+        .route("/access/{id}/phan-cong", post(phan_cong))
+        .route("/access/{id}/giao-nhan", post(giao_nhan))
         .route("/access/{id}/refuse", post(refuse_request))
         .route("/access/{id}/pay", post(confirm_payment))
         .route("/access/{id}/items/{item_id}/read", get(f_25r))
@@ -61,6 +63,11 @@ pub struct AccessDto {
     pub approved_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// 0040: phân công (F12), duyệt cấp 2 (F04), giao nhận bản sao giấy (F10).
+    pub nguoi_xu_ly: Option<Uuid>,
+    pub cap_2_boi: Option<Uuid>,
+    pub cap_2_at: Option<DateTime<Utc>>,
+    pub giao_nhan: Option<serde_json::Value>,
 }
 impl From<Ta> for AccessDto {
     fn from(r_76: Ta) -> Self {
@@ -81,8 +88,64 @@ impl From<Ta> for AccessDto {
             approved_at: r_76.approved_at,
             created_at: r_76.created_at,
             updated_at: r_76.updated_at,
+            nguoi_xu_ly: r_76.nguoi_xu_ly,
+            cap_2_boi: r_76.cap_2_boi,
+            cap_2_at: r_76.cap_2_at,
+            giao_nhan: r_76.giao_nhan,
         }
     }
+}
+/// Cấp 2 (Điều 36.2): người đứng đầu cơ quan = vai trò gốc Quản lý / Quản trị hệ thống.
+fn la_cap_2(ts: &Ts) -> bool {
+    matches!(ts.user.role, digitext_core::Role::SuperAdmin | digitext_core::Role::Manager)
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhanCongBody {
+    pub user_id: Option<Uuid>,
+}
+/// 0040 (F12): phân công người xử lý yêu cầu.
+async fn phan_cong(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Json(b): Json<PhanCongBody>) -> Result<Json<T7>, ApiError> {
+    ts.require_perm(Permission::AccessReview)?;
+    let r = load_in_scope(&st, &ts, id).await?;
+    if let Some(u) = b.user_id {
+        if digitext_db::users::f_1eg(&st.pool, u).await?.is_none() {
+            return Err(ApiError::bad_request("người được phân công không tồn tại"));
+        }
+    }
+    access::phan_cong(&st.pool, r.id, b.user_id).await?;
+    let r = access::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
+    Ok(Json(detail(&st, r).await?))
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GiaoNhanBody {
+    pub hinh_thuc: String,
+    #[serde(default)]
+    pub dia_chi: Option<String>,
+    #[serde(default)]
+    pub nguoi_nhan: Option<String>,
+    #[serde(default)]
+    pub ngay_giao: Option<String>,
+    #[serde(default)]
+    pub ghi_chu: Option<String>,
+}
+/// 0040 (F10, Điều 43): ghi giao nhận bản sao giấy cho yêu cầu đã duyệt (tại trụ sở / gửi theo địa chỉ).
+async fn giao_nhan(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Json(b): Json<GiaoNhanBody>) -> Result<Json<T7>, ApiError> {
+    ts.require_perm(Permission::AccessReview)?;
+    let r = load_in_scope(&st, &ts, id).await?;
+    if !matches!(b.hinh_thuc.as_str(), "tru_so" | "buu_dien" | "truc_tuyen") {
+        return Err(ApiError::bad_request("hinhThuc nhận 'tru_so' | 'buu_dien' | 'truc_tuyen'"));
+    }
+    let v = serde_json::json!({
+        "hinhThuc": b.hinh_thuc, "diaChi": note_of(&b.dia_chi), "nguoiNhan": note_of(&b.nguoi_nhan), "ngayGiao": note_of(&b.ngay_giao),
+        "ghiChu": note_of(&b.ghi_chu), "nguoiGhi": ts.user.id, "ghiLuc": Utc::now(),
+    });
+    if !access::giao_nhan(&st.pool, r.id, &v).await? {
+        return Err(ApiError::conflict("chỉ ghi giao nhận cho yêu cầu đã duyệt"));
+    }
+    let r = access::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
+    Ok(Json(detail(&st, r).await?))
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -371,7 +434,7 @@ async fn approve_request(
 ) -> Result<Json<T7>, ApiError> {
     r_8a.require_perm(Permission::AccessReview)?;
     let r_8d = load_in_scope(&r_8e, &r_8a, id).await?;
-    let Some(approved) = access::approve(&r_8e.pool, r_8d.id, note_of(&r_8b.note)).await? else {
+    let Some(approved) = access::approve(&r_8e.pool, r_8d.id, note_of(&r_8b.note), la_cap_2(&r_8a), r_8a.user.id).await? else {
         return Err(
             ApiError::conflict(
                 format!(
@@ -381,6 +444,10 @@ async fn approve_request(
             ),
         );
     };
+    if approved.status == "cho_cap_2" {
+        notify_requester(&r_8e, &approved, "Yêu cầu khai thác có tài liệu tiếp cận có điều kiện — đã trình người đứng đầu cơ quan duyệt cấp 2 (Điều 36.2)").await;
+        return Ok(Json(detail(&r_8e, approved).await?));
+    }
     let phi = approved.phi.unwrap_or(0);
     let han = approved
         .han_su_dung

@@ -11,7 +11,7 @@ export interface V4tl {
   phuongThuc: string | null;
   uuTien: string | null;
   nguoiNhan: string | null;
-  status: "submitted" | "approved" | "refused" | "expired";
+  status: "submitted" | "cho_cap_2" | "approved" | "refused" | "expired";
   reviewNote: string | null;
   phi: number | null;
   paidAt: string | null;
@@ -19,7 +19,15 @@ export interface V4tl {
   approvedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 0040: phân công, duyệt cấp 2, giao nhận bản sao giấy. */
+  nguoiXuLy?: string | null;
+  cap2Boi?: string | null;
+  cap2At?: string | null;
+  giaoNhan?: { hinhThuc: string; diaChi?: string | null; nguoiNhan?: string | null; ngayGiao?: string | null; ghiChu?: string | null } | null;
 }
+export const accessPhanCong = (id: string, userId: string | null) => invoke<V4tn>("bc_call", { method: "POST", path: `/access/${id}/phan-cong`, body: { userId } });
+export const accessGiaoNhan = (id: string, b: { hinhThuc: "tru_so" | "buu_dien" | "truc_tuyen"; diaChi?: string | null; nguoiNhan?: string | null; ngayGiao?: string | null; ghiChu?: string | null }) =>
+  invoke<V4tn>("bc_call", { method: "POST", path: `/access/${id}/giao-nhan`, body: b });
 
 export interface V4tm {
   id: string;

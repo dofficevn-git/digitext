@@ -38,14 +38,21 @@ pub async fn bc_get(db: State<'_, Db>, auth: State<'_, AuthState>, path: String)
 #[tauri::command]
 pub async fn bc_download(app: AppHandle, db: State<'_, Db>, auth: State<'_, AuthState>, path: String, default_name: String) -> Result<Option<String>, AppError> {
     hop_le(&path)?;
-    let ext = std::path::Path::new(&default_name).extension().and_then(|e| e.to_str()).map(str::to_lowercase).unwrap_or_default();
-    if !matches!(ext.as_str(), "xlsx" | "pdf") {
+    let mut ext = std::path::Path::new(&default_name).extension().and_then(|e| e.to_str()).map(str::to_lowercase).unwrap_or_default();
+    // Tệp đính kèm thu nộp (0040) có thể là docx / zip / ảnh; các đường khác vẫn chỉ xlsx / pdf.
+    let tep_thu_nop = path.starts_with("/submissions/") && path.contains("/files/");
+    if !tep_thu_nop && !matches!(ext.as_str(), "xlsx" | "pdf") {
         return Err(AppError::validation("Đuôi tệp phải là xlsx hoặc pdf."));
+    }
+    if ext.is_empty() || !ext.chars().all(|c| c.is_ascii_alphanumeric()) {
+        ext = "bin".to_string();
     }
     let perm = if path.starts_with("/bao-cao") {
         Permission::StatsView
     } else if path.starts_with("/chuyen-doi") {
         Permission::AccessView
+    } else if tep_thu_nop {
+        Permission::SubmissionView
     } else {
         Permission::DossierRead
     };
@@ -89,6 +96,21 @@ fn quyen_goi(method: &str, path: &str) -> Option<Permission> {
         Some(if doc { Permission::CatalogRead } else { Permission::CatalogUpdate })
     } else if p.starts_with("/chuyen-doi") {
         Some(Permission::AccessReview)
+    // 0040 (đợt 6): cơ quan nộp lưu, bảng mã TT05, phần mở rộng thu nộp / khai thác, kiểm chuỗi băm nhật ký.
+    } else if p == "/co-quan-nop" || p.starts_with("/co-quan-nop/") {
+        Some(if doc { Permission::SubmissionView } else { Permission::SubmissionReview })
+    } else if p == "/cl/ma-tt05" || p.starts_with("/cl/ma-tt05/") {
+        Some(if doc { Permission::CatalogRead } else { Permission::CatalogUpdate })
+    } else if p.starts_with("/submissions/") && (p.contains("/files") || p.ends_with("/items/tu-ho-so") || p.ends_with("/so-sanh") || p.ends_with("/tong-quan")) {
+        Some(if doc { Permission::SubmissionView } else { Permission::SubmissionCreate })
+    } else if p.starts_with("/access/") && (p.ends_with("/phan-cong") || p.ends_with("/giao-nhan")) {
+        Some(Permission::AccessReview)
+    } else if p.starts_with("/info/") && p.ends_with("/phan-cong") {
+        Some(Permission::AccessReview)
+    } else if p == "/ops/audit/kiem-chuoi" {
+        Some(Permission::BkView)
+    } else if p == "/cl/ho-so" && doc {
+        Some(Permission::DossierRead)
     } else {
         None
     }
@@ -107,6 +129,7 @@ pub async fn bc_call(db: State<'_, Db>, auth: State<'_, AuthState>, method: Stri
             match m.as_str() {
                 "GET" => client::f_1eo::<Value>(&base, &token, &path).await,
                 "PUT" => client::f_24x::<Value>(&base, &token, &path, &body).await,
+                "DELETE" => client::delete_ok(&base, &token, &path).await.map(|_| Value::Null),
                 // Chuyển đổi: kiểm chữ ký + ghép PDF lớn → thời gian dài.
                 _ if chuyen_doi => client::post_long::<Value>(&base, &token, &path, &body).await,
                 _ => client::f_23d::<Value>(&base, &token, &path, &body).await,

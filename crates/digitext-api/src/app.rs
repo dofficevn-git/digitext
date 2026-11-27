@@ -142,6 +142,7 @@ fn f_rv() -> Router<AppState> {
         .merge(crate::routes::bao_cao::router())
         .merge(crate::routes::chuyen_doi::router())
         .merge(crate::routes::co_quan::router())
+        .merge(crate::routes::co_quan_nop::router())
         .merge(crate::routes::changes::router())
         .merge(crate::routes::chinh_ly::router())
         .merge(crate::routes::ingest::router())
@@ -152,10 +153,8 @@ fn f_rv() -> Router<AppState> {
         // 27/11/2026: thu nộp vào lưu trữ lịch sử (Điều 20–25) dùng ở cả hai bản — cơ quan chủ đầu tư là bên nhận.
         .merge(crate::routes::submissions::router())
         .merge(crate::routes::hooks::router());
-    // Bản Lưu trữ (máy chủ cơ quan chủ đầu tư) không gắn các route chỉ dùng khi thi công số hoá.
-    if crate::config::edition_luu_tru() {
-        return chung;
-    }
+    // 27/11/2026 (đợt 6): bản Lưu trữ phục vụ trọn một cơ quan — gắn luôn các route số hoá (giao việc, OCR, đưa lên máy chủ,
+    // ký số, dashboard) để cơ quan tự số hoá được; dịch vụ OCR / Triton có hay không là chuyện cấu hình máy chủ.
     chung
         .merge(crate::routes::progress::router())
         .merge(crate::routes::work::router())

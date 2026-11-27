@@ -12,6 +12,7 @@ use chrono::{DateTime, Utc};
 use digitext_core::Permission;
 use digitext_db::packages::{self, Tdy};
 use digitext_db::submissions::{self, Tdv, Te0, Tm7, Tm8};
+use digitext_db::co_quan_nop;
 use digitext_package::wire::Tq4;
 use serde::{Deserialize, Serialize};
 use std::io::Write as _;
@@ -33,6 +34,14 @@ pub fn router() -> Router<AppState> {
         .route("/submissions/{id}/returned", get(f_29t))
         .route("/submissions/{id}/report", post(f_12f))
         .route("/submissions/{id}/dossier", get(f_175))
+        // 0040 (đợt 6): tệp đính kèm Điều 20 (D02), nộp cùng hệ thống từ hồ sơ có sẵn (D04), 10 thông tin tiếp nhận (D06),
+        // so sánh hồ sơ nghi trùng (D07).
+        .route("/submissions/{id}/files", get(files_list).post(file_them))
+        .route("/submissions/{id}/files/{fid}", get(file_download).delete(file_xoa))
+        .route("/submissions/{id}/items/tu-ho-so", post(items_tu_ho_so))
+        .route("/submissions/{id}/items/{item_id}/so-sanh", get(so_sanh))
+        .route("/submissions/{id}/tong-quan", get(tong_quan))
+        .layer(axum::extract::DefaultBodyLimit::max(40 * 1024 * 1024))
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,7 +58,12 @@ pub struct Tin {
 #[serde(rename_all = "camelCase")]
 pub struct Tio {
     pub project_id: Option<Uuid>,
+    /// 0040: chọn cơ quan trong danh mục cơ quan nộp lưu (tên / mã lấy từ đó); vắng → khai tay org_name / org_code.
+    #[serde(default)]
+    pub co_quan_nop_id: Option<Uuid>,
+    #[serde(default)]
     pub org_name: String,
+    #[serde(default)]
     pub org_code: String,
     #[serde(default)]
     pub da_nop_giay: bool,
@@ -70,6 +84,7 @@ pub struct Tio {
 pub struct SubmissionDto {
     pub id: Uuid,
     pub project_id: Uuid,
+    pub co_quan_nop_id: Option<Uuid>,
     pub ma_yeu_cau: String,
     pub org_name: String,
     pub org_code: String,
@@ -99,6 +114,7 @@ impl From<Tm8> for SubmissionDto {
         SubmissionDto {
             id: r_s7.id,
             project_id: r_s7.project_id,
+            co_quan_nop_id: r_s7.co_quan_nop_id,
             ma_yeu_cau: r_s7.ma_yeu_cau,
             org_name: r_s7.org_name,
             org_code: r_s7.org_code,
@@ -139,6 +155,8 @@ pub struct ItemDto {
     pub ghi_chu: Option<String>,
     pub review_result: String,
     pub review_note: Option<String>,
+    pub ho_so_id: Option<Uuid>,
+    pub trung_trong_dot: bool,
 }
 impl From<Tm7> for ItemDto {
     fn from(r_s8: Tm7) -> Self {
@@ -154,6 +172,8 @@ impl From<Tm7> for ItemDto {
             ghi_chu: r_s8.ghi_chu,
             review_result: r_s8.review_result,
             review_note: r_s8.review_note,
+            ho_so_id: r_s8.ho_so_id,
+            trung_trong_dot: r_s8.trung_trong_dot,
         }
     }
 }
@@ -176,6 +196,12 @@ async fn load_in_scope(r_sf: &AppState, r_sc: &Ts, id: Uuid) -> Result<Tm8, ApiE
     let r_se = f_29a(&r_sf.pool, &r_sc.user).await?;
     if !can_touch_project(r_sc, &r_se, r_sd.project_id) {
         return Err(ApiError::forbidden());
+    }
+    // 0040 (D11): tài khoản cơ quan nộp lưu chỉ chạm đợt nộp của cơ quan mình.
+    if let Some(cq) = r_sc.user.co_quan_nop_id {
+        if r_sd.co_quan_nop_id != Some(cq) {
+            return Err(ApiError::forbidden());
+        }
     }
     Ok(r_sd)
 }
@@ -228,9 +254,9 @@ async fn f_26p(
     if !can_touch_project(&r_sl, &r_ss, project_id) {
         return Err(ApiError::forbidden());
     }
-    if r_sq.org_name.trim().is_empty() || r_sq.org_code.trim().is_empty() {
+    if r_sl.user.co_quan_nop_id.is_none() && r_sq.co_quan_nop_id.is_none() && (r_sq.org_name.trim().is_empty() || r_sq.org_code.trim().is_empty()) {
         return Err(ApiError::bad_request(
-            "thiếu tên/mã cơ quan nộp",
+            "thiếu tên/mã cơ quan nộp (hoặc coQuanNopId)",
         ));
     }
     if r_sq.fond_code.trim().is_empty() {
@@ -264,15 +290,34 @@ async fn f_26p(
             so_trang: r_sn.so_trang,
             muc_do_tiep_can: r_sn.muc_do_tiep_can.as_deref(),
             ghi_chu: r_sn.ghi_chu.as_deref(),
+            ho_so_id: None,
         })
         .collect();
+    // 0040 (D11): tài khoản / khoá API của cơ quan nộp lưu → cơ quan, tên, mã lấy từ danh mục, không tin thân yêu cầu.
+    let cq_row = match r_sl.user.co_quan_nop_id {
+        Some(cq) => Some(co_quan_nop::get(&r_st.pool, cq).await?.ok_or_else(|| ApiError::forbidden())?),
+        None => match r_sq.co_quan_nop_id {
+            Some(cq) => Some(co_quan_nop::get(&r_st.pool, cq).await?.ok_or_else(|| ApiError::bad_request("cơ quan nộp lưu không tồn tại"))?),
+            None => None,
+        },
+    };
+    if let Some(c) = &cq_row {
+        if c.project_id != project_id {
+            return Err(ApiError::bad_request("cơ quan nộp lưu không thuộc kho này"));
+        }
+    }
+    let (org_name, org_code) = match &cq_row {
+        Some(c) => (c.ten.clone(), c.ma.clone()),
+        None => (r_sq.org_name.trim().to_string(), r_sq.org_code.trim().to_string()),
+    };
     let result = submissions::register(
         &r_st.pool,
         Te0 {
             project_id,
             created_by: Some(r_sl.user.id),
-            org_name: r_sq.org_name.trim(),
-            org_code: r_sq.org_code.trim(),
+            co_quan_nop_id: cq_row.as_ref().map(|c| c.id),
+            org_name: &org_name,
+            org_code: &org_code,
             da_nop_giay: r_sq.da_nop_giay,
             summary: note_of(&r_sq.summary),
             fond_code: r_sq.fond_code.trim(),
@@ -347,7 +392,7 @@ async fn f_1oe(
     let offset = r_sw.offset.unwrap_or(0).max(0);
     let r_sy = f_29a(&r_sz.pool, &r_su.user).await?;
     let r_sv = r_su.list_projects(r_sy);
-    let r_sx = submissions::list(&r_sz.pool, r_sv.as_deref(), limit, offset).await?;
+    let r_sx = submissions::list(&r_sz.pool, r_sv.as_deref(), limit, offset, r_su.user.co_quan_nop_id).await?;
     Ok(Json(r_sx.into_iter().map(SubmissionDto::from).collect()))
 }
 async fn f_1ex(
@@ -1048,4 +1093,152 @@ async fn f_175(
         Body::from(bytes),
     )
         .into_response())
+}
+
+// ============================================================ 0040 — đợt 6
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TepBody {
+    pub loai: String,
+    pub filename: String,
+    /// Nội dung tệp mã hoá base64 (tối đa ~25 MB).
+    pub content_base64: String,
+    #[serde(default)]
+    pub ghi_chu: Option<String>,
+}
+fn kho_cua(st: &AppState) -> Result<std::sync::Arc<dyn digitext_storage::ObjectStore>, ApiError> {
+    st.store.clone().ok_or_else(|| ApiError::service_unavailable("máy chủ chưa cấu hình kho tệp"))
+}
+async fn files_list(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>) -> Result<Json<Vec<submissions::TepDinhKem>>, ApiError> {
+    ts.require_perm(Permission::SubmissionView)?;
+    load_in_scope(&st, &ts, id).await?;
+    Ok(Json(submissions::files_list(&st.pool, id).await?))
+}
+/// Tệp đính kèm đợt nộp (Điều 20.3: văn bản đề nghị, lịch sử phông, phương án phân loại, hướng dẫn xác định giá trị; Điều 25: quyết định).
+async fn file_them(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Json(b): Json<TepBody>) -> Result<(StatusCode, Json<submissions::TepDinhKem>), ApiError> {
+    ts.require_perm(Permission::SubmissionCreate)?;
+    let s = load_in_scope(&st, &ts, id).await?;
+    if !submissions::LOAI_TEP.contains(&b.loai.as_str()) {
+        return Err(ApiError::bad_request(format!("loai nhận {}", submissions::LOAI_TEP.join(" | "))));
+    }
+    if s.status == "completed" || s.status == "refused" {
+        return Err(ApiError::conflict("đợt nộp đã kết thúc, không thêm tệp"));
+    }
+    let ten = b.filename.trim();
+    if ten.is_empty() || ten.contains(['/', '\\']) {
+        return Err(ApiError::bad_request("tên tệp không hợp lệ"));
+    }
+    use base64::Engine as _;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(b.content_base64.trim()).map_err(|_| ApiError::bad_request("contentBase64 không hợp lệ"))?;
+    if bytes.is_empty() || bytes.len() > 25 * 1024 * 1024 {
+        return Err(ApiError::bad_request("tệp rỗng hoặc quá 25 MB"));
+    }
+    let fid = Uuid::now_v7();
+    let key = format!("{}-submissions/{}/{}-{}", s.project_id, s.id, fid, ten);
+    kho_cua(&st)?.put(&key, &bytes).await.map_err(|e| {
+        tracing::error!(error = %e, "PUT tệp đính kèm thu nộp lỗi");
+        ApiError::internal()
+    })?;
+    let b3 = blake3::hash(&bytes).to_hex().to_string();
+    let row = submissions::file_them(&st.pool, fid, s.id, &b.loai, ten, &key, bytes.len() as i64, &b3, note_of(&b.ghi_chu), ts.user.id).await?;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+async fn file_download(State(st): State<AppState>, ts: Ts, Path((id, fid)): Path<(Uuid, Uuid)>) -> Result<Response, ApiError> {
+    ts.require_perm(Permission::SubmissionView)?;
+    load_in_scope(&st, &ts, id).await?;
+    let f = submissions::file_get(&st.pool, fid).await?.filter(|f| f.submission_id == id).ok_or_else(ApiError::not_found)?;
+    let bytes = kho_cua(&st)?.get(&f.storage_key).await.map_err(|e| {
+        tracing::error!(error = %e, "GET tệp đính kèm thu nộp lỗi");
+        ApiError::internal()
+    })?.ok_or_else(ApiError::not_found)?;
+    let ten = f.filename.replace('"', "");
+    Ok((
+        [
+            (header::CONTENT_TYPE, "application/octet-stream".to_string()),
+            (header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", ten.chars().map(|c| if c.is_ascii() && c != '"' { c } else { '_' }).collect::<String>())),
+        ],
+        Body::from(bytes),
+    )
+        .into_response())
+}
+async fn file_xoa(State(st): State<AppState>, ts: Ts, Path((id, fid)): Path<(Uuid, Uuid)>) -> Result<StatusCode, ApiError> {
+    ts.require_perm(Permission::SubmissionCreate)?;
+    let s = load_in_scope(&st, &ts, id).await?;
+    if !matches!(s.status.as_str(), "registered" | "confirmed") {
+        return Err(ApiError::conflict("chỉ xoá tệp khi đợt nộp còn đăng ký / đã xác nhận"));
+    }
+    let f = submissions::file_get(&st.pool, fid).await?.filter(|f| f.submission_id == id).ok_or_else(ApiError::not_found)?;
+    if let Ok(k) = kho_cua(&st) {
+        let _ = k.delete(&f.storage_key).await;
+    }
+    submissions::file_xoa(&st.pool, fid).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TuHoSoBody {
+    pub ho_so_ids: Vec<Uuid>,
+}
+/// Nộp cùng hệ thống (Điều 22.4): chọn hồ sơ đang có trong kho → thêm vào mục lục nộp, dòng mang ho_so_id để đối chiếu đủ / thiếu.
+async fn items_tu_ho_so(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Json(b): Json<TuHoSoBody>) -> Result<Json<Vec<ItemDto>>, ApiError> {
+    ts.require_perm(Permission::SubmissionCreate)?;
+    let s = load_in_scope(&st, &ts, id).await?;
+    if !matches!(s.status.as_str(), "registered" | "confirmed") {
+        return Err(ApiError::conflict("chỉ thêm hồ sơ khi đợt nộp còn đăng ký / đã xác nhận"));
+    }
+    if b.ho_so_ids.is_empty() || b.ho_so_ids.len() > 2000 {
+        return Err(ApiError::bad_request("hoSoIds cần 1–2000 hồ sơ"));
+    }
+    let rows = submissions::ho_so_de_nop(&st.pool, s.project_id, &b.ho_so_ids).await?;
+    if rows.len() != b.ho_so_ids.len() {
+        return Err(ApiError::bad_request("có hồ sơ không thuộc kho này hoặc đã xoá"));
+    }
+    // Phạm vi phông (0038) với người bị giới hạn: mọi hồ sơ chọn phải thuộc phông được cấp.
+    if let Some(sc) = crate::routes::chinh_ly::pham_vi_phong(&st, &ts, s.project_id).await? {
+        for (hid, ..) in &rows {
+            let ph: Option<Uuid> = sqlx::query_scalar("SELECT phong_id FROM cl_ho_so WHERE id = $1").bind(hid).fetch_optional(&st.pool).await?;
+            if !ph.map(|p| sc.contains(&p)).unwrap_or(false) {
+                return Err(ApiError::forbidden());
+            }
+        }
+    }
+    let owned: Vec<(String, String, Option<String>, Option<String>, Option<i32>, Option<String>, Uuid)> = rows
+        .into_iter()
+        .map(|(hid, ma, td, bd, kt, so_to, cd)| (ma.unwrap_or_else(|| hid.to_string()), td, bd, kt, so_to.and_then(|s| s.trim().parse::<i32>().ok()), cd, hid))
+        .collect();
+    let items: Vec<Tdv<'_>> = owned
+        .iter()
+        .map(|(ma, td, bd, kt, so_trang, cd, hid)| Tdv {
+            ma_ho_so: ma.as_str(),
+            tieu_de: td.as_str(),
+            thoi_gian_bat_dau: bd.as_deref(),
+            thoi_gian_ket_thuc: kt.as_deref(),
+            so_trang: *so_trang,
+            muc_do_tiep_can: cd.as_deref(),
+            ghi_chu: None,
+            ho_so_id: Some(*hid),
+        })
+        .collect();
+    let out = submissions::them_items(&st.pool, s.id, &items).await?;
+    Ok(Json(out.into_iter().map(ItemDto::from).collect()))
+}
+/// So sánh một dòng mục lục nộp với hồ sơ đang có trong kho (Điều 24.1: nghi trùng → viên chức quyết định).
+async fn so_sanh(State(st): State<AppState>, ts: Ts, Path((id, item_id)): Path<(Uuid, Uuid)>) -> Result<Json<serde_json::Value>, ApiError> {
+    ts.require_perm(Permission::SubmissionView)?;
+    let s = load_in_scope(&st, &ts, id).await?;
+    let item = submissions::items(&st.pool, id).await?.into_iter().find(|i| i.id == item_id).ok_or_else(ApiError::not_found)?;
+    let trong_kho = submissions::so_sanh(&st.pool, s.project_id, &item).await?;
+    let trong_dot: Vec<ItemDto> = submissions::items(&st.pool, id)
+        .await?
+        .into_iter()
+        .filter(|i| i.id != item_id && i.ma_ho_so.trim().eq_ignore_ascii_case(item.ma_ho_so.trim()))
+        .map(ItemDto::from)
+        .collect();
+    Ok(Json(serde_json::json!({ "dong": ItemDto::from(item), "trongKho": trong_kho, "trongDot": trong_dot })))
+}
+/// 10 thông tin tiếp nhận (Điều 23).
+async fn tong_quan(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>) -> Result<Json<serde_json::Value>, ApiError> {
+    ts.require_perm(Permission::SubmissionView)?;
+    load_in_scope(&st, &ts, id).await?;
+    Ok(Json(submissions::tong_quan(&st.pool, id).await?.ok_or_else(ApiError::not_found)?))
 }

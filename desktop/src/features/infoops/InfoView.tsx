@@ -5,7 +5,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
-import { V4ut, V4uv, V4ux, V4uy, type V4us, type V4uw } from "@/api/infoops";
+import { infoPhanCong, V4ut, V4uv, V4ux, V4uy, type V4us, type V4uw } from "@/api/infoops";
+import { V4ac, type V4a8 } from "@/api/users";
 import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { V3z9 } from "@/domain/permissions";
@@ -67,6 +68,18 @@ export default function V4vc() {
   const [statusF, setStatusF] = useState("");
   const [moi, setMoi] = useState(false);
   const [busy, setBusy] = useState(false);
+  // 0040 (F12): phân công người xử lý.
+  const [nguoiDung, setNguoiDung] = useState<V4a8[]>([]);
+  useEffect(() => {
+    if (!canReview || !isTauri()) return;
+    let bo = false;
+    V4ac(duAn ?? null)
+      .then((u) => !bo && setNguoiDung(u.filter((x) => x.isActive)))
+      .catch(() => !bo && setNguoiDung([]));
+    return () => {
+      bo = true;
+    };
+  }, [canReview, duAn]);
 
   const load = useCallback(() => V4ut(), []);
   const { data: list, error, loading, refreshing, reload } = V41t(load, { topics: ["info"], enabled: isTauri() });
@@ -207,6 +220,32 @@ export default function V4vc() {
                 {d.bienTap && <><dt className="text-fg-subtle">Biên tập</dt><dd>{d.bienTap}</dd></>}
                 {d.reviewNote && d.status !== "refused" && <><dt className="text-fg-subtle">Ghi chú</dt><dd>{d.reviewNote}</dd></>}
                 {d.fulfilledAt && <><dt className="text-fg-subtle">Trả kết quả</dt><dd>{ngay(d.fulfilledAt)}</dd></>}
+                {canReview && (
+                  <>
+                    <dt className="text-fg-subtle">Người xử lý</dt>
+                    <dd>
+                      <Select
+                        size="sm"
+                        value={d.nguoiXuLy ?? ""}
+                        onChange={(v) => {
+                          setBusy(true);
+                          infoPhanCong(d.id, v || null)
+                            .then(() => {
+                              toast.success(v ? "Đã phân công." : "Đã bỏ phân công.");
+                              reload();
+                            })
+                            .catch((e) => notifyError(e, "phân công"))
+                            .finally(() => setBusy(false));
+                        }}
+                        placeholder="— Chưa phân công —"
+                        options={nguoiDung.map((u) => ({ value: u.id, label: u.displayName }))}
+                        className="w-64"
+                        aria-label="Phân công người xử lý"
+                        disabled={busy}
+                      />
+                    </dd>
+                  </>
+                )}
               </dl>
               <Toolbar>
                 {canReview && d.status === "submitted" && (

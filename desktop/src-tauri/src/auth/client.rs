@@ -283,6 +283,14 @@ pub async fn f_23d<T: serde::de::DeserializeOwned>(
     )
     .await
 }
+/// DELETE (0040): 2xx không thân → Ok(()); lỗi đi qua `parse` để lấy thông điệp máy chủ.
+pub async fn delete_ok(base: &str, token: &str, path: &str) -> Result<(), ClientError> {
+    let r = http().delete(api(base, path)).bearer_auth(token).send().await;
+    match r {
+        Ok(resp) if resp.status().is_success() => Ok(()),
+        other => parse::<serde_json::Value>(other).await.map(|_| ()),
+    }
+}
 /// POST cho các lệnh "toàn bộ" (OCR / PDF 2 lớp / bóc tách / ghép lại): máy chủ có thể mất
 /// hàng chục giây với vài chục nghìn tài liệu — không dùng hạn 15 s mặc định.
 pub const LONG_POST_TIMEOUT: Duration = Duration::from_secs(600);

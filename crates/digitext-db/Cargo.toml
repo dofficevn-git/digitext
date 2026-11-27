@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 digitext-core = { path = "../digitext-core" }
+blake3 = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

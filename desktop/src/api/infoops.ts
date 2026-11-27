@@ -20,7 +20,10 @@ export interface V4us {
   fulfilledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 0040: người được phân công xử lý. */
+  nguoiXuLy?: string | null;
 }
+export const infoPhanCong = (id: string, userId: string | null) => invoke<V4us>("bc_call", { method: "POST", path: `/info/${id}/phan-cong`, body: { userId } });
 
 export function V4ut(): Promise<V4us[]> {
   return invoke<V4us[]>("info_list");

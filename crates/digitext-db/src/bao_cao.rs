@@ -256,7 +256,12 @@ pub async fn khai_thac_yeu_cau(pool: &PgPool, b: &BoLoc) -> sqlx::Result<Vec<Val
                   (SELECT count(*) FROM access_request_items i WHERE i.request_id = ANY(array_agg(r.id)) AND i.deleted_at IS NULL) AS so_tai_lieu, \
                   (SELECT count(*) FROM access_request_items i WHERE i.request_id = ANY(array_agg(r.id)) AND i.deleted_at IS NULL AND i.verdict = 'duyet') AS tl_duyet, \
                   (SELECT count(*) FROM access_request_items i WHERE i.request_id = ANY(array_agg(r.id)) AND i.deleted_at IS NULL AND i.verdict = 'tu_choi') AS tl_tu_choi, \
-                  COALESCE(sum(r.phi), 0) AS phi, COALESCE(sum(r.phi) FILTER (WHERE r.paid_at IS NOT NULL), 0) AS phi_da_thu \
+                  COALESCE(sum(r.phi), 0) AS phi, COALESCE(sum(r.phi) FILTER (WHERE r.paid_at IS NOT NULL), 0) AS phi_da_thu, \
+                  count(*) FILTER (WHERE r.approved_at IS NOT NULL AND r.approved_at <= r.created_at + make_interval(days => CASE WHEN r.kind = 'doc' THEN 1 ELSE 7 END)) AS trong_han, \
+                  count(*) FILTER (WHERE (r.approved_at IS NOT NULL AND r.approved_at > r.created_at + make_interval(days => CASE WHEN r.kind = 'doc' THEN 1 ELSE 7 END)) \
+                                      OR (r.status IN ('submitted', 'cho_cap_2') AND now() > r.created_at + make_interval(days => CASE WHEN r.kind = 'doc' THEN 1 ELSE 7 END))) AS qua_han, \
+                  round(100.0 * count(*) FILTER (WHERE r.approved_at IS NOT NULL AND r.approved_at <= r.created_at + make_interval(days => CASE WHEN r.kind = 'doc' THEN 1 ELSE 7 END)) \
+                        / NULLIF(count(*) FILTER (WHERE r.approved_at IS NOT NULL), 0), 1) AS pct_dung_han \
            FROM access_requests r WHERE r.project_id = $1 AND ($2::uuid IS NULL OR true) AND ($5::uuid[] IS NULL OR true) \
              AND ($3::timestamptz IS NULL OR r.created_at >= $3) AND ($4::timestamptz IS NULL OR r.created_at < $4) \
            GROUP BY r.kind ORDER BY r.kind) x";

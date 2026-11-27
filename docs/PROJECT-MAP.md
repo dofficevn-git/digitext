@@ -484,6 +484,12 @@ Bản 0.17.1 (10/2026) làm lại toàn bộ giao diện trên một bộ thành
   `submissions::router()` chuyển vào khối chung của `app.rs`), `donggoi` ("Gói tin SIP/AIP/DIP"), `bienban`, `ti:chuky`, màn mới
   `settings/CoQuanView` (view `coquan`, gate `project.view`). Digifile còn mà DigiText chưa có: thư viện văn bản pháp lý, danh mục cơ
   quan nộp lưu, kho lưu trữ cá nhân (xem `KE-HOACH-BAN-LUU-TRU.md` GĐ11).
+  **GĐ12 Đợt 6 (27/11, 0040, desktop 0.25.26):** `digitext-db::{co_quan_nop, ma_tt05}`, `routes/{co_quan_nop, chinh_ly/ma_tt05}`,
+  `extract.rs` nhận `X-Api-Key` (khoá → cơ quan nộp → tài khoản đại diện), `submissions` thêm files / tu-ho-so / so-sanh / tong-quan +
+  phạm vi `users.co_quan_nop_id`, `access` thêm `cho_cap_2` / phan-cong / giao-nhan, `info` phan-cong, `audit::append` chuỗi băm BLAKE3 +
+  `ops/audit/kiem-chuoi`, view `cl_ho_so_v` thêm `ma_ho_so_tt05` / `ma_ho_so_giay_tt05`, cột dự phòng / gói tài liệu rời / quy trình xử lý;
+  desktop: `submission/CoQuanNopView` (view `coquannop`), `chinhly/MaTt05Tab`, `api/{coQuanNop,maTt05}.ts`, Tauri `bc_call` thêm DELETE +
+  whitelist đường mới; `NAV_LUU_TRU` thêm nhóm số hoá; `app.rs` bỏ cổng edition. Kịch bản `dev/luutru/thu-dot-6.ps1`.
   Mô tả cũ bên dưới giữ để tra cứu vị trí tệp:
   Quản trị có thêm `users/RolesView` (vai trò và bộ quyền, 22/10/2026) ·
   Tổng quan (`home`: một màn, ba góc nhìn theo vai trò — `StaffDashboard` nhân viên, `ProjectDashboard` một dự án,

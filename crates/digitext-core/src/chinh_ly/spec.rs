@@ -198,6 +198,8 @@ pub const HO_SO_COLS: &[&str] = &[
     "ct_so_to_bang_chu", "ct_danh_so_tu", "ct_den_so", "ct_so_trung", "ct_so_khuyet", "ct_so_muc_luc_vb",
     "ct_so_muc_luc_vb_bang_chu", "ct_dac_diem_tai_lieu", "ct_dia_danh", "ct_ngay", "ct_thang", "ct_nam",
     "ct_nguoi_lap_hs", "ct_phan_bo_sung",
+    // 0040 (27/11/2026): dự phòng (riskRecovery / riskRecoveryStatus), gói tài liệu rời lẻ (AIP_tailieu, Digifile B09).
+    "du_phong", "du_phong_trang_thai", "la_goi_tai_lieu", "ma_goi",
 ];
 
 pub const VAN_BAN_COLS: &[&str] = &[
@@ -206,6 +208,8 @@ pub const VAN_BAN_COLS: &[&str] = &[
     "tinh_trang_vat_ly", "tai_lieu_so", "tu_khoa", "ky_hieu_thong_tin", "ghi_chu",
     // 0023 (2/11/2026): văn bản máy tạo từ OCR — nguon = 'ocr' | null; duyet_luc / duyet_boi = người soát xác nhận.
     "nguon", "duyet_luc", "duyet_boi",
+    // 0040: dự phòng + quy trình xử lý (process — PL I mục 2b).
+    "du_phong", "du_phong_trang_thai", "quy_trinh_xu_ly",
 ];
 
 /// Tên bảng sync (kể cả lịch sử) theo thứ tự cha → con, dùng cho pull.

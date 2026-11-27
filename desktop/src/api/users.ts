@@ -13,6 +13,8 @@ export interface V4a8 {
   roleCode?: string | null;
   projectId: string | null;
   phongBanId?: string | null;
+  /** 0040: cơ quan nộp lưu (tài khoản của cơ quan ngoài). */
+  coQuanNopId?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -37,6 +39,7 @@ export interface V4aa {
   roleCode?: string | null;
   projectId?: string | null;
   phongBanId?: string | null;
+  coQuanNopId?: string | null;
 }
 
 export interface V4ab {
@@ -48,6 +51,9 @@ export interface V4ab {
   /** Gắn phòng ban (0031); `boPhongBan` gỡ về không phòng ban. */
   phongBanId?: string | null;
   boPhongBan?: boolean;
+  /** Gắn cơ quan nộp lưu (0040); `boCoQuanNop` gỡ. */
+  coQuanNopId?: string | null;
+  boCoQuanNop?: boolean;
 }
 
 export function V4ac(Vpn?: string | null): Promise<V4a8[]> {

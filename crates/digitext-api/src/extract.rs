@@ -121,16 +121,35 @@ impl FromRequestParts<AppState> for Ts {
         r_4e: &mut Parts,
         r_4g: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let r_4h = r_4e
-            .headers
-            .get(AUTHORIZATION)
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.strip_prefix("Bearer "))
-            .ok_or_else(ApiError::unauthorized)?;
-        let claims = r_4g
-            .keys
-            .decode(r_4h)
-            .map_err(|_| ApiError::unauthorized())?;
+        // 0040 (Digifile D12): hệ thống của cơ quan nộp lưu gọi bằng `X-Api-Key` thay token — khoá tra ra cơ quan, mang danh tính
+        // tài khoản đại diện của cơ quan đó (users.co_quan_nop_id); mọi kiểm quyền / phạm vi phía sau như người dùng thường.
+        let bearer = r_4e.headers.get(AUTHORIZATION).and_then(|v| v.to_str().ok()).and_then(|v| v.strip_prefix("Bearer "));
+        let claims = match bearer {
+            Some(r_4h) => r_4g.keys.decode(r_4h).map_err(|_| ApiError::unauthorized())?,
+            None => {
+                let key = r_4e.headers.get("x-api-key").and_then(|v| v.to_str().ok()).map(str::trim).filter(|k| !k.is_empty()).ok_or_else(ApiError::unauthorized)?;
+                let hash = crate::routes::co_quan_nop::bam_api_key(key);
+                let (_cq, _pid, uid) = digitext_db::co_quan_nop::theo_api_key(&r_4g.pool, &hash).await?.ok_or_else(ApiError::unauthorized)?;
+                let uid = uid.ok_or_else(|| ApiError::revoked(StatusCode::UNAUTHORIZED))?;
+                let u = digitext_db::users::f_1eg(&r_4g.pool, uid).await?.ok_or_else(|| ApiError::revoked(StatusCode::UNAUTHORIZED))?;
+                let now = chrono::Utc::now().timestamp();
+                T2s {
+                    sub: u.id,
+                    username: u.username.clone(),
+                    role: u.role,
+                    project_id: u.project_id,
+                    device_id: None,
+                    tv: u.token_version,
+                    purpose: Purpose::Access,
+                    iat: now,
+                    exp: now + 3600,
+                    offline_expiry: None,
+                    perm_grants: Vec::new(),
+                    perm_denies: Vec::new(),
+                    perms: Vec::new(),
+                }
+            }
+        };
         if claims.purpose != Purpose::Access {
             return Err(ApiError::unauthorized());
         }

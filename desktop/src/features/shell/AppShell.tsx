@@ -45,6 +45,7 @@ import TiepNhanView from "@/features/luutru/TiepNhanView";
 import DanhMucHoSoView from "@/features/luutru/DanhMucHoSoView";
 import SoChuyenDoiView from "@/features/luutru/SoChuyenDoiView";
 import CoQuanView from "@/features/settings/CoQuanView";
+import CoQuanNopView from "@/features/submission/CoQuanNopView";
 import { LUU_TRU, V3wu } from "@/config";
 import { VIEW_CUA_BAN } from "@/features/shell/navTree";
 
@@ -101,6 +102,7 @@ export default function V4wx() {
         {V382 && view === "danhmuc" && <DanhMucHoSoView />}
         {V382 && view === "chuyendoi" && <SoChuyenDoiView />}
         {V382 && view === "coquan" && <CoQuanView />}
+        {V382 && view === "coquannop" && <CoQuanNopView />}
       </main>
 
       <V47t />

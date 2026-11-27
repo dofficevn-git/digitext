@@ -11,9 +11,19 @@ use digitext_core::Permission;
 use digitext_db::ops::{self, Tdr};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+#[derive(Debug, Deserialize)]
+pub struct ChuoiQ {
+    pub limit: Option<i64>,
+}
+/// 0040 (H08): kiểm chuỗi băm nhật ký — trả dòng đầu tiên bị sửa / chen / xoá nếu có.
+async fn kiem_chuoi_audit(State(st): State<AppState>, ts: Ts, Query(q): Query<ChuoiQ>) -> Result<Json<digitext_db::audit::KetQuaChuoi>, ApiError> {
+    ts.require_perm(Permission::BkView)?;
+    Ok(Json(digitext_db::audit::kiem_chuoi(&st.pool, q.limit.unwrap_or(200_000).clamp(1, 2_000_000)).await?))
+}
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/ops/integrity", get(f_1ik))
+        .route("/ops/audit/kiem-chuoi", get(kiem_chuoi_audit))
         .route("/ops/integrity/run", post(f_1il))
         .route("/ops/backups", get(f_1n6).post(f_27y))
 }

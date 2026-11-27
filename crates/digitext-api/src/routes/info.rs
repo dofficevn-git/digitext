@@ -19,6 +19,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/info", get(list_requests).post(create_request))
         .route("/info/{id}", get(get_request))
+        .route("/info/{id}/phan-cong", post(phan_cong))
         .route("/info/{id}/approve", post(approve_request))
         .route("/info/{id}/refuse", post(refuse_request))
         .route("/info/{id}/pay", post(confirm_payment))
@@ -55,6 +56,7 @@ pub struct InfoDto {
     pub fulfilled_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub nguoi_xu_ly: Option<Uuid>,
 }
 impl From<T9v> for InfoDto {
     fn from(r_i8: T9v) -> Self {
@@ -76,8 +78,27 @@ impl From<T9v> for InfoDto {
             fulfilled_at: r_i8.fulfilled_at,
             created_at: r_i8.created_at,
             updated_at: r_i8.updated_at,
+            nguoi_xu_ly: r_i8.nguoi_xu_ly,
         }
     }
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PhanCongBody {
+    pub user_id: Option<Uuid>,
+}
+/// 0040 (F12): phân công người xử lý đề nghị cung cấp thông tin.
+async fn phan_cong(State(st): State<AppState>, ts: Ts, Path(id): Path<Uuid>, Json(b): Json<PhanCongBody>) -> Result<Json<InfoDto>, ApiError> {
+    ts.require_perm(Permission::AccessReview)?;
+    let r = load_in_scope(&st, &ts, id).await?;
+    if let Some(u) = b.user_id {
+        if digitext_db::users::f_1eg(&st.pool, u).await?.is_none() {
+            return Err(ApiError::bad_request("người được phân công không tồn tại"));
+        }
+    }
+    digitext_db::info::phan_cong(&st.pool, r.id, b.user_id).await?;
+    let r = digitext_db::info::get(&st.pool, id).await?.ok_or_else(ApiError::not_found)?;
+    Ok(Json(r.into()))
 }
 fn can_touch_project(r_i9: &Ts, r_ib: &Scope, r_ia: Uuid) -> bool {
     r_i9.can_touch_project(r_ib, r_ia)

@@ -2,7 +2,8 @@
 // Hộp thoại hồ sơ tạm (đủ trường: mô tả + TT05 + chứng từ kết thúc). Ghi vào bản sao, offline được.
 
 import { useEffect, useMemo, useState } from "react";
-import { clRemoteSave, clSave, str, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
+import { clRemoteSave, clSave, str, DU_PHONG, TIEP_CAN, TIN_CAY, TINH_TRANG_VAT_LY, type ClCatalog, type ClLocalErr, type ClRow } from "@/api/chinhly";
+import { maTt05List, tuyChon, type MaTt05 } from "@/api/maTt05";
 import { dmHieuLuc, type DongHieuLuc } from "@/api/luutru";
 import { hoSoBiKhoa } from "@/features/luutru/luuTruFlow";
 import { LUU_TRU } from "@/config";
@@ -53,6 +54,18 @@ export default function HoSoForm({ cat, phongId, row, duAn, offline, onSaved, on
   const [errs, setErrs] = useState<ClLocalErr[]>([]);
   const [busy, setBusy] = useState(false);
   const [moCt, setMoCt] = useState(false);
+  // Bảng mã TT05 của máy chủ (0040); ngoại tuyến hoặc lỗi → hằng số chuẩn.
+  const [maTt05, setMaTt05] = useState<MaTt05[] | null>(null);
+  useEffect(() => {
+    if (offline || !duAn) return;
+    let bo = false;
+    maTt05List(duAn)
+      .then((r) => !bo && setMaTt05(r.rows))
+      .catch(() => !bo && setMaTt05(null));
+    return () => {
+      bo = true;
+    };
+  }, [duAn, offline]);
   const set = (k: string, v: unknown) => setD((p) => ({ ...p, [k]: v }));
   const g = (k: string) => (d[k] === null || d[k] === undefined ? "" : String(d[k]));
   const err = (k: string) => errs.find((e) => e.field === k)?.message;
@@ -90,7 +103,7 @@ export default function HoSoForm({ cat, phongId, row, duAn, offline, onSaved, on
     setErrs([]);
     try {
       const patch: Record<string, unknown> = {};
-      const keys = new Set<string>(["phong_id", "phong_ban_id", "mang_id", "thbq_id", "tieu_de", "trung_thua", "che_do_su_dung", "tinh_trang_vat_ly", "muc_do_tin_cay", "ghi_chu", ...CO_BAN.map((c) => c[0]), ...TT05.map((c) => c[0]), ...CT.map((c) => c[0])]);
+      const keys = new Set<string>(["phong_id", "phong_ban_id", "mang_id", "thbq_id", "tieu_de", "trung_thua", "che_do_su_dung", "tinh_trang_vat_ly", "muc_do_tin_cay", "ghi_chu", "du_phong", "du_phong_trang_thai", "la_goi_tai_lieu", "ma_goi", ...CO_BAN.map((c) => c[0]), ...TT05.map((c) => c[0]), ...CT.map((c) => c[0])]);
       for (const k of keys) {
         const v = d[k];
         patch[k] = v === "" ? null : v;
@@ -131,6 +144,7 @@ export default function HoSoForm({ cat, phongId, row, duAn, offline, onSaved, on
         <span className="flex items-center gap-2">
           {row ? `Sửa hồ sơ số tạm ${str(row, "so_tam")}` : "Thêm hồ sơ tạm"}
           {row && str(row, "ho_so_so") && <Badge tone="info">Đã đánh số {str(row, "ho_so_so")}</Badge>}
+          {row && str(row, "ma_ho_so_tt05") && <Badge tone="gray">{str(row, "ma_ho_so_tt05")}</Badge>}
         </span>
       }
       footer={
@@ -202,17 +216,36 @@ export default function HoSoForm({ cat, phongId, row, duAn, offline, onSaved, on
             </Field>
           ))}
           <Field label="Chế độ sử dụng">
-            <UiSelect value={g("che_do_su_dung")} onChange={(v) => set("che_do_su_dung", v)} placeholder="Chọn" options={opts(TIEP_CAN)} />
+            <UiSelect value={g("che_do_su_dung")} onChange={(v) => set("che_do_su_dung", v)} placeholder="Chọn" options={opts(tuyChon(maTt05, "che_do_su_dung", TIEP_CAN))} />
           </Field>
           <Field label="Tình trạng vật lý">
-            <UiSelect value={g("tinh_trang_vat_ly")} onChange={(v) => set("tinh_trang_vat_ly", v)} placeholder="Chọn" options={opts(TINH_TRANG_VAT_LY)} />
+            <UiSelect value={g("tinh_trang_vat_ly")} onChange={(v) => set("tinh_trang_vat_ly", v)} placeholder="Chọn" options={opts(tuyChon(maTt05, "tinh_trang_vat_ly", TINH_TRANG_VAT_LY))} />
           </Field>
           <Field label="Mức độ tin cậy">
-            <UiSelect value={g("muc_do_tin_cay")} onChange={(v) => set("muc_do_tin_cay", v)} placeholder="Chọn" options={opts(TIN_CAY)} />
+            <UiSelect value={g("muc_do_tin_cay")} onChange={(v) => set("muc_do_tin_cay", v)} placeholder="Chọn" options={opts(tuyChon(maTt05, "muc_do_tin_cay", TIN_CAY))} />
+          </Field>
+          <Field label="Tình trạng dự phòng" hint="riskRecovery — Phụ lục I" hintAs="tip">
+            <UiSelect
+              value={g("du_phong_trang_thai")}
+              onChange={(v) => {
+                set("du_phong_trang_thai", v);
+                set("du_phong", v === "01");
+              }}
+              placeholder="Chưa rõ"
+              options={opts(tuyChon(maTt05, "tinh_trang_du_phong", DU_PHONG))}
+            />
           </Field>
           <Field label="Hồ sơ trùng thừa (loại)" inline className="self-end">
             <Checkbox checked={!!d.trung_thua} onChange={(v) => set("trung_thua", v)} />
           </Field>
+          <Field label="Gói tài liệu rời lẻ" inline className="self-end" hint="Tài liệu chưa lập hồ sơ, đóng gói AIP_tailieu (Điều 17.2)" hintAs="tip">
+            <Checkbox checked={!!d.la_goi_tai_lieu} onChange={(v) => set("la_goi_tai_lieu", v)} />
+          </Field>
+          {!!d.la_goi_tai_lieu && (
+            <Field label="Mã gói tài liệu" hint="Mã CQ.Năm.Lần nộp.STT gói — Phụ lục II" hintAs="tip" error={err("ma_goi")}>
+              {inp("ma_goi")}
+            </Field>
+          )}
           {TT05.map(([k, l]) => (
             <Field key={k} label={l} error={err(k)}>
               {inp(k)}

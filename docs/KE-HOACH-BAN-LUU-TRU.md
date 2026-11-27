@@ -333,6 +333,32 @@ Cấu hình hệ thống, Người dùng / vai trò.
 hồ sơ đang làm của từng người trước khi vào phòng ban — DigiText chỉ phân theo phòng ban + người lập); cổng độc giả web, ảnh / ghi âm,
 email / SMS (đã ghi "để sau").
 
+### GĐ12 — Đợt 6: "làm luôn cho đủ" theo đối chiếu 94 hạng mục Digifile (27/11/2026, desktop 0.25.26, migration 0040)
+
+Anh bảo "làm luôn cho đủ" sau bảng `docs/DOI-CHIEU-DIGIFILE-94.md`. Đã làm (nhóm "để sau" vẫn để sau):
+
+| Mã Digifile | Việc | Chỗ |
+|---|---|---|
+| B03 | Bảng mã TT05 còn thiếu (chế độ sử dụng, mức độ tin cậy, tình trạng vật lý, tình trạng dự phòng), mã chuẩn + mã riêng | `cl_ma_tt05`, `/cl/ma-tt05`, Danh mục › Mã TT05, form hồ sơ / văn bản đọc mã từ máy chủ |
+| B04, B05 | Tình trạng dự phòng hồ sơ / văn bản; quy trình xử lý văn bản | cột `du_phong`, `du_phong_trang_thai`, `quy_trinh_xu_ly`; `spec.rs` cols |
+| B06 | Mã hồ sơ có mã cơ quan lưu trữ; mã hồ sơ giấy theo kho / giá / hộp | view `ma_ho_so_tt05`, `ma_ho_so_giay_tt05` (mã cũ giữ nguyên — không đổi dữ liệu) |
+| B09 | Gói tài liệu rời lẻ trên màn hình | `la_goi_tai_lieu`, `ma_goi` + ô trong form hồ sơ |
+| D02 | Tệp đính kèm Điều 20 | `submission_files`, `/submissions/{id}/files*` (kho tệp `{p}-submissions/`) |
+| D04 | Nộp cùng hệ thống từ hồ sơ có sẵn | `submission_items.ho_so_id`, `POST …/items/tu-ho-so` |
+| D06 | 10 thông tin tiếp nhận | `GET …/tong-quan` |
+| D07 | Trùng trong cùng đợt tự không đạt; so sánh với kho | bỏ `ux_submission_items_ma_ho_so`, `trung_trong_dot`, `GET …/items/{i}/so-sanh` |
+| D11 | Cơ quan nộp lưu + tài khoản chỉ thấy đợt của mình | `co_quan_nop`, `users.co_quan_nop_id`, màn Cơ quan nộp lưu |
+| D12 | Khoá API cho hệ thống ngoài | `X-Api-Key` trong `extract.rs`, `docs/API-THU-NOP.md` |
+| F04 | Duyệt hai cấp | trạng thái `cho_cap_2`, cấp 2 = vai trò gốc Quản lý / Quản trị hệ thống |
+| F10 | Giao nhận bản sao giấy | `access_requests.giao_nhan`, `POST …/giao-nhan` |
+| F12 | Phân công, % đúng hạn | `nguoi_xu_ly` (access + info), báo cáo `khai_thac_yeu_cau` thêm `trong_han` / `qua_han` / `pct_dung_han` |
+| H08 | Chuỗi băm nhật ký | `audit_log.prev_hash/hash` (BLAKE3), `GET /ops/audit/kiem-chuoi` |
+| C05 | Module số hoá vào bản Lưu trữ | `app.rs` bỏ cổng edition; `NAV_LUU_TRU` thêm Giao nhận, Số hoá, Kiểm tra, Ký số, Nghiệm thu, đủ báo cáo / tiện ích |
+| G04 | HDSD theo vai trò | `docs/HUONG-DAN-SU-DUNG-LUU-TRU.md` |
+
+Kịch bản `dev/luutru/thu-dot-6.ps1` xanh trên Postgres tạm. Chưa làm (ngoài phạm vi hoặc cần hạ tầng): HSM / SmartCA phía máy chủ (C03),
+OpenAPI tự sinh, ngày lễ trong SLA, cổng độc giả, ảnh / ghi âm, email / SMS, nhóm I.
+
 ## Cần anh quyết
 
 1. **Kết nối máy trạm ↔ máy chủ CĐT.** App hiện chỉ nhận `https` có chứng chỉ công khai (rustls không đọc kho chứng chỉ

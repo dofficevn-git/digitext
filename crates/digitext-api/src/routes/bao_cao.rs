@@ -150,7 +150,7 @@ const DEFS: &[Def] = &[
     },
     Def {
         ma: "khai_thac_yeu_cau", ten: "Yêu cầu khai thác, sử dụng", can_cu: "Điều 35–40 TT 05/2025/TT-BNV", nhom: "khai_thac", ban: "ca_hai", bo_loc: &["thoi_gian"], tong: true,
-        cot: &[chu("hinh_thuc", "Hình thức", 22.0), so("so_yeu_cau", "Yêu cầu"), so("cho_duyet", "Chờ duyệt"), so("da_duyet", "Đã duyệt"), so("tu_choi", "Từ chối"), so("het_han", "Hết hạn"), so("so_tai_lieu", "Tài liệu"), so("tl_duyet", "TL duyệt"), so("tl_tu_choi", "TL từ chối"), so("phi", "Phí (đ)"), so("phi_da_thu", "Đã thu (đ)")],
+        cot: &[chu("hinh_thuc", "Hình thức", 22.0), so("so_yeu_cau", "Yêu cầu"), so("cho_duyet", "Chờ duyệt"), so("da_duyet", "Đã duyệt"), so("tu_choi", "Từ chối"), so("het_han", "Hết hạn"), so("so_tai_lieu", "Tài liệu"), so("tl_duyet", "TL duyệt"), so("tl_tu_choi", "TL từ chối"), so("phi", "Phí (đ)"), so("phi_da_thu", "Đã thu (đ)"), so("trong_han", "Đúng hạn"), so("qua_han", "Quá hạn"), so("pct_dung_han", "% đúng hạn")],
     },
     Def {
         ma: "luot_khai_thac", ten: "Lượt khai thác (xem, tải, in, chuyển đổi)", can_cu: "Điều 44.3b; Điều 13–16 TT 05/2025/TT-BNV", nhom: "khai_thac", ban: "ca_hai", bo_loc: &["thoi_gian"], tong: true,

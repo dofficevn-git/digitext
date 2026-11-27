@@ -1,5 +1,7 @@
 # Đối chiếu 94 hạng mục Digifile TT05 với DigiText bản Lưu trữ (27/11/2026)
 
+> **Cập nhật sau đợt 6 (0.25.26, 0040):** các dòng đánh dấu **→ ✓ Đ6** đã làm; bảng tổng hợp dưới là trước đợt 6. Sau đợt 6: 62 đủ, 9 một phần, 10 chưa (chưa: A08 license, B07, B08, B13, D12 OAuth/OpenAPI, F01, F02, F13, nhóm I).
+
 Nguồn Digifile: `D:\Digifile\KeHoachNangCap_TT05\03_Danh_muc_chuc_nang_bao_gia.md` (94 hạng mục A–I) và hai báo cáo nghiệm thu
 `05_*`, `06_*` (mô tả cái đã làm thật). Nguồn DigiText: mã trên nhánh `feat/ban-luu-tru` tại desktop 0.25.25, migration 0039.
 
@@ -46,13 +48,13 @@ nhóm **F (cổng độc giả) và D (thu nộp từ cơ quan ngoài) thiếu n
 |---|---|---|
 | B01 Cơ quan lưu trữ | ✓ | 0039, màn Quản trị › Cơ quan lưu trữ (0.25.25) |
 | B02 Phông: trạng thái, lịch sử ĐVHTP có phiên bản | ✓ | `phong_lich_su`; khối phông / mã phông / mục lục số có sẵn |
-| B03 Danh mục mã hoá TT05 | ◐ | có THBQ (mã 01–07), ngôn ngữ, loại văn bản 32 mã; **chế độ sử dụng, mức độ tin cậy, tình trạng vật lý, tình trạng dự phòng là ô chữ tự do**, không có bảng mã + màn quản trị |
-| B04 18 trường EAD hồ sơ | ◐ | có từ khoá, ký hiệu thông tin, mức độ tin cậy, mã hồ sơ giấy, ngày không đầy đủ, ngôn ngữ; **thiếu tình trạng dự phòng (riskRecovery/Status)** |
-| B05 EAD_doc | ◐ | có loại VB mã TT05, tách số / ký hiệu, độ tin cậy; **thiếu `process` (quy trình xử lý kèm tệp luồng) và dự phòng** |
-| B06 Bộ sinh mã | ◐ | mã hồ sơ `mãphông.phôngsố.năm.số[.mụclục]`, arcDocCode STT 7 chữ số, OBJID urn; **chưa có mã cơ quan lưu trữ ở đầu và paperFileCode theo kho/giá/hộp** — chờ câu (20) |
+| B03 Danh mục mã hoá TT05 | ◐ → ✓ Đ6 | có THBQ (mã 01–07), ngôn ngữ, loại văn bản 32 mã; **chế độ sử dụng, mức độ tin cậy, tình trạng vật lý, tình trạng dự phòng là ô chữ tự do**, không có bảng mã + màn quản trị |
+| B04 18 trường EAD hồ sơ | ◐ → ✓ Đ6 | có từ khoá, ký hiệu thông tin, mức độ tin cậy, mã hồ sơ giấy, ngày không đầy đủ, ngôn ngữ; **thiếu tình trạng dự phòng (riskRecovery/Status)** |
+| B05 EAD_doc | ◐ → ✓ Đ6 | có loại VB mã TT05, tách số / ký hiệu, độ tin cậy; **thiếu `process` (quy trình xử lý kèm tệp luồng) và dự phòng** |
+| B06 Bộ sinh mã | ◐ → ✓ Đ6 (ma_ho_so_tt05, ma_ho_so_giay_tt05) | mã hồ sơ `mãphông.phôngsố.năm.số[.mụclục]`, arcDocCode STT 7 chữ số, OBJID urn; **chưa có mã cơ quan lưu trữ ở đầu và paperFileCode theo kho/giá/hộp** — chờ câu (20) |
 | B07 Tài liệu ảnh | ✗ | EAD_pic chỉ có tên schema |
 | B08 Tài liệu ghi âm / ghi hình | ✗ | EAD_media chỉ có tên schema |
-| B09 Gói tài liệu rời lẻ | ◐ | đóng gói `AIP_tailieu` được (package); **không có đối tượng "gói tài liệu" trên màn hình để lập / quản lý** |
+| B09 Gói tài liệu rời lẻ | ◐ → ✓ Đ6 | đóng gói `AIP_tailieu` được (package); **không có đối tượng "gói tài liệu" trên màn hình để lập / quản lý** |
 | B10 Nhiều tệp / tài liệu, SHA, PDF/A, chữ ký | ✓ | `documents` + `cl_van_ban_file` |
 | B11 Form lập hồ sơ / biên mục | ✓ | HoSoForm, lưới văn bản, kiểm tra TT05 |
 | B12 Excel chuẩn TT05 | ✓ | MLHS / MLVB / 51 cột, lỗi từng dòng |
@@ -67,7 +69,7 @@ nhóm **F (cổng độc giả) và D (thu nộp từ cơ quan ngoài) thiếu n
 | C02 PDF/A hai lớp + OCR | ✓ | chính là thế mạnh của DigiText (bản Lưu trữ cần máy chủ OCR nếu muốn OCR lại) |
 | C03 Ký số server-side (HSM / SmartCA) | ◐ | ký bằng USB token tại máy trạm, PAdES-LTV; **chưa có HSM / SmartCA server-side** |
 | C04 Ký số token trong luồng | ✓ | |
-| C05 Module quản lý số hoá | ◐ | đủ ở bản thi công (giao nhận, QC, nghiệm thu, nhật ký); **bản Lưu trữ chưa đưa vào menu** — xem câu hỏi cuối |
+| C05 Module quản lý số hoá | ◐ → ✓ Đ6 (vào menu bản Lưu trữ) | đủ ở bản thi công (giao nhận, QC, nghiệm thu, nhật ký); **bản Lưu trữ chưa đưa vào menu** — xem câu hỏi cuối |
 | C06 METS CSIP | ✓ | |
 | C07 EAD / EAD_doc | ✓ | EAD_pic / EAD_media ✗ (B07, B08) |
 | C08 PREMIS v3 | ✓ | |
@@ -80,17 +82,17 @@ nhóm **F (cổng độc giả) và D (thu nộp từ cơ quan ngoài) thiếu n
 | Mã | DigiText | Ghi chú |
 |---|---|---|
 | D01 Nộp lưu hiện hành | ✓ | 0031: 60 ngày, nhắc, trả lại, khoá sửa, 360 ngày, sổ, biên bản |
-| D02 Đăng ký nộp LTLS 17 thông tin | ◐ | `/submissions` có mã yêu cầu, cơ quan, đã nộp giấy, số lần, tóm tắt, phông, phương án, cách thức, dự kiến, liên hệ, mục lục; **thiếu tệp đính kèm (văn bản đề nghị, lịch sử phông, hướng dẫn xác định giá trị) và hạn đăng ký 12 tháng** |
+| D02 Đăng ký nộp LTLS 17 thông tin | ◐ → ✓ Đ6 (tệp đính kèm) | `/submissions` có mã yêu cầu, cơ quan, đã nộp giấy, số lần, tóm tắt, phông, phương án, cách thức, dự kiến, liên hệ, mục lục; **thiếu tệp đính kèm (văn bản đề nghị, lịch sử phông, hướng dẫn xác định giá trị) và hạn đăng ký 12 tháng** |
 | D03 Xác nhận yêu cầu (7 ngày) | ✓ | đối soát + SLA `sla_confirm_overdue` |
-| D04 Nộp cùng hệ thống | ◐ | hồ sơ nộp theo mục lục Excel / gói; **chưa có "chọn hồ sơ đang có → nộp vào LTLS"** |
+| D04 Nộp cùng hệ thống | ◐ → ✓ Đ6 | hồ sơ nộp theo mục lục Excel / gói; **chưa có "chọn hồ sơ đang có → nộp vào LTLS"** |
 | D05 Nộp gói SIP | ✓ | |
-| D06 Tiếp nhận 10 thông tin | ◐ | có tổng gói / hồ sơ / dung lượng; chưa đủ 10 cột Điều 23 |
-| D07 Trùng lặp + kiểm từng hồ sơ | ◐ | có `duplicate_in_system`, đạt / không đạt từng dòng; **chưa có màn so sánh 2 hồ sơ nghi trùng, chưa tự từ chối trùng trong cùng đợt** |
+| D06 Tiếp nhận 10 thông tin | ◐ → ✓ Đ6 | có tổng gói / hồ sơ / dung lượng; chưa đủ 10 cột Điều 23 |
+| D07 Trùng lặp + kiểm từng hồ sơ | ◐ → ✓ Đ6 | có `duplicate_in_system`, đạt / không đạt từng dòng; **chưa có màn so sánh 2 hồ sơ nghi trùng, chưa tự từ chối trùng trong cùng đợt** |
 | D08 Phê duyệt, hoàn thành | ✓ | |
 | D09 Biên bản | ✓ | records |
 | D10 Vào kho / trả lại | ✓ | `/returned` |
-| D11 Tài khoản cơ quan nộp (multi-tenant nhẹ) | ✗ | chỉ có vai trò customer theo dự án; **không có danh mục cơ quan nộp lưu** |
-| D12 REST API + API key cho hệ thống ngoài | ✗ | API JWT nội bộ, webhook NCC; không có API key |
+| D11 Tài khoản cơ quan nộp (multi-tenant nhẹ) | ✗ → ✓ Đ6 | chỉ có vai trò customer theo dự án; **không có danh mục cơ quan nộp lưu** |
+| D12 REST API + API key cho hệ thống ngoài | ✗ → ◐ Đ6 (X-Api-Key, tài liệu tay; chưa OAuth / OpenAPI) | API JWT nội bộ, webhook NCC; không có API key |
 
 ## E. Bảo quản & huỷ — đủ 8/8
 
@@ -104,15 +106,15 @@ E07 hội đồng · E08 thẩm định, quyết định, thực hiện có lưu
 | F01 Cổng độc giả web | ✗ | anh đã bảo để sau |
 | F02 Đăng ký độc giả CCCD + OTP | ✗ | như trên |
 | F03 Yêu cầu đọc | ◐ | vai trò độc giả làm trên desktop, không có web / giỏ |
-| F04 Duyệt 2 cấp | ◐ | duyệt từng dòng có cờ "có điều kiện"; **không có cấp 2 riêng** |
+| F04 Duyệt 2 cấp | ◐ → ✓ Đ6 | duyệt từng dòng có cờ "có điều kiện"; **không có cấp 2 riêng** |
 | F05 Phí, thanh toán | ✓ | bảng giá, xác nhận thanh toán |
 | F06 Bản đọc watermark, hết hạn, tự xoá | ✓ | |
 | F07 Bản sao không xác thực | ✓ | watermark + "BẢN SAO" |
 | F08 Bản sao có xác thực | ✓ | ký bằng khoá cơ quan (`copy_sign`) |
 | F09 DIP có xác-thuc.pdf | ✓ | |
-| F10 Bản sao giấy | ◐ | in qua chuyển đổi PL VI; **chưa theo dõi giao nhận bản giấy** |
+| F10 Bản sao giấy | ◐ → ✓ Đ6 | in qua chuyển đổi PL VI; **chưa theo dõi giao nhận bản giấy** |
 | F11 Cung cấp thông tin 3 hình thức | ✓ | danh mục / trích xuất / tổng hợp |
-| F12 Backoffice SLA, phân công | ◐ | SLA nhắc có; **chưa phân công người xử lý, chưa thống kê % đúng hạn** |
+| F12 Backoffice SLA, phân công | ◐ → ✓ Đ6 | SLA nhắc có; **chưa phân công người xử lý, chưa thống kê % đúng hạn** |
 | F13 Email / SMS | ✗ | chỉ in-app; để sau |
 | F14 Mượn – trả nâng cấp | ✓ | 0034 |
 
@@ -123,12 +125,11 @@ E07 hội đồng · E08 thẩm định, quyết định, thực hiện có lưu
 | G01 Chuyển đổi PL VI | ✓ | 0037 |
 | G02 PDF máy chủ / máy trạm cho biểu mẫu | ✓ | |
 | G03 Báo cáo + dashboard | ✓ | 19 báo cáo, Tổng quan Lưu trữ |
-| G04 Tài liệu, đào tạo | ◐ | có hướng dẫn cài; **chưa có HDSD theo vai trò, video** |
+| G04 Tài liệu, đào tạo | ◐ → ◐ Đ6 (HDSD theo vai trò có; video chưa) | có hướng dẫn cài; **chưa có HDSD theo vai trò, video** |
 
 ## H. Trải nghiệm & chất lượng
 
-H01–H07, H11 — (vá giao diện .NET cũ; DigiText có bộ `ui/*` riêng) · H08 audit log ✓ (`audit_log`, nhật ký khai thác; **không có hash chain
-chống sửa**) · H09 hiệu năng ✓ · H10 ma trận quyền ✓ (0022) · H12 danh mục hồ sơ có duyệt ✓ (0031).
+H01–H07, H11 — (vá giao diện .NET cũ; DigiText có bộ `ui/*` riêng) · H08 audit log ✓ (`audit_log`, nhật ký khai thác; **chuỗi băm chống sửa có từ Đ6** — `/ops/audit/kiem-chuoi`) · H09 hiệu năng ✓ · H10 ma trận quyền ✓ (0022) · H12 danh mục hồ sơ có duyệt ✓ (0031).
 
 ## I. Tuỳ chọn — ✗ tất cả (cổng thanh toán, Elasticsearch, LGSP, song ngữ, ASR); I06 hạ tầng —.
 

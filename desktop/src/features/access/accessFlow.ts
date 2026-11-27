@@ -12,6 +12,7 @@ export const V4u0: Record<V4tl["kind"], string> = {
 
 export const V4u1: Record<V4tl["status"], string> = {
   submitted: "Chờ xét duyệt",
+  cho_cap_2: "Chờ duyệt cấp 2",
   approved: "Đã duyệt",
   refused: "Từ chối",
   expired: "Hết hạn (đã xóa bản người dùng)",

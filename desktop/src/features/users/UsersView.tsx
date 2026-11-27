@@ -2,7 +2,8 @@
 // Quản trị người dùng và dự án: tài khoản (tạo / sửa / đổi mật khẩu / phân quyền / khoá), dự án (tạo, gán quản trị),
 // số liệu nhân viên gửi về. Dữ liệu tự cập nhật theo máy chủ, không nhấp nháy khi tải lại.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { coQuanNopList, type CoQuanNop } from "@/api/coQuanNop";
 import { V41t } from "@/live/useLive";
 import { V460 } from "@/state";
 import { V3z0, V3za } from "@/domain/permissions";
@@ -92,6 +93,7 @@ export default function V4ra() {
             {u.username}
             {u.email ? ` · ${u.email}` : ""}
             {u.phongBanId ? ` · ${tenPhongBan(u.phongBanId)}` : ""}
+            {u.coQuanNopId ? " · cơ quan nộp lưu" : ""}
           </div>
         </div>
       ),
@@ -418,6 +420,23 @@ function UserDialog({ mode, myRole, me, roles, projects, phongBans, user, onClos
   const [roleCode, setRoleCode] = useState<string>(banDau);
   const [projectId, setProjectId] = useState(user?.projectId ?? (projects.length === 1 ? projects[0].id : ""));
   const [phongBanId, setPhongBanId] = useState(user?.phongBanId ?? "");
+  // 0040: cơ quan nộp lưu (bản Lưu trữ) — tài khoản của cơ quan ngoài, chỉ thấy đợt nộp của cơ quan mình.
+  const [coQuanNopId, setCoQuanNopId] = useState(user?.coQuanNopId ?? "");
+  const [coQuans, setCoQuans] = useState<CoQuanNop[]>([]);
+  const duAnCq = projectId || user?.projectId || "";
+  useEffect(() => {
+    if (!LUU_TRU || !duAnCq) {
+      setCoQuans([]);
+      return;
+    }
+    let bo = false;
+    coQuanNopList(duAnCq)
+      .then((r) => !bo && setCoQuans(r))
+      .catch(() => !bo && setCoQuans([]));
+    return () => {
+      bo = true;
+    };
+  }, [duAnCq]);
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
   const chon = chonDuoc.find((r) => r.code === roleCode) ?? chonDuoc.find((r) => r.code === "user") ?? chonDuoc[0];
@@ -440,11 +459,11 @@ function UserDialog({ mode, myRole, me, roles, projects, phongBans, user, onClos
     setBusy(true);
     try {
       if (mode === "create") {
-        const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, roleCode: effCode, projectId: askProject ? projectId || null : null, phongBanId: phongBanId || null });
+        const created = await V4ad({ username: username.trim(), password, displayName: displayName.trim(), email: email.trim() || null, role: effRole, roleCode: effCode, projectId: askProject ? projectId || null : null, phongBanId: phongBanId || null, coQuanNopId: coQuanNopId || null });
         if (toanHeThong && effRole === "admin" && projectId) await V4an(projectId, created.id);
         toast.success(`Đã tạo tài khoản ${username.trim()}.`);
       } else if (user) {
-        await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null, roleCode: doiVaiTro ? effCode : null, phongBanId: phongBanId || null, boPhongBan: !phongBanId && !!user.phongBanId });
+        await V4ae({ id: user.id, displayName: displayName.trim(), email: email.trim() || null, roleCode: doiVaiTro ? effCode : null, phongBanId: phongBanId || null, boPhongBan: !phongBanId && !!user.phongBanId, coQuanNopId: coQuanNopId || null, boCoQuanNop: !coQuanNopId && !!user.coQuanNopId });
         toast.success(doiVaiTro ? "Đã lưu. Người này phải đăng nhập lại để nhận vai trò mới." : "Đã lưu thông tin tài khoản.");
       }
       onDone();
@@ -487,6 +506,11 @@ function UserDialog({ mode, myRole, me, roles, projects, phongBans, user, onClos
         {phongBans.length > 0 && (
           <Field label="Phòng ban" hint="Nhân viên phòng ban chỉ thấy và nộp lưu hồ sơ của phòng mình. Để trống với cán bộ lưu trữ, lãnh đạo.">
             <Select value={phongBanId} onChange={setPhongBanId} placeholder="— Không gắn phòng ban —" options={phongBans.map((p) => ({ value: p.id, label: str(p, "ma_don_vi") ? `${str(p, "ma_don_vi")} · ${str(p, "ten")}` : str(p, "ten") }))} />
+          </Field>
+        )}
+        {coQuans.length > 0 && (
+          <Field label="Cơ quan nộp lưu" hint="Tài khoản của cơ quan ngoài nộp vào lưu trữ lịch sử: chỉ thấy đợt nộp của cơ quan mình. Để trống với cán bộ của kho.">
+            <Select value={coQuanNopId} onChange={setCoQuanNopId} placeholder="— Không thuộc cơ quan nộp lưu —" options={coQuans.map((c) => ({ value: c.id, label: `${c.ma} · ${c.ten}` }))} />
           </Field>
         )}
         {askProject && (

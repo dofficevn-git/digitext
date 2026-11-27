@@ -7,6 +7,8 @@ pub struct Tm8 {
     pub id: Uuid,
     pub project_id: Uuid,
     pub created_by: Option<Uuid>,
+    /// 0040: cơ quan nộp lưu (danh mục co_quan_nop); None = đợt nộp khai tay / cũ.
+    pub co_quan_nop_id: Option<Uuid>,
     pub ma_yeu_cau: String,
     pub org_name: String,
     pub org_code: String,
@@ -50,18 +52,23 @@ pub struct Tm7 {
     pub review_result: String,
     pub review_note: Option<String>,
     pub created_at: DateTime<Utc>,
+    /// 0040: hồ sơ đang có trong hệ thống (nộp cùng hệ thống, Điều 22.4); trùng mã trong cùng đợt (Điều 24).
+    pub ho_so_id: Option<Uuid>,
+    pub trung_trong_dot: bool,
 }
-const COLS: &str = "id, project_id, created_by, ma_yeu_cau, org_name, org_code, da_nop_giay, \
+const COLS: &str = "id, project_id, created_by, co_quan_nop_id, ma_yeu_cau, org_name, org_code, da_nop_giay, \
      so_lan_nop, summary, fond_code, phuong_an_phan_loai, cach_thuc, du_kien_thoi_gian, lien_he, \
      ghi_chu, total_pages, total_bytes, han_nop, status, decision_note, reconcile_note, reception_note, \
      approval_doc, approval_note, confirmed_at, received_at, approved_at, completed_at, \
      created_at, updated_at";
 const ITEM_COLS: &str = "id, submission_id, stt, ma_ho_so, tieu_de, thoi_gian_bat_dau, \
      thoi_gian_ket_thuc, so_trang, muc_do_tiep_can, ghi_chu, review_result, review_note, \
-     created_at";
+     created_at, ho_so_id, trung_trong_dot";
+pub const LOI_TRUNG_DOT: &str = "Trùng mã hồ sơ với dòng khác trong cùng đợt nộp — tự động không đạt (Điều 24.2)";
 pub struct Te0<'a> {
     pub project_id: Uuid,
     pub created_by: Option<Uuid>,
+    pub co_quan_nop_id: Option<Uuid>,
     pub org_name: &'a str,
     pub org_code: &'a str,
     pub da_nop_giay: bool,
@@ -84,6 +91,7 @@ pub struct Tdv<'a> {
     pub so_trang: Option<i32>,
     pub muc_do_tiep_can: Option<&'a str>,
     pub ghi_chu: Option<&'a str>,
+    pub ho_so_id: Option<Uuid>,
 }
 pub async fn register(
     r_2ch: &PgPool,
@@ -121,9 +129,9 @@ pub async fn register(
     let r_2cj = sqlx::query_as::<_, Tm8>(&format!(
         "INSERT INTO submissions (id, project_id, created_by, ma_yeu_cau, org_name, org_code, \
              da_nop_giay, so_lan_nop, summary, fond_code, phuong_an_phan_loai, cach_thuc, \
-             du_kien_thoi_gian, lien_he, ghi_chu, total_pages, total_bytes, han_nop) \
+             du_kien_thoi_gian, lien_he, ghi_chu, total_pages, total_bytes, han_nop, co_quan_nop_id) \
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, \
-             $18) \
+             $18, $19) \
          RETURNING {COLS}"
     ))
     .bind(Uuid::now_v7())
@@ -144,31 +152,164 @@ pub async fn register(
     .bind(r_2ck.total_pages)
     .bind(r_2ck.total_bytes)
     .bind(r_2ck.han_nop)
+    .bind(r_2ck.co_quan_nop_id)
     .fetch_one(&mut *r_2cm)
     .await?;
-    let mut r_2cg = Vec::with_capacity(items.len());
-    for (i, r_2cf) in items.iter().enumerate() {
-        let r_2ci = sqlx::query_as::<_, Tm7>(&format!(
-            "INSERT INTO submission_items (id, submission_id, stt, ma_ho_so, tieu_de, \
-                 thoi_gian_bat_dau, thoi_gian_ket_thuc, so_trang, muc_do_tiep_can, ghi_chu) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING {ITEM_COLS}"
-        ))
-        .bind(Uuid::now_v7())
-        .bind(r_2cj.id)
-        .bind((i + 1) as i32)
-        .bind(r_2cf.ma_ho_so)
-        .bind(r_2cf.tieu_de)
-        .bind(r_2cf.thoi_gian_bat_dau)
-        .bind(r_2cf.thoi_gian_ket_thuc)
-        .bind(r_2cf.so_trang)
-        .bind(r_2cf.muc_do_tiep_can)
-        .bind(r_2cf.ghi_chu)
-        .fetch_one(&mut *r_2cm)
-        .await?;
-        r_2cg.push(r_2ci);
-    }
+    let r_2cg = chen_items(&mut r_2cm, r_2cj.id, 0, &std::collections::HashSet::new(), items).await?;
     r_2cm.commit().await?;
     Ok((r_2cj, r_2cg))
+}
+/// Chèn dòng mục lục nộp từ `stt_tu + 1`; mã hồ sơ đã có trong đợt (hoặc lặp trong chính lô) → `trung_trong_dot`, không đạt sẵn.
+async fn chen_items(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    submission_id: Uuid,
+    stt_tu: i32,
+    da_co: &std::collections::HashSet<String>,
+    items: &[Tdv<'_>],
+) -> sqlx::Result<Vec<Tm7>> {
+    let mut seen: std::collections::HashSet<String> = da_co.clone();
+    let mut out = Vec::with_capacity(items.len());
+    for (i, it) in items.iter().enumerate() {
+        let ma = it.ma_ho_so.trim().to_lowercase();
+        let trung = !seen.insert(ma);
+        let row = sqlx::query_as::<_, Tm7>(&format!(
+            "INSERT INTO submission_items (id, submission_id, stt, ma_ho_so, tieu_de, \
+                 thoi_gian_bat_dau, thoi_gian_ket_thuc, so_trang, muc_do_tiep_can, ghi_chu, ho_so_id, trung_trong_dot, \
+                 review_result, review_note) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, \
+                 CASE WHEN $12 THEN 'khong_dat' ELSE 'pending' END, CASE WHEN $12 THEN $13 ELSE NULL END) RETURNING {ITEM_COLS}"
+        ))
+        .bind(Uuid::now_v7())
+        .bind(submission_id)
+        .bind(stt_tu + (i as i32) + 1)
+        .bind(it.ma_ho_so)
+        .bind(it.tieu_de)
+        .bind(it.thoi_gian_bat_dau)
+        .bind(it.thoi_gian_ket_thuc)
+        .bind(it.so_trang)
+        .bind(it.muc_do_tiep_can)
+        .bind(it.ghi_chu)
+        .bind(it.ho_so_id)
+        .bind(trung)
+        .bind(LOI_TRUNG_DOT)
+        .fetch_one(&mut **tx)
+        .await?;
+        out.push(row);
+    }
+    Ok(out)
+}
+/// 0040 (D04): thêm dòng vào đợt đang đăng ký (nộp cùng hệ thống từ hồ sơ có sẵn, hoặc khai thêm).
+pub async fn them_items(pool: &PgPool, submission_id: Uuid, items: &[Tdv<'_>]) -> sqlx::Result<Vec<Tm7>> {
+    let mut tx = pool.begin().await?;
+    let (stt_max, da_co): (Option<i32>, Vec<String>) = {
+        let m: Option<i32> = sqlx::query_scalar("SELECT max(stt) FROM submission_items WHERE submission_id = $1")
+            .bind(submission_id)
+            .fetch_one(&mut *tx)
+            .await?;
+        let d: Vec<String> = sqlx::query_scalar("SELECT lower(btrim(ma_ho_so)) FROM submission_items WHERE submission_id = $1")
+            .bind(submission_id)
+            .fetch_all(&mut *tx)
+            .await?;
+        (m, d)
+    };
+    let out = chen_items(&mut tx, submission_id, stt_max.unwrap_or(0), &da_co.into_iter().collect(), items).await?;
+    sqlx::query("UPDATE submissions SET updated_at = now() WHERE id = $1").bind(submission_id).execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(out)
+}
+/// Hồ sơ trong hệ thống để nộp cùng hệ thống: lấy theo id trong dự án, trả (id, mã hồ sơ, tiêu đề, bắt đầu, kết thúc, số tờ, chế độ sử dụng).
+pub async fn ho_so_de_nop(pool: &PgPool, project_id: Uuid, ids: &[Uuid]) -> sqlx::Result<Vec<(Uuid, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<String>)>> {
+    sqlx::query_as(
+        "SELECT id, COALESCE(ma_ho_so_tt05, ma_ho_so, so_tam), tieu_de, ngay_bat_dau, ngay_ket_thuc, so_to, che_do_su_dung \
+         FROM cl_ho_so_v WHERE project_id = $1 AND id = ANY($2) AND deleted_at IS NULL ORDER BY array_position($2, id)",
+    )
+    .bind(project_id)
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+}
+/// 0040 (D07): so sánh một dòng mục lục nộp với hồ sơ đang có trong kho — cùng mã, hoặc cùng tiêu đề (không dấu) và năm kết thúc.
+pub async fn so_sanh(pool: &PgPool, project_id: Uuid, item: &Tm7) -> sqlx::Result<Vec<serde_json::Value>> {
+    sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT to_jsonb(x) FROM ( \
+           SELECT h.id, h.ma_ho_so, h.ma_ho_so_tt05, h.tieu_de, h.ngay_bat_dau, h.ngay_ket_thuc, h.so_to, h.ten_phong, h.ten_thbq, \
+                  h.so_van_ban, h.hop_so, h.created_at, \
+                  CASE WHEN lower(btrim(COALESCE(h.ma_ho_so_tt05, ''))) = lower(btrim($2)) OR lower(btrim(COALESCE(h.ma_ho_so, ''))) = lower(btrim($2)) \
+                       THEN 'ma' ELSE 'tieu_de' END AS khop \
+           FROM cl_ho_so_v h \
+           WHERE h.project_id = $1 AND h.deleted_at IS NULL AND ( \
+                 lower(btrim(COALESCE(h.ma_ho_so_tt05, ''))) = lower(btrim($2)) OR lower(btrim(COALESCE(h.ma_ho_so, ''))) = lower(btrim($2)) \
+                 OR (khong_dau(h.tieu_de) = khong_dau($3) AND ($4::int IS NULL OR h.nam_ket_thuc = $4))) \
+           ORDER BY khop, h.created_at LIMIT 10) x",
+    )
+    .bind(project_id)
+    .bind(&item.ma_ho_so)
+    .bind(&item.tieu_de)
+    .bind(item.thoi_gian_ket_thuc.as_deref().and_then(|s| s.rsplit(['/', '-']).next()).and_then(|y| y.trim().parse::<i32>().ok()))
+    .fetch_all(pool)
+    .await
+}
+/// 0040 (D06): 10 thông tin tiếp nhận theo Điều 23 (khoá camelCase để màn hình dùng thẳng).
+pub async fn tong_quan(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<serde_json::Value>> {
+    sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT to_jsonb(x) FROM (            SELECT s.id, s.ma_yeu_cau AS \"maYeuCau\", s.org_name AS \"orgName\", s.org_code AS \"orgCode\", s.so_lan_nop AS \"soLanNop\", s.cach_thuc AS \"cachThuc\", s.status,                   (SELECT count(*) FROM packages p WHERE p.submission_id = s.id) AS \"tongGoi\",                   (SELECT count(*) FROM submission_items i WHERE i.submission_id = s.id) AS \"hoSoDangKy\",                   (SELECT count(*) FROM submission_items i WHERE i.submission_id = s.id AND i.review_result = 'dat') AS \"hoSoDaDuyet\",                   (SELECT count(*) FROM submission_items i WHERE i.submission_id = s.id AND i.review_result = 'khong_dat') AS \"hoSoKhongDat\",                   (SELECT count(*) FROM submission_items i WHERE i.submission_id = s.id AND i.trung_trong_dot) AS \"hoSoTrungDot\",                   (SELECT count(*) FROM submission_items i WHERE i.submission_id = s.id AND (i.ho_so_id IS NOT NULL                         OR EXISTS (SELECT 1 FROM packages p WHERE p.project_id = s.project_id AND p.ho_so_ref = i.ma_ho_so AND p.kind IN ('aip_hoso','aip_tailieu') AND p.status = 'built'))) AS \"hoSoDaVaoHeThong\",                   COALESCE((SELECT sum(p.zip_size) FROM packages p WHERE p.submission_id = s.id), 0)::bigint AS \"dungLuongGoi\",                   s.total_pages AS \"totalPages\", s.total_bytes AS \"totalBytes\", s.created_at AS \"createdAt\", s.confirmed_at AS \"confirmedAt\",                   s.received_at AS \"receivedAt\", s.approved_at AS \"approvedAt\", s.completed_at AS \"completedAt\", s.han_nop AS \"hanNop\",                   (SELECT count(*) FROM submission_files f WHERE f.submission_id = s.id) AS \"soTepDinhKem\"            FROM submissions s WHERE s.id = $1) x",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TepDinhKem {
+    pub id: Uuid,
+    pub submission_id: Uuid,
+    pub loai: String,
+    pub filename: String,
+    pub storage_key: String,
+    pub size_bytes: i64,
+    pub blake3: Option<String>,
+    pub ghi_chu: Option<String>,
+    pub uploaded_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+}
+pub const LOAI_TEP: &[&str] = &["van_ban_de_nghi", "lich_su_phong", "phuong_an_phan_loai", "huong_dan_xdgt", "quyet_dinh", "khac"];
+pub async fn files_list(pool: &PgPool, submission_id: Uuid) -> sqlx::Result<Vec<TepDinhKem>> {
+    sqlx::query_as::<_, TepDinhKem>(
+        "SELECT id, submission_id, loai, filename, storage_key, size_bytes, blake3, ghi_chu, uploaded_by, created_at \
+         FROM submission_files WHERE submission_id = $1 ORDER BY created_at",
+    )
+    .bind(submission_id)
+    .fetch_all(pool)
+    .await
+}
+pub async fn file_get(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<TepDinhKem>> {
+    sqlx::query_as::<_, TepDinhKem>(
+        "SELECT id, submission_id, loai, filename, storage_key, size_bytes, blake3, ghi_chu, uploaded_by, created_at FROM submission_files WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+pub async fn file_them(pool: &PgPool, id: Uuid, submission_id: Uuid, loai: &str, filename: &str, storage_key: &str, size: i64, blake3: &str, ghi_chu: Option<&str>, boi: Uuid) -> sqlx::Result<TepDinhKem> {
+    sqlx::query_as::<_, TepDinhKem>(
+        "INSERT INTO submission_files (id, submission_id, loai, filename, storage_key, size_bytes, blake3, ghi_chu, uploaded_by) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+         RETURNING id, submission_id, loai, filename, storage_key, size_bytes, blake3, ghi_chu, uploaded_by, created_at",
+    )
+    .bind(id)
+    .bind(submission_id)
+    .bind(loai)
+    .bind(filename)
+    .bind(storage_key)
+    .bind(size)
+    .bind(blake3)
+    .bind(ghi_chu)
+    .bind(boi)
+    .fetch_one(pool)
+    .await
+}
+pub async fn file_xoa(pool: &PgPool, id: Uuid) -> sqlx::Result<bool> {
+    Ok(sqlx::query("DELETE FROM submission_files WHERE id = $1").bind(id).execute(pool).await?.rows_affected() > 0)
 }
 pub async fn get(r_2cn: &PgPool, id: Uuid) -> sqlx::Result<Option<Tm8>> {
     sqlx::query_as::<_, Tm8>(&format!("SELECT {COLS} FROM submissions WHERE id = $1"))
@@ -210,15 +351,17 @@ pub async fn list(
     r_2cw: Option<&[Uuid]>,
     r_2ct: i64,
     r_2cu: i64,
+    co_quan_nop: Option<Uuid>,
 ) -> sqlx::Result<Vec<Tm8>> {
     sqlx::query_as::<_, Tm8>(&format!(
         "SELECT {COLS} FROM submissions \
-         WHERE ($1::uuid[] IS NULL OR project_id = ANY($1)) \
+         WHERE ($1::uuid[] IS NULL OR project_id = ANY($1)) AND ($4::uuid IS NULL OR co_quan_nop_id = $4) \
          ORDER BY created_at DESC LIMIT $2 OFFSET $3"
     ))
     .bind(r_2cw)
     .bind(r_2ct)
     .bind(r_2cu)
+    .bind(co_quan_nop)
     .fetch_all(r_2cv)
     .await
 }

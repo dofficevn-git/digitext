@@ -176,6 +176,8 @@ pub fn fill_defaults(table: &str, row: &mut Row) {
         "cl_ho_so" => {
             put(row, "tieu_de", Value::String(String::new()));
             put(row, "trung_thua", Value::Bool(false));
+            // 0040: cờ gói tài liệu rời lẻ NOT NULL DEFAULT false — insert đi qua jsonb_populate_record nên phải điền sẵn.
+            put(row, "la_goi_tai_lieu", Value::Bool(false));
         }
         "cl_mang" => put(row, "ma_mang", Value::String("00".into())),
         "cl_hop" => put(row, "vinh_vien", Value::Bool(false)),
@@ -209,7 +211,7 @@ pub fn normalize(table: &str, row: &mut Row, full: bool) -> Vec<FieldErr> {
             set_int(row, f, &mut errs, None);
         }
     }
-    for f in ["trung_thua", "vinh_vien"] {
+    for f in ["trung_thua", "vinh_vien", "la_goi_tai_lieu", "du_phong"] {
         if row.contains_key(f) {
             set_bool(row, f, &mut errs);
         }

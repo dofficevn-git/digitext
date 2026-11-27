@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTauri } from "@/api/ipc";
 import { V41t } from "@/live/useLive";
 import { V4ei, type V4eg } from "@/api/docs";
-import { V4to, V4tp, V4tr, V4ts, V4tu, V4tv, V4tw, V4ty, V4tz, type V4tl, type V4tn } from "@/api/access";
+import { accessGiaoNhan, accessPhanCong, V4to, V4tp, V4tr, V4ts, V4tu, V4tv, V4tw, V4ty, V4tz, type V4tl, type V4tn } from "@/api/access";
+import { V4ac, type V4a8 } from "@/api/users";
 import { V460 } from "@/state";
 import { useProject } from "@/state/project";
 import { V3z9 } from "@/domain/permissions";
@@ -28,6 +29,7 @@ const KIND: Record<V4tl["kind"], { label: string; desc: string; legal: string; i
 };
 const STATUS: Record<V4tl["status"], { label: string; tone: "warn" | "ok" | "err" | "gray" }> = {
   submitted: { label: "Chờ xét duyệt", tone: "warn" },
+  cho_cap_2: { label: "Chờ duyệt cấp 2", tone: "warn" },
   approved: { label: "Đã duyệt", tone: "ok" },
   refused: { label: "Từ chối", tone: "err" },
   expired: { label: "Hết hạn", tone: "gray" },
@@ -43,8 +45,15 @@ const STEPS = [
   { key: "phi", label: "Thanh toán" },
   { key: "dung", label: "Sử dụng" },
 ];
+/** Đang xét duyệt (cấp 1 hoặc cấp 2) — chấm từng tài liệu, duyệt, từ chối đều còn làm được. */
+const dangXet = (r: V4tl) => r.status === "submitted" || r.status === "cho_cap_2";
+const GIAO_NHAN_HT: [string, string][] = [
+  ["tru_so", "Nhận tại trụ sở lưu trữ"],
+  ["buu_dien", "Gửi theo địa chỉ"],
+  ["truc_tuyen", "Trực tuyến"],
+];
 function stepOf(r: V4tl): number {
-  if (r.status === "submitted") return 1;
+  if (r.status === "submitted" || r.status === "cho_cap_2") return 1;
   if (r.status === "refused") return 1;
   if (r.status === "approved") return V4u6(r) ? 3 : 2;
   return 4;
@@ -65,6 +74,10 @@ export default function V4u7() {
   const [moi, setMoi] = useState(false);
   const [fees, setFees] = useState(false);
   const [busy, setBusy] = useState(false);
+  // 0040: phân công người xử lý (F12), giao nhận bản sao giấy (F10), duyệt cấp 2 (F04).
+  const laCap2 = session?.role === "super_admin" || session?.role === "manager";
+  const [nguoiDung, setNguoiDung] = useState<V4a8[]>([]);
+  const [giaoNhan, setGiaoNhan] = useState<{ hinhThuc: "tru_so" | "buu_dien" | "truc_tuyen"; diaChi: string; nguoiNhan: string; ngayGiao: string; ghiChu: string } | null>(null);
   const [doc, setDoc] = useState<{ src: string; title: string } | null>(null);
   const [selItems, setSelItems] = useState<Set<string>>(new Set());
 
@@ -98,6 +111,30 @@ export default function V4u7() {
     }
   };
 
+  useEffect(() => {
+    if (!canReview || !isTauri()) return;
+    let bo = false;
+    V4ac(duAn ?? null)
+      .then((u) => !bo && setNguoiDung(u.filter((x) => x.isActive)))
+      .catch(() => !bo && setNguoiDung([]));
+    return () => {
+      bo = true;
+    };
+  }, [canReview, duAn]);
+  const tenNd = (id: string | null | undefined) => (id ? (nguoiDung.find((u) => u.id === id)?.displayName ?? id.slice(0, 8)) : "");
+  const phanCong = (userId: string) =>
+    run("phân công", async () => {
+      if (!d) return;
+      await accessPhanCong(d.id, userId || null);
+      toast.success(userId ? "Đã phân công." : "Đã bỏ phân công.");
+    });
+  const luuGiaoNhan = () =>
+    run("ghi giao nhận", async () => {
+      if (!d || !giaoNhan) return;
+      await accessGiaoNhan(d.id, { hinhThuc: giaoNhan.hinhThuc, diaChi: giaoNhan.diaChi || null, nguoiNhan: giaoNhan.nguoiNhan || null, ngayGiao: giaoNhan.ngayGiao || null, ghiChu: giaoNhan.ghiChu || null });
+      setGiaoNhan(null);
+      toast.success("Đã ghi giao nhận bản sao giấy.");
+    });
   const act = async (action: "approve" | "refuse" | "pay" | "dip") => {
     if (!d) return;
     let note: string | undefined;
@@ -113,6 +150,7 @@ export default function V4u7() {
     await run(action === "approve" ? "duyệt yêu cầu" : action === "refuse" ? "từ chối yêu cầu" : action === "pay" ? "xác nhận thanh toán" : "cấp gói DIP", async () => {
       const r = await V4tu(d.id, action, note);
       if (action === "dip") toast.success(`Gói DIP ${r.maXacThuc ?? ""} đã xếp hàng.`, { action: { label: "Xem Đóng gói", onClick: () => goto("package") } });
+      else if (action === "approve" && r.status === "cho_cap_2") toast.success("Có tài liệu tiếp cận có điều kiện — đã trình người đứng đầu duyệt cấp 2 (Điều 36.2).");
       else toast.success(action === "approve" ? "Đã duyệt yêu cầu. Phí được tính tự động." : action === "refuse" ? "Đã từ chối yêu cầu." : "Đã ghi nhận thanh toán.");
     });
   };
@@ -222,6 +260,7 @@ export default function V4u7() {
                 <Stepper steps={STEPS} current={stepOf(d)} className="mb-4" />
                 {d.status === "refused" && <Banner tone="danger" className="mb-3">Yêu cầu đã bị từ chối{d.reviewNote ? `: ${d.reviewNote}` : "."}</Banner>}
                 {d.status === "expired" && <Banner tone="warning" className="mb-3">Đã hết hạn sử dụng. Bản đọc và bản sao trên hệ thống đã được xoá.</Banner>}
+                {d.status === "cho_cap_2" && <Banner tone="warning" className="mb-3" title="Chờ duyệt cấp 2">Có tài liệu tiếp cận có điều kiện đã được cấp 1 duyệt — người đứng đầu cơ quan (vai trò Quản lý) duyệt tiếp theo Điều 36.2.</Banner>}
                 <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                   <dt className="text-fg-subtle">Mục đích</dt>
                   <dd>{d.mucDich}</dd>
@@ -233,15 +272,28 @@ export default function V4u7() {
                     {(d.phi ?? 0) > 0 && <span className={d.paidAt ? "text-success-700" : "text-warning-700"}> · {d.paidAt ? `đã thu ${ngay(d.paidAt)}` : "chưa thu"}</span>}
                   </dd>
                   {d.reviewNote && d.status !== "refused" && <><dt className="text-fg-subtle">Ghi chú</dt><dd>{d.reviewNote}</dd></>}
+                  {d.cap2At && <><dt className="text-fg-subtle">Duyệt cấp 2</dt><dd>{tenNd(d.cap2Boi) || "—"} · {ngay(d.cap2At)}</dd></>}
+                  {canReview && (
+                    <>
+                      <dt className="text-fg-subtle">Người xử lý</dt>
+                      <dd>
+                        <Select size="sm" value={d.nguoiXuLy ?? ""} onChange={(v) => void phanCong(v)} placeholder="— Chưa phân công —" options={nguoiDung.map((u) => ({ value: u.id, label: u.displayName }))} className="w-64" aria-label="Phân công người xử lý" disabled={busy} />
+                      </dd>
+                    </>
+                  )}
+                  {!canReview && d.nguoiXuLy && <><dt className="text-fg-subtle">Người xử lý</dt><dd>{tenNd(d.nguoiXuLy)}</dd></>}
+                  {d.giaoNhan && <><dt className="text-fg-subtle">Giao nhận bản giấy</dt><dd>{GIAO_NHAN_HT.find(([k]) => k === d.giaoNhan?.hinhThuc)?.[1] ?? d.giaoNhan.hinhThuc}{d.giaoNhan.nguoiNhan ? ` · ${d.giaoNhan.nguoiNhan}` : ""}{d.giaoNhan.diaChi ? ` · ${d.giaoNhan.diaChi}` : ""}{d.giaoNhan.ngayGiao ? ` · ${d.giaoNhan.ngayGiao}` : ""}</dd></>}
                 </dl>
                 {canReview && (
                   <Toolbar>
-                    {d.status === "submitted" && (
+                    {dangXet(d) && (
                       <>
-                        <Tip text="Duyệt yêu cầu, phí tính tự động (Điều 36.1.c)">
-                          <Button variant="primary" icon="duyet" disabled={busy} onClick={() => void act("approve")}>
-                            Duyệt yêu cầu
-                          </Button>
+                        <Tip text={d.status === "cho_cap_2" ? (laCap2 ? "Duyệt cấp 2 — người đứng đầu cơ quan (Điều 36.2)" : "Chờ vai trò Quản lý duyệt cấp 2") : "Duyệt yêu cầu, phí tính tự động (Điều 36.1.c)"}>
+                          <span>
+                            <Button variant="primary" icon="duyet" disabled={busy || (d.status === "cho_cap_2" && !laCap2)} onClick={() => void act("approve")}>
+                              {d.status === "cho_cap_2" ? "Duyệt cấp 2" : "Duyệt yêu cầu"}
+                            </Button>
+                          </span>
                         </Tip>
                         <Button variant="dangerOutline" icon="tuChoi" disabled={busy} onClick={() => void act("refuse")}>
                           Từ chối
@@ -252,6 +304,13 @@ export default function V4u7() {
                       <Tip text="Theo Điều 36.4">
                         <Button variant="primary" icon="thanhToan" disabled={busy} onClick={() => void act("pay")}>
                           Xác nhận đã thu phí
+                        </Button>
+                      </Tip>
+                    )}
+                    {(d.kind === "ban_sao" || d.kind === "ban_sao_ky") && d.status === "approved" && (
+                      <Tip text="Theo dõi giao nhận bản sao giấy (Điều 43)">
+                        <Button icon="bienBan" disabled={busy} onClick={() => setGiaoNhan({ hinhThuc: (d.giaoNhan?.hinhThuc as "tru_so" | "buu_dien" | "truc_tuyen") ?? "tru_so", diaChi: d.giaoNhan?.diaChi ?? "", nguoiNhan: d.giaoNhan?.nguoiNhan ?? d.nguoiNhan ?? "", ngayGiao: d.giaoNhan?.ngayGiao ?? "", ghiChu: d.giaoNhan?.ghiChu ?? "" })}>
+                          Giao nhận bản giấy
                         </Button>
                       </Tip>
                     )}
@@ -272,7 +331,7 @@ export default function V4u7() {
                 title={`Tài liệu trong yêu cầu (${n(d.items.length)})`}
                 padding="none"
                 actions={
-                  canReview && d.status === "submitted" && selItems.size > 0 && (
+                  canReview && dangXet(d) && selItems.size > 0 && (
                     <>
                       <Button size="sm" variant="primary" icon="duyet" disabled={busy} onClick={() => void cham([...selItems], "duyet")}>
                         Duyệt ({n(selItems.size)})
@@ -305,13 +364,13 @@ export default function V4u7() {
                   ]}
                   rows={d.items}
                   getRowId={(i) => i.id}
-                  selection={canReview && d.status === "submitted" ? { selected: selItems, onChange: setSelItems } : undefined}
+                  selection={canReview && dangXet(d) ? { selected: selItems, onChange: setSelItems } : undefined}
                   rowActions={(i) => {
                     const usable = d.status === "approved" && i.verdict === "duyet" && !i.deleted && V4u6(d) && V4u5(d);
                     const why = d.status !== "approved" ? "Yêu cầu chưa được duyệt" : i.verdict !== "duyet" ? "Tài liệu không được duyệt" : i.deleted ? "Đã xoá theo hạn" : !V4u6(d) ? "Chưa thu phí" : !V4u5(d) ? "Hết hạn sử dụng" : "";
                     return (
                       <>
-                        {canReview && d.status === "submitted" && (
+                        {canReview && dangXet(d) && (
                           <>
                             <IconButton label="Duyệt" icon="duyet" size="sm" disabled={busy} onClick={() => void cham([i.id], "duyet")} />
                             <IconButton label="Không duyệt" icon="tuChoi" size="sm" disabled={busy} onClick={() => void cham([i.id], "tu_choi")} />
@@ -353,6 +412,43 @@ export default function V4u7() {
       </Dialog>
 
       {fees && <FeesDialog onClose={() => setFees(false)} />}
+      {giaoNhan && (
+        <Dialog
+          open
+          onOpenChange={(o) => !o && !busy && setGiaoNhan(null)}
+          title="Giao nhận bản sao giấy"
+          size="md"
+          footer={
+            <>
+              <Toolbar.Spacer />
+              <Button onClick={() => setGiaoNhan(null)} disabled={busy}>
+                Huỷ
+              </Button>
+              <Button variant="primary" loading={busy} onClick={() => void luuGiaoNhan()}>
+                Ghi nhận
+              </Button>
+            </>
+          }
+        >
+          <FormGrid cols={2}>
+            <Field label="Hình thức" className="col-span-2">
+              <Select value={giaoNhan.hinhThuc} onChange={(v) => setGiaoNhan((g) => g && { ...g, hinhThuc: v as typeof g.hinhThuc })} options={GIAO_NHAN_HT.map(([value, label]) => ({ value, label }))} />
+            </Field>
+            <Field label="Người nhận">
+              <Input value={giaoNhan.nguoiNhan} onChange={(e) => setGiaoNhan((g) => g && { ...g, nguoiNhan: e.target.value })} />
+            </Field>
+            <Field label="Ngày giao">
+              <Input type="date" value={giaoNhan.ngayGiao} onChange={(e) => setGiaoNhan((g) => g && { ...g, ngayGiao: e.target.value })} />
+            </Field>
+            <Field label="Địa chỉ gửi" className="col-span-2">
+              <Input value={giaoNhan.diaChi} onChange={(e) => setGiaoNhan((g) => g && { ...g, diaChi: e.target.value })} disabled={giaoNhan.hinhThuc !== "buu_dien"} />
+            </Field>
+            <Field label="Ghi chú" className="col-span-2">
+              <Textarea rows={2} value={giaoNhan.ghiChu} onChange={(e) => setGiaoNhan((g) => g && { ...g, ghiChu: e.target.value })} />
+            </Field>
+          </FormGrid>
+        </Dialog>
+      )}
       {moi && (
         <YeuCauMoiDialog
           projectId={duAn}

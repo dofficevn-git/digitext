@@ -38,7 +38,8 @@ export type V3xt =
   | "tiepnhan"
   | "danhmuc"
   | "chuyendoi"
-  | "coquan";
+  | "coquan"
+  | "coquannop";
 
 /** Tab trong màn Tiện ích (3/11/2026). */
 export type V3xTienIch = "pdfa" | "chuky" | "kiemgoi" | "khongoai" | "nhanh" | "vidu" | "chuyendulieu";

@@ -8,9 +8,11 @@ import { clDelete, clSave, str, type ClCatalog, type ClRow, type ClTable } from 
 import { ChuaChonDuAn, Select, SyncBadgeRow, tenPhong, useClCatalog } from "./common";
 import { Badge, Button, Card, confirm, Dialog, ErrorBanner, Field, Input, Menu, notifyError, PageHeader, Select as UiSelect, Table, Tabs, Tip, type Column } from "@/ui";
 import PhongLichSuDialog from "./PhongLichSuDialog";
+import MaTt05Tab from "./MaTt05Tab";
 import { isTauri } from "@/api/ipc";
 
 type Tab = "phong" | "phong_ban" | "mang" | "thbq" | "ngon_ngu" | "loai_van_ban" | "khoi_phong";
+type TabMo = Tab | "ma_tt05";
 const TABS: [Tab, string][] = [
   ["phong", "Phông"],
   ["phong_ban", "Phòng ban"],
@@ -174,7 +176,8 @@ export default function DanhMucView() {
   const canUpdate = perms.includes("catalog.update");
   const canDelete = perms.includes("catalog.delete");
   const { cat, reload, error } = useClCatalog();
-  const [tab, setTab] = useState<Tab>("phong");
+  const [tabMo, setTabMo] = useState<TabMo>("phong");
+  const tab: Tab = tabMo === "ma_tt05" ? "phong" : tabMo;
   const [form, setForm] = useState<{ row: ClRow | null } | null>(null);
   const [lichSu, setLichSu] = useState<ClRow | null>(null);
   const trucTuyen = isTauri() && session?.mode !== "offline";
@@ -237,7 +240,7 @@ export default function DanhMucView() {
           </>
         }
         actions={
-          canCreate && (
+          canCreate && tabMo !== "ma_tt05" && (
             <Button variant="primary" icon="them" onClick={() => setForm({ row: null })}>
               Thêm
             </Button>
@@ -246,7 +249,9 @@ export default function DanhMucView() {
       />
       <ChuaChonDuAn />
       {error && <ErrorBanner error={error} className="mb-4" onRetry={reload} />}
-      <Tabs<Tab> value={tab} onChange={setTab} items={TABS.map(([value, label]) => ({ value, label, count: cat[value].length }))} />
+      <Tabs<TabMo> value={tabMo} onChange={setTabMo} items={[...TABS.map(([value, label]) => ({ value: value as TabMo, label, count: cat[value].length })), { value: "ma_tt05" as TabMo, label: "Mã TT05" }]} />
+      {tabMo === "ma_tt05" && <MaTt05Tab canUpdate={canUpdate} />}
+      {tabMo !== "ma_tt05" && (
       <Card className="mt-3" padding="none">
         <Table
           columns={cols}
@@ -262,6 +267,7 @@ export default function DanhMucView() {
           state={{ empty: { title: `Chưa có ${TABS.find((t) => t[0] === tab)?.[1].toLowerCase()} nào`, action: canCreate ? <Button icon="them" onClick={() => setForm({ row: null })}>Thêm</Button> : undefined } }}
         />
       </Card>
+      )}
       {lichSu && <PhongLichSuDialog phong={lichSu} canEdit={canUpdate} onClose={() => setLichSu(null)} />}
       {form && (
         <Form

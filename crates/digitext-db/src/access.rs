@@ -21,6 +21,11 @@ pub struct Ta {
     pub approved_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// 0040: phân công (F12), duyệt cấp 2 (F04), giao nhận bản sao giấy (F10).
+    pub nguoi_xu_ly: Option<Uuid>,
+    pub cap_2_boi: Option<Uuid>,
+    pub cap_2_at: Option<DateTime<Utc>>,
+    pub giao_nhan: Option<serde_json::Value>,
 }
 impl Ta {
     pub fn fee_settled(&self) -> bool {
@@ -44,7 +49,7 @@ pub struct T9 {
 }
 const COLS: &str = "id, project_id, requester, kind, muc_dich, phuong_thuc, uu_tien, \
      nguoi_nhan, so_dinh_danh, status, review_note, phi, paid_at, han_su_dung, approved_at, \
-     created_at, updated_at";
+     created_at, updated_at, nguoi_xu_ly, cap_2_boi, cap_2_at, giao_nhan";
 const ITEM_COLS: &str =
     "id, request_id, document_id, stt, verdict, ly_do, dieu_kien, user_copy_key, deleted_at";
 pub struct Tdq<'a> {
@@ -136,7 +141,7 @@ pub async fn review_item(
     let r_20p = sqlx::query(
         "UPDATE access_request_items i SET verdict = $2, ly_do = $3, dieu_kien = $4 \
          FROM access_requests q \
-         WHERE i.id = $1 AND q.id = i.request_id AND q.status = 'submitted'",
+         WHERE i.id = $1 AND q.id = i.request_id AND q.status IN ('submitted', 'cho_cap_2')",
     )
     .bind(r_20n)
     .bind(verdict)
@@ -174,11 +179,13 @@ pub async fn f_2e2(
     .await?;
     Ok(())
 }
-pub async fn approve(r_20y: &PgPool, id: Uuid, r_20u: Option<&str>) -> sqlx::Result<Option<Ta>> {
+/// Duyệt yêu cầu. 0040 (F04, Điều 36.2): có tài liệu "tiếp cận có điều kiện" được duyệt mà người duyệt không đủ cấp 2
+/// (`cap2_ok` = false) → chuyển `cho_cap_2`, chờ người đứng đầu duyệt lại bằng chính hàm này với `cap2_ok` = true.
+pub async fn approve(r_20y: &PgPool, id: Uuid, r_20u: Option<&str>, cap2_ok: bool, boi: Uuid) -> sqlx::Result<Option<Ta>> {
     let Some(r_20z) = get(r_20y, id).await? else {
         return Ok(None);
     };
-    if r_20z.status != "submitted" {
+    if r_20z.status != "submitted" && r_20z.status != "cho_cap_2" {
         return Ok(None);
     }
     let mut r_211 = r_20y.begin().await?;
@@ -206,15 +213,37 @@ pub async fn approve(r_20y: &PgPool, id: Uuid, r_20u: Option<&str>) -> sqlx::Res
     } else {
         r_20x.saturating_mul(r_20v)
     };
+    let can_cap_2: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM access_request_items i WHERE i.request_id = $1 AND i.verdict = 'duyet' AND i.dieu_kien AND i.deleted_at IS NULL)",
+    )
+    .bind(id)
+    .fetch_one(&mut *r_211)
+    .await?;
+    if can_cap_2 && !cap2_ok {
+        let r = sqlx::query_as::<_, Ta>(&format!(
+            "UPDATE access_requests SET status = 'cho_cap_2', review_note = $2, phi = $3, updated_at = now() \
+             WHERE id = $1 AND status IN ('submitted', 'cho_cap_2') RETURNING {COLS}"
+        ))
+        .bind(id)
+        .bind(r_20u)
+        .bind(phi)
+        .fetch_optional(&mut *r_211)
+        .await?;
+        r_211.commit().await?;
+        return Ok(r);
+    }
     let r_210 = sqlx::query_as::<_, Ta>(&format!(
         "UPDATE access_requests SET status = 'approved', review_note = $2, phi = $3, \
              approved_at = now(), han_su_dung = now() + interval '15 days', \
+             cap_2_boi = CASE WHEN $4 THEN $5 ELSE cap_2_boi END, cap_2_at = CASE WHEN $4 THEN now() ELSE cap_2_at END, \
              updated_at = now() \
-         WHERE id = $1 AND status = 'submitted' RETURNING {COLS}"
+         WHERE id = $1 AND status IN ('submitted', 'cho_cap_2') RETURNING {COLS}"
     ))
     .bind(id)
     .bind(r_20u)
     .bind(phi)
+    .bind(can_cap_2)
+    .bind(boi)
     .fetch_optional(&mut *r_211)
     .await?;
     r_211.commit().await?;
@@ -223,13 +252,31 @@ pub async fn approve(r_20y: &PgPool, id: Uuid, r_20u: Option<&str>) -> sqlx::Res
 pub async fn refuse(r_213: &PgPool, id: Uuid, r_212: &str) -> sqlx::Result<bool> {
     let r_214 = sqlx::query(
         "UPDATE access_requests SET status = 'refused', review_note = $2, updated_at = now() \
-         WHERE id = $1 AND status = 'submitted'",
+         WHERE id = $1 AND status IN ('submitted', 'cho_cap_2')",
     )
     .bind(id)
     .bind(r_212)
     .execute(r_213)
     .await?;
     Ok(r_214.rows_affected() > 0)
+}
+/// 0040 (F12): phân công người xử lý; None = bỏ phân công.
+pub async fn phan_cong(pool: &PgPool, id: Uuid, nguoi: Option<Uuid>) -> sqlx::Result<bool> {
+    Ok(sqlx::query("UPDATE access_requests SET nguoi_xu_ly = $2, updated_at = now() WHERE id = $1")
+        .bind(id)
+        .bind(nguoi)
+        .execute(pool)
+        .await?
+        .rows_affected() > 0)
+}
+/// 0040 (F10, Điều 43): ghi giao nhận bản sao giấy {hinhThuc, diaChi, nguoiNhan, ngayGiao, ghiChu}.
+pub async fn giao_nhan(pool: &PgPool, id: Uuid, v: &serde_json::Value) -> sqlx::Result<bool> {
+    Ok(sqlx::query("UPDATE access_requests SET giao_nhan = $2, updated_at = now() WHERE id = $1 AND status = 'approved'")
+        .bind(id)
+        .bind(v)
+        .execute(pool)
+        .await?
+        .rows_affected() > 0)
 }
 pub async fn confirm_payment(r_215: &PgPool, id: Uuid) -> sqlx::Result<bool> {
     let r_216 = sqlx::query(

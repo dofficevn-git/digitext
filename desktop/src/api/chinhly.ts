@@ -213,6 +213,11 @@ export const TIN_CAY: [string, string][] = [
   ["02", "Số hoá"],
   ["03", "Hỗn hợp"],
 ];
+/** Tình trạng dự phòng (riskRecoveryStatus — PL I; 0040). */
+export const DU_PHONG: [string, string][] = [
+  ["01", "Đã dự phòng"],
+  ["02", "Chưa dự phòng"],
+];
 
 export const str = (r: ClRow | null | undefined, k: string): string => {
   const v = r?.[k];

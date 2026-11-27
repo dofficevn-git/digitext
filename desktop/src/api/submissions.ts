@@ -6,6 +6,8 @@ import type { V4rt } from "@/api/packaging";
 export interface V4rx {
   id: string;
   projectId: string;
+  /** 0040: cơ quan trong danh mục cơ quan nộp lưu (null = khai tay / đợt cũ). */
+  coQuanNopId?: string | null;
   maYeuCau: string;
   orgName: string;
   orgCode: string;
@@ -34,6 +36,9 @@ export interface V4ry {
   ghiChu: string | null;
   reviewResult: "pending" | "dat" | "khong_dat";
   reviewNote: string | null;
+  /** 0040: hồ sơ có sẵn trong hệ thống (nộp cùng hệ thống); trùng mã trong cùng đợt. */
+  hoSoId?: string | null;
+  trungTrongDot?: boolean;
 }
 
 export interface V4rz extends V4rx {
@@ -57,6 +62,8 @@ export interface V4s0 {
 
 export interface V4s1 {
   projectId?: string | null;
+  /** 0040: chọn cơ quan trong danh mục; có thì orgName / orgCode lấy từ đó. */
+  coQuanNopId?: string | null;
   orgName: string;
   orgCode: string;
   daNopGiay?: boolean;
@@ -158,3 +165,69 @@ export function V4sh(V2o8: string): Promise<V4sg> {
 export function V4si(V2o9: string, V2oa: string): Promise<string> {
   return invoke<string>("submission_dossier", { args: { id: V2o9, fileName: V2oa } });
 }
+
+// ---------------- 0040 (đợt 6): tệp đính kèm, nộp cùng hệ thống, so sánh trùng, tổng quan tiếp nhận — qua bc_call
+export interface TepThuNop {
+  id: string;
+  submissionId: string;
+  loai: "van_ban_de_nghi" | "lich_su_phong" | "phuong_an_phan_loai" | "huong_dan_xdgt" | "quyet_dinh" | "khac";
+  filename: string;
+  sizeBytes: number;
+  blake3: string | null;
+  ghiChu: string | null;
+  uploadedBy: string | null;
+  createdAt: string;
+}
+export const LOAI_TEP_THU_NOP: [TepThuNop["loai"], string][] = [
+  ["van_ban_de_nghi", "Văn bản đề nghị nộp lưu"],
+  ["lich_su_phong", "Lịch sử đơn vị hình thành phông, lịch sử phông"],
+  ["phuong_an_phan_loai", "Phương án phân loại"],
+  ["huong_dan_xdgt", "Hướng dẫn xác định giá trị tài liệu"],
+  ["quyet_dinh", "Quyết định phê duyệt"],
+  ["khac", "Khác"],
+];
+const call = <T,>(method: string, path: string, body?: unknown) => invoke<T>("bc_call", { method, path, body: body ?? null });
+export const subFiles = (id: string) => call<TepThuNop[]>("GET", `/submissions/${id}/files`);
+export const subFileThem = (id: string, loai: TepThuNop["loai"], filename: string, contentBase64: string, ghiChu?: string | null) =>
+  call<TepThuNop>("POST", `/submissions/${id}/files`, { loai, filename, contentBase64, ghiChu: ghiChu ?? null });
+export const subFileXoa = (id: string, fid: string) => call<null>("DELETE", `/submissions/${id}/files/${fid}`);
+export const subFileTai = (id: string, fid: string, filename: string) => invoke<string | null>("bc_download", { path: `/submissions/${id}/files/${fid}`, defaultName: filename });
+export const subItemsTuHoSo = (id: string, hoSoIds: string[]) => call<V4ry[]>("POST", `/submissions/${id}/items/tu-ho-so`, { hoSoIds });
+export interface SoSanhTrung {
+  dong: V4ry;
+  trongKho: Array<{ id: string; ma_ho_so: string | null; ma_ho_so_tt05: string | null; tieu_de: string; ngay_bat_dau: string | null; ngay_ket_thuc: string | null; so_to: string | null; ten_phong: string | null; ten_thbq: string | null; so_van_ban: number; hop_so: string | null; khop: "ma" | "tieu_de" }>;
+  trongDot: V4ry[];
+}
+export const subSoSanh = (id: string, itemId: string) => call<SoSanhTrung>("GET", `/submissions/${id}/items/${itemId}/so-sanh`);
+export interface TongQuanTiepNhan {
+  tongGoi: number;
+  hoSoDangKy: number;
+  hoSoDaDuyet: number;
+  hoSoKhongDat: number;
+  hoSoTrungDot: number;
+  hoSoDaVaoHeThong: number;
+  dungLuongGoi: number;
+  totalPages: number | null;
+  totalBytes: number | null;
+  soLanNop: number;
+  cachThuc: string;
+  createdAt: string;
+  confirmedAt: string | null;
+  receivedAt: string | null;
+  approvedAt: string | null;
+  completedAt: string | null;
+  hanNop: string | null;
+  soTepDinhKem: number;
+}
+export const subTongQuan = (id: string) => call<TongQuanTiepNhan>("GET", `/submissions/${id}/tong-quan`);
+export interface HoSoChon {
+  id: string;
+  ma_ho_so: string | null;
+  ma_ho_so_tt05: string | null;
+  tieu_de: string;
+  ngay_ket_thuc: string | null;
+  so_to: string | null;
+  ten_phong: string | null;
+}
+export const hoSoTim = (projectId: string, q: string) =>
+  call<{ rows: HoSoChon[]; total: number }>("GET", `/cl/ho-so?projectId=${encodeURIComponent(projectId)}&q=${encodeURIComponent(q)}&limit=50`);

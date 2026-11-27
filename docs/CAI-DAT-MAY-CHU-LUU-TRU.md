@@ -171,6 +171,25 @@ Khi nâng cấp máy chủ đang chạy:
 2. Máy chủ cần font TTF (`DIGITEXT_CERT_FONT`, bộ cài đã đặt) để dựng trang thể thức; thiếu font API trả lỗi 503 khi chuyển đổi.
 3. Không có việc nền mới.
 
+## 13. Đủ như Digifile — thu nộp từ cơ quan ngoài, bảng mã TT05, duyệt hai cấp (từ bản 0.25.26, migration 0040)
+
+- **Nhập Hệ thống › Cơ quan nộp lưu**: danh mục cơ quan nộp vào lưu trữ lịch sử; tài khoản gắn cơ quan chỉ thấy đợt nộp của mình;
+  **khoá API** (`X-Api-Key`) cho hệ thống của cơ quan tự đăng ký / nộp gói — xem `docs/API-THU-NOP.md`.
+- **Thu nộp**: tệp đính kèm Điều 20 (văn bản đề nghị, lịch sử phông, phương án phân loại, hướng dẫn xác định giá trị), thêm hồ sơ có sẵn
+  trong hệ thống (nộp cùng hệ thống), dòng trùng mã trong cùng đợt tự không đạt, nút so sánh hồ sơ nghi trùng với kho, 10 thông tin tiếp nhận.
+- **Danh mục › Mã TT05**: chế độ sử dụng, mức độ tin cậy, tình trạng vật lý, tình trạng dự phòng (mã chuẩn + mã riêng của cơ quan).
+  Hồ sơ / văn bản có thêm tình trạng dự phòng, quy trình xử lý văn bản, cờ gói tài liệu rời lẻ + mã gói.
+- **Mã hồ sơ theo Phụ lục I**: `ma_ho_so_tt05` = mã cơ quan lưu trữ (Quản trị › Cơ quan lưu trữ) + mã hồ sơ; `ma_ho_so_giay_tt05` =
+  mã CQ.kho/giá/hộp.số hồ sơ giấy — hiện trong form hồ sơ và mục lục nộp.
+- **Khai thác**: tài liệu "tiếp cận có điều kiện" được cấp 1 duyệt → yêu cầu chuyển **chờ duyệt cấp 2**, vai trò Quản lý / Quản trị hệ
+  thống duyệt tiếp; phân công người xử lý; ghi giao nhận bản sao giấy; báo cáo khai thác có cột đúng hạn / quá hạn.
+- **Nhật ký** có chuỗi băm (`prev_hash` / `hash`); kiểm bằng `GET /api/v1/ops/audit/kiem-chuoi` (quyền xem bảo quản).
+- Menu bản Lưu trữ có đủ nhóm **Giao nhận tài liệu, Số hoá, Kiểm tra sản phẩm, Ký số, Nghiệm thu** để cơ quan tự số hoá; API bản Lưu trữ
+  gắn đủ route. Muốn OCR thì máy chủ cần dịch vụ OCR (`DIGITEXT_CHI_LUU_TRU=false` ở worker và Triton / vLLM như máy chủ thi công).
+
+Khi nâng cấp máy chủ đang chạng: chạy lại `cai-dat.ps1` / `./cai-dat.sh` — áp thêm `0040` (dựng lại view `cl_ho_so_v`, máy trạm mất kết
+nối vài giây; bỏ khoá duy nhất mã hồ sơ trong một đợt nộp).
+
 ## 12. Menu đủ như Digifile (từ bản 0.25.25)
 
 Bản Lưu trữ phục vụ trọn một cơ quan nên có đủ các mục nghiệp vụ: **Lưu trữ hiện hành › Hệ thống hoá, Đồng bộ**; **Nhập Hệ thống ›

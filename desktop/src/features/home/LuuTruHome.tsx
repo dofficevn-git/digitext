@@ -20,7 +20,7 @@ import CoQuanDialog from "@/features/settings/CoQuanDialog";
 
 type Viec = { id: string; loai: "Khai thác" | "Cung cấp thông tin"; noiDung: string; trangThai: string; ngay: string; mo: () => void };
 
-const TT_KHAI_THAC: Record<V4tl["status"], string> = { submitted: "Chờ duyệt", approved: "Đã duyệt", refused: "Từ chối", expired: "Hết hạn" };
+const TT_KHAI_THAC: Record<V4tl["status"], string> = { submitted: "Chờ duyệt", cho_cap_2: "Chờ duyệt cấp 2", approved: "Đã duyệt", refused: "Từ chối", expired: "Hết hạn" };
 const TT_THONG_TIN: Record<V4us["status"], string> = { submitted: "Chờ duyệt", approved: "Đã duyệt", refused: "Từ chối", fulfilled: "Đã trả kết quả" };
 
 export default function LuuTruHome() {

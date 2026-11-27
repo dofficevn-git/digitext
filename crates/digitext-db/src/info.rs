@@ -21,6 +21,8 @@ pub struct T9v {
     pub fulfilled_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// 0040: người được phân công xử lý (F12).
+    pub nguoi_xu_ly: Option<Uuid>,
 }
 impl T9v {
     pub fn fee_settled(&self) -> bool {
@@ -29,7 +31,17 @@ impl T9v {
 }
 const COLS: &str = "id, project_id, requester, hinh_thuc, chu_de, muc_dich, phuong_thuc, \
      status, review_note, phi, paid_at, ket_qua_key, bien_tap, approved_at, fulfilled_at, \
-     created_at, updated_at";
+     created_at, updated_at, nguoi_xu_ly";
+/// 0040: phân công người xử lý; `None` = bỏ phân công.
+pub async fn phan_cong(pool: &PgPool, id: Uuid, nguoi: Option<Uuid>) -> sqlx::Result<bool> {
+    let n = sqlx::query("UPDATE info_requests SET nguoi_xu_ly = $2, updated_at = now() WHERE id = $1")
+        .bind(id)
+        .bind(nguoi)
+        .execute(pool)
+        .await?
+        .rows_affected();
+    Ok(n > 0)
+}
 pub struct Tdu<'a> {
     pub project_id: Uuid,
     pub requester: Option<Uuid>,
