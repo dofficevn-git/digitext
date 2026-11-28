@@ -239,10 +239,27 @@ export interface V4ew {
   skippedPageFailed: number;
 }
 
-export function V4ex(V17u?: string, V17v = false, V17w?: string[]): Promise<V4ew> {
-  return invoke<V4ew>("docs_extract_fields_all", {
-    args: { projectId: V17u, retryFailed: V17v, documentIds: V17w },
-  });
+const LO_BOC_TACH = 5000;
+const SO_LO_TOI_DA = 400;
+
+export async function V4ex(V17u?: string, V17v = false, V17w?: string[]): Promise<V4ew> {
+  const tong: V4ew = { documents: 0, skippedNoPageCount: 0, skippedPageFailed: 0 };
+  for (let lo = 0; lo < SO_LO_TOI_DA; lo++) {
+    let r: V4ew;
+    try {
+      r = await invoke<V4ew>("docs_extract_fields_all", {
+        args: { projectId: V17u, retryFailed: V17v, documentIds: V17w },
+      });
+    } catch (e) {
+      if (tong.documents === 0) throw e;
+      break;
+    }
+    tong.documents += r.documents;
+    tong.skippedNoPageCount = r.skippedNoPageCount;
+    tong.skippedPageFailed = r.skippedPageFailed;
+    if (r.documents < LO_BOC_TACH) break;
+  }
+  return tong;
 }
 
 export interface V4ey {
