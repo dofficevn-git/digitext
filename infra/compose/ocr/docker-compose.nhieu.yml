@@ -16,5 +16,6 @@ services:
     depends_on: [ocr]
     ports:
       - "127.0.0.1:5010:80"
+      - "127.0.0.1:5011:81"
     volumes:
       - ./chia-tai.conf:/etc/nginx/http.d/default.conf:ro
